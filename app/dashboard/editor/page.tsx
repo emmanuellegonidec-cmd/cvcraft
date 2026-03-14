@@ -1,0 +1,411 @@
+'use client';
+
+import { useState, useEffect, useRef, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
+import { CVFormData, defaultFormData, Experience, Education } from '@/lib/types';
+import { TEMPLATES, TemplateId } from '@/lib/templates';
+
+function uid() { return Math.random().toString(36).slice(2, 9); }
+
+function EditorContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const cvId = searchParams.get('id');
+
+  const [tab, setTab] = useState<'import' | 'form'>('import');
+  const [form, setForm] = useState<CVFormData>(defaultFormData);
+  const [template, setTemplate] = useState<TemplateId>('classic');
+  const [cvTitle, setCvTitle] = useState('Mon CV');
+  const [generatedCV, setGeneratedCV] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+  const [error, setError] = useState('');
+  const [importStatus, setImportStatus] = useState<{ type: string; msg: string } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Load existing CV if editing
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push('/auth/login'); return; }
+      if (!cvId) return;
+
+      const res = await fetch('/api/cvs');
+      const json = await res.json();
+      const cv = (json.cvs || []).find((c: any) => c.id === cvId);
+      if (cv) {
+        setCvTitle(cv.title);
+        setTemplate(cv.template);
+        setGeneratedCV(cv.content);
+        const fd = cv.form_data;
+        setForm({
+          ...fd,
+          experiences: (fd.experiences || []).map((e: any) => ({ ...e, id: e.id || uid() })),
+          education: (fd.education || []).map((e: any) => ({ ...e, id: e.id || uid() })),
+        });
+        setTab('form');
+      }
+    }
+    load();
+  }, [cvId, router]);
+
+  // PDF import
+  async function handleFile(file: File) {
+    if (file.type !== 'application/pdf') { setImportStatus({ type: 'error', msg: 'Sélectionnez un fichier PDF.' }); return; }
+    setImportStatus({ type: 'loading', msg: 'Lecture du PDF...' });
+    try {
+      const pdfjsLib = (await import('pdfjs-dist')).default;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+      let text = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map((s: any) => s.str).join(' ') + '\n';
+      }
+      setImportStatus({ type: 'loading', msg: 'Claude analyse votre profil...' });
+      const res = await fetch('/api/extract-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      const d = json.data;
+      setForm({
+        ...form, ...d,
+        experiences: (d.experiences || []).map((e: any) => ({ ...e, id: uid() })),
+        education: (d.education || []).map((e: any) => ({ ...e, id: uid() })),
+      });
+      if (d.firstName || d.lastName) setCvTitle(`CV — ${d.firstName} ${d.lastName}`.trim());
+      setImportStatus({ type: 'success', msg: 'Profil LinkedIn importé !' });
+      setTimeout(() => { setImportStatus(null); setTab('form'); }, 1500);
+    } catch (e: any) {
+      setImportStatus({ type: 'error', msg: e.message });
+    }
+  }
+
+  // Form helpers
+  function setField(field: keyof CVFormData, value: string) { setForm({ ...form, [field]: value }); }
+  function addExp() { setForm({ ...form, experiences: [...form.experiences, { id: uid(), role: '', company: '', start: '', end: '', description: '' }] }); }
+  function updateExp(id: string, field: keyof Experience, val: string) { setForm({ ...form, experiences: form.experiences.map(e => e.id === id ? { ...e, [field]: val } : e) }); }
+  function removeExp(id: string) { setForm({ ...form, experiences: form.experiences.filter(e => e.id !== id) }); }
+  function addEdu() { setForm({ ...form, education: [...form.education, { id: uid(), degree: '', school: '', year: '' }] }); }
+  function updateEdu(id: string, field: keyof Education, val: string) { setForm({ ...form, education: form.education.map(e => e.id === id ? { ...e, [field]: val } : e) }); }
+  function removeEdu(id: string) { setForm({ ...form, education: form.education.filter(e => e.id !== id) }); }
+
+  async function generate() {
+    setIsGenerating(true); setError(''); setGeneratedCV('');
+    try {
+      const res = await fetch('/api/generate-cv', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setGeneratedCV(json.cv);
+    } catch (e: any) { setError(e.message); }
+    finally { setIsGenerating(false); }
+  }
+
+  async function saveCV() {
+    if (!generatedCV) { alert('Générez d\'abord votre CV.'); return; }
+    setIsSaving(true); setSaveMsg('');
+    try {
+      const res = await fetch('/api/cvs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: cvId || undefined, title: cvTitle, template, content: generatedCV, form_data: form }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setSaveMsg('Sauvegardé !');
+      if (!cvId) router.replace(`/dashboard/editor?id=${json.cv.id}`);
+      setTimeout(() => setSaveMsg(''), 2000);
+    } catch (e: any) { setSaveMsg('Erreur : ' + e.message); }
+    finally { setIsSaving(false); }
+  }
+
+  function downloadTxt() {
+    const blob = new Blob([generatedCV], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `${cvTitle}.txt`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.5rem', background: 'white', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 100, flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <Link href="/dashboard" style={{ color: 'var(--muted)', textDecoration: 'none', fontSize: 13 }}>← Mes CVs</Link>
+          <input
+            value={cvTitle} onChange={e => setCvTitle(e.target.value)}
+            style={{ border: 'none', background: 'transparent', fontSize: 15, fontWeight: 600, color: 'var(--ink)', padding: '4px 0', outline: 'none', width: 220 }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {saveMsg && <span style={{ fontSize: 13, color: saveMsg.startsWith('Erreur') ? '#cc4444' : 'var(--success)' }}>{saveMsg}</span>}
+          <button onClick={saveCV} disabled={isSaving} className="btn-secondary" style={{ padding: '7px 16px', fontSize: 13 }}>
+            {isSaving ? 'Sauvegarde...' : '💾 Sauvegarder'}
+          </button>
+        </div>
+      </header>
+
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '420px 1fr', maxHeight: 'calc(100vh - 58px)', overflow: 'hidden' }}>
+
+        {/* Left panel */}
+        <div style={{ borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'white' }}>
+          <div style={{ padding: '1.25rem' }}>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', background: 'var(--cream)', borderRadius: 10, padding: 3, marginBottom: '1.25rem' }}>
+              {(['import', 'form'] as const).map(t => (
+                <button key={t} onClick={() => setTab(t)} style={{
+                  flex: 1, padding: '7px 12px', fontSize: 13, fontFamily: 'DM Sans, sans-serif',
+                  background: tab === t ? 'white' : 'transparent',
+                  border: tab === t ? '1px solid var(--border)' : '1px solid transparent',
+                  borderRadius: 8, cursor: 'pointer', fontWeight: tab === t ? 500 : 400,
+                  color: tab === t ? 'var(--ink)' : 'var(--muted)', transition: 'all 0.15s',
+                }}>
+                  {t === 'import' ? 'Import LinkedIn' : 'Formulaire'}
+                </button>
+              ))}
+            </div>
+
+            {/* Import tab */}
+            {tab === 'import' && (
+              <div>
+                <div style={{ background: 'var(--accent-light)', border: '1px solid #c4d4fb', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: 'var(--accent)', lineHeight: 1.6, marginBottom: 14 }}>
+                  <strong>Comment exporter depuis LinkedIn :</strong><br />
+                  Profil → <strong>Plus</strong> → <strong>Enregistrer au format PDF</strong>
+                </div>
+                <div
+                  onClick={() => fileRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={e => { e.preventDefault(); setIsDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+                  style={{
+                    border: `2px dashed ${isDragOver ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 12, padding: '2rem', textAlign: 'center', cursor: 'pointer',
+                    background: isDragOver ? 'var(--accent-light)' : 'var(--cream)', transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{ width: 40, height: 40, background: '#0A66C2', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', color: 'white', fontWeight: 700, fontFamily: 'serif', fontSize: 18 }}>in</div>
+                  <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 14 }}>Glissez votre CV LinkedIn</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>ou cliquez pour sélectionner un PDF</div>
+                  <input ref={fileRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+                </div>
+                {importStatus && (
+                  <div style={{
+                    marginTop: 10, padding: '9px 14px', borderRadius: 8, fontSize: 13,
+                    background: importStatus.type === 'success' ? 'var(--success-bg)' : importStatus.type === 'error' ? '#FCEBEB' : 'var(--accent-light)',
+                    color: importStatus.type === 'success' ? 'var(--success)' : importStatus.type === 'error' ? '#791F1F' : 'var(--accent)',
+                  }}>
+                    {importStatus.msg}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Form tab */}
+            {tab === 'form' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {/* Personal info */}
+                <Section title="Informations personnelles">
+                  <Row2>
+                    <Field label="Prénom"><input value={form.firstName} onChange={e => setField('firstName', e.target.value)} placeholder="Jean" /></Field>
+                    <Field label="Nom"><input value={form.lastName} onChange={e => setField('lastName', e.target.value)} placeholder="Dupont" /></Field>
+                  </Row2>
+                  <Field label="Titre actuel"><input value={form.title} onChange={e => setField('title', e.target.value)} placeholder="Développeur Full Stack" /></Field>
+                  <Row2>
+                    <Field label="Email"><input value={form.email} onChange={e => setField('email', e.target.value)} placeholder="jean@email.com" /></Field>
+                    <Field label="Téléphone"><input value={form.phone} onChange={e => setField('phone', e.target.value)} placeholder="+33 6 ..." /></Field>
+                  </Row2>
+                  <Row2>
+                    <Field label="Ville"><input value={form.city} onChange={e => setField('city', e.target.value)} placeholder="Paris" /></Field>
+                    <Field label="LinkedIn"><input value={form.linkedin} onChange={e => setField('linkedin', e.target.value)} placeholder="linkedin.com/in/..." /></Field>
+                  </Row2>
+                </Section>
+
+                <Section title="Résumé">
+                  <Field label="Votre profil">
+                    <textarea value={form.summary} onChange={e => setField('summary', e.target.value)} rows={3} placeholder="5 ans d'expérience en..." />
+                  </Field>
+                </Section>
+
+                <Section title="Expériences">
+                  {form.experiences.map(exp => (
+                    <div key={exp.id} style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 10 }}>
+                      <button onClick={() => removeExp(exp.id)} style={{ float: 'right', fontSize: 11, color: '#cc4444', background: 'none', border: 'none', cursor: 'pointer' }}>Supprimer</button>
+                      <Row2>
+                        <Field label="Poste"><input value={exp.role} onChange={e => updateExp(exp.id, 'role', e.target.value)} placeholder="Développeur" /></Field>
+                        <Field label="Entreprise"><input value={exp.company} onChange={e => updateExp(exp.id, 'company', e.target.value)} placeholder="Acme" /></Field>
+                      </Row2>
+                      <Row2>
+                        <Field label="Début"><input value={exp.start} onChange={e => updateExp(exp.id, 'start', e.target.value)} placeholder="Jan 2022" /></Field>
+                        <Field label="Fin"><input value={exp.end} onChange={e => updateExp(exp.id, 'end', e.target.value)} placeholder="Présent" /></Field>
+                      </Row2>
+                      <Field label="Description"><textarea value={exp.description} onChange={e => updateExp(exp.id, 'description', e.target.value)} rows={2} placeholder="Missions..." /></Field>
+                    </div>
+                  ))}
+                  <AddBtn onClick={addExp}>+ Expérience</AddBtn>
+                </Section>
+
+                <Section title="Formation">
+                  {form.education.map(edu => (
+                    <div key={edu.id} style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 10 }}>
+                      <button onClick={() => removeEdu(edu.id)} style={{ float: 'right', fontSize: 11, color: '#cc4444', background: 'none', border: 'none', cursor: 'pointer' }}>Supprimer</button>
+                      <Row2>
+                        <Field label="Diplôme"><input value={edu.degree} onChange={e => updateEdu(edu.id, 'degree', e.target.value)} placeholder="Master" /></Field>
+                        <Field label="Établissement"><input value={edu.school} onChange={e => updateEdu(edu.id, 'school', e.target.value)} placeholder="Université" /></Field>
+                      </Row2>
+                      <Field label="Année"><input value={edu.year} onChange={e => updateEdu(edu.id, 'year', e.target.value)} placeholder="2022" /></Field>
+                    </div>
+                  ))}
+                  <AddBtn onClick={addEdu}>+ Formation</AddBtn>
+                </Section>
+
+                <Section title="Compétences">
+                  <Field label="Séparées par des virgules">
+                    <input value={form.skills} onChange={e => setField('skills', e.target.value)} placeholder="React, Python, SQL..." />
+                  </Field>
+                </Section>
+
+                <Section title="Options">
+                  <Row2>
+                    <Field label="Langue">
+                      <select value={form.lang} onChange={e => setField('lang', e.target.value)}>
+                        <option value="français">Français</option>
+                        <option value="anglais">Anglais</option>
+                        <option value="espagnol">Espagnol</option>
+                        <option value="allemand">Allemand</option>
+                      </select>
+                    </Field>
+                    <Field label="Ton">
+                      <select value={form.tone} onChange={e => setField('tone', e.target.value)}>
+                        <option value="professionnel">Professionnel</option>
+                        <option value="moderne et dynamique">Dynamique</option>
+                        <option value="académique">Académique</option>
+                        <option value="créatif">Créatif</option>
+                      </select>
+                    </Field>
+                  </Row2>
+                  <Field label="Poste visé (optimise le CV)">
+                    <input value={form.targetJob} onChange={e => setField('targetJob', e.target.value)} placeholder="Chef de projet chez une startup" />
+                  </Field>
+                </Section>
+
+                {/* Template selector */}
+                <Section title="Template visuel">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    {TEMPLATES.map(t => (
+                      <button key={t.id} onClick={() => setTemplate(t.id)} style={{
+                        padding: '12px 8px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+                        border: template === t.id ? `2px solid var(--accent)` : '1px solid var(--border)',
+                        background: template === t.id ? 'var(--accent-light)' : 'white',
+                        transition: 'all 0.15s', fontFamily: 'DM Sans, sans-serif',
+                      }}>
+                        <div style={{ fontSize: 20, marginBottom: 4 }}>{t.preview}</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: template === t.id ? 'var(--accent)' : 'var(--ink)' }}>{t.name}</div>
+                      </button>
+                    ))}
+                  </div>
+                </Section>
+              </div>
+            )}
+
+            {/* Generate button */}
+            <button onClick={generate} disabled={isGenerating} className="btn-accent" style={{
+              width: '100%', justifyContent: 'center', marginTop: 16,
+              padding: '13px', fontSize: 15, opacity: isGenerating ? 0.6 : 1,
+            }}>
+              {isGenerating ? 'Claude rédige...' : 'Générer mon CV →'}
+            </button>
+          </div>
+        </div>
+
+        {/* Right panel — CV result */}
+        <div style={{ overflowY: 'auto', padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Aperçu</span>
+            {generatedCV && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => { navigator.clipboard.writeText(generatedCV); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+                  className="btn-secondary" style={{ padding: '6px 14px', fontSize: 13 }}>
+                  {copied ? '✓ Copié' : 'Copier'}
+                </button>
+                <button onClick={downloadTxt} className="btn-secondary" style={{ padding: '6px 14px', fontSize: 13 }}>
+                  ↓ .txt
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 16, padding: '2rem', minHeight: 500 }}>
+            {isGenerating && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 400, gap: 16, color: 'var(--muted)' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[0,1,2].map(i => (
+                    <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 1.2s ease-in-out infinite', animationDelay: `${i*0.2}s` }} />
+                  ))}
+                </div>
+                <span style={{ fontSize: 14 }}>Claude rédige votre CV...</span>
+                <style>{`@keyframes bounce { 0%,80%,100%{transform:translateY(0);opacity:.4} 40%{transform:translateY(-8px);opacity:1} }`}</style>
+              </div>
+            )}
+            {error && !isGenerating && (
+              <div style={{ background: '#FCEBEB', border: '1px solid #F09595', borderRadius: 8, padding: '12px 16px', color: '#791F1F', fontSize: 14 }}>
+                Erreur : {error}
+              </div>
+            )}
+            {!generatedCV && !isGenerating && !error && (
+              <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 14, marginTop: '5rem', lineHeight: 1.8 }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>✦</div>
+                Importez votre LinkedIn ou remplissez le formulaire,<br />puis cliquez sur <strong>Générer</strong>.
+              </div>
+            )}
+            {generatedCV && !isGenerating && (
+              <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'DM Sans, sans-serif', fontSize: 14, lineHeight: 1.8, color: 'var(--ink)', margin: 0 }}>
+                {generatedCV}
+              </pre>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Small helper components
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ background: 'var(--cream)', borderRadius: 12, padding: '1rem 1.1rem' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div style={{ marginBottom: 8 }}><label style={{ fontSize: 11 }}>{label}</label>{children}</div>;
+}
+function Row2({ children }: { children: React.ReactNode }) {
+  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{children}</div>;
+}
+function AddBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return <button onClick={onClick} style={{ fontSize: 13, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginTop: 4, fontFamily: 'DM Sans, sans-serif' }}>{children}</button>;
+}
+
+export default function EditorPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '4rem', textAlign: 'center', color: 'var(--muted)' }}>Chargement...</div>}>
+      <EditorContent />
+    </Suspense>
+  );
+}
