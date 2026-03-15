@@ -20,10 +20,18 @@ export default function DashboardPage() {
       if (!user) { router.push('/auth/login'); return; }
       setUserEmail(user.email || '');
 
-      const res = await fetch('/api/cvs');
-      const json = await res.json();
-      setCvs(json.cvs || []);
-      setLoading(false);
+const res = await fetch('/api/cvs');
+
+if (!res.ok) {
+  setCvs([]);
+  setLoading(false);
+  return;
+}
+
+const json = await res.json();
+
+setCvs(json.cvs || []);
+setLoading(false);
     }
     load();
   }, [router]);

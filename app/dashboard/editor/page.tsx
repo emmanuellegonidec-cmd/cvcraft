@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { CVFormData, defaultFormData, Experience, Education } from '@/lib/types';
 import { TEMPLATES, TemplateId } from '@/lib/templates';
+import { pdf } from "@react-pdf/renderer";
+import { CVPdf } from "@/lib/pdf-generator";
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
@@ -60,8 +62,9 @@ function EditorContent() {
     if (file.type !== 'application/pdf') { setImportStatus({ type: 'error', msg: 'Sélectionnez un fichier PDF.' }); return; }
     setImportStatus({ type: 'loading', msg: 'Lecture du PDF...' });
     try {
-      const pdfjsLib = (await import('pdfjs-dist')).default;
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const buffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
       let text = '';
@@ -132,12 +135,18 @@ function EditorContent() {
     finally { setIsSaving(false); }
   }
 
-  function downloadTxt() {
-    const blob = new Blob([generatedCV], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `${cvTitle}.txt`; a.click();
-    URL.revokeObjectURL(url);
-  }
+  async function downloadPdf() {
+  const blob = await pdf(<CVPdf content={generatedCV} />).toBlob();
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${cvTitle}.pdf`;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
@@ -341,8 +350,8 @@ function EditorContent() {
                   className="btn-secondary" style={{ padding: '6px 14px', fontSize: 13 }}>
                   {copied ? '✓ Copié' : 'Copier'}
                 </button>
-                <button onClick={downloadTxt} className="btn-secondary" style={{ padding: '6px 14px', fontSize: 13 }}>
-                  ↓ .txt
+                <button onClick={downloadPdf} className="btn-secondary" style={{ padding: '6px 14px', fontSize: 13 }}>
+                  ↓ PDF
                 </button>
               </div>
             )}
