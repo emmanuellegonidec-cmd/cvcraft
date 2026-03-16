@@ -15,3 +15,5 @@ Disallow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://cvcraft-five.vercel.app/sitemap.xml
