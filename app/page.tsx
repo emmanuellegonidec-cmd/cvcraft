@@ -50,7 +50,7 @@ export default function LandingPage() {
       {/* NAV */}
       <nav style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'1rem 2.5rem',background:'#fff',borderBottom:'2.5px solid #111',position:'sticky',top:0,zIndex:100 }}>
         <Link href="/" style={{ textDecoration:'none',display:'flex',alignItems:'center',gap:10 }}>
-          <img src="/logo.png" alt="Jean Find My Job" style={{ height:40,width:'auto' }} onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}} />
+          <img src="/logo.png" alt="Jean Find My Job" style={{ height:40,width:'auto' }} />
           <span style={{ fontFamily:'Montserrat,sans-serif',fontSize:'1rem',fontWeight:900,color:'#111',letterSpacing:'-0.01em' }}>Jean <span style={{ color:'#E8151B' }}>Find My Job</span></span>
         </Link>
         <div className="nav-desktop" style={{ display:'flex',gap:'2rem',alignItems:'center' }}>
