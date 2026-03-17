@@ -35,16 +35,6 @@ export default function SignupPage() {
     setSuccess(true);
   }
 
-  const Logo = () => (
-    <svg viewBox="0 0 140 120" width="90" height="77" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="70,2 85,24 108,6 100,30 126,22 114,44 136,46 120,62 134,80 112,75 122,96 98,86 102,108 80,92 70,110 60,92 38,108 42,86 18,96 28,75 6,80 20,62 4,46 26,44 14,22 40,30 32,6 55,24" fill="#111"/>
-      <polygon points="70,10 83,28 102,14 96,35 118,28 108,47 126,50 112,64 124,80 105,76 114,94 93,85 96,105 76,91 70,106 64,91 44,105 47,85 26,94 35,76 16,80 28,64 14,50 32,47 22,28 44,35 38,14 57,28" fill="#E8151B"/>
-      <text x="70" y="58" textAnchor="middle" fontFamily="Impact,Arial Black,sans-serif" fontSize="32" fontWeight="900" fill="#F5C400" stroke="#111" strokeWidth="2" paintOrder="stroke">Jean</text>
-      <rect x="22" y="66" width="96" height="24" rx="3" fill="#111"/>
-      <text x="70" y="83" textAnchor="middle" fontFamily="Impact,Arial Black,sans-serif" fontSize="14" fontWeight="900" fill="#fff">find my job</text>
-    </svg>
-  );
-
   return (
     <div style={{ fontFamily: "'Montserrat', sans-serif", minHeight: '100vh', background: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
       <style>{`
@@ -55,21 +45,29 @@ export default function SignupPage() {
         .auth-label { display: block; font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
       `}</style>
 
-      {/* NAV */}
-      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.875rem 2rem', background: '#fff', borderBottom: '2px solid #111' }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          <div style={{ background: '#E8151B', border: '2px solid #111', borderRadius: 7, padding: '3px 10px', boxShadow: '2px 2px 0 #111' }}>
-            <span style={{ fontFamily: 'Montserrat,sans-serif', fontSize: '0.95rem', fontWeight: 900, color: '#F5C400' }}>Jean</span>
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Find My Job</span>
+      {/* NAV — même style que la home */}
+      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 2.5rem', background: '#fff', borderBottom: '2.5px solid #111' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <img src="/logo.png" alt="Jean Find My Job" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
+          <span style={{ fontFamily: 'Montserrat,sans-serif', fontSize: '1rem', fontWeight: 900, color: '#111', letterSpacing: '-0.01em' }}>
+            Jean <span style={{ color: '#E8151B' }}>Find My Job</span>
+          </span>
         </Link>
+        <div style={{ fontSize: 13, color: '#888', fontWeight: 500 }}>
+          Déjà un compte ?{' '}
+          <Link href="/auth/login" style={{ color: '#E8151B', fontWeight: 700, textDecoration: 'none' }}>Se connecter</Link>
+        </div>
       </nav>
 
       {/* FORM */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
-        <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '2.5rem 2rem', width: '100%', maxWidth: 440, boxShadow: '4px 4px 0 #111' }}>
+        <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '2.5rem 2rem', width: '100%', maxWidth: 460, boxShadow: '4px 4px 0 #111' }}>
 
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}><Logo /></div>
+          {/* Logo centré dans le form */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+            <img src="/logo.png" alt="Jean Find My Job" style={{ height: 90, width: 'auto', objectFit: 'contain' }} />
+          </div>
+
           <h1 style={{ fontSize: '1.6rem', fontWeight: 900, textAlign: 'center', marginBottom: '0.25rem', letterSpacing: '-0.02em', color: '#111' }}>Créer un compte</h1>
           <p style={{ textAlign: 'center', fontSize: 13, color: '#888', fontWeight: 500, marginBottom: '1.75rem' }}>Gratuit · Sans carte bancaire</p>
 
@@ -77,7 +75,7 @@ export default function SignupPage() {
             <div style={{ textAlign: 'center', padding: '1.5rem', background: '#E8F5EE', border: '2px solid #1A7A4A', borderRadius: 8 }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>📧</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#1A7A4A', marginBottom: 8 }}>Vérifiez vos emails !</div>
-              <div style={{ fontSize: 13, color: '#555' }}>Un lien de confirmation a été envoyé à <b>{email}</b>. Cliquez dessus pour activer votre compte.</div>
+              <div style={{ fontSize: 13, color: '#555' }}>Un lien de confirmation a été envoyé à <b>{email}</b>.</div>
               <Link href="/auth/login" style={{ display: 'inline-block', marginTop: '1rem', background: '#111', color: '#F5C400', border: '2px solid #111', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 800, textDecoration: 'none', boxShadow: '2px 2px 0 #E8151B' }}>
                 Retour à la connexion
               </Link>
