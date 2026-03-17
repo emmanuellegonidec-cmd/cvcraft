@@ -2,43 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
 
 :root {
-  --cream: #F7F4EE;
-  --ink: #1A1814;
-  --accent: #2D5BE3;
-  --accent-light: #EBF0FD;
-  --muted: #8A8680;
-  --border: #E8E4DC;
-  --card: #FFFFFF;
-  --success: #1A7A4A;
-  --success-bg: #E8F5EE;
+  /* Couleurs Jean Find My Job */
+  --red: #E8151B;
+  --red-dark: #C01116;
+  --red-light: #FDEAEA;
+  --yellow: #F5C400;
+  --yellow-light: #FEF9E0;
+  --blue: #1A6FDB;
+  --blue-light: #EBF2FD;
+  --ink: #111111;
+  --white: #FFFFFF;
+  --cream: #FAFAFA;
+  --warm: #F4F4F4;
+  --muted: #6B6B6B;
+  --border: #E0E0E0;
+  --shadow: 0 4px 24px rgba(0,0,0,0.10);
+
+  /* Aliases pour compatibilité avec le code existant */
+  --accent: var(--red);
+  --accent-light: var(--red-light);
+  --green: #1A7A4A;
+  --green-light: #E8F5EE;
+  --amber: #D97706;
+  --amber-light: #FEF3C7;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   background: var(--cream);
   color: var(--ink);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 {
-  font-family: 'Fraunces', serif;
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
   line-height: 1.2;
 }
 
 /* Cards */
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  background: var(--white);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
   padding: 1.5rem;
+  box-shadow: 4px 4px 0px var(--ink);
 }
 
 /* Buttons */
@@ -47,80 +62,91 @@ h1, h2, h3 {
   align-items: center;
   gap: 8px;
   background: var(--ink);
-  color: white;
-  border: none;
-  border-radius: 10px;
+  color: var(--yellow);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
   padding: 12px 24px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 500;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.15s;
+  transition: all 0.15s;
   text-decoration: none;
+  box-shadow: 3px 3px 0px var(--red);
+  letter-spacing: 0.02em;
 }
-.btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
-.btn-primary:active { transform: scale(0.98); }
+.btn-primary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0px var(--red);
+}
+.btn-primary:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px var(--red); }
 
 .btn-secondary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: transparent;
+  background: var(--white);
   color: var(--ink);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
   padding: 12px 24px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 500;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s;
   text-decoration: none;
+  box-shadow: 3px 3px 0px var(--border);
 }
-.btn-secondary:hover { background: var(--border); }
+.btn-secondary:hover { background: var(--warm); transform: translate(-1px, -1px); box-shadow: 4px 4px 0px var(--border); }
 
 .btn-accent {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 10px;
+  background: var(--red);
+  color: var(--white);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
   padding: 12px 24px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 500;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.15s;
+  transition: all 0.15s;
   text-decoration: none;
+  box-shadow: 3px 3px 0px var(--ink);
+  letter-spacing: 0.02em;
 }
-.btn-accent:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-accent:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0px var(--ink); }
+.btn-accent:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px var(--ink); }
 
 /* Form elements */
 input, textarea, select {
   width: 100%;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 15px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
   padding: 10px 14px;
-  background: white;
+  background: var(--white);
   color: var(--ink);
   outline: none;
   transition: border-color 0.15s;
+  font-weight: 500;
 }
 input:focus, textarea:focus, select:focus {
-  border-color: var(--accent);
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(232, 21, 27, 0.1);
 }
 textarea { resize: vertical; }
 
 label {
   display: block;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--muted);
   margin-bottom: 5px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
