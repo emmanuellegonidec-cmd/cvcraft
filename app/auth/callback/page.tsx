@@ -1,31 +1,39 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
 export default function AuthCallbackPage() {
-  const router = useRouter()
-
   useEffect(() => {
     const handleAuthCallback = async () => {
       const supabase = createClient()
+      const url = new URL(window.location.href)
+      const code = url.searchParams.get('code')
 
-      const { error } = await supabase.auth.exchangeCodeForSession(
-        window.location.href
-      )
-
-      if (error) {
-        console.error(error)
-        router.replace('/auth/login')
+      if (!code) {
+        window.location.href = '/auth/login'
         return
       }
 
-      router.replace('/dashboard')
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+      if (error) {
+        console.error('Supabase callback error:', error)
+        window.location.href = '/auth/login'
+        return
+      }
+
+      setTimeout(() => {
+        window.location.href = '/dashboard'
+      }, 300)
     }
 
     handleAuthCallback()
-  }, [router])
+  }, [])
 
-  return <p>Connexion en cours...</p>
+  return (
+    <div style={{ padding: '40px', textAlign: 'center' }}>
+      Connexion en cours...
+    </div>
+  )
 }
