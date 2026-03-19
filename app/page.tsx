@@ -84,8 +84,8 @@ export default function LandingPage() {
           </div>
 
           {/* HERO DROITE — Logo grand format */}
-          <div id="dashboard" style={{ display:'flex',alignItems:'center',justifyContent:'center',padding:'2rem' }}>
-            <img src="/logo.png" alt="Jean Find My Job" style={{ width:'100%',maxWidth:420,height:'auto',objectFit:'contain',filter:'drop-shadow(6px 6px 0px #111)' }} />
+          <div id="dashboard" style={{ display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem' }}>
+            <img src="/logo.png" alt="Jean Find My Job" style={{ width:'100%',maxWidth:520,height:'auto',objectFit:'contain' }} />
           </div>
         </div>
       </section>
