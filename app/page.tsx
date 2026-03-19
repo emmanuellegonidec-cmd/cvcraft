@@ -33,17 +33,22 @@ export default function LandingPage() {
         .fade4{animation:fadeUp 0.6s ease 0.4s both}
         @media(max-width:768px){
           .nav-desktop{display:none!important}
+          .nav-btns{display:none!important}
           .hero-grid,.feat-grid,.steps-grid,.testi-grid,.blog-grid{grid-template-columns:1fr!important}
           .feats-grid{grid-template-columns:1fr 1fr!important}
-          .footer-grid{grid-template-columns:1fr 1fr!important}
+          .footer-grid{grid-template-columns:1fr!important}
+          .hero-logo-img{max-width:300px!important;margin:0 auto!important;}
+        }
+        @media(max-width:480px){
+          .nav-btns{display:none!important}
         }
       `}</style>
 
       {/* NAV */}
-      <nav style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'1rem 2.5rem',background:'#fff',borderBottom:'2.5px solid #111',position:'sticky',top:0,zIndex:100 }}>
-        <Link href="/" style={{ textDecoration:'none',display:'flex',alignItems:'center',gap:10 }}>
-          <img src="/logo.png" alt="Jean Find My Job" style={{ height:44,width:'auto',objectFit:'contain' }} />
-          <span style={{ fontFamily:'Montserrat,sans-serif',fontSize:'1rem',fontWeight:900,color:'#111',letterSpacing:'-0.01em' }}>
+      <nav style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'1rem 1.5rem',background:'#fff',borderBottom:'2.5px solid #111',position:'sticky',top:0,zIndex:100,flexWrap:'wrap',gap:8 }}>
+        <Link href="/" style={{ textDecoration:'none',display:'flex',alignItems:'center',gap:8 }}>
+          <img src="/logo.png" alt="Jean Find My Job" style={{ height:40,width:'auto',objectFit:'contain' }} />
+          <span style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.95rem',fontWeight:900,color:'#111',letterSpacing:'-0.01em' }}>
             Jean <span style={{ color:'#E8151B' }}>Find My Job</span>
           </span>
         </Link>
@@ -52,9 +57,9 @@ export default function LandingPage() {
             <a key={h} href={h} style={{ fontSize:13,color:'#111',textDecoration:'none',fontWeight:700,letterSpacing:'0.02em',textTransform:'uppercase' }}>{l}</a>
           ))}
         </div>
-        <div style={{ display:'flex',gap:10 }}>
-          <Link href="/auth/login" className="btn-outline" style={{ padding:'9px 20px',fontSize:13 }}>Connexion</Link>
-          <Link href="/auth/signup" className="btn-black" style={{ padding:'9px 20px',fontSize:13 }}>Commencer →</Link>
+        <div className="nav-btns" style={{ display:'flex',gap:8,alignItems:'center' }}>
+          <Link href="/auth/login" className="btn-outline" style={{ padding:'8px 16px',fontSize:12 }}>Connexion</Link>
+          <Link href="/auth/signup" className="btn-black" style={{ padding:'8px 16px',fontSize:12 }}>Commencer →</Link>
         </div>
       </nav>
 
@@ -84,8 +89,8 @@ export default function LandingPage() {
           </div>
 
           {/* HERO DROITE — Logo grand format */}
-          <div id="dashboard" style={{ display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem' }}>
-            <img src="/logo.png" alt="Jean Find My Job" style={{ width:'100%',maxWidth:520,height:'auto',objectFit:'contain' }} />
+          <div id="dashboard" style={{ display:'flex',alignItems:'center',justifyContent:'center',padding:'0' }}>
+            <img src="/logo.png" alt="Jean Find My Job" className="hero-logo-img" style={{ width:'100%',maxWidth:620,height:'auto',objectFit:'contain' }} />
           </div>
         </div>
       </section>
