@@ -25,11 +25,14 @@ export default function SignupPage() {
     if (password.length < 8) { setError('Le mot de passe doit faire au moins 8 caractères.'); return; }
     setLoading(true);
     const supabase = createClient();
-    const { error: err } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { first_name: firstName, last_name: lastName } },
-    });
+const { error: err } = await supabase.auth.signUp({
+  email,
+  password,
+  options: {
+    data: { first_name: firstName, last_name: lastName },
+    emailRedirectTo: 'https://jeanfindmyjob.fr/auth/callback',
+  },
+});
     setLoading(false);
     if (err) { setError(err.message); return; }
     setSuccess(true);
