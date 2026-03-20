@@ -52,6 +52,8 @@ export default function DashboardPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [newJob, setNewJob] = useState<Partial<Job>>({ status: 'to_apply', job_type: 'CDI' });
   const [newContact, setNewContact] = useState<Partial<Contact>>({});
+  const [addJobMode, setAddJobMode] = useState<null | 'url' | 'manual'>(null);
+  const [importError, setImportError] = useState(false);
 
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -230,7 +232,7 @@ export default function DashboardPage() {
               Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
             </div>
           </div>
-          <button className="btn-main" onClick={() => view === 'contacts' ? setShowAddContact(true) : setShowAddJob(true)}>
+          <button className="btn-main" onClick={() => view === 'contacts' ? setShowAddContact(true) : (setAddJobMode(null), setImportError(false), setShowAddJob(true))}>
             {view === 'contacts' ? '+ Ajouter un contact' : '+ Ajouter une offre'}
           </button>
         </div>
@@ -279,7 +281,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   ))}
-                  <div className="add-card" onClick={() => { setNewJob({ status: col.id, job_type: 'CDI' }); setShowAddJob(true); }}>
+                  <div className="add-card" onClick={() => { setNewJob({ status: col.id, job_type: 'CDI' }); setAddJobMode(null); setImportError(false); setShowAddJob(true); }}>
                     + Ajouter
                   </div>
                 </div>
@@ -491,22 +493,72 @@ export default function DashboardPage() {
               <h2 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Ajouter une offre</h2>
               <button onClick={() => setShowAddJob(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
-              {[{ lbl: 'Titre du poste *', key: 'title', full: true, ph: 'Chef de projet digital' }, { lbl: 'Entreprise *', key: 'company', ph: 'Decathlon' }, { lbl: 'Ville', key: 'location', ph: 'Paris · Hybrid' }, { lbl: 'Contact', key: 'contact_name', ph: 'Sophie Martin' }, { lbl: 'Email contact', key: 'contact_email', ph: 'recruteur@co.fr' }].map(f => (
-                <div key={f.key} style={{ marginBottom: 12, gridColumn: f.full ? '1/-1' : undefined }}>
-                  <label className="fl">{f.lbl}</label>
-                  <input className="fi" value={(newJob as any)[f.key] || ''} onChange={e => setNewJob({ ...newJob, [f.key]: e.target.value })} placeholder={f.ph} />
+
+            {/* CHOIX MODE */}
+            {!addJobMode && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <button onClick={() => setAddJobMode('url')} style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', textAlign: 'left', boxShadow: '2px 2px 0 #111', transition: 'all 0.15s', width: '100%' }}
+                  onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'translate(-1px,-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '3px 3px 0 #E8151B'; }}
+                  onMouseOut={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '2px 2px 0 #111'; }}>
+                  <span style={{ fontSize: 24 }}>🔗</span>
+                  <div><div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 2 }}>Importer depuis une URL</div><div style={{ fontSize: 12, color: '#888', fontWeight: 500 }}>Importer automatiquement depuis un jobboard</div></div>
+                </button>
+                <button onClick={() => setAddJobMode('manual')} style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', textAlign: 'left', boxShadow: '2px 2px 0 #111', transition: 'all 0.15s', width: '100%' }}
+                  onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'translate(-1px,-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '3px 3px 0 #E8151B'; }}
+                  onMouseOut={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '2px 2px 0 #111'; }}>
+                  <span style={{ fontSize: 24 }}>✍️</span>
+                  <div><div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 2 }}>Remplir manuellement</div><div style={{ fontSize: 12, color: '#888', fontWeight: 500 }}>Créer une offre à partir de zéro</div></div>
+                </button>
+              </div>
+            )}
+
+            {/* MODE URL */}
+            {addJobMode === 'url' && (
+              <div>
+                <button onClick={() => { setAddJobMode(null); setImportError(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 12, fontFamily: 'Montserrat,sans-serif', display: 'flex', alignItems: 'center', gap: 4 }}>← Retour</button>
+                <div style={{ marginBottom: 14 }}>
+                  <label className="fl">URL de l&apos;offre</label>
+                  <input className="fi" placeholder="https://www.linkedin.com/jobs/view/..." value={(newJob as any).url || ''} onChange={e => setNewJob({ ...newJob, url: e.target.value } as any)} />
                 </div>
-              ))}
-              <div style={{ marginBottom: 12 }}><label className="fl">Type</label><select className="fi" value={newJob.job_type} onChange={e => setNewJob({ ...newJob, job_type: e.target.value as JobType })}>{['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance'].map(t => <option key={t}>{t}</option>)}</select></div>
-              <div style={{ marginBottom: 12 }}><label className="fl">Statut</label><select className="fi" value={newJob.status} onChange={e => setNewJob({ ...newJob, status: e.target.value as JobStatus })}>{Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
-              <div style={{ marginBottom: 12, gridColumn: '1/-1' }}><label className="fl">Date d'entretien</label><input className="fi" type="datetime-local" value={newJob.interview_at || ''} onChange={e => setNewJob({ ...newJob, interview_at: e.target.value })} /></div>
-              <div style={{ marginBottom: 12, gridColumn: '1/-1' }}><label className="fl">Description</label><textarea className="fi" value={newJob.description || ''} onChange={e => setNewJob({ ...newJob, description: e.target.value })} placeholder="Résumé du poste..." rows={3} style={{ resize: 'vertical' }} /></div>
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowAddJob(false)}>Annuler</button>
-              <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={saveJob} disabled={!newJob.title || !newJob.company}>Ajouter l'offre</button>
-            </div>
+                {importError && (
+                  <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#111', marginBottom: 4 }}>Impossible d&apos;importer cette offre automatiquement.</div>
+                    <div style={{ fontSize: 12, color: '#888', fontWeight: 500, marginBottom: 10 }}>Vous pouvez la remplir manuellement.</div>
+                    <button className="btn-main" style={{ fontSize: 12, padding: '7px 14px' }} onClick={() => { setAddJobMode('manual'); setImportError(false); }}>→ Remplir manuellement</button>
+                  </div>
+                )}
+                {!importError && (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setAddJobMode(null)}>Annuler</button>
+                    <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={() => setImportError(true)} disabled={!(newJob as any).url}>Importer l&apos;offre →</button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* MODE MANUEL */}
+            {addJobMode === 'manual' && (
+              <div>
+                <button onClick={() => setAddJobMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 12, fontFamily: 'Montserrat,sans-serif', display: 'flex', alignItems: 'center', gap: 4 }}>← Retour</button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px', maxHeight: '55vh', overflowY: 'auto', paddingRight: 4 }}>
+                  <div style={{ marginBottom: 12 }}><label className="fl">Date de l&apos;offre</label><input className="fi" type="date" value={(newJob as any).offer_date || ''} onChange={e => setNewJob({ ...newJob, offer_date: e.target.value } as any)} /></div>
+                  <div style={{ marginBottom: 12 }}><label className="fl">Type de contrat</label><select className="fi" value={newJob.job_type} onChange={e => setNewJob({ ...newJob, job_type: e.target.value as JobType })}>{['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance'].map(t => <option key={t}>{t}</option>)}</select></div>
+                  <div style={{ marginBottom: 12, gridColumn: '1/-1' }}><label className="fl">Poste *</label><input className="fi" value={newJob.title || ''} onChange={e => setNewJob({ ...newJob, title: e.target.value })} placeholder="Chef de projet digital" /></div>
+                  <div style={{ marginBottom: 12 }}><label className="fl">Entreprise *</label><input className="fi" value={newJob.company || ''} onChange={e => setNewJob({ ...newJob, company: e.target.value })} placeholder="Decathlon" /></div>
+                  <div style={{ marginBottom: 12 }}><label className="fl">Source</label><select className="fi" value={(newJob as any).source || ''} onChange={e => setNewJob({ ...newJob, source: e.target.value } as any)}><option value="">Choisir...</option>{['LinkedIn','Indeed','Welcome to the Jungle','Apec','Pôle Emploi','Site entreprise','Réseau','Autre'].map(s => <option key={s}>{s}</option>)}</select></div>
+                  <div style={{ marginBottom: 12 }}><label className="fl">Lieu</label><input className="fi" value={newJob.location || ''} onChange={e => setNewJob({ ...newJob, location: e.target.value })} placeholder="Paris · Hybrid" /></div>
+                  <div style={{ marginBottom: 12 }}><label className="fl">Salaire</label><input className="fi" value={(newJob as any).salary || ''} onChange={e => setNewJob({ ...newJob, salary: e.target.value } as any)} placeholder="45-55k€ / an" /></div>
+                  <div style={{ marginBottom: 12 }}><label className="fl">Statut</label><select className="fi" value={newJob.status} onChange={e => setNewJob({ ...newJob, status: e.target.value as JobStatus })}>{Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+                  <div style={{ marginBottom: 12, gridColumn: '1/-1' }}><label className="fl">Lien <span style={{ color: '#aaa', fontWeight: 500, textTransform: 'none' }}>(optionnel)</span></label><input className="fi" value={(newJob as any).url || ''} onChange={e => setNewJob({ ...newJob, url: e.target.value } as any)} placeholder="https://..." /></div>
+                  <div style={{ marginBottom: 12, gridColumn: '1/-1' }}><label className="fl">Description</label><textarea className="fi" value={newJob.description || ''} onChange={e => setNewJob({ ...newJob, description: e.target.value })} placeholder="Résumé du poste, missions..." rows={3} style={{ resize: 'vertical' }} /></div>
+                  <div style={{ marginBottom: 12, gridColumn: '1/-1' }}><label className="fl">Notes personnelles</label><textarea className="fi" value={newJob.notes || ''} onChange={e => setNewJob({ ...newJob, notes: e.target.value })} placeholder="Mes impressions, points à vérifier..." rows={2} style={{ resize: 'vertical' }} /></div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                  <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowAddJob(false)}>Annuler</button>
+                  <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={saveJob} disabled={!newJob.title || !newJob.company}>Ajouter l&apos;offre</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
