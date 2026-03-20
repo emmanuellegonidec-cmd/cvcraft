@@ -113,12 +113,11 @@ async function importJobFromUrl(url: string) {
 
   try {
     const supabase = createClient();
-
     const { data: { session } } = await supabase.auth.getSession();
 
-    // ✅ Sécurité : on bloque si pas de session
+    // ✅ Si pas de session → on garde le comportement UI
     if (!session) {
-      console.error("❌ Session manquante");
+      console.error("❌ Pas de session");
       setImportError(true);
       return;
     }
@@ -127,33 +126,40 @@ async function importJobFromUrl(url: string) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`, // ✅ TOUJOURS envoyé
+        'Authorization': `Bearer ${session.access_token}`, // ✅ FIX
       },
       body: JSON.stringify({ url }),
     });
 
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        setImportError(true);
-      } else {
-        const job = data.job || data;
-        setNewJob({
-          title: job.title || '',
-          company: job.company_name || '',
-          location: job.location_text || '',
-          description: job.description || '',
-          job_type: 'CDI',
-          status: 'to_apply',
-          notes: '',
-        });
-        setAddJobMode('manual');
-      }
-    } catch {
-      setImportError(true);
-    } finally {
-      setImportLoading(false);
+    const data = await res.json();
+
+    // ✅ ON GARDE TON COMPORTEMENT EXISTANT
+    if (!res.ok || data.error) {
+      console.error("❌ Import error:", data);
+      setImportError(true); // 👉 garde le message + bouton manuel
+    } else {
+      const job = data.job || data;
+
+      setNewJob({
+        title: job.title || '',
+        company: job.company_name || '',
+        location: job.location_text || '',
+        description: job.description || '',
+        job_type: 'CDI',
+        status: 'to_apply',
+        notes: '',
+      });
+
+      setAddJobMode('manual'); // 👉 IMPORTANT : on garde le pré-remplissage
     }
+
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    setImportError(true); // 👉 garde fallback manuel
+  } finally {
+    setImportLoading(false);
   }
+}
 
   const filteredJobs = jobs.filter(j => {
     const ms = !searchQuery || j.title.toLowerCase().includes(searchQuery.toLowerCase()) || j.company.toLowerCase().includes(searchQuery.toLowerCase());
