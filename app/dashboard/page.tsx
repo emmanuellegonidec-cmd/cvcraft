@@ -54,6 +54,7 @@ export default function DashboardPage() {
   const [newContact, setNewContact] = useState<Partial<Contact>>({});
   const [addJobMode, setAddJobMode] = useState<null | 'url' | 'manual'>(null);
   const [importError, setImportError] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
 
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -105,6 +106,38 @@ export default function DashboardPage() {
     const res = await fetch('/api/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newContact) });
     const data = await res.json();
     if (data.contact) { setContacts([data.contact, ...contacts]); setShowAddContact(false); setNewContact({}); }
+  }
+
+  async function importJobFromUrl(url: string) {
+    setImportLoading(true);
+    setImportError(false);
+    try {
+      const res = await fetch('/api/jobs/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setImportError(true);
+      } else {
+        const job = data.job || data;
+        setNewJob({
+          title: job.title || '',
+          company: job.company_name || '',
+          location: job.location_text || '',
+          description: job.description || '',
+          job_type: 'CDI',
+          status: 'to_apply',
+          notes: '',
+        });
+        setAddJobMode('manual');
+      }
+    } catch {
+      setImportError(true);
+    } finally {
+      setImportLoading(false);
+    }
   }
 
   const filteredJobs = jobs.filter(j => {
@@ -530,7 +563,7 @@ export default function DashboardPage() {
                 {!importError && (
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setAddJobMode(null)}>Annuler</button>
-                    <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={() => setImportError(true)} disabled={!(newJob as any).url}>Importer l&apos;offre →</button>
+                    <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={() => importJobFromUrl((newJob as any).url || '')} disabled={!(newJob as any).url || importLoading}>{importLoading ? 'Import en cours...' : "Importer l'offre →"}</button>
                   </div>
                 )}
               </div>
