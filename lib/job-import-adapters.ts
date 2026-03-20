@@ -144,7 +144,7 @@ function parseSalary(salaryText: string | null): {
       ? 'USD'
       : null
 
-  const numbers = [...salaryText.matchAll(/(\d[\d\s.,]*)/g)]
+  const numbers = Array.from(salaryText.matchAll(/(\d[\d\s.,]*)/g))
     .map((m) => m[1].replace(/\s/g, '').replace(',', '.'))
     .map((n) => Number.parseFloat(n))
     .filter((n) => Number.isFinite(n))
