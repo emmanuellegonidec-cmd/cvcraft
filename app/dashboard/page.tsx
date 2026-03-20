@@ -107,24 +107,31 @@ export default function DashboardPage() {
     const data = await res.json();
     if (data.contact) { setContacts([data.contact, ...contacts]); setShowAddContact(false); setNewContact({}); }
   }
+async function importJobFromUrl(url: string) {
+  setImportLoading(true);
+  setImportError(false);
 
-  async function importJobFromUrl(url: string) {
-    setImportLoading(true);
-    setImportError(false);
-    try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+  try {
+    const supabase = createClient();
 
-      const res = await fetch('/api/jobs/import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {}),
-        },
-        body: JSON.stringify({ url }),
-      });
+    const { data: { session } } = await supabase.auth.getSession();
+
+    // ✅ Sécurité : on bloque si pas de session
+    if (!session) {
+      console.error("❌ Session manquante");
+      setImportError(true);
+      return;
+    }
+
+    const res = await fetch('/api/jobs/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`, // ✅ TOUJOURS envoyé
+      },
+      body: JSON.stringify({ url }),
+    });
+
       const data = await res.json();
       if (!res.ok || data.error) {
         setImportError(true);
