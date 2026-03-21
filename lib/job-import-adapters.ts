@@ -185,7 +185,6 @@ function createEmptyJob(source: JobSource, url: string): NormalizedJobOffer {
     source_url: url,
     source_hostname: getHostname(url),
     external_job_id: null,
-
     title: null,
     company_name: null,
     location_text: null,
@@ -193,21 +192,17 @@ function createEmptyJob(source: JobSource, url: string): NormalizedJobOffer {
     employment_type: null,
     seniority_level: null,
     department: null,
-
     salary_text: null,
     salary_min: null,
     salary_max: null,
     currency: null,
-
     description: null,
     requirements: null,
     benefits: null,
     posted_at_text: null,
     raw_text: null,
-
     import_status: 'failed',
     extraction_confidence: null,
-
     parser_name: null,
     parser_version: PARSER_VERSION,
   }
@@ -322,6 +317,88 @@ function externalIdFromPath(url: string, regex: RegExp): string | null {
   return match?.[1] ?? null
 }
 
+// ─────────────────────────────────────────────────────────────────
+// EXTRACTION DEPUIS LE RAW_TEXT LINKEDIN (page non connectée)
+// LinkedIn charge le vrai contenu en JS dynamique, donc on parse
+// le raw_text qui contient tout le texte de la page.
+// ─────────────────────────────────────────────────────────────────
+
+function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | null): {
+  title: string | null
+  company_name: string | null
+  location_text: string | null
+  description: string | null
+  employment_type: string | null
+  seniority_level: string | null
+} {
+  // Structure du raw_text LinkedIn non connecté :
+  // "...S'identifier S'inscrire [TITRE] [ENTREPRISE] [LIEU] Postuler [TITRE] [ENTREPRISE] [LIEU] il y a X..."
+  // Le vrai contenu de l'offre vient ensuite jusqu'à "Show more Show less"
+
+  // 1. Extraire le titre : apparaît juste après "S'inscrire" et avant l'entreprise
+  let title: string | null = null
+  let company_name: string | null = companyFromMeta
+  let location_text: string | null = null
+  let description: string | null = null
+  let employment_type: string | null = null
+  let seniority_level: string | null = null
+
+  // Pattern : "S'inscrire [TITRE] [ENTREPRISE] [LIEU] Postuler"
+  const headerMatch = rawText.match(/S'inscrire\s+(.+?)\s+([\w\s\-&'.]+)\s+([\w\s,\-éèêëàâùûüîïôœç]+)\s+Postuler/)
+  if (headerMatch) {
+    title = cleanText(headerMatch[1])
+    if (!company_name) company_name = cleanText(headerMatch[2])
+    location_text = cleanText(headerMatch[3])
+      ?.replace(/^(Ville de |Province de |Région de )/i, '')
+      .trim() ?? null
+  }
+
+  // 2. Extraire la description : entre le contenu de l'offre et "Show more Show less"
+  // Le vrai contenu commence après "il y a X jours Plus de X candidats" ou après le nom de l'entreprise répété
+  const descStart = rawText.search(/(?:🎯|Missions|À propos|Description du poste|Rattaché|Dans le cadre|Nous recherchons|Le poste|Vos missions|Contexte|Présentation)/i)
+
+  if (descStart > -1) {
+    // Trouver la fin : "Show more Show less" ou "Niveau hiérarchique"
+    const descEndMatch = rawText.slice(descStart).search(/Show more Show less|Niveau hiérarchique|Les recommandations|Offres d'emploi similaires/i)
+    const descEnd = descEndMatch > -1 ? descStart + descEndMatch : descStart + 8000
+
+    description = cleanText(rawText.slice(descStart, descEnd))
+  } else {
+    // Fallback : prendre le bloc principal entre les marqueurs LinkedIn
+    const fallbackStart = rawText.search(/Postuler\s+Enregistrer/)
+    const fallbackEnd = rawText.search(/Show more Show less|Niveau hiérarchique/)
+
+    if (fallbackStart > -1 && fallbackEnd > fallbackStart) {
+      // Sauter "Postuler Enregistrer Signaler..." pour aller au vrai contenu
+      const contentStart = rawText.indexOf('\n', fallbackStart + 50)
+      description = cleanText(rawText.slice(
+        contentStart > -1 ? contentStart : fallbackStart + 50,
+        fallbackEnd
+      ))
+    }
+  }
+
+  // 3. Extraire employment_type et seniority depuis la fin du raw_text
+  const employmentMatch = rawText.match(/Type d'emploi\s+([^\n]+)/i)
+  if (employmentMatch) employment_type = cleanText(employmentMatch[1])
+
+  const seniorityMatch = rawText.match(/Niveau hiérarchique\s+([^\n]+)/i)
+  if (seniorityMatch) seniority_level = cleanText(seniorityMatch[1])
+
+  // 4. Nettoyer le lieu si pas trouvé via header
+  if (!location_text) {
+    const locMatch = rawText.match(/(?:Ville de |Province de )?([A-ZÀ-Ÿ][a-zà-ÿ\-]+(?:[\s,]+[A-ZÀ-Ÿ][a-zà-ÿ\-]+)*)\s+(?:Postuler|il y a)/
+    )
+    if (locMatch) {
+      location_text = locMatch[1]
+        .replace(/^(Ville de |Province de |Région de )/i, '')
+        .trim()
+    }
+  }
+
+  return { title, company_name, location_text, description, employment_type, seniority_level }
+}
+
 const linkedinAdapter: JobAdapter = {
   source: 'linkedin',
   canHandle: (url) => {
@@ -333,31 +410,54 @@ const linkedinAdapter: JobAdapter = {
     )
   },
   parse: ({ url, $, html }) => {
+    // Essai 1 : JSON-LD (meilleure source, mais rarement présent sur LinkedIn)
     const jsonLd = extractJsonLdJobPosting($)
     if (jsonLd) return normalizeJsonLd(url, 'linkedin', jsonLd)
 
+    // Essai 2 : sélecteurs CSS (page connectée)
+    const titleFromMeta = attr($, 'meta[property="og:title"]', 'content')
+    const companyFromMeta =
+      text($, '.topcard__org-name-link') ||
+      text($, '.job-details-jobs-unified-top-card__company-name')
+    const descFromCss =
+      text($, '.show-more-less-html__markup') ||
+      text($, '.description__text')
+
+    const rawText = bodyText($) ?? cleanText(html) ?? ''
+
+    // Essai 3 : extraction depuis raw_text (page non connectée — cas le plus fréquent)
+    const extracted = extractLinkedInFromRawText(rawText, companyFromMeta)
+
+    // Priorité : CSS > extraction raw_text > meta
+    const finalTitle = extracted.title ||
+      titleFromMeta?.replace(/\s*[|\-]\s*LinkedIn.*$/i, '').trim() ||
+      null
+
+    const finalLocation = extracted.location_text
+      ?.replace(/^(Ville de |Province de |Région de )/i, '')
+      .trim() ?? null
+
+    const finalDescription = descFromCss || extracted.description || null
+
     return finalizeJob('linkedin', 'linkedinAdapter', url, {
       external_job_id: externalIdFromPath(url, /\/jobs\/view\/(\d+)/),
-      title:
-        attr($, 'meta[property="og:title"]', 'content') ||
-        text($, 'h1'),
-      company_name:
-        text($, '.topcard__org-name-link') ||
-        text($, '.job-details-jobs-unified-top-card__company-name'),
-      location_text:
-        text($, '.topcard__flavor--bullet') ||
-        text($, '.job-details-jobs-unified-top-card__primary-description-container'),
-      employment_type: cleanText($('li:contains("Employment type") span').last().text()),
-      seniority_level: cleanText($('li:contains("Seniority level") span').last().text()),
+      title: finalTitle,
+      company_name: extracted.company_name || companyFromMeta,
+      location_text: finalLocation,
+      employment_type: extracted.employment_type ||
+        cleanText($('li:contains("Employment type") span').last().text()),
+      seniority_level: extracted.seniority_level ||
+        cleanText($('li:contains("Seniority level") span').last().text()),
       department: cleanText($('li:contains("Job function") span').last().text()),
-      description:
-        attr($, 'meta[name="description"]', 'content') ||
-        text($, '.show-more-less-html__markup') ||
-        text($, '.description__text'),
-      raw_text: bodyText($) ?? cleanText(html),
+      description: finalDescription,
+      raw_text: rawText,
     })
   },
 }
+
+// ─────────────────────────────────────────────────────────────────
+// AUTRES ADAPTATEURS — inchangés, prêts pour futurs jobboards
+// ─────────────────────────────────────────────────────────────────
 
 const apecAdapter: JobAdapter = {
   source: 'apec',
