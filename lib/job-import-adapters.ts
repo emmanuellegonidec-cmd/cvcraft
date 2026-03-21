@@ -109,17 +109,14 @@ function parseSalary(salaryText: string | null): {
   currency: string | null
 } {
   if (!salaryText) return { salary_min: null, salary_max: null, currency: null }
-
   const currency =
     salaryText.includes('€') || salaryText.toLowerCase().includes('eur') ? 'EUR'
     : salaryText.includes('$') ? 'USD'
     : null
-
   const numbers = Array.from(salaryText.matchAll(/(\d[\d\s.,]*)/g))
     .map((m) => m[1].replace(/\s/g, '').replace(',', '.'))
     .map((n) => Number.parseFloat(n))
     .filter((n) => Number.isFinite(n))
-
   if (numbers.length >= 2) return { salary_min: numbers[0] ?? null, salary_max: numbers[1] ?? null, currency }
   if (numbers.length === 1) return { salary_min: numbers[0] ?? null, salary_max: null, currency }
   return { salary_min: null, salary_max: null, currency }
@@ -240,8 +237,12 @@ function externalIdFromPath(url: string, regex: RegExp): string | null {
 
 // ─────────────────────────────────────────────────────────────────
 // EXTRACTION DEPUIS LE RAW_TEXT LINKEDIN (page non connectée)
-// Pattern LinkedIn non connecté dans le raw_text :
-// "S'inscrire [TITRE] [ENTREPRISE] [LIEU] Postuler [TITRE] [ENTREPRISE] [LIEU] il y a X jours"
+//
+// Le raw_text LinkedIn contient toujours ce pattern répété 2 fois :
+// "Chief Marketing Officer H/F Stych Ville de Paris Postuler
+//  Chief Marketing Officer H/F Stych Ville de Paris il y a X jours"
+//
+// On exploite le 2e bloc (avant "il y a") car il est fiable et court.
 // ─────────────────────────────────────────────────────────────────
 
 function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | null): {
@@ -260,47 +261,68 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
   let seniority_level: string | null = null
 
   // ── 1. TITRE et LIEU ──────────────────────────────────────────
-  // Le raw_text contient toujours ce bloc :
-  // "S'inscrire [TITRE] [ENTREPRISE] [LIEU] Postuler"
-  // On cherche ce pattern précis pour extraire les 3 valeurs d'un coup
+  // Stratégie : chercher le pattern "[TITRE] [ENTREPRISE] [LIEU] il y a \d"
+  // Ce pattern est toujours présent et fiable dans le raw_text LinkedIn.
+  // On utilise l'entreprise connue comme pivot pour séparer titre et lieu.
 
-  // Étape A : trouver le bloc après "S'inscrire" et avant "Postuler"
-  const headerBlock = rawText.match(/S'inscrire\s+(.+?)\s+Postuler/i)
-  if (headerBlock) {
-    const block = headerBlock[1].trim()
-    // Le bloc contient "[TITRE] [ENTREPRISE] [LIEU]"
-    // On utilise l'entreprise connue pour séparer titre et lieu
-    if (companyFromMeta) {
-      const escaped = companyFromMeta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      const splitRegex = new RegExp(`^(.+?)\\s+${escaped}\\s+(.+)$`, 'i')
-      const split = block.match(splitRegex)
-      if (split) {
-        title = cleanText(split[1])
-        location_text = cleanText(split[2])
+  if (companyFromMeta) {
+    const escaped = companyFromMeta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+    // Pattern : "[TITRE] [ENTREPRISE] [LIEU] il y a X"
+    const withCompanyRegex = new RegExp(
+      `(.+?)\\s+${escaped}\\s+((?:Ville de |Province de |Région de )?[A-ZÀ-Ÿ][a-zà-ÿ\\s,\\-]+?)\\s+il y a\\s+\\d`,
+      'i'
+    )
+    const match = rawText.match(withCompanyRegex)
+    if (match) {
+      title = cleanText(match[1])
+      location_text = cleanText(match[2])
+        ?.replace(/^(Ville de |Province de |Région de )/i, '')
+        .trim() ?? null
+    }
+
+    // Fallback : pattern sans "il y a" — "[TITRE] [ENTREPRISE] [LIEU] Postuler"
+    if (!title) {
+      const fallbackRegex = new RegExp(
+        `(.+?)\\s+${escaped}\\s+((?:Ville de |Province de |Région de )?[A-ZÀ-Ÿ][a-zà-ÿ\\s,\\-]+?)\\s+Postuler`,
+        'i'
+      )
+      const fallback = rawText.match(fallbackRegex)
+      if (fallback) {
+        title = cleanText(fallback[1])
+        location_text = cleanText(fallback[2])
           ?.replace(/^(Ville de |Province de |Région de )/i, '')
           .trim() ?? null
       }
     }
-
-    // Fallback : pas d'entreprise connue — on tente de deviner
-    // Format typique : "Chief Marketing Officer H/F Stych Ville de Paris"
-    // On cherche le dernier mot en majuscule comme séparateur entreprise/lieu
-    if (!title) {
-      // Cherche un pattern "[TITRE] [MOT_MAJUSCULE] [LIEU_CONNU]"
-      const fallbackSplit = block.match(/^(.+?)\s+([A-ZÀ-Ÿ][a-zA-ZÀ-ÿ\s&'\-\.]+?)\s+((?:Ville de |Province de )?[A-ZÀ-Ÿ][a-zà-ÿ\s,\-]+)$/)
-      if (fallbackSplit) {
-        title = cleanText(fallbackSplit[1])
-        company_name = cleanText(fallbackSplit[2])
-        location_text = cleanText(fallbackSplit[3])
-          ?.replace(/^(Ville de |Province de |Région de )/i, '')
-          .trim() ?? null
-      }
+  } else {
+    // Pas d'entreprise connue : pattern générique
+    // "[TITRE] [MOT_ENTREPRISE] [LIEU] il y a \d"
+    const genericMatch = rawText.match(
+      /([A-ZÀ-Ÿ].+?)\s+([A-ZÀ-Ÿ][a-zA-ZÀ-ÿ\s&'\-\.]{1,40}?)\s+((?:Ville de |Province de )?[A-ZÀ-Ÿ][a-zà-ÿ\s,\-]+?)\s+il y a\s+\d/i
+    )
+    if (genericMatch) {
+      title = cleanText(genericMatch[1])
+      company_name = cleanText(genericMatch[2])
+      location_text = cleanText(genericMatch[3])
+        ?.replace(/^(Ville de |Province de |Région de )/i, '')
+        .trim() ?? null
     }
   }
 
+  // Nettoyage titre : supprimer les préfixes parasites LinkedIn
+  // ex: "Stych recrute pour des postes de Chief Marketing Officer H/F"
+  if (title) {
+    title = title
+      .replace(/^.+?\s+recrute\s+(?:pour\s+(?:des?\s+postes?\s+de\s+)?)?/i, '')
+      .replace(/^.+?\s+recherche\s+(?:un[e]?\s+)?/i, '')
+      .replace(/^.+?\s+est\s+(?:à\s+la\s+recherche\s+d['e]un[e]?\s+)?/i, '')
+      .trim()
+    if (!title) title = null
+  }
+
   // ── 2. DESCRIPTION ────────────────────────────────────────────
-  // Le vrai contenu de l'offre commence après les infos de contact LinkedIn
-  // et se termine avant "Show more Show less" ou "Niveau hiérarchique"
+  // Cherche le début du vrai contenu de l'offre
   const descStart = rawText.search(
     /(?:⭐|🎯|Missions|À propos|Description du poste|Rattaché|Dans le cadre|Nous recherchons|Le poste|Vos missions|Contexte|Présentation)/i
   )
@@ -313,7 +335,7 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
     const descEnd = descEndMatch > -1 ? descStart + descEndMatch : descStart + 8000
     description = cleanText(rawText.slice(descStart, descEnd))
   } else {
-    // Fallback : le contenu commence souvent après "Postuler Enregistrer Signaler"
+    // Fallback : contenu après "Postuler Enregistrer Signaler"
     const fallbackDescStart = rawText.search(/Postuler\s+Enregistrer\s+Signaler/)
     if (fallbackDescStart > -1) {
       const afterBlock = rawText.slice(fallbackDescStart + 30)
@@ -324,7 +346,6 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
   }
 
   // ── 3. EMPLOYMENT TYPE et SENIORITY ───────────────────────────
-  // Ces infos apparaissent après "Show more Show less" dans le raw_text
   const employmentMatch = rawText.match(
     /Type d'emploi\s+(Temps plein|Temps partiel|CDI|CDD|Freelance|Stage|Alternance)/i
   )
@@ -368,10 +389,11 @@ const linkedinAdapter: JobAdapter = {
       ?.replace(/\s*[|]\s*LinkedIn.*$/i, '')
       ?.replace(/\s*-\s*LinkedIn.*$/i, '')
       ?.replace(/\s*\(Ville de [^)]+\)\s*/i, '')
+      ?.replace(/^.+?\s+recrute\s+(?:pour\s+(?:des?\s+postes?\s+de\s+)?)?/i, '')
       ?.trim() ?? null
 
     // Priorités : extracted > CSS > meta nettoyé
-    const finalTitle = extracted.title || descFromCss && cleanMetaTitle || cleanMetaTitle || null
+    const finalTitle = extracted.title || cleanMetaTitle || null
     const finalLocation = extracted.location_text ?? null
     const finalDescription = descFromCss || extracted.description || null
 
