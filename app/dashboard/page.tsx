@@ -1,44 +1,31 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
-import { Job, Contact, JobStatus, STATUS_LABELS, STATUS_COLORS, JobType } from '@/lib/jobs';
+import { Job, Contact, JobStatus, STATUS_COLORS, JobType } from '@/lib/jobs';
 
 type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats';
 
-const COLUMNS: { id: JobStatus; label: string; countBg: string; countColor: string }[] = [
-  { id: 'to_apply', label: 'Envie de postuler ?', countBg: '#E0E0E0', countColor: '#888' },
-  { id: 'applied', label: 'Postulé', countBg: '#EBF2FD', countColor: '#1A6FDB' },
-  { id: 'interview', label: 'Entretien', countBg: '#FEF9E0', countColor: '#B8900A' },
-  { id: 'offer', label: 'Offre reçue', countBg: '#E8F5EE', countColor: '#1A7A4A' },
-  { id: 'archived', label: 'Archivé', countBg: '#F0EEEA', countColor: '#aaa' },
+// Étapes de base du pipeline
+const DEFAULT_STAGES = [
+  { id: 'to_apply', label: 'Envie de postuler ?', color: '#888', position: 1, is_default: true },
+  { id: 'applied', label: 'Postulé', color: '#1A6FDB', position: 2, is_default: true },
+  { id: 'phone_interview', label: 'Entretien téléphonique', color: '#B8900A', position: 3, is_default: true },
+  { id: 'hr_interview', label: 'Entretien RH', color: '#B8500A', position: 4, is_default: true },
+  { id: 'technical_interview', label: 'Entretien technique', color: '#7A1ADB', position: 5, is_default: true },
+  { id: 'offer', label: 'Offre reçue', color: '#1A7A4A', position: 6, is_default: true },
+  { id: 'archived', label: 'Archivé', color: '#aaa', position: 99, is_default: true },
 ];
 
-function cleanJobTitle(title: string | null | undefined): string {
-  if (!title) return '';
-  return title
-    .replace(/\s*[\|]\s*(LinkedIn|Indeed|APEC|HelloWork|Welcome to the Jungle).*$/i, '')
-    .replace(/\s*-\s*(LinkedIn|Indeed|APEC|HelloWork|Welcome to the Jungle).*$/i, '')
-    .trim();
-}
-
-function cleanLocation(location: string | null | undefined): string {
-  if (!location) return '';
-  return location.replace(/^(Ville de |Province de |Région de |Department of )/i, '').trim();
-}
-
-function detectSource(url: string | null | undefined): string {
-  if (!url) return '';
-  const u = url.toLowerCase();
-  if (u.includes('linkedin.com')) return 'LinkedIn';
-  if (u.includes('indeed.')) return 'Indeed';
-  if (u.includes('apec.fr')) return 'Apec';
-  if (u.includes('hellowork.com')) return 'HelloWork';
-  if (u.includes('welcometothejungle.com')) return 'Welcome to the Jungle';
-  return 'Autre';
-}
+type Stage = {
+  id: string;
+  label: string;
+  color: string;
+  position: number;
+  is_default?: boolean;
+};
 
 function capitalize(str: string) {
   if (!str) return '';
@@ -58,22 +45,43 @@ function formatRelative(dateStr: string) {
   return formatDate(dateStr) || '';
 }
 
+function cleanJobTitle(title: string | null | undefined): string {
+  if (!title) return '';
+  return title.replace(/\s*[\|]\s*(LinkedIn|Indeed|APEC|HelloWork|Welcome to the Jungle).*$/i, '').replace(/\s*-\s*(LinkedIn|Indeed|APEC|HelloWork|Welcome to the Jungle).*$/i, '').trim();
+}
+
+function cleanLocation(location: string | null | undefined): string {
+  if (!location) return '';
+  return location.replace(/^(Ville de |Province de |Région de |Department of )/i, '').trim();
+}
+
+function detectSource(url: string | null | undefined): string {
+  if (!url) return '';
+  const u = url.toLowerCase();
+  if (u.includes('linkedin.com')) return 'LinkedIn';
+  if (u.includes('indeed.')) return 'Indeed';
+  if (u.includes('apec.fr')) return 'Apec';
+  if (u.includes('hellowork.com')) return 'HelloWork';
+  if (u.includes('welcometothejungle.com')) return 'Welcome to the Jungle';
+  return 'Autre';
+}
+
 function HeartRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hovered, setHovered] = useState(0);
   return (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
       {[1, 2, 3].map(i => (
         <span key={i} onClick={() => onChange(value === i ? 0 : i)} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(0)}
-          style={{ fontSize: 26, cursor: 'pointer', color: (hovered >= i || value >= i) ? '#E8151B' : '#E0E0E0', transition: 'color 0.15s, transform 0.1s', transform: hovered >= i ? 'scale(1.2)' : 'scale(1)', display: 'inline-block', userSelect: 'none' }}>♥</span>
+          style={{ fontSize: 22, cursor: 'pointer', color: (hovered >= i || value >= i) ? '#E8151B' : '#E0E0E0', transition: 'color 0.15s', display: 'inline-block', userSelect: 'none' }}>♥</span>
       ))}
-      {value > 0 && <span style={{ fontSize: 11, color: '#E8151B', fontWeight: 700, marginLeft: 4 }}>{value === 1 ? 'Intéressant' : value === 2 ? "J'aime bien" : 'Coup de cœur !'}</span>}
+      {value > 0 && <span style={{ fontSize: 10, color: '#E8151B', fontWeight: 700 }}>{value === 1 ? 'Intéressant' : value === 2 ? "J'aime bien" : 'Coup de cœur !'}</span>}
     </div>
   );
 }
 
 function HeartDisplay({ value }: { value: number }) {
   if (!value) return null;
-  return <div style={{ display: 'flex', gap: 2, marginTop: 4 }}>{[1, 2, 3].map(i => <span key={i} style={{ fontSize: 11, color: i <= value ? '#E8151B' : '#E0E0E0' }}>♥</span>)}</div>;
+  return <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>{[1, 2, 3].map(i => <span key={i} style={{ fontSize: 10, color: i <= value ? '#E8151B' : '#E0E0E0' }}>♥</span>)}</div>;
 }
 
 const EMPTY_JOB = { status: 'to_apply' as JobStatus, job_type: 'CDI' as JobType, title: '', company: '', location: '', description: '', notes: '', salary: '', source: '', url: '', favorite: 0 };
@@ -83,13 +91,16 @@ export default function DashboardPage() {
   const [view, setView] = useState<View>('kanban');
   const [jobs, setJobs] = useState<Job[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [stages, setStages] = useState<Stage[]>(DEFAULT_STAGES);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState('');
   const [firstName, setFirstName] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showAddJob, setShowAddJob] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [newJob, setNewJob] = useState({ ...EMPTY_JOB });
@@ -99,6 +110,17 @@ export default function DashboardPage() {
   const [importLoading, setImportLoading] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
+  // Upload document
+  const [uploadingCv, setUploadingCv] = useState(false);
+  const [uploadingLm, setUploadingLm] = useState(false);
+  const cvInputRef = useRef<HTMLInputElement>(null);
+  const lmInputRef = useRef<HTMLInputElement>(null);
+  // Synthèse entretien
+  const [interviewSummary, setInterviewSummary] = useState('');
+  // Settings - nouvelle étape
+  const [newStageName, setNewStageName] = useState('');
+  const [newStageColor, setNewStageColor] = useState('#E8151B');
+  const [newStagePosition, setNewStagePosition] = useState(3);
 
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -115,90 +137,110 @@ export default function DashboardPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/auth/login'); return; }
       setAccessToken(session.access_token);
+      setUserId(session.user.id);
       setUserEmail(session.user.email || '');
       const meta = session.user.user_metadata;
       setFirstName(capitalize(meta?.first_name || meta?.full_name?.split(' ')[0] || session.user.email?.split('@')[0] || ''));
+
       const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
       const [jr, cr] = await Promise.all([fetch('/api/jobs', { headers: h }), fetch('/api/contacts', { headers: h })]);
       const jd = await jr.json(); const cd = await cr.json();
-      setJobs(jd.jobs || []); setContacts(cd.contacts || []); setLoading(false);
+      setJobs(jd.jobs || []); setContacts(cd.contacts || []);
+
+      // Charger les étapes personnalisées
+      const { data: customStages } = await supabase.from('pipeline_stages').select('*').eq('user_id', session.user.id).order('position');
+      if (customStages && customStages.length > 0) {
+        const allStages = [...DEFAULT_STAGES, ...customStages.map((s: any) => ({ id: s.id, label: s.label, color: s.color, position: s.position, is_default: false }))];
+        allStages.sort((a, b) => a.position - b.position);
+        setStages(allStages);
+      }
+
+      setLoading(false);
     }
     load();
   }, [router]);
 
+  async function addCustomStage() {
+    if (!newStageName.trim() || !userId || !accessToken) return;
+    const supabase = createClient();
+    const { data } = await supabase.from('pipeline_stages').insert({
+      user_id: userId,
+      label: newStageName.trim(),
+      color: newStageColor,
+      position: newStagePosition,
+    }).select().single();
+    if (data) {
+      const newStage: Stage = { id: data.id, label: data.label, color: data.color, position: data.position, is_default: false };
+      const updated = [...stages, newStage].sort((a, b) => a.position - b.position);
+      setStages(updated);
+      setNewStageName('');
+    }
+  }
+
+  async function deleteCustomStage(stageId: string) {
+    if (!confirm('Supprimer cette étape ?')) return;
+    const supabase = createClient();
+    await supabase.from('pipeline_stages').delete().eq('id', stageId);
+    setStages(prev => prev.filter(s => s.id !== stageId));
+  }
+
   async function handleLogout() { const s = createClient(); await s.auth.signOut(); router.push('/'); }
 
-  function openAddJobModal(defaultStatus?: JobStatus) {
-    setNewJob({ ...EMPTY_JOB, status: defaultStatus || 'to_apply' });
+  function openAddJobModal(defaultStatus?: string) {
+    setNewJob({ ...EMPTY_JOB, status: (defaultStatus || 'to_apply') as JobStatus });
     setImportUrl(''); setImportError(false); setAddJobMode(null);
-    setEditingJobId(null);
-    setShowAddJob(true);
+    setEditingJobId(null); setShowAddJob(true);
   }
 
   function openEditJobModal(job: Job) {
     setNewJob({
-      status: job.status,
-      job_type: job.job_type || 'CDI',
-      title: job.title || '',
-      company: job.company || '',
-      location: job.location || '',
-      description: job.description || '',
-      notes: job.notes || '',
-      salary: (job as any).salary_text || '',
-      source: (job as any).source_platform || '',
-      url: (job as any).source_url || '',
+      status: job.status, job_type: job.job_type || 'CDI',
+      title: job.title || '', company: job.company || '',
+      location: job.location || '', description: job.description || '',
+      notes: job.notes || '', salary: (job as any).salary_text || '',
+      source: (job as any).source_platform || '', url: (job as any).source_url || '',
       favorite: (job as any).favorite || 0,
     });
-    setEditingJobId(job.id);
-    setAddJobMode('manual');
+    setEditingJobId(job.id); setAddJobMode('manual');
     setImportUrl(''); setImportError(false);
-    setSelectedJob(null);
-    setShowAddJob(true);
+    setSelectedJob(null); setShowAddJob(true);
   }
 
   async function saveJob() {
     if (!newJob.title || !newJob.company) return;
-
     const payload = {
-      title: newJob.title,
-      company: newJob.company,
-      location: newJob.location || '',
-      description: newJob.description || '',
-      job_type: newJob.job_type || 'CDI',
-      status: newJob.status || 'to_apply',
+      title: newJob.title, company: newJob.company,
+      location: newJob.location || '', description: newJob.description || '',
+      job_type: newJob.job_type || 'CDI', status: newJob.status || 'to_apply',
       notes: newJob.notes || '',
       ...(newJob.salary ? { salary_text: newJob.salary } : {}),
       ...(newJob.source ? { source_platform: newJob.source } : {}),
       ...(newJob.url ? { source_url: newJob.url } : {}),
       ...(newJob.favorite !== undefined ? { favorite: newJob.favorite } : {}),
     };
-
-    // Si on édite, on passe l'id pour faire un UPDATE
     if (editingJobId) {
       const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: editingJobId, ...payload }) });
       const data = await res.json();
-      if (data.job) {
-        setJobs(prev => prev.map(j => j.id === editingJobId ? data.job : j));
-        setShowAddJob(false);
-        setNewJob({ ...EMPTY_JOB });
-        setEditingJobId(null);
-      } else alert('Erreur : ' + (data.error || 'inconnue'));
+      if (data.job) { setJobs(prev => prev.map(j => j.id === editingJobId ? data.job : j)); setShowAddJob(false); setEditingJobId(null); }
+      else alert('Erreur : ' + (data.error || 'inconnue'));
     } else {
       const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify(payload) });
       const data = await res.json();
-      if (data.job) {
-        setJobs(prev => [data.job, ...prev]);
-        setShowAddJob(false);
-        setNewJob({ ...EMPTY_JOB });
-        setImportUrl('');
-      } else alert('Erreur : ' + (data.error || 'inconnue'));
+      if (data.job) { setJobs(prev => [data.job, ...prev]); setShowAddJob(false); setNewJob({ ...EMPTY_JOB }); }
+      else alert('Erreur : ' + (data.error || 'inconnue'));
     }
   }
 
-  async function updateJobStatus(id: string, status: JobStatus) {
+  async function updateJobStatus(id: string, status: string) {
     const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id, status }) });
     const data = await res.json();
-    if (data.job) setJobs(prev => prev.map(j => j.id === id ? data.job : j));
+    if (data.job) { setJobs(prev => prev.map(j => j.id === id ? data.job : j)); if (selectedJob?.id === id) setSelectedJob(data.job); }
+  }
+
+  async function updateJobField(id: string, field: string, value: any) {
+    const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id, [field]: value }) });
+    const data = await res.json();
+    if (data.job) { setJobs(prev => prev.map(j => j.id === id ? data.job : j)); if (selectedJob?.id === id) setSelectedJob(data.job); }
   }
 
   async function deleteJob(id: string) {
@@ -222,28 +264,35 @@ export default function DashboardPage() {
       if (!res.ok || !data.success) { setImportError(true); return; }
       const job = data.job || {};
       const description = (job.description && job.description.length > 150) ? job.description : (job.raw_text || job.description || '');
-      setNewJob({
-        title: cleanJobTitle(job.title),
-        company: job.company_name || '',
-        location: cleanLocation(job.location_text),
-        description,
-        job_type: 'CDI',
-        status: 'to_apply',
-        notes: '',
-        salary: job.salary_text || '',
-        source: detectSource(url),
-        url,
-        favorite: 0,
-      });
+      setNewJob({ title: cleanJobTitle(job.title), company: job.company_name || '', location: cleanLocation(job.location_text), description, job_type: 'CDI', status: 'to_apply', notes: '', salary: job.salary_text || '', source: detectSource(url), url, favorite: 0 });
       setAddJobMode('manual');
     } catch { setImportError(true); }
     finally { setImportLoading(false); }
   }
 
+  async function uploadDocument(jobId: string, file: File, type: 'cv' | 'lm') {
+    if (!userId || !accessToken) return;
+    const supabase = createClient();
+    const ext = file.name.split('.').pop();
+    const path = `${userId}/${jobId}/${type}.${ext}`;
+    const { error } = await supabase.storage.from('job-documents').upload(path, file, { upsert: true });
+    if (error) { alert('Erreur upload : ' + error.message); return; }
+    const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
+    const field = type === 'cv' ? 'cv_url' : 'cover_letter_url';
+    const checkField = type === 'cv' ? 'cv_sent' : 'cover_letter_sent';
+    await updateJobField(jobId, field, urlData.publicUrl);
+    await updateJobField(jobId, checkField, true);
+  }
+
   const filteredJobs = jobs.filter(j => (!searchQuery || j.title.toLowerCase().includes(searchQuery.toLowerCase()) || j.company.toLowerCase().includes(searchQuery.toLowerCase())) && (filterStatus === 'all' || j.status === filterStatus));
-  const jobsByStatus = useCallback((s: JobStatus) => jobs.filter(j => j.status === s), [jobs]);
+  const jobsByStatus = useCallback((s: string) => jobs.filter(j => j.status === s), [jobs]);
   const initials = (n: string) => n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2);
-  const stats = { total: jobs.length, responseRate: jobs.length ? Math.round((jobs.filter(j => ['interview','offer'].includes(j.status)).length / jobs.length) * 100) : 0, interviews: jobs.filter(j => j.status === 'interview').length, offers: jobs.filter(j => j.status === 'offer').length };
+  const stats = { total: jobs.length, responseRate: jobs.length ? Math.round((jobs.filter(j => ['hr_interview','technical_interview','phone_interview','offer'].includes(j.status)).length / jobs.length) * 100) : 0, interviews: jobs.filter(j => ['phone_interview','hr_interview','technical_interview'].includes(j.status)).length, offers: jobs.filter(j => j.status === 'offer').length };
+
+  // Stages sans "archivé" pour le kanban principal
+  const kanbanStages = stages.filter(s => s.id !== 'archived');
+
+  const isInterviewStage = (status: string) => ['phone_interview', 'hr_interview', 'technical_interview'].includes(status) || stages.find(s => s.id === status && !s.is_default);
 
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Montserrat,sans-serif' }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 32 }}>⚡</div><div style={{ fontWeight: 700, color: '#888' }}>Chargement...</div></div></div>;
 
@@ -256,15 +305,6 @@ export default function DashboardPage() {
       <text x="30" y="37" textAnchor="middle" fontFamily="Impact,sans-serif" fontSize="6" fontWeight="900" fill="#fff">find my job</text>
     </svg>
   );
-
-  // Labels pour la liste et les stats (gardent l'ancien label court)
-  const STATUS_LABELS_DISPLAY: Record<JobStatus, string> = {
-    to_apply: 'Envie de postuler ?',
-    applied: 'Postulé',
-    interview: 'Entretien',
-    offer: 'Offre reçue',
-    archived: 'Archivé',
-  };
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: "'Montserrat', sans-serif" }}>
@@ -298,6 +338,11 @@ export default function DashboardPage() {
         .add-card { border: 2px dashed #E0E0E0; border-radius: 8px; padding: 8px; text-align: center; font-size: 11px; color: #888; cursor: pointer; font-weight: 700; transition: all 0.15s; }
         .add-card:hover { border-color: #E8151B; color: #E8151B; background: #FDEAEA; }
         .date-tag { font-size: 9px; color: #aaa; font-weight: 600; margin-top: 5px; display: flex; align-items: center; gap: 3px; }
+        .doc-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 6px; border: 1.5px solid #E0E0E0; background: #fff; font-size: 11px; font-weight: 700; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.15s; }
+        .doc-btn:hover { border-color: #111; background: #F4F4F4; }
+        .doc-btn.done { border-color: #1A7A4A; background: #E8F5EE; color: #1A7A4A; }
+        .check-box { width: 16px; height: 16px; border: 2px solid #E0E0E0; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
+        .check-box.checked { background: #1A7A4A; border-color: #1A7A4A; color: #fff; font-size: 10px; }
       `}</style>
 
       {/* SIDEBAR */}
@@ -321,10 +366,15 @@ export default function DashboardPage() {
         })}
         <div style={{ padding: '0.5rem 0.5rem 0.2rem', marginTop: '0.5rem', fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Outils</div>
         <button className="nav-btn" onClick={() => router.push('/dashboard/editor')}><span style={{ fontSize: 13 }}>✦</span> CV Creator</button>
-        <div style={{ marginTop: 'auto', padding: '0.875rem', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={handleLogout}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#E8151B', border: '2px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#F5C400' }}>{firstName ? firstName.charAt(0).toUpperCase() : initials(userEmail.split('@')[0])}</div>
-            <div><div style={{ fontSize: 11, color: '#fff', fontWeight: 700 }}>{firstName || userEmail.split('@')[0]}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>Déconnexion</div></div>
+        <div style={{ marginTop: 'auto', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+          <button className="nav-btn" onClick={() => setShowSettings(true)} style={{ margin: '4px 6px' }}>
+            <span style={{ fontSize: 13 }}>⚙️</span> Paramètres
+          </button>
+          <div style={{ padding: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={handleLogout}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#E8151B', border: '2px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#F5C400' }}>{firstName ? firstName.charAt(0).toUpperCase() : initials(userEmail.split('@')[0])}</div>
+              <div><div style={{ fontSize: 11, color: '#fff', fontWeight: 700 }}>{firstName || userEmail.split('@')[0]}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>Déconnexion</div></div>
+            </div>
           </div>
         </div>
       </aside>
@@ -351,20 +401,19 @@ export default function DashboardPage() {
 
           {/* KANBAN */}
           {view === 'kanban' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, alignItems: 'start' }}>
-              {COLUMNS.map(col => (
-                <div key={col.id} style={{ background: '#F4F4F4', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: 8, minHeight: 180 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'start', overflowX: 'auto', paddingBottom: 8 }}>
+              {stages.map(col => (
+                <div key={col.id} style={{ background: '#F4F4F4', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: 8, minHeight: 180, minWidth: 160, flex: '0 0 auto', width: `${Math.max(160, Math.floor((100 / stages.length)))}px` }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.02em' }}>{col.label}</div>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: col.countBg, color: col.countColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800 }}>{jobsByStatus(col.id).length}</div>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.3 }}>{col.label}</div>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: col.color + '22', color: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, flexShrink: 0 }}>{jobsByStatus(col.id).length}</div>
                   </div>
                   {jobsByStatus(col.id).map(job => (
                     <div key={job.id} className="jcard" onClick={() => setSelectedJob(job)}>
                       <div style={{ fontSize: 9, color: '#888', fontWeight: 600, marginBottom: 2 }}>{job.company}</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 5 }}>{job.title}</div>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 3 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{job.title}</div>
+                      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 2 }}>
                         {job.location && <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0', fontSize: 9 }}>{job.location}</span>}
-                        <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0', fontSize: 9 }}>{job.job_type}</span>
                         {(job as any).salary_text && <span className="pill" style={{ background: '#E8F5EE', color: '#1A7A4A', border: '1px solid #1A7A4A', fontSize: 9 }}>💰 {(job as any).salary_text}</span>}
                       </div>
                       {(job as any).favorite > 0 && <HeartDisplay value={(job as any).favorite} />}
@@ -387,16 +436,16 @@ export default function DashboardPage() {
                 </div>
                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="fi" style={{ width: 'auto' }}>
                   <option value="all">Tous les statuts</option>
-                  {Object.entries(STATUS_LABELS_DISPLAY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  {stages.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
               <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
                 <div className="lrow" style={{ background: '#F4F4F4', fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', cursor: 'default' }}>
                   <div>Poste / Entreprise</div><div>Localisation</div><div>Type</div><div>Statut</div><div>Créé le</div><div></div>
                 </div>
-                {filteredJobs.length === 0 && <div style={{ padding: '3rem', textAlign: 'center', color: '#888' }}>Aucune candidature — <button onClick={() => openAddJobModal()} style={{ color: '#E8151B', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Ajouter</button></div>}
+                {filteredJobs.length === 0 && <div style={{ padding: '3rem', textAlign: 'center', color: '#888' }}>Aucune candidature</div>}
                 {filteredJobs.map(job => {
-                  const sc = STATUS_COLORS[job.status];
+                  const stage = stages.find(s => s.id === job.status) || { color: '#888', label: job.status };
                   return (
                     <div key={job.id} className="lrow" onClick={() => setSelectedJob(job)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -405,7 +454,7 @@ export default function DashboardPage() {
                       </div>
                       <div style={{ fontSize: 13 }}>{job.location || '—'}</div>
                       <div><span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0' }}>{job.job_type}</span></div>
-                      <div><span className="pill" style={{ background: sc.bg, color: sc.color }}>{STATUS_LABELS_DISPLAY[job.status]}</span></div>
+                      <div><span className="pill" style={{ background: stage.color + '22', color: stage.color }}>{stage.label}</span></div>
                       <div style={{ fontSize: 11, color: '#888', fontWeight: 600 }}>{formatDate(job.created_at)}</div>
                       <div><button className="btn-ghost" style={{ padding: '4px 10px', fontSize: 11, color: '#E8151B', borderColor: '#FDEAEA' }} onClick={e => { e.stopPropagation(); deleteJob(job.id); }}>✕</button></div>
                     </div>
@@ -444,18 +493,21 @@ export default function DashboardPage() {
           {/* AGENDA */}
           {view === 'agenda' && (
             <div>
-              {jobs.filter(j => j.status === 'interview').length === 0
+              {jobs.filter(j => isInterviewStage(j.status)).length === 0
                 ? <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '3rem', textAlign: 'center', color: '#888', boxShadow: '3px 3px 0 #111' }}><div style={{ fontSize: 32, marginBottom: 12 }}>📅</div><div style={{ fontSize: 15, fontWeight: 700, color: '#111', marginBottom: 8 }}>Aucun entretien planifié</div><button className="btn-main" onClick={() => setView('kanban')}>Voir le tableau de bord</button></div>
-                : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{jobs.filter(j => j.status === 'interview').map(job => (
-                  <div key={job.id} style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '2px 2px 0 #111' }}>
-                    <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8, padding: '8px 12px', textAlign: 'center', minWidth: 60 }}>
-                      <div style={{ fontSize: 9, fontWeight: 800, color: '#B8900A', textTransform: 'uppercase' }}>Entretien</div>
-                      {job.interview_at && <div style={{ fontSize: 12, fontWeight: 800, color: '#B8900A' }}>{new Date(job.interview_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>}
+                : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{jobs.filter(j => isInterviewStage(j.status)).map(job => {
+                  const stage = stages.find(s => s.id === job.status);
+                  return (
+                    <div key={job.id} style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '2px 2px 0 #111' }}>
+                      <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8, padding: '8px 12px', textAlign: 'center', minWidth: 80 }}>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: '#B8900A', textTransform: 'uppercase' }}>{stage?.label || 'Entretien'}</div>
+                        {job.interview_at && <div style={{ fontSize: 12, fontWeight: 800, color: '#B8900A' }}>{new Date(job.interview_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>}
+                      </div>
+                      <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 700 }}>{job.title}</div><div style={{ fontSize: 12, color: '#888' }}>{job.company}{job.location && ' · ' + job.location}</div></div>
+                      <button className="btn-main" style={{ fontSize: 12, padding: '7px 14px' }} onClick={() => setSelectedJob(job)}>Voir détails</button>
                     </div>
-                    <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 700 }}>{job.title}</div><div style={{ fontSize: 12, color: '#888' }}>{job.company}{job.location && ' · ' + job.location}</div></div>
-                    <button className="btn-main" style={{ fontSize: 12, padding: '7px 14px' }} onClick={() => setSelectedJob(job)}>Voir détails</button>
-                  </div>
-                ))}</div>
+                  );
+                })}</div>
               }
             </div>
           )}
@@ -465,8 +517,8 @@ export default function DashboardPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '1.5rem', boxShadow: '3px 3px 0 #111' }}>
                 <div style={{ fontSize: 12, fontWeight: 800, marginBottom: '1rem', textTransform: 'uppercase' }}>Répartition par statut</div>
-                {COLUMNS.filter(c => c.id !== 'archived').map(col => { const count = jobsByStatus(col.id).length; const pct = jobs.length ? Math.round((count/jobs.length)*100) : 0; return (
-                  <div key={col.id} style={{ marginBottom: 10 }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}><span style={{ fontWeight: 600 }}>{col.label}</span><span style={{ fontWeight: 800 }}>{count}</span></div><div style={{ height: 8, background: '#F4F4F4', borderRadius: 4, border: '1px solid #E0E0E0' }}><div style={{ height: '100%', width: pct+'%', background: col.countColor, borderRadius: 4 }}/></div></div>
+                {stages.filter(s => s.id !== 'archived').map(col => { const count = jobsByStatus(col.id).length; const pct = jobs.length ? Math.round((count/jobs.length)*100) : 0; return (
+                  <div key={col.id} style={{ marginBottom: 10 }}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}><span style={{ fontWeight: 600 }}>{col.label}</span><span style={{ fontWeight: 800 }}>{count}</span></div><div style={{ height: 8, background: '#F4F4F4', borderRadius: 4 }}><div style={{ height: '100%', width: pct+'%', background: col.color, borderRadius: 4 }}/></div></div>
                 ); })}
               </div>
               <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '1.5rem', boxShadow: '3px 3px 0 #111' }}>
@@ -486,58 +538,107 @@ export default function DashboardPage() {
       {/* DETAIL PANEL */}
       {selectedJob && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,12,0.5)', zIndex: 200 }} onClick={() => setSelectedJob(null)}>
-          <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 460, background: '#fff', borderLeft: '2px solid #111', padding: '1.5rem', overflowY: 'auto', boxShadow: '-4px 0 0 #111' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 480, background: '#fff', borderLeft: '2px solid #111', padding: '1.5rem', overflowY: 'auto', boxShadow: '-4px 0 0 #111' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
               <div>
                 <div style={{ fontSize: 11, color: '#888', marginBottom: 3, fontWeight: 600 }}>{selectedJob.company}</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>{selectedJob.title}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>{selectedJob.title}</div>
               </div>
               <button onClick={() => setSelectedJob(null)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
             </div>
 
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: '0.75rem' }}>
               {selectedJob.location && <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0' }}>{selectedJob.location}</span>}
-              <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0' }}>{selectedJob.job_type}</span>
-              <span className="pill" style={{ background: STATUS_COLORS[selectedJob.status].bg, color: STATUS_COLORS[selectedJob.status].color }}>{STATUS_LABELS_DISPLAY[selectedJob.status]}</span>
               {(selectedJob as any).salary_text && <span className="pill" style={{ background: '#E8F5EE', color: '#1A7A4A', border: '1px solid #1A7A4A' }}>💰 {(selectedJob as any).salary_text}</span>}
+              {(() => { const stage = stages.find(s => s.id === selectedJob.status); return stage ? <span className="pill" style={{ background: stage.color + '22', color: stage.color }}>{stage.label}</span> : null; })()}
             </div>
 
-            {(selectedJob as any).favorite > 0 && (
-              <div style={{ marginBottom: '0.75rem' }}>
-                <HeartDisplay value={(selectedJob as any).favorite} />
-              </div>
-            )}
-
+            {(selectedJob as any).favorite > 0 && <div style={{ marginBottom: '0.75rem' }}><HeartDisplay value={(selectedJob as any).favorite} /></div>}
             <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: '1rem' }}>📅 Créé le {formatDate(selectedJob.created_at)}</div>
 
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label className="fl">Changer le statut</label>
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                {COLUMNS.map(col => <button key={col.id} onClick={() => { updateJobStatus(selectedJob.id, col.id); setSelectedJob({ ...selectedJob, status: col.id }); }} style={{ background: selectedJob.status === col.id ? col.countBg : '#fff', color: selectedJob.status === col.id ? col.countColor : '#888', border: `2px solid ${selectedJob.status === col.id ? col.countColor : '#E0E0E0'}`, borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'Montserrat,sans-serif' }}>{col.label}</button>)}
+            {/* CHANGER STATUT */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label className="fl">Étape</label>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {stages.map(col => (
+                  <button key={col.id} onClick={() => updateJobStatus(selectedJob.id, col.id)}
+                    style={{ background: selectedJob.status === col.id ? col.color + '22' : '#fff', color: selectedJob.status === col.id ? col.color : '#888', border: `2px solid ${selectedJob.status === col.id ? col.color : '#E0E0E0'}`, borderRadius: 6, padding: '4px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'Montserrat,sans-serif' }}>
+                    {col.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {selectedJob.description && (
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label className="fl">Description</label>
-                <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 8, padding: '10px 12px', fontSize: 13, lineHeight: 1.6, maxHeight: 200, overflowY: 'auto' }}>{selectedJob.description}</div>
+            {/* DOCUMENTS — section compacte */}
+            {(selectedJob.status === 'applied' || selectedJob.status !== 'to_apply') && (
+              <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '10px 14px', marginBottom: '1rem' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Documents</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {/* CV */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div className={'check-box' + ((selectedJob as any).cv_sent ? ' checked' : '')} onClick={() => updateJobField(selectedJob.id, 'cv_sent', !(selectedJob as any).cv_sent)}>
+                      {(selectedJob as any).cv_sent && '✓'}
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#111' }}>CV</span>
+                    <button className={'doc-btn' + ((selectedJob as any).cv_url ? ' done' : '')}
+                      onClick={() => { if ((selectedJob as any).cv_url) { window.open((selectedJob as any).cv_url); } else { cvInputRef.current?.click(); } }}>
+                      {(selectedJob as any).cv_url ? '📎 Voir' : '📎 Joindre'}
+                    </button>
+                    <input ref={cvInputRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={async e => { const f = e.target.files?.[0]; if (f) { setUploadingCv(true); await uploadDocument(selectedJob.id, f, 'cv'); setUploadingCv(false); } }} />
+                    {uploadingCv && <span style={{ fontSize: 10, color: '#888' }}>⏳</span>}
+                  </div>
+
+                  <div style={{ width: 1, background: '#E0E0E0' }} />
+
+                  {/* LM */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div className={'check-box' + ((selectedJob as any).cover_letter_sent ? ' checked' : '')} onClick={() => updateJobField(selectedJob.id, 'cover_letter_sent', !(selectedJob as any).cover_letter_sent)}>
+                      {(selectedJob as any).cover_letter_sent && '✓'}
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#111' }}>LM</span>
+                    <button className={'doc-btn' + ((selectedJob as any).cover_letter_url ? ' done' : '')}
+                      onClick={() => { if ((selectedJob as any).cover_letter_url) { window.open((selectedJob as any).cover_letter_url); } else { lmInputRef.current?.click(); } }}>
+                      {(selectedJob as any).cover_letter_url ? '📎 Voir' : '📎 Joindre'}
+                    </button>
+                    <input ref={lmInputRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={async e => { const f = e.target.files?.[0]; if (f) { setUploadingLm(true); await uploadDocument(selectedJob.id, f, 'lm'); setUploadingLm(false); } }} />
+                    {uploadingLm && <span style={{ fontSize: 10, color: '#888' }}>⏳</span>}
+                  </div>
+                </div>
               </div>
             )}
 
-            <div style={{ marginBottom: '1.25rem' }}>
+            {/* SYNTHÈSE ENTRETIEN */}
+            {isInterviewStage(selectedJob.status) && (
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="fl">Synthèse de l&apos;entretien</label>
+                <textarea
+                  defaultValue={(selectedJob as any).interview_summary || ''}
+                  placeholder="Notes sur le déroulement, questions posées, impressions..."
+                  className="fi"
+                  rows={4}
+                  style={{ resize: 'vertical' }}
+                  onBlur={async e => { await updateJobField(selectedJob.id, 'interview_summary', e.target.value); }}
+                />
+              </div>
+            )}
+
+            {/* DESCRIPTION */}
+            {selectedJob.description && (
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="fl">Description</label>
+                <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 8, padding: '10px 12px', fontSize: 13, lineHeight: 1.6, maxHeight: 180, overflowY: 'auto' }}>{selectedJob.description}</div>
+              </div>
+            )}
+
+            {/* NOTES */}
+            <div style={{ marginBottom: '1rem' }}>
               <label className="fl">Mes notes</label>
-              <textarea defaultValue={selectedJob.notes || ''} placeholder="Notes, impressions..." className="fi" style={{ resize: 'vertical', minHeight: 80 }} onBlur={async e => { await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: selectedJob.id, notes: e.target.value }) }); }} />
+              <textarea defaultValue={selectedJob.notes || ''} placeholder="Notes, impressions..." className="fi" style={{ resize: 'vertical', minHeight: 70 }}
+                onBlur={async e => { await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: selectedJob.id, notes: e.target.value }) }); }} />
             </div>
 
-            <button className="btn-main" style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }} onClick={() => router.push('/dashboard/editor?targetJob=' + encodeURIComponent(selectedJob.title + ' chez ' + selectedJob.company))}>
-              ✦ Générer un CV pour ce poste →
-            </button>
-
-            {/* BOUTON MODIFIER */}
-            <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }} onClick={() => openEditJobModal(selectedJob)}>
-              ✏️ Modifier l&apos;offre
-            </button>
-
+            <button className="btn-main" style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }} onClick={() => router.push('/dashboard/editor?targetJob=' + encodeURIComponent(selectedJob.title + ' chez ' + selectedJob.company))}>✦ Générer un CV pour ce poste →</button>
+            <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }} onClick={() => openEditJobModal(selectedJob)}>✏️ Modifier l&apos;offre</button>
             <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center', color: '#E8151B', borderColor: '#FDEAEA' }} onClick={() => deleteJob(selectedJob.id)}>Supprimer</button>
           </div>
         </div>
@@ -548,13 +649,10 @@ export default function DashboardPage() {
         <div className="modal-bg" onClick={() => setShowAddJob(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: 0 }}>
-                {editingJobId ? 'Modifier l\'offre' : 'Ajouter une offre'}
-              </h2>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: 0 }}>{editingJobId ? "Modifier l'offre" : 'Ajouter une offre'}</h2>
               <button onClick={() => setShowAddJob(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
             </div>
 
-            {/* CHOIX MODE — seulement pour nouveau */}
             {!addJobMode && !editingJobId && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[{mode:'url',icon:'🔗',title:'Importer depuis une URL',sub:'Importer automatiquement depuis un jobboard'},{mode:'manual',icon:'✍️',title:'Remplir manuellement',sub:'Créer une offre à partir de zéro'}].map(opt => (
@@ -568,14 +666,10 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* MODE URL */}
             {addJobMode === 'url' && !editingJobId && (
               <div>
                 <button onClick={() => { setAddJobMode(null); setImportError(false); setImportUrl(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 12, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
-                <div style={{ marginBottom: 14 }}>
-                  <label className="fl">URL de l&apos;offre</label>
-                  <input className="fi" placeholder="https://www.linkedin.com/jobs/view/..." value={importUrl} onChange={e => setImportUrl(e.target.value)} />
-                </div>
+                <div style={{ marginBottom: 14 }}><label className="fl">URL de l&apos;offre</label><input className="fi" placeholder="https://www.linkedin.com/jobs/view/..." value={importUrl} onChange={e => setImportUrl(e.target.value)} /></div>
                 {importError && (
                   <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#111', marginBottom: 4 }}>Impossible d&apos;importer cette offre automatiquement.</div>
@@ -592,38 +686,34 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* MODE MANUEL (ajout ET modification) */}
             {addJobMode === 'manual' && (
               <div>
-                {!editingJobId && (
-                  <button onClick={() => setAddJobMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
-                )}
-
-                <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+                {!editingJobId && <button onClick={() => setAddJobMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>}
+                <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coup de cœur ?</div>
                   <HeartRating value={newJob.favorite} onChange={v => setNewJob(prev => ({ ...prev, favorite: v }))} />
                 </div>
-
                 <div style={{ maxHeight: '62vh', overflowY: 'auto', paddingRight: 4 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                     <div style={{ marginBottom: 14 }}><label className="fl">Type de contrat</label><select className="fi" value={newJob.job_type} onChange={e => setNewJob(prev => ({ ...prev, job_type: e.target.value as JobType }))}>{['CDI','CDD','Freelance','Stage','Alternance'].map(t => <option key={t}>{t}</option>)}</select></div>
-                    <div style={{ marginBottom: 14 }}><label className="fl">Statut</label><select className="fi" value={newJob.status} onChange={e => setNewJob(prev => ({ ...prev, status: e.target.value as JobStatus }))}>{Object.entries(STATUS_LABELS_DISPLAY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+                    <div style={{ marginBottom: 14 }}><label className="fl">Étape</label>
+                      <select className="fi" value={newJob.status} onChange={e => setNewJob(prev => ({ ...prev, status: e.target.value as JobStatus }))}>
+                        {stages.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                      </select>
+                    </div>
                     <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}><label className="fl">Intitulé du poste *</label><input className="fi" value={newJob.title} onChange={e => setNewJob(prev => ({ ...prev, title: e.target.value }))} placeholder="Chief Marketing Officer H/F" /></div>
                     <div style={{ marginBottom: 14 }}><label className="fl">Entreprise *</label><input className="fi" value={newJob.company} onChange={e => setNewJob(prev => ({ ...prev, company: e.target.value }))} placeholder="Decathlon" /></div>
                     <div style={{ marginBottom: 14 }}><label className="fl">Source</label><select className="fi" value={newJob.source} onChange={e => setNewJob(prev => ({ ...prev, source: e.target.value }))}><option value="">Choisir...</option>{['LinkedIn','Indeed','Welcome to the Jungle','Apec','Pôle Emploi','Site entreprise','Réseau','HelloWork','Autre'].map(s => <option key={s}>{s}</option>)}</select></div>
                     <div style={{ marginBottom: 14 }}><label className="fl">Lieu</label><input className="fi" value={newJob.location} onChange={e => setNewJob(prev => ({ ...prev, location: e.target.value }))} placeholder="Paris · Hybride" /></div>
                     <div style={{ marginBottom: 14 }}><label className="fl">Salaire</label><input className="fi" value={newJob.salary} onChange={e => setNewJob(prev => ({ ...prev, salary: e.target.value }))} placeholder="45-55k€ / an" /></div>
                     <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}><label className="fl">Lien de l&apos;offre</label><input className="fi" value={newJob.url} onChange={e => setNewJob(prev => ({ ...prev, url: e.target.value }))} placeholder="https://..." /></div>
-                    <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}><label className="fl">Description du poste</label><textarea className="fi" value={newJob.description} onChange={e => setNewJob(prev => ({ ...prev, description: e.target.value }))} placeholder="Missions, compétences requises..." rows={6} style={{ resize: 'vertical', minHeight: 140 }} /></div>
+                    <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}><label className="fl">Description du poste</label><textarea className="fi" value={newJob.description} onChange={e => setNewJob(prev => ({ ...prev, description: e.target.value }))} placeholder="Missions, compétences requises..." rows={5} style={{ resize: 'vertical', minHeight: 120 }} /></div>
                     <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}><label className="fl">Mes notes personnelles</label><textarea className="fi" value={newJob.notes} onChange={e => setNewJob(prev => ({ ...prev, notes: e.target.value }))} placeholder="Mes impressions, points à vérifier..." rows={3} style={{ resize: 'vertical' }} /></div>
                   </div>
                 </div>
-
-                <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
                   <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowAddJob(false)}>Annuler</button>
-                  <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={saveJob} disabled={!newJob.title || !newJob.company}>
-                    {editingJobId ? 'Enregistrer les modifications' : 'Ajouter l\'offre'}
-                  </button>
+                  <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={saveJob} disabled={!newJob.title || !newJob.company}>{editingJobId ? 'Enregistrer' : 'Ajouter l\'offre'}</button>
                 </div>
               </div>
             )}
@@ -645,6 +735,59 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowAddContact(false)}>Annuler</button>
               <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={saveContact} disabled={!newContact.name}>Ajouter le contact</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS MODAL */}
+      {showSettings && (
+        <div className="modal-bg" onClick={() => setShowSettings(false)}>
+          <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: 0 }}>⚙️ Paramètres du pipeline</h2>
+              <button onClick={() => setShowSettings(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
+            </div>
+
+            {/* Étapes existantes */}
+            <label className="fl" style={{ marginBottom: 10 }}>Étapes actuelles</label>
+            <div style={{ marginBottom: 20 }}>
+              {stages.map(stage => (
+                <div key={stage.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 8, marginBottom: 6 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: stage.color, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{stage.label}</span>
+                  <span style={{ fontSize: 10, color: '#aaa' }}>pos. {stage.position}</span>
+                  {!stage.is_default && (
+                    <button onClick={() => deleteCustomStage(stage.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8151B', fontSize: 14, padding: '0 4px' }}>✕</button>
+                  )}
+                  {stage.is_default && <span style={{ fontSize: 9, color: '#aaa', fontWeight: 700 }}>DÉFAUT</span>}
+                </div>
+              ))}
+            </div>
+
+            {/* Ajouter une étape */}
+            <label className="fl" style={{ marginBottom: 10 }}>Ajouter une étape personnalisée</label>
+            <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '14px', marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 10, marginBottom: 10 }}>
+                <div>
+                  <label className="fl">Nom de l&apos;étape</label>
+                  <input className="fi" value={newStageName} onChange={e => setNewStageName(e.target.value)} placeholder="Ex: Test technique" />
+                </div>
+                <div>
+                  <label className="fl">Couleur</label>
+                  <input type="color" value={newStageColor} onChange={e => setNewStageColor(e.target.value)} style={{ width: 44, height: 42, border: '2px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', padding: 2 }} />
+                </div>
+                <div>
+                  <label className="fl">Position</label>
+                  <input type="number" className="fi" value={newStagePosition} onChange={e => setNewStagePosition(Number(e.target.value))} style={{ width: 60 }} min={1} max={98} />
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 10 }}>
+                💡 La position détermine l&apos;ordre dans le pipeline. Ex: 3.5 s&apos;insère entre 3 et 4.
+              </div>
+              <button className="btn-main" style={{ width: '100%', justifyContent: 'center' }} onClick={addCustomStage} disabled={!newStageName.trim()}>
+                + Ajouter cette étape
+              </button>
             </div>
           </div>
         </div>
