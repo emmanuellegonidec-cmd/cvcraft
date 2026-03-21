@@ -16,6 +16,35 @@ const COLUMNS: { id: JobStatus; label: string; countBg: string; countColor: stri
   { id: 'archived', label: 'Archivé', countBg: '#F0EEEA', countColor: '#aaa' },
 ];
 
+// Nettoie le titre LinkedIn (supprime tout après | ou - suivi de LinkedIn/jobboard)
+function cleanJobTitle(title: string | null | undefined): string {
+  if (!title) return '';
+  return title
+    .replace(/\s*[\||\-]\s*(LinkedIn|Indeed|APEC|HelloWork|Welcome to the Jungle).*$/i, '')
+    .replace(/^[^a-zA-ZÀ-ÿ]*/, '')
+    .trim();
+}
+
+// Nettoie la localisation (supprime "Ville de", "Province de", etc.)
+function cleanLocation(location: string | null | undefined): string {
+  if (!location) return '';
+  return location
+    .replace(/^(Ville de |Province de |Région de |Department of )/i, '')
+    .trim();
+}
+
+// Détecte la source depuis l'URL
+function detectSource(url: string | null | undefined): string {
+  if (!url) return '';
+  const u = url.toLowerCase();
+  if (u.includes('linkedin.com')) return 'LinkedIn';
+  if (u.includes('indeed.')) return 'Indeed';
+  if (u.includes('apec.fr')) return 'Apec';
+  if (u.includes('hellowork.com')) return 'HelloWork';
+  if (u.includes('welcometothejungle.com')) return 'Welcome to the Jungle';
+  return 'Autre';
+}
+
 function capitalize(str: string) {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -37,6 +66,57 @@ function formatRelative(dateStr: string) {
   return formatDate(dateStr) || '';
 }
 
+// Composant cœurs favoris
+function HeartRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      {[1, 2, 3].map(i => (
+        <span
+          key={i}
+          onClick={() => onChange(value === i ? 0 : i)}
+          onMouseEnter={() => setHovered(i)}
+          onMouseLeave={() => setHovered(0)}
+          style={{
+            fontSize: 22,
+            cursor: 'pointer',
+            color: (hovered >= i || value >= i) ? '#E8151B' : '#E0E0E0',
+            transition: 'color 0.15s, transform 0.1s',
+            transform: hovered >= i ? 'scale(1.2)' : 'scale(1)',
+            display: 'inline-block',
+            userSelect: 'none',
+          }}
+        >
+          ♥
+        </span>
+      ))}
+      {value > 0 && (
+        <span style={{ fontSize: 10, color: '#E8151B', fontWeight: 700, marginLeft: 4 }}>
+          {value === 1 ? 'Intéressant' : value === 2 ? 'J\'aime bien' : 'Coup de cœur !'}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Composant cœurs en lecture seule (pour les cartes)
+function HeartDisplay({ value }: { value: number }) {
+  if (!value) return null;
+  return (
+    <div style={{ display: 'flex', gap: 2, marginTop: 4 }}>
+      {[1, 2, 3].map(i => (
+        <span key={i} style={{ fontSize: 11, color: i <= value ? '#E8151B' : '#E0E0E0' }}>♥</span>
+      ))}
+    </div>
+  );
+}
+
+const EMPTY_JOB: Partial<Job> & { url?: string; salary?: string; source?: string; offer_date?: string; favorite?: number } = {
+  status: 'to_apply',
+  job_type: 'CDI',
+  favorite: 0,
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const [view, setView] = useState<View>('kanban');
@@ -50,11 +130,12 @@ export default function DashboardPage() {
   const [showAddContact, setShowAddContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [newJob, setNewJob] = useState<Partial<Job>>({ status: 'to_apply', job_type: 'CDI' });
+  const [newJob, setNewJob] = useState<typeof EMPTY_JOB>({ ...EMPTY_JOB });
   const [newContact, setNewContact] = useState<Partial<Contact>>({});
   const [addJobMode, setAddJobMode] = useState<null | 'url' | 'manual'>(null);
   const [importError, setImportError] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
 
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -83,10 +164,47 @@ export default function DashboardPage() {
     router.push('/');
   }
 
+  function openAddJobModal(defaultStatus?: JobStatus) {
+    setNewJob({ ...EMPTY_JOB, status: defaultStatus || 'to_apply' });
+    setImportUrl('');
+    setImportError(false);
+    setAddJobMode(null);
+    setShowAddJob(true);
+  }
+
   async function saveJob() {
-    const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newJob) });
+    if (!newJob.title || !newJob.company) return;
+
+    const payload = {
+      title: newJob.title,
+      company: newJob.company,
+      location: newJob.location || '',
+      description: newJob.description || '',
+      job_type: newJob.job_type || 'CDI',
+      status: newJob.status || 'to_apply',
+      notes: newJob.notes || '',
+      // Champs supplémentaires
+      ...(newJob.salary ? { salary_text: newJob.salary } : {}),
+      ...(newJob.source ? { source_platform: newJob.source } : {}),
+      ...(newJob.url ? { source_url: newJob.url } : {}),
+      ...(newJob.favorite ? { favorite: newJob.favorite } : {}),
+    };
+
+    const res = await fetch('/api/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
     const data = await res.json();
-    if (data.job) { setJobs([data.job, ...jobs]); setShowAddJob(false); setNewJob({ status: 'to_apply', job_type: 'CDI' }); }
+    if (data.job) {
+      setJobs([data.job, ...jobs]);
+      setShowAddJob(false);
+      setNewJob({ ...EMPTY_JOB });
+      setImportUrl('');
+    } else {
+      console.error('Erreur saveJob:', data);
+      alert('Erreur lors de l\'enregistrement : ' + (data.error || 'inconnue'));
+    }
   }
 
   async function updateJobStatus(id: string, status: JobStatus) {
@@ -107,59 +225,70 @@ export default function DashboardPage() {
     const data = await res.json();
     if (data.contact) { setContacts([data.contact, ...contacts]); setShowAddContact(false); setNewContact({}); }
   }
-async function importJobFromUrl(url: string) {
-  setImportLoading(true);
-  setImportError(false);
 
-  try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+  async function importJobFromUrl(url: string) {
+    if (!url) return;
+    setImportLoading(true);
+    setImportError(false);
 
-    // ✅ Si pas de session → on garde le comportement UI
-    if (!session) {
-      console.error("❌ Pas de session");
-      setImportError(true);
-      return;
-    }
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
 
-    const res = await fetch('/api/jobs/import', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`, // ✅ FIX
-      },
-      body: JSON.stringify({ url }),
-    });
+      if (!session) {
+        setImportError(true);
+        return;
+      }
 
-    const data = await res.json();
-
-    // ✅ ON GARDE TON COMPORTEMENT EXISTANT
-    if (!res.ok || data.error) {
-      console.error("❌ Import error:", data);
-      setImportError(true); // 👉 garde le message + bouton manuel
-    } else {
-      const job = data.job || data;
-
-      setNewJob({
-        title: job.title || '',
-        company: job.company_name || '',
-        location: job.location_text || '',
-        description: job.description || '',
-        job_type: 'CDI',
-        status: 'to_apply',
-        notes: '',
+      const res = await fetch('/api/jobs/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ url }),
       });
 
-      setAddJobMode('manual'); // 👉 IMPORTANT : on garde le pré-remplissage
-    }
+      const data = await res.json();
 
-  } catch (err) {
-    console.error("❌ Fetch error:", err);
-    setImportError(true); // 👉 garde fallback manuel
-  } finally {
-    setImportLoading(false);
+      if (!res.ok || data.error || !data.success) {
+        setImportError(true);
+      } else {
+        const job = data.job || {};
+
+        // Nettoyage et mapping correct des champs
+        const cleanedTitle = cleanJobTitle(job.title);
+        const cleanedLocation = cleanLocation(job.location_text);
+        const detectedSource = detectSource(url);
+
+        // La vraie description : on préfère raw_text si description est trop courte
+        const description = (job.description && job.description.length > 100)
+          ? job.description
+          : (job.raw_text || job.description || '');
+
+        setNewJob({
+          title: cleanedTitle,
+          company: job.company_name || '',
+          location: cleanedLocation,
+          description: description,
+          job_type: 'CDI',
+          status: 'to_apply',
+          notes: '',
+          salary: job.salary_text || '',
+          source: detectedSource,
+          url: url,
+          favorite: 0,
+        });
+
+        setAddJobMode('manual');
+      }
+    } catch (err) {
+      console.error('Import error:', err);
+      setImportError(true);
+    } finally {
+      setImportLoading(false);
+    }
   }
-}
 
   const filteredJobs = jobs.filter(j => {
     const ms = !searchQuery || j.title.toLowerCase().includes(searchQuery.toLowerCase()) || j.company.toLowerCase().includes(searchQuery.toLowerCase());
@@ -209,11 +338,12 @@ async function importJobFromUrl(url: string) {
         .jcard:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 #E8151B; border-color: #E8151B; }
         .btn-main { display: inline-flex; align-items: center; gap: 6px; background: #111; color: #F5C400; border: 2px solid #111; border-radius: 8px; padding: 9px 18px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 2px 2px 0 #E8151B; letter-spacing: 0.02em; transition: all 0.15s; }
         .btn-main:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 #E8151B; }
+        .btn-main:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         .btn-ghost { display: inline-flex; align-items: center; gap: 6px; background: #fff; color: #111; border: 2px solid #111; border-radius: 8px; padding: 9px 18px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 2px 2px 0 #E0E0E0; transition: all 0.15s; }
         .btn-ghost:hover { background: #F4F4F4; }
         .pill { display: inline-flex; align-items: center; border-radius: 5px; padding: 2px 7px; font-size: 10px; font-weight: 700; }
-        .fi { width: 100%; border: 2px solid #E0E0E0; border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: 'Montserrat', sans-serif; outline: none; transition: border-color 0.15s; }
-        .fi:focus { border-color: #E8151B; box-shadow: 0 0 0 3px rgba(232,21,27,0.08); }
+        .fi { width: 100%; border: 2px solid #E0E0E0; border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: 'Montserrat', sans-serif; outline: none; transition: border-color 0.15s; background: #fff; }
+        .fi:focus { border-color: #111; box-shadow: 0 0 0 3px rgba(17,17,17,0.06); }
         .fl { display: block; font-size: 10px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
         .lrow { display: grid; grid-template-columns: 2fr 1fr 0.8fr 1fr 0.8fr 60px; gap: 12px; padding: 11px 16px; border-bottom: 1.5px solid #E0E0E0; align-items: center; cursor: pointer; transition: background 0.15s; }
         .lrow:hover { background: #FAFAFA; }
@@ -222,11 +352,14 @@ async function importJobFromUrl(url: string) {
         .cbtn { flex: 1; padding: 5px; border-radius: 6px; border: 1.5px solid #E0E0E0; background: transparent; font-size: 11px; font-weight: 700; color: #888; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.15s; }
         .cbtn:hover { background: #FDEAEA; color: #E8151B; border-color: #E8151B; }
         .modal-bg { position: fixed; inset: 0; background: rgba(15,14,12,0.6); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 1rem; }
-        .modal { background: #fff; border: 2px solid #111; border-radius: 14px; padding: 1.5rem; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 6px 6px 0 #111; }
+        .modal { background: #fff; border: 2px solid #111; border-radius: 14px; padding: 1.5rem; width: 100%; max-width: 620px; max-height: 92vh; overflow-y: auto; box-shadow: 6px 6px 0 #111; }
         .stat-card { background: #fff; border: 2px solid #111; border-radius: 10px; padding: 0.875rem; box-shadow: 2px 2px 0 #111; }
         .add-card { border: 2px dashed #E0E0E0; border-radius: 8px; padding: 8px; text-align: center; font-size: 11px; color: #888; cursor: pointer; font-weight: 700; transition: all 0.15s; }
         .add-card:hover { border-color: #E8151B; color: #E8151B; background: #FDEAEA; }
         .date-tag { font-size: 9px; color: #aaa; font-weight: 600; margin-top: 5px; display: flex; align-items: center; gap: 3px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+        .form-field { margin-bottom: 14px; }
+        .form-field-full { margin-bottom: 14px; grid-column: 1 / -1; }
       `}</style>
 
       {/* SIDEBAR */}
@@ -253,7 +386,7 @@ async function importJobFromUrl(url: string) {
             <span style={{ fontSize: 13 }}>{ic}</span>
             <span style={{ flex: 1 }}>{lb}</span>
             {bg !== null && bg > 0 && (
-              <span style={{ background: v === 'agenda' && bg > 0 ? '#E8151B' : '#E8151B', color: '#F5C400', borderRadius: 10, padding: '1px 6px', fontSize: 9, fontWeight: 800 }}>{bg}</span>
+              <span style={{ background: '#E8151B', color: '#F5C400', borderRadius: 10, padding: '1px 6px', fontSize: 9, fontWeight: 800 }}>{bg}</span>
             )}
           </button>
         ))}
@@ -286,7 +419,7 @@ async function importJobFromUrl(url: string) {
               Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
             </div>
           </div>
-          <button className="btn-main" onClick={() => view === 'contacts' ? setShowAddContact(true) : (setAddJobMode(null), setImportError(false), setShowAddJob(true))}>
+          <button className="btn-main" onClick={() => view === 'contacts' ? setShowAddContact(true) : openAddJobModal()}>
             {view === 'contacts' ? '+ Ajouter un contact' : '+ Ajouter une offre'}
           </button>
         </div>
@@ -330,12 +463,13 @@ async function importJobFromUrl(url: string) {
                         {job.location && <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0', fontSize: 9 }}>{job.location}</span>}
                         <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0', fontSize: 9 }}>{job.job_type}</span>
                       </div>
+                      {(job as any).favorite > 0 && <HeartDisplay value={(job as any).favorite} />}
                       <div className="date-tag">
                         📅 {formatRelative(job.created_at)}
                       </div>
                     </div>
                   ))}
-                  <div className="add-card" onClick={() => { setNewJob({ status: col.id, job_type: 'CDI' }); setAddJobMode(null); setImportError(false); setShowAddJob(true); }}>
+                  <div className="add-card" onClick={() => openAddJobModal(col.id)}>
                     + Ajouter
                   </div>
                 </div>
@@ -362,7 +496,7 @@ async function importJobFromUrl(url: string) {
                 </div>
                 {filteredJobs.length === 0 && (
                   <div style={{ padding: '3rem', textAlign: 'center', color: '#888', fontSize: 14 }}>
-                    Aucune candidature — <button onClick={() => setShowAddJob(true)} style={{ color: '#E8151B', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Ajouter</button>
+                    Aucune candidature — <button onClick={() => openAddJobModal()} style={{ color: '#E8151B', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Ajouter</button>
                   </div>
                 )}
                 {filteredJobs.map(job => {
@@ -371,7 +505,10 @@ async function importJobFromUrl(url: string) {
                     <div key={job.id} className="lrow" onClick={() => setSelectedJob(job)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 30, height: 30, borderRadius: 7, background: '#FDEAEA', border: '1.5px solid #E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#E8151B', flexShrink: 0 }}>{job.company.substring(0, 2).toUpperCase()}</div>
-                        <div><div style={{ fontWeight: 700, fontSize: 13 }}>{job.title}</div><div style={{ fontSize: 11, color: '#888' }}>{job.company}</div></div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 13 }}>{job.title}</div>
+                          <div style={{ fontSize: 11, color: '#888' }}>{job.company}</div>
+                        </div>
                       </div>
                       <div style={{ fontSize: 13 }}>{job.location || '—'}</div>
                       <div><span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0' }}>{job.job_type}</span></div>
@@ -543,8 +680,8 @@ async function importJobFromUrl(url: string) {
       {showAddJob && (
         <div className="modal-bg" onClick={() => setShowAddJob(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Ajouter une offre</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: 0 }}>Ajouter une offre</h2>
               <button onClick={() => setShowAddJob(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
             </div>
 
@@ -569,10 +706,15 @@ async function importJobFromUrl(url: string) {
             {/* MODE URL */}
             {addJobMode === 'url' && (
               <div>
-                <button onClick={() => { setAddJobMode(null); setImportError(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 12, fontFamily: 'Montserrat,sans-serif', display: 'flex', alignItems: 'center', gap: 4 }}>← Retour</button>
+                <button onClick={() => { setAddJobMode(null); setImportError(false); setImportUrl(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 12, fontFamily: 'Montserrat,sans-serif', display: 'flex', alignItems: 'center', gap: 4 }}>← Retour</button>
                 <div style={{ marginBottom: 14 }}>
                   <label className="fl">URL de l&apos;offre</label>
-                  <input className="fi" placeholder="https://www.linkedin.com/jobs/view/..." value={(newJob as any).url || ''} onChange={e => setNewJob({ ...newJob, url: e.target.value } as any)} />
+                  <input
+                    className="fi"
+                    placeholder="https://www.linkedin.com/jobs/view/..."
+                    value={importUrl}
+                    onChange={e => setImportUrl(e.target.value)}
+                  />
                 </div>
                 {importError && (
                   <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
@@ -584,7 +726,14 @@ async function importJobFromUrl(url: string) {
                 {!importError && (
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setAddJobMode(null)}>Annuler</button>
-                    <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={() => importJobFromUrl((newJob as any).url || '')} disabled={!(newJob as any).url || importLoading}>{importLoading ? 'Import en cours...' : "Importer l'offre →"}</button>
+                    <button
+                      className="btn-main"
+                      style={{ flex: 2, justifyContent: 'center' }}
+                      onClick={() => importJobFromUrl(importUrl)}
+                      disabled={!importUrl || importLoading}
+                    >
+                      {importLoading ? '⏳ Import en cours...' : "Importer l'offre →"}
+                    </button>
                   </div>
                 )}
               </div>
@@ -593,23 +742,129 @@ async function importJobFromUrl(url: string) {
             {/* MODE MANUEL */}
             {addJobMode === 'manual' && (
               <div>
-                <button onClick={() => setAddJobMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 12, fontFamily: 'Montserrat,sans-serif', display: 'flex', alignItems: 'center', gap: 4 }}>← Retour</button>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px', maxHeight: '55vh', overflowY: 'auto', paddingRight: 4 }}>
-                  <div style={{ marginBottom: 12 }}><label className="fl">Date de l&apos;offre</label><input className="fi" type="date" value={(newJob as any).offer_date || ''} onChange={e => setNewJob({ ...newJob, offer_date: e.target.value } as any)} /></div>
-                  <div style={{ marginBottom: 12 }}><label className="fl">Type de contrat</label><select className="fi" value={newJob.job_type} onChange={e => setNewJob({ ...newJob, job_type: e.target.value as JobType })}>{['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance'].map(t => <option key={t}>{t}</option>)}</select></div>
-                  <div style={{ marginBottom: 12, gridColumn: '1/-1' }}><label className="fl">Poste *</label><input className="fi" value={newJob.title || ''} onChange={e => setNewJob({ ...newJob, title: e.target.value })} placeholder="Chef de projet digital" /></div>
-                  <div style={{ marginBottom: 12 }}><label className="fl">Entreprise *</label><input className="fi" value={newJob.company || ''} onChange={e => setNewJob({ ...newJob, company: e.target.value })} placeholder="Decathlon" /></div>
-                  <div style={{ marginBottom: 12 }}><label className="fl">Source</label><select className="fi" value={(newJob as any).source || ''} onChange={e => setNewJob({ ...newJob, source: e.target.value } as any)}><option value="">Choisir...</option>{['LinkedIn','Indeed','Welcome to the Jungle','Apec','Pôle Emploi','Site entreprise','Réseau','Autre'].map(s => <option key={s}>{s}</option>)}</select></div>
-                  <div style={{ marginBottom: 12 }}><label className="fl">Lieu</label><input className="fi" value={newJob.location || ''} onChange={e => setNewJob({ ...newJob, location: e.target.value })} placeholder="Paris · Hybrid" /></div>
-                  <div style={{ marginBottom: 12 }}><label className="fl">Salaire</label><input className="fi" value={(newJob as any).salary || ''} onChange={e => setNewJob({ ...newJob, salary: e.target.value } as any)} placeholder="45-55k€ / an" /></div>
-                  <div style={{ marginBottom: 12 }}><label className="fl">Statut</label><select className="fi" value={newJob.status} onChange={e => setNewJob({ ...newJob, status: e.target.value as JobStatus })}>{Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
-                  <div style={{ marginBottom: 12, gridColumn: '1/-1' }}><label className="fl">Lien <span style={{ color: '#aaa', fontWeight: 500, textTransform: 'none' }}>(optionnel)</span></label><input className="fi" value={(newJob as any).url || ''} onChange={e => setNewJob({ ...newJob, url: e.target.value } as any)} placeholder="https://..." /></div>
-                  <div style={{ marginBottom: 12, gridColumn: '1/-1' }}><label className="fl">Description</label><textarea className="fi" value={newJob.description || ''} onChange={e => setNewJob({ ...newJob, description: e.target.value })} placeholder="Résumé du poste, missions..." rows={3} style={{ resize: 'vertical' }} /></div>
-                  <div style={{ marginBottom: 12, gridColumn: '1/-1' }}><label className="fl">Notes personnelles</label><textarea className="fi" value={newJob.notes || ''} onChange={e => setNewJob({ ...newJob, notes: e.target.value })} placeholder="Mes impressions, points à vérifier..." rows={2} style={{ resize: 'vertical' }} /></div>
+                <button onClick={() => setAddJobMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif', display: 'flex', alignItems: 'center', gap: 4 }}>← Retour</button>
+
+                {/* Cœurs favoris */}
+                <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coup de cœur ?</div>
+                  <HeartRating
+                    value={newJob.favorite || 0}
+                    onChange={v => setNewJob(prev => ({ ...prev, favorite: v }))}
+                  />
                 </div>
-                <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+
+                <div style={{ maxHeight: '58vh', overflowY: 'auto', paddingRight: 4 }}>
+                  <div className="form-grid">
+
+                    <div className="form-field">
+                      <label className="fl">Type de contrat</label>
+                      <select className="fi" value={newJob.job_type || 'CDI'} onChange={e => setNewJob(prev => ({ ...prev, job_type: e.target.value as JobType }))}>
+                        {['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance'].map(t => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="form-field">
+                      <label className="fl">Statut</label>
+                      <select className="fi" value={newJob.status || 'to_apply'} onChange={e => setNewJob(prev => ({ ...prev, status: e.target.value as JobStatus }))}>
+                        {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="form-field-full">
+                      <label className="fl">Intitulé du poste *</label>
+                      <input
+                        className="fi"
+                        value={newJob.title || ''}
+                        onChange={e => setNewJob(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="Chief Marketing Officer H/F"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="fl">Entreprise *</label>
+                      <input
+                        className="fi"
+                        value={newJob.company || ''}
+                        onChange={e => setNewJob(prev => ({ ...prev, company: e.target.value }))}
+                        placeholder="Decathlon"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="fl">Source</label>
+                      <select className="fi" value={(newJob as any).source || ''} onChange={e => setNewJob(prev => ({ ...prev, source: e.target.value }))}>
+                        <option value="">Choisir...</option>
+                        {['LinkedIn', 'Indeed', 'Welcome to the Jungle', 'Apec', 'Pôle Emploi', 'Site entreprise', 'Réseau', 'HelloWork', 'Autre'].map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="form-field">
+                      <label className="fl">Lieu</label>
+                      <input
+                        className="fi"
+                        value={newJob.location || ''}
+                        onChange={e => setNewJob(prev => ({ ...prev, location: e.target.value }))}
+                        placeholder="Paris · Hybride"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="fl">Salaire</label>
+                      <input
+                        className="fi"
+                        value={(newJob as any).salary || ''}
+                        onChange={e => setNewJob(prev => ({ ...prev, salary: e.target.value }))}
+                        placeholder="45-55k€ / an"
+                      />
+                    </div>
+
+                    <div className="form-field-full">
+                      <label className="fl">Lien de l&apos;offre</label>
+                      <input
+                        className="fi"
+                        value={(newJob as any).url || ''}
+                        onChange={e => setNewJob(prev => ({ ...prev, url: e.target.value }))}
+                        placeholder="https://..."
+                      />
+                    </div>
+
+                    <div className="form-field-full">
+                      <label className="fl">Description du poste</label>
+                      <textarea
+                        className="fi"
+                        value={newJob.description || ''}
+                        onChange={e => setNewJob(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="Missions, compétences requises..."
+                        rows={5}
+                        style={{ resize: 'vertical', minHeight: 120 }}
+                      />
+                    </div>
+
+                    <div className="form-field-full">
+                      <label className="fl">Mes notes personnelles</label>
+                      <textarea
+                        className="fi"
+                        value={newJob.notes || ''}
+                        onChange={e => setNewJob(prev => ({ ...prev, notes: e.target.value }))}
+                        placeholder="Mes impressions, points à vérifier..."
+                        rows={3}
+                        style={{ resize: 'vertical' }}
+                      />
+                    </div>
+
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
                   <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowAddJob(false)}>Annuler</button>
-                  <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={saveJob} disabled={!newJob.title || !newJob.company}>Ajouter l&apos;offre</button>
+                  <button
+                    className="btn-main"
+                    style={{ flex: 2, justifyContent: 'center' }}
+                    onClick={saveJob}
+                    disabled={!newJob.title || !newJob.company}
+                  >
+                    Ajouter l&apos;offre ✓
+                  </button>
                 </div>
               </div>
             )}
