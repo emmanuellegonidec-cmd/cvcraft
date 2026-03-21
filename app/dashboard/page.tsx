@@ -9,7 +9,7 @@ import { Job, Contact, JobStatus, STATUS_LABELS, STATUS_COLORS, JobType } from '
 type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats';
 
 const COLUMNS: { id: JobStatus; label: string; countBg: string; countColor: string }[] = [
-  { id: 'to_apply', label: 'À postuler', countBg: '#E0E0E0', countColor: '#888' },
+  { id: 'to_apply', label: 'Envie de postuler ?', countBg: '#E0E0E0', countColor: '#888' },
   { id: 'applied', label: 'Postulé', countBg: '#EBF2FD', countColor: '#1A6FDB' },
   { id: 'interview', label: 'Entretien', countBg: '#FEF9E0', countColor: '#B8900A' },
   { id: 'offer', label: 'Offre reçue', countBg: '#E8F5EE', countColor: '#1A7A4A' },
@@ -98,6 +98,7 @@ export default function DashboardPage() {
   const [importError, setImportError] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [importUrl, setImportUrl] = useState('');
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
 
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -129,16 +130,69 @@ export default function DashboardPage() {
 
   function openAddJobModal(defaultStatus?: JobStatus) {
     setNewJob({ ...EMPTY_JOB, status: defaultStatus || 'to_apply' });
-    setImportUrl(''); setImportError(false); setAddJobMode(null); setShowAddJob(true);
+    setImportUrl(''); setImportError(false); setAddJobMode(null);
+    setEditingJobId(null);
+    setShowAddJob(true);
+  }
+
+  function openEditJobModal(job: Job) {
+    setNewJob({
+      status: job.status,
+      job_type: job.job_type || 'CDI',
+      title: job.title || '',
+      company: job.company || '',
+      location: job.location || '',
+      description: job.description || '',
+      notes: job.notes || '',
+      salary: (job as any).salary_text || '',
+      source: (job as any).source_platform || '',
+      url: (job as any).source_url || '',
+      favorite: (job as any).favorite || 0,
+    });
+    setEditingJobId(job.id);
+    setAddJobMode('manual');
+    setImportUrl(''); setImportError(false);
+    setSelectedJob(null);
+    setShowAddJob(true);
   }
 
   async function saveJob() {
     if (!newJob.title || !newJob.company) return;
-    const payload = { title: newJob.title, company: newJob.company, location: newJob.location || '', description: newJob.description || '', job_type: newJob.job_type || 'CDI', status: newJob.status || 'to_apply', notes: newJob.notes || '', ...(newJob.salary ? { salary_text: newJob.salary } : {}), ...(newJob.source ? { source_platform: newJob.source } : {}), ...(newJob.url ? { source_url: newJob.url } : {}), ...(newJob.favorite ? { favorite: newJob.favorite } : {}) };
-    const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify(payload) });
-    const data = await res.json();
-    if (data.job) { setJobs(prev => [data.job, ...prev]); setShowAddJob(false); setNewJob({ ...EMPTY_JOB }); setImportUrl(''); }
-    else alert('Erreur : ' + (data.error || 'inconnue'));
+
+    const payload = {
+      title: newJob.title,
+      company: newJob.company,
+      location: newJob.location || '',
+      description: newJob.description || '',
+      job_type: newJob.job_type || 'CDI',
+      status: newJob.status || 'to_apply',
+      notes: newJob.notes || '',
+      ...(newJob.salary ? { salary_text: newJob.salary } : {}),
+      ...(newJob.source ? { source_platform: newJob.source } : {}),
+      ...(newJob.url ? { source_url: newJob.url } : {}),
+      ...(newJob.favorite !== undefined ? { favorite: newJob.favorite } : {}),
+    };
+
+    // Si on édite, on passe l'id pour faire un UPDATE
+    if (editingJobId) {
+      const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: editingJobId, ...payload }) });
+      const data = await res.json();
+      if (data.job) {
+        setJobs(prev => prev.map(j => j.id === editingJobId ? data.job : j));
+        setShowAddJob(false);
+        setNewJob({ ...EMPTY_JOB });
+        setEditingJobId(null);
+      } else alert('Erreur : ' + (data.error || 'inconnue'));
+    } else {
+      const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (data.job) {
+        setJobs(prev => [data.job, ...prev]);
+        setShowAddJob(false);
+        setNewJob({ ...EMPTY_JOB });
+        setImportUrl('');
+      } else alert('Erreur : ' + (data.error || 'inconnue'));
+    }
   }
 
   async function updateJobStatus(id: string, status: JobStatus) {
@@ -168,7 +222,19 @@ export default function DashboardPage() {
       if (!res.ok || !data.success) { setImportError(true); return; }
       const job = data.job || {};
       const description = (job.description && job.description.length > 150) ? job.description : (job.raw_text || job.description || '');
-      setNewJob({ title: cleanJobTitle(job.title), company: job.company_name || '', location: cleanLocation(job.location_text), description, job_type: 'CDI', status: 'to_apply', notes: '', salary: job.salary_text || '', source: detectSource(url), url, favorite: 0 });
+      setNewJob({
+        title: cleanJobTitle(job.title),
+        company: job.company_name || '',
+        location: cleanLocation(job.location_text),
+        description,
+        job_type: 'CDI',
+        status: 'to_apply',
+        notes: '',
+        salary: job.salary_text || '',
+        source: detectSource(url),
+        url,
+        favorite: 0,
+      });
       setAddJobMode('manual');
     } catch { setImportError(true); }
     finally { setImportLoading(false); }
@@ -190,6 +256,15 @@ export default function DashboardPage() {
       <text x="30" y="37" textAnchor="middle" fontFamily="Impact,sans-serif" fontSize="6" fontWeight="900" fill="#fff">find my job</text>
     </svg>
   );
+
+  // Labels pour la liste et les stats (gardent l'ancien label court)
+  const STATUS_LABELS_DISPLAY: Record<JobStatus, string> = {
+    to_apply: 'Envie de postuler ?',
+    applied: 'Postulé',
+    interview: 'Entretien',
+    offer: 'Offre reçue',
+    archived: 'Archivé',
+  };
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: "'Montserrat', sans-serif" }}>
@@ -225,6 +300,7 @@ export default function DashboardPage() {
         .date-tag { font-size: 9px; color: #aaa; font-weight: 600; margin-top: 5px; display: flex; align-items: center; gap: 3px; }
       `}</style>
 
+      {/* SIDEBAR */}
       <aside style={{ width: 210, background: '#111', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '0.875rem 1rem', borderBottom: '2px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <LogoSVG />
@@ -253,6 +329,7 @@ export default function DashboardPage() {
         </div>
       </aside>
 
+      {/* MAIN */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.5rem', background: '#fff', borderBottom: '2px solid #111', flexShrink: 0 }}>
           <div>
@@ -263,6 +340,7 @@ export default function DashboardPage() {
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
+
           {['kanban','list','stats'].includes(view) && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: '1.25rem' }}>
               {[{l:'Total',v:stats.total,c:'#111'},{l:'Taux réponse',v:stats.responseRate+'%',c:'#E8151B'},{l:'Entretiens',v:stats.interviews,c:'#1A7A4A'},{l:'Offres',v:stats.offers,c:'#B8900A'},{l:'Contacts',v:contacts.length,c:'#888'}].map(s => (
@@ -271,21 +349,23 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* KANBAN */}
           {view === 'kanban' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, alignItems: 'start' }}>
               {COLUMNS.map(col => (
                 <div key={col.id} style={{ background: '#F4F4F4', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: 8, minHeight: 180 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#111', textTransform: 'uppercase' }}>{col.label}</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.02em' }}>{col.label}</div>
                     <div style={{ width: 18, height: 18, borderRadius: '50%', background: col.countBg, color: col.countColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800 }}>{jobsByStatus(col.id).length}</div>
                   </div>
                   {jobsByStatus(col.id).map(job => (
                     <div key={job.id} className="jcard" onClick={() => setSelectedJob(job)}>
                       <div style={{ fontSize: 9, color: '#888', fontWeight: 600, marginBottom: 2 }}>{job.company}</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 6 }}>{job.title}</div>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 5 }}>{job.title}</div>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 3 }}>
                         {job.location && <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0', fontSize: 9 }}>{job.location}</span>}
                         <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0', fontSize: 9 }}>{job.job_type}</span>
+                        {(job as any).salary_text && <span className="pill" style={{ background: '#E8F5EE', color: '#1A7A4A', border: '1px solid #1A7A4A', fontSize: 9 }}>💰 {(job as any).salary_text}</span>}
                       </div>
                       {(job as any).favorite > 0 && <HeartDisplay value={(job as any).favorite} />}
                       <div className="date-tag">📅 {formatRelative(job.created_at)}</div>
@@ -297,6 +377,7 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* LIST */}
           {view === 'list' && (
             <div>
               <div style={{ display: 'flex', gap: 10, marginBottom: '1.25rem' }}>
@@ -306,7 +387,7 @@ export default function DashboardPage() {
                 </div>
                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="fi" style={{ width: 'auto' }}>
                   <option value="all">Tous les statuts</option>
-                  {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  {Object.entries(STATUS_LABELS_DISPLAY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
               <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
@@ -324,7 +405,7 @@ export default function DashboardPage() {
                       </div>
                       <div style={{ fontSize: 13 }}>{job.location || '—'}</div>
                       <div><span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0' }}>{job.job_type}</span></div>
-                      <div><span className="pill" style={{ background: sc.bg, color: sc.color }}>{STATUS_LABELS[job.status]}</span></div>
+                      <div><span className="pill" style={{ background: sc.bg, color: sc.color }}>{STATUS_LABELS_DISPLAY[job.status]}</span></div>
                       <div style={{ fontSize: 11, color: '#888', fontWeight: 600 }}>{formatDate(job.created_at)}</div>
                       <div><button className="btn-ghost" style={{ padding: '4px 10px', fontSize: 11, color: '#E8151B', borderColor: '#FDEAEA' }} onClick={e => { e.stopPropagation(); deleteJob(job.id); }}>✕</button></div>
                     </div>
@@ -334,6 +415,7 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* CONTACTS */}
           {view === 'contacts' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
               {contacts.length === 0 && <div style={{ gridColumn: '1/-1', padding: '3rem', textAlign: 'center', color: '#888' }}>Aucun contact — <button onClick={() => setShowAddContact(true)} style={{ color: '#E8151B', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Ajouter le premier</button></div>}
@@ -359,6 +441,7 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* AGENDA */}
           {view === 'agenda' && (
             <div>
               {jobs.filter(j => j.status === 'interview').length === 0
@@ -377,6 +460,7 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* STATS */}
           {view === 'stats' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '1.5rem', boxShadow: '3px 3px 0 #111' }}>
@@ -399,45 +483,79 @@ export default function DashboardPage() {
         </div>
       </main>
 
+      {/* DETAIL PANEL */}
       {selectedJob && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,12,0.5)', zIndex: 200 }} onClick={() => setSelectedJob(null)}>
           <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 460, background: '#fff', borderLeft: '2px solid #111', padding: '1.5rem', overflowY: 'auto', boxShadow: '-4px 0 0 #111' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <div><div style={{ fontSize: 11, color: '#888', marginBottom: 3, fontWeight: 600 }}>{selectedJob.company}</div><div style={{ fontSize: '1.2rem', fontWeight: 900 }}>{selectedJob.title}</div></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#888', marginBottom: 3, fontWeight: 600 }}>{selectedJob.company}</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>{selectedJob.title}</div>
+              </div>
               <button onClick={() => setSelectedJob(null)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
             </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '1rem' }}>
+
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '0.75rem' }}>
               {selectedJob.location && <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0' }}>{selectedJob.location}</span>}
               <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0' }}>{selectedJob.job_type}</span>
-              <span className="pill" style={{ background: STATUS_COLORS[selectedJob.status].bg, color: STATUS_COLORS[selectedJob.status].color }}>{STATUS_LABELS[selectedJob.status]}</span>
+              <span className="pill" style={{ background: STATUS_COLORS[selectedJob.status].bg, color: STATUS_COLORS[selectedJob.status].color }}>{STATUS_LABELS_DISPLAY[selectedJob.status]}</span>
+              {(selectedJob as any).salary_text && <span className="pill" style={{ background: '#E8F5EE', color: '#1A7A4A', border: '1px solid #1A7A4A' }}>💰 {(selectedJob as any).salary_text}</span>}
             </div>
+
+            {(selectedJob as any).favorite > 0 && (
+              <div style={{ marginBottom: '0.75rem' }}>
+                <HeartDisplay value={(selectedJob as any).favorite} />
+              </div>
+            )}
+
             <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: '1rem' }}>📅 Créé le {formatDate(selectedJob.created_at)}</div>
+
             <div style={{ marginBottom: '1.25rem' }}>
               <label className="fl">Changer le statut</label>
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                 {COLUMNS.map(col => <button key={col.id} onClick={() => { updateJobStatus(selectedJob.id, col.id); setSelectedJob({ ...selectedJob, status: col.id }); }} style={{ background: selectedJob.status === col.id ? col.countBg : '#fff', color: selectedJob.status === col.id ? col.countColor : '#888', border: `2px solid ${selectedJob.status === col.id ? col.countColor : '#E0E0E0'}`, borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'Montserrat,sans-serif' }}>{col.label}</button>)}
               </div>
             </div>
-            {selectedJob.description && <div style={{ marginBottom: '1.25rem' }}><label className="fl">Description</label><div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 8, padding: '10px 12px', fontSize: 13, lineHeight: 1.6, maxHeight: 200, overflowY: 'auto' }}>{selectedJob.description}</div></div>}
+
+            {selectedJob.description && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label className="fl">Description</label>
+                <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 8, padding: '10px 12px', fontSize: 13, lineHeight: 1.6, maxHeight: 200, overflowY: 'auto' }}>{selectedJob.description}</div>
+              </div>
+            )}
+
             <div style={{ marginBottom: '1.25rem' }}>
               <label className="fl">Mes notes</label>
               <textarea defaultValue={selectedJob.notes || ''} placeholder="Notes, impressions..." className="fi" style={{ resize: 'vertical', minHeight: 80 }} onBlur={async e => { await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: selectedJob.id, notes: e.target.value }) }); }} />
             </div>
-            <button className="btn-main" style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }} onClick={() => router.push('/dashboard/editor?targetJob=' + encodeURIComponent(selectedJob.title + ' chez ' + selectedJob.company))}>✦ Générer un CV pour ce poste →</button>
+
+            <button className="btn-main" style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }} onClick={() => router.push('/dashboard/editor?targetJob=' + encodeURIComponent(selectedJob.title + ' chez ' + selectedJob.company))}>
+              ✦ Générer un CV pour ce poste →
+            </button>
+
+            {/* BOUTON MODIFIER */}
+            <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }} onClick={() => openEditJobModal(selectedJob)}>
+              ✏️ Modifier l&apos;offre
+            </button>
+
             <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center', color: '#E8151B', borderColor: '#FDEAEA' }} onClick={() => deleteJob(selectedJob.id)}>Supprimer</button>
           </div>
         </div>
       )}
 
+      {/* ADD / EDIT JOB MODAL */}
       {showAddJob && (
         <div className="modal-bg" onClick={() => setShowAddJob(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: 0 }}>Ajouter une offre</h2>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: 0 }}>
+                {editingJobId ? 'Modifier l\'offre' : 'Ajouter une offre'}
+              </h2>
               <button onClick={() => setShowAddJob(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
             </div>
 
-            {!addJobMode && (
+            {/* CHOIX MODE — seulement pour nouveau */}
+            {!addJobMode && !editingJobId && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[{mode:'url',icon:'🔗',title:'Importer depuis une URL',sub:'Importer automatiquement depuis un jobboard'},{mode:'manual',icon:'✍️',title:'Remplir manuellement',sub:'Créer une offre à partir de zéro'}].map(opt => (
                   <button key={opt.mode} onClick={() => setAddJobMode(opt.mode as 'url'|'manual')} style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', textAlign: 'left', boxShadow: '2px 2px 0 #111', width: '100%' }}
@@ -450,7 +568,8 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {addJobMode === 'url' && (
+            {/* MODE URL */}
+            {addJobMode === 'url' && !editingJobId && (
               <div>
                 <button onClick={() => { setAddJobMode(null); setImportError(false); setImportUrl(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 12, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
                 <div style={{ marginBottom: 14 }}>
@@ -473,17 +592,22 @@ export default function DashboardPage() {
               </div>
             )}
 
+            {/* MODE MANUEL (ajout ET modification) */}
             {addJobMode === 'manual' && (
               <div>
-                <button onClick={() => setAddJobMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
+                {!editingJobId && (
+                  <button onClick={() => setAddJobMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
+                )}
+
                 <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coup de cœur ?</div>
                   <HeartRating value={newJob.favorite} onChange={v => setNewJob(prev => ({ ...prev, favorite: v }))} />
                 </div>
+
                 <div style={{ maxHeight: '62vh', overflowY: 'auto', paddingRight: 4 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                     <div style={{ marginBottom: 14 }}><label className="fl">Type de contrat</label><select className="fi" value={newJob.job_type} onChange={e => setNewJob(prev => ({ ...prev, job_type: e.target.value as JobType }))}>{['CDI','CDD','Freelance','Stage','Alternance'].map(t => <option key={t}>{t}</option>)}</select></div>
-                    <div style={{ marginBottom: 14 }}><label className="fl">Statut</label><select className="fi" value={newJob.status} onChange={e => setNewJob(prev => ({ ...prev, status: e.target.value as JobStatus }))}>{Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+                    <div style={{ marginBottom: 14 }}><label className="fl">Statut</label><select className="fi" value={newJob.status} onChange={e => setNewJob(prev => ({ ...prev, status: e.target.value as JobStatus }))}>{Object.entries(STATUS_LABELS_DISPLAY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
                     <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}><label className="fl">Intitulé du poste *</label><input className="fi" value={newJob.title} onChange={e => setNewJob(prev => ({ ...prev, title: e.target.value }))} placeholder="Chief Marketing Officer H/F" /></div>
                     <div style={{ marginBottom: 14 }}><label className="fl">Entreprise *</label><input className="fi" value={newJob.company} onChange={e => setNewJob(prev => ({ ...prev, company: e.target.value }))} placeholder="Decathlon" /></div>
                     <div style={{ marginBottom: 14 }}><label className="fl">Source</label><select className="fi" value={newJob.source} onChange={e => setNewJob(prev => ({ ...prev, source: e.target.value }))}><option value="">Choisir...</option>{['LinkedIn','Indeed','Welcome to the Jungle','Apec','Pôle Emploi','Site entreprise','Réseau','HelloWork','Autre'].map(s => <option key={s}>{s}</option>)}</select></div>
@@ -494,9 +618,12 @@ export default function DashboardPage() {
                     <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}><label className="fl">Mes notes personnelles</label><textarea className="fi" value={newJob.notes} onChange={e => setNewJob(prev => ({ ...prev, notes: e.target.value }))} placeholder="Mes impressions, points à vérifier..." rows={3} style={{ resize: 'vertical' }} /></div>
                   </div>
                 </div>
+
                 <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
                   <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowAddJob(false)}>Annuler</button>
-                  <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={saveJob} disabled={!newJob.title || !newJob.company}>Ajouter l&apos;offre</button>
+                  <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={saveJob} disabled={!newJob.title || !newJob.company}>
+                    {editingJobId ? 'Enregistrer les modifications' : 'Ajouter l\'offre'}
+                  </button>
                 </div>
               </div>
             )}
@@ -504,6 +631,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* ADD CONTACT MODAL */}
       {showAddContact && (
         <div className="modal-bg" onClick={() => setShowAddContact(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
