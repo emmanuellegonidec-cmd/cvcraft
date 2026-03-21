@@ -238,9 +238,11 @@ function externalIdFromPath(url: string, regex: RegExp): string | null {
 // ─────────────────────────────────────────────────────────────────
 // EXTRACTION DEPUIS LE RAW_TEXT LINKEDIN (page non connectée)
 //
-// Stratégie : trouver "il y a X jours" dans le raw_text, puis
-// analyser les 200 caractères JUSTE AVANT — ils contiennent
-// toujours "[TITRE] [ENTREPRISE] [LIEU]" de façon compacte.
+// Structure du raw_text LinkedIn non connecté :
+// "...Postuler [TITRE] [ENTREPRISE] [LIEU] Postuler [TITRE] [ENTREPRISE] [LIEU] il y a X jours..."
+//
+// On ancre sur le 2e "Postuler" suivi du pattern complet jusqu'à "il y a".
+// C'est le bloc le plus court et le plus fiable.
 // ─────────────────────────────────────────────────────────────────
 
 function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | null): {
@@ -259,56 +261,51 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
   let seniority_level: string | null = null
 
   // ── 1. TITRE et LIEU ──────────────────────────────────────────
-  // On cherche "il y a X" (X = chiffre) dans le raw_text.
-  // Les 200 caractères avant contiennent toujours "[TITRE] [ENTREPRISE] [LIEU]"
-  // car c'est le résumé court répété 2 fois par LinkedIn.
+  // Pattern ancré : "Postuler [TITRE] [ENTREPRISE] [LIEU] il y a X"
+  // Le 2e "Postuler" précède toujours le bloc répété court et propre.
 
-  const ilYaMatch = rawText.match(/\sil y a\s+\d/)
-  if (ilYaMatch && ilYaMatch.index !== undefined) {
-    const windowEnd = ilYaMatch.index
-    const windowStart = Math.max(0, windowEnd - 200)
-    const window = rawText.slice(windowStart, windowEnd).trim()
+  if (companyFromMeta) {
+    const escaped = companyFromMeta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-    if (companyFromMeta) {
-      // Utilise l'entreprise comme pivot : "[TITRE] [ENTREPRISE] [LIEU]"
-      const escaped = companyFromMeta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      const splitRegex = new RegExp(
-        `(.+?)\\s+${escaped}\\s+((?:Ville de |Province de |Région de )?[A-ZÀ-Ÿ][a-zà-ÿ\\s,\\-]+?)$`,
+    // Cherche : "Postuler [TITRE] [ENTREPRISE] [LIEU] il y a"
+    const anchoredRegex = new RegExp(
+      `Postuler\\s+(.+?)\\s+${escaped}\\s+((?:Ville de |Province de |Région de )?[A-ZÀ-Ÿ][a-zà-ÿ\\s,\\-]+?)\\s+il y a`,
+      'i'
+    )
+    const match = rawText.match(anchoredRegex)
+    if (match) {
+      title = cleanText(match[1])
+      location_text = cleanText(match[2])
+        ?.replace(/^(Ville de |Province de |Région de )/i, '')
+        .trim() ?? null
+    }
+
+    // Fallback : "Postuler [TITRE] [ENTREPRISE] [LIEU] Plus de"
+    if (!title) {
+      const fallback1 = new RegExp(
+        `Postuler\\s+(.+?)\\s+${escaped}\\s+((?:Ville de |Province de |Région de )?[A-ZÀ-Ÿ][a-zà-ÿ\\s,\\-]+?)\\s+(?:Plus de|Découvrez)`,
         'i'
       )
-      const split = window.match(splitRegex)
-      if (split) {
-        title = cleanText(split[1])
-        location_text = cleanText(split[2])
+      const m1 = rawText.match(fallback1)
+      if (m1) {
+        title = cleanText(m1[1])
+        location_text = cleanText(m1[2])
           ?.replace(/^(Ville de |Province de |Région de )/i, '')
           .trim() ?? null
       }
     }
-
-    // Fallback sans entreprise connue
-    if (!title) {
-      const genericSplit = window.match(
-        /([A-ZÀ-Ÿ].+?)\s+([A-ZÀ-Ÿ][a-zA-ZÀ-ÿ\s&'\-\.]{1,40}?)\s+((?:Ville de |Province de )?[A-ZÀ-Ÿ][a-zà-ÿ\s,\-]+?)$/i
-      )
-      if (genericSplit) {
-        title = cleanText(genericSplit[1])
-        company_name = cleanText(genericSplit[2])
-        location_text = cleanText(genericSplit[3])
-          ?.replace(/^(Ville de |Province de |Région de )/i, '')
-          .trim() ?? null
-      }
+  } else {
+    // Pas d'entreprise connue : pattern générique après "Postuler"
+    const genericMatch = rawText.match(
+      /Postuler\s+([A-ZÀ-Ÿ].+?)\s+([A-ZÀ-Ÿ][a-zA-ZÀ-ÿ\s&'\-\.]{1,40}?)\s+((?:Ville de |Province de )?[A-ZÀ-Ÿ][a-zà-ÿ\s,\-]+?)\s+il y a/i
+    )
+    if (genericMatch) {
+      title = cleanText(genericMatch[1])
+      company_name = cleanText(genericMatch[2])
+      location_text = cleanText(genericMatch[3])
+        ?.replace(/^(Ville de |Province de |Région de )/i, '')
+        .trim() ?? null
     }
-  }
-
-  // Nettoyage titre : supprimer préfixes parasites LinkedIn
-  // ex: "Stych recrute pour des postes de Chief Marketing Officer H/F"
-  if (title) {
-    title = title
-      .replace(/^.+?\s+recrute\s+(?:pour\s+(?:des?\s+postes?\s+de\s+)?)?/i, '')
-      .replace(/^.+?\s+recherche\s+(?:un[e]?\s+)?/i, '')
-      .replace(/^.+?\s+est\s+(?:à\s+la\s+recherche\s+d['e]un[e]?\s+)?/i, '')
-      .trim()
-    if (!title) title = null
   }
 
   // ── 2. DESCRIPTION ────────────────────────────────────────────
@@ -366,7 +363,6 @@ const linkedinAdapter: JobAdapter = {
       text($, '.description__text')
 
     const rawText = bodyText($) ?? cleanText(html) ?? ''
-
     const extracted = extractLinkedInFromRawText(rawText, companyFromMeta)
 
     // Nettoyage titre meta comme dernier recours
