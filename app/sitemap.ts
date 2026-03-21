@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://cvcraft-five.vercel.app'
+  const baseUrl = 'https://jeanfindmyjob.fr'
 
   return [
     {
@@ -9,7 +9,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
     },
     {
-      url: `${baseUrl}/editor`,
+      url: `${baseUrl}/auth/login`,
+      lastModified: new Date(),
+    },
+    {
+      url: `${baseUrl}/auth/signup`,
       lastModified: new Date(),
     },
     {
