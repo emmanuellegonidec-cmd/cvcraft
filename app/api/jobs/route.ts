@@ -1,36 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 
-// Récupère le user depuis le token Bearer OU depuis les cookies
-async function getUser(req: NextRequest) {
+// Crée un client Supabase authentifié avec le token de l'utilisateur
+function createAuthedClient(token: string) {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    }
+  );
+}
+
+// Récupère le user et son token depuis Bearer header OU cookies
+async function getAuth(req: NextRequest): Promise<{ userId: string | null; supabase: ReturnType<typeof createAuthedClient> | Awaited<ReturnType<typeof createClient>> }> {
   const authHeader = req.headers.get('authorization');
 
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.replace('Bearer ', '').trim();
-    const supabase = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = createAuthedClient(token);
     const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (!error && user) return { user, token };
+    if (!error && user) {
+      return { userId: user.id, supabase };
+    }
   }
 
   // Fallback cookies
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  return { user, token: null };
+  return { userId: user?.id ?? null, supabase };
 }
 
 export async function GET(req: NextRequest) {
-  const { user } = await getUser(req);
-  if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 });
+  const { userId, supabase } = await getAuth(req);
+  if (!userId) return NextResponse.json({ error: 'Non connecté' }, { status: 401 });
 
-  const supabase = await createClient();
   const { data, error } = await supabase
     .from('jobs')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -38,10 +51,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { user } = await getUser(req);
-  if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 });
+  const { userId, supabase } = await getAuth(req);
+  if (!userId) return NextResponse.json({ error: 'Non connecté' }, { status: 401 });
 
-  const supabase = await createClient();
   const body = await req.json();
   const { id, ...fields } = body;
 
@@ -49,32 +61,35 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from('jobs')
       .update({ ...fields, updated_at: new Date().toISOString() })
-      .eq('id', id).eq('user_id', user.id)
-      .select().single();
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ job: data });
   } else {
     const { data, error } = await supabase
       .from('jobs')
-      .insert({ ...fields, user_id: user.id })
-      .select().single();
+      .insert({ ...fields, user_id: userId })
+      .select()
+      .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ job: data });
   }
 }
 
 export async function DELETE(req: NextRequest) {
-  const { user } = await getUser(req);
-  if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 });
+  const { userId, supabase } = await getAuth(req);
+  if (!userId) return NextResponse.json({ error: 'Non connecté' }, { status: 401 });
 
-  const supabase = await createClient();
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'ID manquant' }, { status: 400 });
 
   const { error } = await supabase
     .from('jobs')
     .delete()
-    .eq('id', id).eq('user_id', user.id);
+    .eq('id', id)
+    .eq('user_id', userId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
