@@ -22,7 +22,6 @@ export type NormalizedJobOffer = {
   source_url: string
   source_hostname: string
   external_job_id: string | null
-
   title: string | null
   company_name: string | null
   location_text: string | null
@@ -30,21 +29,17 @@ export type NormalizedJobOffer = {
   employment_type: string | null
   seniority_level: string | null
   department: string | null
-
   salary_text: string | null
   salary_min: number | null
   salary_max: number | null
   currency: string | null
-
   description: string | null
   requirements: string | null
   benefits: string | null
   posted_at_text: string | null
   raw_text: string | null
-
   import_status: ImportStatus
   extraction_confidence: number | null
-
   parser_name: string | null
   parser_version: string | null
 }
@@ -102,29 +97,9 @@ function detectWorkplaceType(
   ...values: Array<string | null | undefined>
 ): WorkplaceType {
   const merged = values.filter(Boolean).join(' ').toLowerCase()
-
-  if (
-    merged.includes('remote') ||
-    merged.includes('télétravail') ||
-    merged.includes('full remote') ||
-    merged.includes('100% télétravail')
-  ) {
-    return 'remote'
-  }
-
-  if (merged.includes('hybrid') || merged.includes('hybride')) {
-    return 'hybrid'
-  }
-
-  if (
-    merged.includes('on-site') ||
-    merged.includes('onsite') ||
-    merged.includes('sur site') ||
-    merged.includes('présentiel')
-  ) {
-    return 'onsite'
-  }
-
+  if (merged.includes('remote') || merged.includes('télétravail') || merged.includes('full remote') || merged.includes('100% télétravail')) return 'remote'
+  if (merged.includes('hybrid') || merged.includes('hybride')) return 'hybrid'
+  if (merged.includes('on-site') || merged.includes('onsite') || merged.includes('sur site') || merged.includes('présentiel')) return 'onsite'
   return null
 }
 
@@ -133,38 +108,20 @@ function parseSalary(salaryText: string | null): {
   salary_max: number | null
   currency: string | null
 } {
-  if (!salaryText) {
-    return { salary_min: null, salary_max: null, currency: null }
-  }
+  if (!salaryText) return { salary_min: null, salary_max: null, currency: null }
 
   const currency =
-    salaryText.includes('€') || salaryText.toLowerCase().includes('eur')
-      ? 'EUR'
-      : salaryText.includes('$')
-      ? 'USD'
-      : null
+    salaryText.includes('€') || salaryText.toLowerCase().includes('eur') ? 'EUR'
+    : salaryText.includes('$') ? 'USD'
+    : null
 
   const numbers = Array.from(salaryText.matchAll(/(\d[\d\s.,]*)/g))
     .map((m) => m[1].replace(/\s/g, '').replace(',', '.'))
     .map((n) => Number.parseFloat(n))
     .filter((n) => Number.isFinite(n))
 
-  if (numbers.length >= 2) {
-    return {
-      salary_min: numbers[0] ?? null,
-      salary_max: numbers[1] ?? null,
-      currency,
-    }
-  }
-
-  if (numbers.length === 1) {
-    return {
-      salary_min: numbers[0] ?? null,
-      salary_max: null,
-      currency,
-    }
-  }
-
+  if (numbers.length >= 2) return { salary_min: numbers[0] ?? null, salary_max: numbers[1] ?? null, currency }
+  if (numbers.length === 1) return { salary_min: numbers[0] ?? null, salary_max: null, currency }
   return { salary_min: null, salary_max: null, currency }
 }
 
@@ -215,7 +172,6 @@ function finalizeJob(
   partial: Partial<NormalizedJobOffer>
 ): NormalizedJobOffer {
   const salary = parseSalary(partial.salary_text ?? null)
-
   const job: NormalizedJobOffer = {
     ...createEmptyJob(source, url),
     ...partial,
@@ -225,48 +181,31 @@ function finalizeJob(
     parser_name: parserName,
     parser_version: PARSER_VERSION,
   }
-
   const hasCoreData = Boolean(job.title || job.company_name || job.description)
-
   job.import_status = hasCoreData ? 'needs_review' : 'failed'
-  job.extraction_confidence =
-    partial.extraction_confidence ?? computeConfidence(job)
-
+  job.extraction_confidence = partial.extraction_confidence ?? computeConfidence(job)
   return job
 }
 
 function extractJsonLdJobPosting($: CheerioAPI): Record<string, unknown> | null {
   const scripts = $('script[type="application/ld+json"]').toArray()
-
   for (const script of scripts) {
     const raw = $(script).contents().text()
     if (!raw) continue
-
     try {
       const parsed = JSON.parse(raw)
-
       const candidates = Array.isArray(parsed)
         ? parsed
         : parsed['@graph'] && Array.isArray(parsed['@graph'])
         ? parsed['@graph']
         : [parsed]
-
       for (const item of candidates) {
-        if (
-          item &&
-          typeof item === 'object' &&
-          String((item as Record<string, unknown>)['@type'] || '')
-            .toLowerCase()
-            .includes('jobposting')
-        ) {
+        if (item && typeof item === 'object' && String((item as Record<string, unknown>)['@type'] || '').toLowerCase().includes('jobposting')) {
           return item as Record<string, unknown>
         }
       }
-    } catch {
-      continue
-    }
+    } catch { continue }
   }
-
   return null
 }
 
@@ -275,31 +214,13 @@ function stringValue(value: unknown): string | null {
 }
 
 function normalizeJsonLd(url: string, source: JobSource, jsonLd: Record<string, unknown>) {
-  const hiringOrg =
-    jsonLd.hiringOrganization && typeof jsonLd.hiringOrganization === 'object'
-      ? (jsonLd.hiringOrganization as Record<string, unknown>)
-      : null
-
-  const jobLocation =
-    jsonLd.jobLocation && typeof jsonLd.jobLocation === 'object'
-      ? (jsonLd.jobLocation as Record<string, unknown>)
-      : null
-
-  const address =
-    jobLocation?.address && typeof jobLocation.address === 'object'
-      ? (jobLocation.address as Record<string, unknown>)
-      : null
-
-  const locationText = cleanText(
-    [
-      stringValue(address?.addressLocality),
-      stringValue(address?.addressRegion),
-      stringValue(address?.addressCountry),
-    ]
-      .filter(Boolean)
-      .join(', ')
-  )
-
+  const hiringOrg = jsonLd.hiringOrganization && typeof jsonLd.hiringOrganization === 'object'
+    ? (jsonLd.hiringOrganization as Record<string, unknown>) : null
+  const jobLocation = jsonLd.jobLocation && typeof jsonLd.jobLocation === 'object'
+    ? (jsonLd.jobLocation as Record<string, unknown>) : null
+  const address = jobLocation?.address && typeof jobLocation.address === 'object'
+    ? (jobLocation.address as Record<string, unknown>) : null
+  const locationText = cleanText([stringValue(address?.addressLocality), stringValue(address?.addressRegion), stringValue(address?.addressCountry)].filter(Boolean).join(', '))
   return finalizeJob(source, `${source}JsonLdAdapter`, url, {
     title: stringValue(jsonLd.title),
     company_name: stringValue(hiringOrg?.name),
@@ -319,8 +240,8 @@ function externalIdFromPath(url: string, regex: RegExp): string | null {
 
 // ─────────────────────────────────────────────────────────────────
 // EXTRACTION DEPUIS LE RAW_TEXT LINKEDIN (page non connectée)
-// LinkedIn charge le vrai contenu en JS dynamique, donc on parse
-// le raw_text qui contient tout le texte de la page.
+// Pattern LinkedIn non connecté dans le raw_text :
+// "S'inscrire [TITRE] [ENTREPRISE] [LIEU] Postuler [TITRE] [ENTREPRISE] [LIEU] il y a X jours"
 // ─────────────────────────────────────────────────────────────────
 
 function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | null): {
@@ -338,43 +259,80 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
   let employment_type: string | null = null
   let seniority_level: string | null = null
 
-  // Titre : dans le raw_text LinkedIn non connecté, le pattern est :
-  // "S'inscrire [TITRE] [ENTREPRISE] [LIEU] Postuler [TITRE] [ENTREPRISE] [LIEU] il y a"
-  // Le titre apparaît juste après "S'inscrire" ou "S'identifier S'inscrire"
-  const titleMatch = rawText.match(/S'inscrire\s+(.+?)\s+(?:Stych|[\w\s]+)\s+(?:Ville de |Province de )?[A-ZÀ-Ÿ][a-zà-ÿ]+\s+Postuler/i)
-  if (titleMatch) {
-    title = cleanText(titleMatch[1])
+  // ── 1. TITRE et LIEU ──────────────────────────────────────────
+  // Le raw_text contient toujours ce bloc :
+  // "S'inscrire [TITRE] [ENTREPRISE] [LIEU] Postuler"
+  // On cherche ce pattern précis pour extraire les 3 valeurs d'un coup
+
+  // Étape A : trouver le bloc après "S'inscrire" et avant "Postuler"
+  const headerBlock = rawText.match(/S'inscrire\s+(.+?)\s+Postuler/i)
+  if (headerBlock) {
+    const block = headerBlock[1].trim()
+    // Le bloc contient "[TITRE] [ENTREPRISE] [LIEU]"
+    // On utilise l'entreprise connue pour séparer titre et lieu
+    if (companyFromMeta) {
+      const escaped = companyFromMeta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const splitRegex = new RegExp(`^(.+?)\\s+${escaped}\\s+(.+)$`, 'i')
+      const split = block.match(splitRegex)
+      if (split) {
+        title = cleanText(split[1])
+        location_text = cleanText(split[2])
+          ?.replace(/^(Ville de |Province de |Région de )/i, '')
+          .trim() ?? null
+      }
+    }
+
+    // Fallback : pas d'entreprise connue — on tente de deviner
+    // Format typique : "Chief Marketing Officer H/F Stych Ville de Paris"
+    // On cherche le dernier mot en majuscule comme séparateur entreprise/lieu
+    if (!title) {
+      // Cherche un pattern "[TITRE] [MOT_MAJUSCULE] [LIEU_CONNU]"
+      const fallbackSplit = block.match(/^(.+?)\s+([A-ZÀ-Ÿ][a-zA-ZÀ-ÿ\s&'\-\.]+?)\s+((?:Ville de |Province de )?[A-ZÀ-Ÿ][a-zà-ÿ\s,\-]+)$/)
+      if (fallbackSplit) {
+        title = cleanText(fallbackSplit[1])
+        company_name = cleanText(fallbackSplit[2])
+        location_text = cleanText(fallbackSplit[3])
+          ?.replace(/^(Ville de |Province de |Région de )/i, '')
+          .trim() ?? null
+      }
+    }
   }
 
-  // Fallback titre : premier texte avant l'entreprise après S'inscrire
-  if (!title) {
-    const fallbackTitle = rawText.match(/S'inscrire\s+([^\n]+?)\s+Stych/i)
-    if (fallbackTitle) title = cleanText(fallbackTitle[1])
-  }
-
-  // Lieu : "Stych [LIEU] Postuler" — après le nom de l'entreprise
-  const locMatch = rawText.match(/(?:Stych|[\w]+)\s+((?:Ville de |Province de )?[A-ZÀ-Ÿ][a-zà-ÿ\s,\-]+?)\s+(?:Postuler|il y a)/i)
-  if (locMatch) {
-    location_text = locMatch[1]
-      .replace(/^(Ville de |Province de |Région de )/i, '')
-      .trim()
-  }
-
-  // Description : contenu réel de l'offre
-  const descStart = rawText.search(/(?:⭐|🎯|Missions|À propos|Description du poste|Rattaché|Dans le cadre|Nous recherchons|Le poste|Vos missions|Contexte|Présentation|STYCH est)/i)
+  // ── 2. DESCRIPTION ────────────────────────────────────────────
+  // Le vrai contenu de l'offre commence après les infos de contact LinkedIn
+  // et se termine avant "Show more Show less" ou "Niveau hiérarchique"
+  const descStart = rawText.search(
+    /(?:⭐|🎯|Missions|À propos|Description du poste|Rattaché|Dans le cadre|Nous recherchons|Le poste|Vos missions|Contexte|Présentation)/i
+  )
 
   if (descStart > -1) {
-    const descEndMatch = rawText.slice(descStart).search(/Show more Show less|Niveau hiérarchique|Les recommandations|Offres d'emploi similaires/i)
+    const afterDesc = rawText.slice(descStart)
+    const descEndMatch = afterDesc.search(
+      /Show more Show less|Niveau hiérarchique|Les recommandations|Offres d'emploi similaires/i
+    )
     const descEnd = descEndMatch > -1 ? descStart + descEndMatch : descStart + 8000
     description = cleanText(rawText.slice(descStart, descEnd))
+  } else {
+    // Fallback : le contenu commence souvent après "Postuler Enregistrer Signaler"
+    const fallbackDescStart = rawText.search(/Postuler\s+Enregistrer\s+Signaler/)
+    if (fallbackDescStart > -1) {
+      const afterBlock = rawText.slice(fallbackDescStart + 30)
+      const descEndMatch = afterBlock.search(/Show more Show less|Niveau hiérarchique/)
+      const content = afterBlock.slice(0, descEndMatch > -1 ? descEndMatch : 8000)
+      description = cleanText(content)
+    }
   }
 
-  // Employment type : uniquement "Temps plein", "Temps partiel", etc.
-  const employmentMatch = rawText.match(/Type d'emploi\s+(Temps plein|Temps partiel|CDI|CDD|Freelance|Stage|Alternance)/i)
+  // ── 3. EMPLOYMENT TYPE et SENIORITY ───────────────────────────
+  // Ces infos apparaissent après "Show more Show less" dans le raw_text
+  const employmentMatch = rawText.match(
+    /Type d'emploi\s+(Temps plein|Temps partiel|CDI|CDD|Freelance|Stage|Alternance)/i
+  )
   if (employmentMatch) employment_type = cleanText(employmentMatch[1])
 
-  // Seniority : uniquement la valeur courte
-  const seniorityMatch = rawText.match(/Niveau hiérarchique\s+(Cadre supérieur|Cadre|Directeur|Employé|Débutant|Intermédiaire|Non applicable)/i)
+  const seniorityMatch = rawText.match(
+    /Niveau hiérarchique\s+(Cadre supérieur|Cadre|Directeur|Employé|Débutant|Intermédiaire|Non applicable)/i
+  )
   if (seniorityMatch) seniority_level = cleanText(seniorityMatch[1])
 
   return { title, company_name, location_text, description, employment_type, seniority_level }
@@ -384,14 +342,10 @@ const linkedinAdapter: JobAdapter = {
   source: 'linkedin',
   canHandle: (url) => {
     const u = safeUrl(url)
-    return Boolean(
-      u &&
-        u.hostname.includes('linkedin.com') &&
-        u.pathname.includes('/jobs/view/')
-    )
+    return Boolean(u && u.hostname.includes('linkedin.com') && u.pathname.includes('/jobs/view/'))
   },
   parse: ({ url, $, html }) => {
-    // Essai 1 : JSON-LD (meilleure source, mais rarement présent sur LinkedIn)
+    // Essai 1 : JSON-LD (meilleure source, rarement présent sur LinkedIn non connecté)
     const jsonLd = extractJsonLdJobPosting($)
     if (jsonLd) return normalizeJsonLd(url, 'linkedin', jsonLd)
 
@@ -409,15 +363,16 @@ const linkedinAdapter: JobAdapter = {
     // Essai 3 : extraction depuis raw_text (page non connectée — cas le plus fréquent)
     const extracted = extractLinkedInFromRawText(rawText, companyFromMeta)
 
-    // Priorité : CSS > extraction raw_text > meta
-    const finalTitle = extracted.title ||
-      titleFromMeta?.replace(/\s*[|\-]\s*LinkedIn.*$/i, '').trim() ||
-      null
+    // Nettoyage du titre meta comme dernier recours
+    const cleanMetaTitle = titleFromMeta
+      ?.replace(/\s*[|]\s*LinkedIn.*$/i, '')
+      ?.replace(/\s*-\s*LinkedIn.*$/i, '')
+      ?.replace(/\s*\(Ville de [^)]+\)\s*/i, '')
+      ?.trim() ?? null
 
-    const finalLocation = extracted.location_text
-      ?.replace(/^(Ville de |Province de |Région de )/i, '')
-      .trim() ?? null
-
+    // Priorités : extracted > CSS > meta nettoyé
+    const finalTitle = extracted.title || descFromCss && cleanMetaTitle || cleanMetaTitle || null
+    const finalLocation = extracted.location_text ?? null
     const finalDescription = descFromCss || extracted.description || null
 
     return finalizeJob('linkedin', 'linkedinAdapter', url, {
@@ -444,38 +399,20 @@ const apecAdapter: JobAdapter = {
   source: 'apec',
   canHandle: (url) => {
     const u = safeUrl(url)
-    return Boolean(
-      u &&
-        u.hostname.includes('apec.fr') &&
-        u.pathname.includes('/emploi/detail-offre/')
-    )
+    return Boolean(u && u.hostname.includes('apec.fr') && u.pathname.includes('/emploi/detail-offre/'))
   },
   parse: ({ url, $, html }) => {
     const jsonLd = extractJsonLdJobPosting($)
     if (jsonLd) return normalizeJsonLd(url, 'apec', jsonLd)
-
     return finalizeJob('apec', 'apecAdapter', url, {
       external_job_id: externalIdFromPath(url, /detail-offre\/([^/?]+)/),
       title: text($, 'h1') || attr($, 'meta[property="og:title"]', 'content'),
-      company_name:
-        text($, '[data-cy="companyName"]') ||
-        text($, '.company-name'),
-      location_text:
-        text($, '[data-cy="location"]') ||
-        text($, '.place'),
-      employment_type:
-        text($, '[data-cy="contractType"]') ||
-        text($, '.contract-type'),
-      salary_text:
-        text($, '[data-cy="salary"]') ||
-        text($, '.salary'),
-      description:
-        text($, '[data-cy="jobDescription"]') ||
-        text($, '.description') ||
-        attr($, 'meta[name="description"]', 'content'),
-      posted_at_text:
-        text($, '[data-cy="publicationDate"]') ||
-        text($, '.publication-date'),
+      company_name: text($, '[data-cy="companyName"]') || text($, '.company-name'),
+      location_text: text($, '[data-cy="location"]') || text($, '.place'),
+      employment_type: text($, '[data-cy="contractType"]') || text($, '.contract-type'),
+      salary_text: text($, '[data-cy="salary"]') || text($, '.salary'),
+      description: text($, '[data-cy="jobDescription"]') || text($, '.description') || attr($, 'meta[name="description"]', 'content'),
+      posted_at_text: text($, '[data-cy="publicationDate"]') || text($, '.publication-date'),
       raw_text: bodyText($) ?? cleanText(html),
     })
   },
@@ -485,38 +422,20 @@ const helloworkAdapter: JobAdapter = {
   source: 'hellowork',
   canHandle: (url) => {
     const u = safeUrl(url)
-    return Boolean(
-      u &&
-        u.hostname.includes('hellowork.com') &&
-        u.pathname.includes('/emplois/')
-    )
+    return Boolean(u && u.hostname.includes('hellowork.com') && u.pathname.includes('/emplois/'))
   },
   parse: ({ url, $, html }) => {
     const jsonLd = extractJsonLdJobPosting($)
     if (jsonLd) return normalizeJsonLd(url, 'hellowork', jsonLd)
-
     return finalizeJob('hellowork', 'helloworkAdapter', url, {
       external_job_id: externalIdFromPath(url, /\/emplois\/(\d+)\.html/),
       title: text($, 'h1') || attr($, 'meta[property="og:title"]', 'content'),
-      company_name:
-        text($, '[data-cy="company-name"]') ||
-        text($, '.company'),
-      location_text:
-        text($, '[data-cy="job-location"]') ||
-        text($, '.tw-text-slate-700'),
-      employment_type:
-        text($, '[data-cy="job-contract"]') ||
-        text($, '.contract'),
-      salary_text:
-        text($, '[data-cy="job-salary"]') ||
-        text($, '.salary'),
-      description:
-        text($, '[data-cy="job-description"]') ||
-        text($, '.description') ||
-        attr($, 'meta[name="description"]', 'content'),
-      posted_at_text:
-        text($, '[data-cy="job-publication-date"]') ||
-        text($, '.publication-date'),
+      company_name: text($, '[data-cy="company-name"]') || text($, '.company'),
+      location_text: text($, '[data-cy="job-location"]') || text($, '.tw-text-slate-700'),
+      employment_type: text($, '[data-cy="job-contract"]') || text($, '.contract'),
+      salary_text: text($, '[data-cy="job-salary"]') || text($, '.salary'),
+      description: text($, '[data-cy="job-description"]') || text($, '.description') || attr($, 'meta[name="description"]', 'content'),
+      posted_at_text: text($, '[data-cy="job-publication-date"]') || text($, '.publication-date'),
       raw_text: bodyText($) ?? cleanText(html),
     })
   },
@@ -526,40 +445,21 @@ const wttjAdapter: JobAdapter = {
   source: 'wttj',
   canHandle: (url) => {
     const u = safeUrl(url)
-    return Boolean(
-      u &&
-        u.hostname.includes('welcometothejungle.com') &&
-        u.pathname.includes('/jobs')
-    )
+    return Boolean(u && u.hostname.includes('welcometothejungle.com') && u.pathname.includes('/jobs'))
   },
   parse: ({ url, $, html }) => {
     const jsonLd = extractJsonLdJobPosting($)
     if (jsonLd) return normalizeJsonLd(url, 'wttj', jsonLd)
-
     return finalizeJob('wttj', 'wttjAdapter', url, {
       external_job_id: externalIdFromPath(url, /\/jobs\/([^/?]+)/),
       title: text($, 'h1') || attr($, 'meta[property="og:title"]', 'content'),
-      company_name:
-        text($, '[data-testid="company-name"]') ||
-        text($, 'a[href*="/companies/"]'),
-      location_text:
-        text($, '[data-testid="job-location"]') ||
-        text($, '[data-testid="location"]'),
-      employment_type:
-        text($, '[data-testid="contract-type"]') ||
-        text($, '[data-testid="job-contract"]'),
-      department:
-        text($, '[data-testid="job-department"]') ||
-        text($, '[data-testid="department"]'),
-      salary_text:
-        text($, '[data-testid="salary"]') ||
-        text($, '[data-testid="job-salary"]'),
-      description:
-        text($, '[data-testid="job-description"]') ||
-        attr($, 'meta[name="description"]', 'content'),
-      posted_at_text:
-        text($, '[data-testid="job-publication-date"]') ||
-        text($, 'time'),
+      company_name: text($, '[data-testid="company-name"]') || text($, 'a[href*="/companies/"]'),
+      location_text: text($, '[data-testid="job-location"]') || text($, '[data-testid="location"]'),
+      employment_type: text($, '[data-testid="contract-type"]') || text($, '[data-testid="job-contract"]'),
+      department: text($, '[data-testid="job-department"]') || text($, '[data-testid="department"]'),
+      salary_text: text($, '[data-testid="salary"]') || text($, '[data-testid="job-salary"]'),
+      description: text($, '[data-testid="job-description"]') || attr($, 'meta[name="description"]', 'content'),
+      posted_at_text: text($, '[data-testid="job-publication-date"]') || text($, 'time'),
       raw_text: bodyText($) ?? cleanText(html),
     })
   },
@@ -569,36 +469,20 @@ const indeedAdapter: JobAdapter = {
   source: 'indeed',
   canHandle: (url) => {
     const u = safeUrl(url)
-    return Boolean(
-      u &&
-        u.hostname.includes('indeed.') &&
-        u.pathname.includes('/viewjob')
-    )
+    return Boolean(u && u.hostname.includes('indeed.') && u.pathname.includes('/viewjob'))
   },
   parse: ({ url, $, html }) => {
     const jsonLd = extractJsonLdJobPosting($)
     if (jsonLd) return normalizeJsonLd(url, 'indeed', jsonLd)
-
     return finalizeJob('indeed', 'indeedAdapter', url, {
       external_job_id: safeUrl(url)?.searchParams.get('jk') ?? null,
       title: text($, 'h1') || attr($, 'meta[property="og:title"]', 'content'),
-      company_name:
-        text($, '[data-company-name="true"]') ||
-        text($, '[data-testid="inlineHeader-companyName"]'),
-      location_text:
-        text($, '[data-testid="job-location"]') ||
-        text($, '[data-testid="inlineHeader-companyLocation"]'),
-      employment_type:
-        text($, '[data-testid="jobsearch-JobMetadataHeader-item"]'),
-      salary_text:
-        text($, '#salaryInfoAndJobType') ||
-        text($, '[data-testid="attribute_snippet_testid"]'),
-      description:
-        text($, '#jobDescriptionText') ||
-        attr($, 'meta[name="description"]', 'content'),
-      posted_at_text:
-        text($, '[data-testid="myJobsStateDate"]') ||
-        text($, '.jobsearch-JobMetadataFooter'),
+      company_name: text($, '[data-company-name="true"]') || text($, '[data-testid="inlineHeader-companyName"]'),
+      location_text: text($, '[data-testid="job-location"]') || text($, '[data-testid="inlineHeader-companyLocation"]'),
+      employment_type: text($, '[data-testid="jobsearch-JobMetadataHeader-item"]'),
+      salary_text: text($, '#salaryInfoAndJobType') || text($, '[data-testid="attribute_snippet_testid"]'),
+      description: text($, '#jobDescriptionText') || attr($, 'meta[name="description"]', 'content'),
+      posted_at_text: text($, '[data-testid="myJobsStateDate"]') || text($, '.jobsearch-JobMetadataFooter'),
       raw_text: bodyText($) ?? cleanText(html),
     })
   },
@@ -609,20 +493,11 @@ const genericAdapter: JobAdapter = {
   canHandle: () => true,
   parse: ({ url, $, html, hostname }) => {
     const jsonLd = extractJsonLdJobPosting($)
-    if (jsonLd) {
-      return normalizeJsonLd(url, 'unknown', jsonLd)
-    }
-
+    if (jsonLd) return normalizeJsonLd(url, 'unknown', jsonLd)
     return finalizeJob('unknown', 'genericAdapter', url, {
       source_hostname: hostname,
-      title:
-        attr($, 'meta[property="og:title"]', 'content') ||
-        text($, 'h1') ||
-        text($, 'title'),
-      description:
-        attr($, 'meta[name="description"]', 'content') ||
-        text($, 'article') ||
-        bodyText($),
+      title: attr($, 'meta[property="og:title"]', 'content') || text($, 'h1') || text($, 'title'),
+      description: attr($, 'meta[name="description"]', 'content') || text($, 'article') || bodyText($),
       raw_text: bodyText($) ?? cleanText(html),
     })
   },
@@ -645,14 +520,6 @@ export function detectJobSource(url: string): JobSource {
 export function parseJobHtml(url: string, html: string): NormalizedJobOffer {
   const $ = load(html)
   const hostname = getHostname(url)
-
-  const adapter =
-    JOB_ADAPTERS.find((a) => a.canHandle(url)) ?? genericAdapter
-
-  return adapter.parse({
-    url,
-    html,
-    $,
-    hostname,
-  })
+  const adapter = JOB_ADAPTERS.find((a) => a.canHandle(url)) ?? genericAdapter
+  return adapter.parse({ url, html, $, hostname })
 }
