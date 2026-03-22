@@ -30,11 +30,10 @@ export default function LoginPage() {
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
         .auth-input { width: 100%; border: 2px solid #E0E0E0; border-radius: 8px; padding: 11px 14px; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 500; outline: none; color: #111; background: #fff; transition: border-color 0.15s; }
-        .auth-input:focus { border-color: #E8151B; box-shadow: 0 0 0 3px rgba(232,21,27,0.08); }
+        .auth-input:focus { border-color: #111; box-shadow: 0 0 0 3px rgba(17,17,17,0.06); }
         .auth-label { display: block; font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
       `}</style>
 
-      {/* NAV — même style que la home */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 2.5rem', background: '#fff', borderBottom: '2.5px solid #111' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <img src="/logo.png" alt="Jean Find My Job" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
@@ -48,11 +47,9 @@ export default function LoginPage() {
         </div>
       </nav>
 
-      {/* FORM */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
         <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '2.5rem 2rem', width: '100%', maxWidth: 420, boxShadow: '4px 4px 0 #111' }}>
 
-          {/* Logo centré dans le form */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
             <img src="/logo.png" alt="Jean Find My Job" style={{ height: 90, width: 'auto', objectFit: 'contain' }} />
           </div>
