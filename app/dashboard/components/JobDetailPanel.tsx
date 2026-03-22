@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { Job } from '@/lib/jobs';
-import { Stage, formatDate, isInterviewStage } from './types';
+import { Stage, DETAIL_STAGES, formatDate, getGlobalStatus, isInterviewStage } from './types';
 import { HeartDisplay } from './HeartComponents';
 
 type Props = {
@@ -25,6 +25,30 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
   const [uploadingCv, setUploadingCv] = useState(false);
   const [uploadingLm, setUploadingLm] = useState(false);
 
+  // Étapes personnalisées (non default) ajoutées par l'utilisateur → rattachées à in_progress
+  const customStages: Stage[] = stages.filter(s => !s.is_default).map(s => ({ ...s, global_status: 'in_progress' }));
+
+  // Pipeline détaillé complet = étapes fixes + étapes personnalisées insérées avant "offer"
+  const detailStages: Stage[] = [
+    ...DETAIL_STAGES.filter(s => !['offer', 'archived'].includes(s.id)),
+    ...customStages,
+    DETAIL_STAGES.find(s => s.id === 'offer')!,
+    DETAIL_STAGES.find(s => s.id === 'archived')!,
+  ];
+
+  const currentSubStatus = (job as any).sub_status || job.status;
+  const currentDetailStage = detailStages.find(s => s.id === currentSubStatus);
+
+  // Quand on change l'étape dans le pipeline détaillé :
+  // → met à jour sub_status ET recalcule le status global
+  async function handleDetailStageChange(subStatusId: string) {
+    const globalStatus = getGlobalStatus(subStatusId, customStages);
+    await onFieldUpdate(job.id, 'sub_status', subStatusId);
+    if (globalStatus !== job.status) {
+      onStatusChange(job.id, globalStatus);
+    }
+  }
+
   async function uploadDocument(file: File, type: 'cv' | 'lm') {
     if (!userId || !accessToken) return;
     const supabase = createClient();
@@ -38,8 +62,6 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
     onFieldUpdate(job.id, field, signedData?.signedUrl ?? '');
     onFieldUpdate(job.id, checkField, true);
   }
-
-  const currentStage = stages.find(s => s.id === job.status);
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,12,0.5)', zIndex: 200 }} onClick={onClose}>
@@ -58,22 +80,49 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: '0.75rem' }}>
           {job.location && <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0' }}>{job.location}</span>}
           {(job as any).salary_text && <span className="pill" style={{ background: '#E8F5EE', color: '#1A7A4A', border: '1px solid #1A7A4A' }}>💰 {(job as any).salary_text}</span>}
-          {currentStage && <span className="pill" style={{ background: currentStage.color + '22', color: currentStage.color }}>{currentStage.label}</span>}
+          {currentDetailStage && (
+            <span className="pill" style={{ background: currentDetailStage.color + '22', color: currentDetailStage.color }}>
+              {currentDetailStage.label}
+            </span>
+          )}
         </div>
 
         {(job as any).favorite > 0 && <div style={{ marginBottom: '0.75rem' }}><HeartDisplay value={(job as any).favorite} /></div>}
         <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: '1rem' }}>📅 Créé le {formatDate(job.created_at)}</div>
 
-        {/* Étapes */}
+        {/* Pipeline détaillé */}
         <div style={{ marginBottom: '1rem' }}>
-          <label className="fl">Étape</label>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {stages.map(col => (
-              <button key={col.id} onClick={() => onStatusChange(job.id, col.id)}
-                style={{ background: job.status === col.id ? col.color + '22' : '#fff', color: job.status === col.id ? col.color : '#888', border: `2px solid ${job.status === col.id ? col.color : '#E0E0E0'}`, borderRadius: 6, padding: '4px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'Montserrat,sans-serif' }}>
-                {col.label}
-              </button>
-            ))}
+          <label className="fl">Pipeline</label>
+          <div style={{ display: 'flex', gap: 0, overflowX: 'auto', paddingBottom: 4 }}>
+            {detailStages.map((s, i) => {
+              const isActive = currentSubStatus === s.id;
+              const isPast = detailStages.findIndex(d => d.id === currentSubStatus) > i;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => handleDetailStageChange(s.id)}
+                  style={{
+                    flex: '0 0 auto',
+                    background: isActive ? s.color : isPast ? s.color + '33' : '#F4F4F4',
+                    color: isActive ? '#fff' : isPast ? s.color : '#888',
+                    border: `2px solid ${isActive ? s.color : isPast ? s.color + '66' : '#E0E0E0'}`,
+                    borderRadius: i === 0 ? '8px 0 0 8px' : i === detailStages.length - 1 ? '0 8px 8px 0' : '0',
+                    marginLeft: i === 0 ? 0 : -2,
+                    padding: '5px 10px',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'Montserrat,sans-serif',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s',
+                    zIndex: isActive ? 2 : 1,
+                    position: 'relative',
+                  }}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -82,7 +131,6 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
           <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '10px 14px', marginBottom: '1rem' }}>
             <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Documents</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {/* CV */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div className={'check-box' + ((job as any).cv_sent ? ' checked' : '')} onClick={() => onFieldUpdate(job.id, 'cv_sent', !(job as any).cv_sent)}>
                   {(job as any).cv_sent && '✓'}
@@ -96,10 +144,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
                   onChange={async e => { const f = e.target.files?.[0]; if (f) { setUploadingCv(true); await uploadDocument(f, 'cv'); setUploadingCv(false); } }} />
                 {uploadingCv && <span style={{ fontSize: 10, color: '#888' }}>⏳</span>}
               </div>
-
               <div style={{ width: 1, background: '#E0E0E0' }} />
-
-              {/* LM */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div className={'check-box' + ((job as any).cover_letter_sent ? ' checked' : '')} onClick={() => onFieldUpdate(job.id, 'cover_letter_sent', !(job as any).cover_letter_sent)}>
                   {(job as any).cover_letter_sent && '✓'}

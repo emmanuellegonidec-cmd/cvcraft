@@ -8,17 +8,45 @@ export type Stage = {
   color: string;
   position: number;
   is_default?: boolean;
+  global_status?: string; // pour les étapes personnalisées → quelle colonne globale
 };
 
+// ── Kanban global (5 grandes étapes) ──────────────────────────────────────────
 export const DEFAULT_STAGES: Stage[] = [
-  { id: 'to_apply', label: 'Envie de postuler ?', color: '#888', position: 1, is_default: true },
-  { id: 'applied', label: 'Postulé', color: '#1A6FDB', position: 2, is_default: true },
-  { id: 'phone_interview', label: 'Entretien téléphonique', color: '#B8900A', position: 3, is_default: true },
-  { id: 'hr_interview', label: 'Entretien RH', color: '#B8500A', position: 4, is_default: true },
-  { id: 'technical_interview', label: 'Entretien technique', color: '#7A1ADB', position: 5, is_default: true },
-  { id: 'offer', label: 'Offre reçue', color: '#1A7A4A', position: 6, is_default: true },
-  { id: 'archived', label: 'Archivé', color: '#aaa', position: 99, is_default: true },
+  { id: 'to_apply',     label: 'Envie de postuler',  color: '#888',    position: 1,  is_default: true, global_status: 'to_apply' },
+  { id: 'applied',      label: 'Postulé',             color: '#1A6FDB', position: 2,  is_default: true, global_status: 'applied' },
+  { id: 'in_progress',  label: 'En cours',            color: '#B8900A', position: 3,  is_default: true, global_status: 'in_progress' },
+  { id: 'offer',        label: 'Offre reçue',         color: '#1A7A4A', position: 6,  is_default: true, global_status: 'offer' },
+  { id: 'archived',     label: 'Archivé',             color: '#aaa',    position: 99, is_default: true, global_status: 'archived' },
 ];
+
+// ── Pipeline détaillé (panneau par offre) ─────────────────────────────────────
+export const DETAIL_STAGES: Stage[] = [
+  { id: 'to_apply',           label: 'Envie de postuler',       color: '#888',    position: 1,  global_status: 'to_apply' },
+  { id: 'applied',            label: 'Postulé',                 color: '#1A6FDB', position: 2,  global_status: 'applied' },
+  { id: 'phone_interview',    label: 'Entretien téléphonique',  color: '#B8900A', position: 3,  global_status: 'in_progress' },
+  { id: 'hr_interview',       label: 'Entretien RH',            color: '#B8500A', position: 4,  global_status: 'in_progress' },
+  { id: 'manager_interview',  label: 'Entretien manager',       color: '#7A1ADB', position: 5,  global_status: 'in_progress' },
+  { id: 'offer',              label: 'Offre reçue',             color: '#1A7A4A', position: 6,  global_status: 'offer' },
+  { id: 'archived',           label: 'Archivé',                 color: '#aaa',    position: 99, global_status: 'archived' },
+];
+
+// Retourne le status global correspondant à une sous-étape
+export function getGlobalStatus(subStatus: string, customStages: Stage[]): string {
+  const detail = DETAIL_STAGES.find(s => s.id === subStatus);
+  if (detail) return detail.global_status || 'in_progress';
+  const custom = customStages.find(s => s.id === subStatus);
+  return custom?.global_status || 'in_progress';
+}
+
+// Label court pour le badge sur la carte kanban
+export function getSubStatusLabel(subStatus: string | null, customStages: Stage[]): string | null {
+  if (!subStatus) return null;
+  const detail = DETAIL_STAGES.find(s => s.id === subStatus);
+  if (detail) return detail.label;
+  const custom = customStages.find(s => s.id === subStatus);
+  return custom?.label || null;
+}
 
 export const EMPTY_JOB = {
   status: 'to_apply' as JobStatus,
@@ -79,7 +107,8 @@ export function detectSource(url: string | null | undefined): string {
 }
 
 export function isInterviewStage(status: string, stages: Stage[]): boolean {
-  return ['phone_interview', 'hr_interview', 'technical_interview'].includes(status) ||
+  return status === 'in_progress' ||
+    ['phone_interview', 'hr_interview', 'manager_interview'].includes(status) ||
     !!stages.find(s => s.id === status && !s.is_default);
 }
 
