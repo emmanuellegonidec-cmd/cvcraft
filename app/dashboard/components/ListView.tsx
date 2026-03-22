@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Job, JobStatus } from '@/lib/jobs';
+import { useRouter } from 'next/navigation';
+import { Job } from '@/lib/jobs';
 import { Stage, formatDate } from './types';
 
 type Props = {
@@ -11,7 +12,8 @@ type Props = {
   onAddJob: () => void;
 };
 
-export default function ListView({ jobs, stages, onJobClick, onDeleteJob, onAddJob }: Props) {
+export default function ListView({ jobs, stages, onDeleteJob, onAddJob }: Props) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
@@ -48,7 +50,7 @@ export default function ListView({ jobs, stages, onJobClick, onDeleteJob, onAddJ
         {filtered.map(job => {
           const stage = stages.find(s => s.id === job.status) || { color: '#888', label: job.status };
           return (
-            <div key={job.id} className="lrow" onClick={() => onJobClick(job)}>
+            <div key={job.id} className="lrow" onClick={() => router.push(`/dashboard/job/${job.id}`)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 30, height: 30, borderRadius: 7, background: '#FDEAEA', border: '1.5px solid #E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#E8151B', flexShrink: 0 }}>
                   {job.company.substring(0, 2).toUpperCase()}

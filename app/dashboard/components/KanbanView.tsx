@@ -1,4 +1,5 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { Job } from '@/lib/jobs';
 import { Stage, formatRelative, getSubStatusLabel } from './types';
 import { HeartDisplay } from './HeartComponents';
@@ -11,7 +12,8 @@ type Props = {
   onOpenSettings: () => void;
 };
 
-export default function KanbanView({ jobs, stages, onJobClick, onAddJob, onOpenSettings }: Props) {
+export default function KanbanView({ jobs, stages, onAddJob }: Props) {
+  const router = useRouter();
   const jobsByStatus = (s: string) => jobs.filter(j => j.status === s);
 
   return (
@@ -42,11 +44,10 @@ export default function KanbanView({ jobs, stages, onJobClick, onAddJob, onOpenS
               : null;
 
             return (
-              <div key={job.id} className="jcard" onClick={() => onJobClick(job)}>
+              <div key={job.id} className="jcard" onClick={() => router.push(`/dashboard/job/${job.id}`)}>
                 <div style={{ fontSize: 9, color: '#888', fontWeight: 600, marginBottom: 2 }}>{job.company}</div>
                 <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{job.title}</div>
 
-                {/* Badge sous-étape — visible uniquement dans "En cours" */}
                 {subLabel && (
                   <div style={{ marginBottom: 4 }}>
                     <span className="pill" style={{ background: '#B8900A22', color: '#B8900A', border: '1px solid #B8900A', fontSize: 9 }}>
