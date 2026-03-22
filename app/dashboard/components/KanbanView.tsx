@@ -47,7 +47,7 @@ export default function KanbanView({ jobs, stages, onJobClick, onAddJob }: Props
             }}
           >
             {/* En-tête */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isCollapsed ? 0 : 8, gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isCollapsed ? 4 : 8, gap: 4 }}>
               <div
                 style={{
                   fontSize: 9,
@@ -63,30 +63,62 @@ export default function KanbanView({ jobs, stages, onJobClick, onAddJob }: Props
               >
                 {col.label}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                <div style={{
-                  width: 16, height: 16, borderRadius: '50%',
-                  background: col.color + '22', color: col.color,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 9, fontWeight: 800,
-                }}>
-                  {count}
-                </div>
-                {/* Bouton replier/déplier uniquement si vide */}
-                {isEmpty && (
-                  <button
-                    onClick={() => toggle(col.id)}
-                    title={isCollapsed ? 'Déplier' : 'Replier'}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      padding: 0, lineHeight: 1, fontSize: 10, color: '#aaa',
-                    }}
-                  >
-                    {isCollapsed ? '▶' : '◀'}
-                  </button>
-                )}
+              <div style={{
+                width: 16, height: 16, borderRadius: '50%',
+                background: col.color + '22', color: col.color,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 9, fontWeight: 800, flexShrink: 0,
+              }}>
+                {count}
               </div>
             </div>
+
+            {/* Bouton + sous le titre, uniquement si vide et replié */}
+            {isEmpty && isCollapsed && (
+              <button
+                onClick={() => toggle(col.id)}
+                title="Déplier"
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  background: 'none',
+                  border: '1px dashed #ccc',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  padding: '4px 0',
+                  fontSize: 14,
+                  color: '#bbb',
+                  textAlign: 'center',
+                  lineHeight: 1,
+                }}
+              >
+                +
+              </button>
+            )}
+
+            {/* Bouton − pour replier une colonne vide dépliée */}
+            {isEmpty && !isCollapsed && (
+              <button
+                onClick={() => toggle(col.id)}
+                title="Replier"
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  background: 'none',
+                  border: '1px dashed #ccc',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  padding: '2px 0',
+                  fontSize: 14,
+                  color: '#bbb',
+                  textAlign: 'center',
+                  lineHeight: 1,
+                  marginBottom: 6,
+                }}
+              >
+                −
+              </button>
+            )}
 
             {/* Contenu masqué si replié */}
             {!isCollapsed && (
