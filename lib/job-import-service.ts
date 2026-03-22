@@ -188,7 +188,7 @@ async function fetchJobPage(url: string, source: JobSource): Promise<{
   wasBlocked: boolean
 }> {
   // Stratégie 1 : fetch standard avec headers navigateur
-  const strategies = [
+  const strategies: Array<{ headers: Record<string, string> }> = [
     {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
