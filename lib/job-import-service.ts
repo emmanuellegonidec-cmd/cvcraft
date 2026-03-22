@@ -89,52 +89,175 @@ function normalizeImportUrl(url: string): string {
   }
 }
 
-async function fetchJobPage(url: string): Promise<{
+// ─────────────────────────────────────────────────────────────────
+// DÉTECTION PAGE DE LOGIN / BLOCAGE
+// LinkedIn renvoie sa page d'auth quand il détecte un bot serveur.
+// On détecte ça en cherchant des marqueurs fiables dans le HTML.
+// ─────────────────────────────────────────────────────────────────
+
+function isBlockedPage(html: string): boolean {
+  const markers = [
+    'authwall',
+    'auth-wall',
+    'sign-in-modal',
+    'Inscrivez-vous ou identifiez-vous',
+    'Sign in to view',
+    'Join to apply',
+    'Rejoignez LinkedIn',
+    'S\'identifier avec',
+    'Mot de passe oublié',
+    'create a free account',
+    'li-page-signin',
+    'session_redirect',
+  ]
+  const lowerHtml = html.toLowerCase()
+  return markers.some((m) => lowerHtml.includes(m.toLowerCase()))
+}
+
+// ─────────────────────────────────────────────────────────────────
+// EXTRACTION VIA CLAUDE (fallback quand le scraping est bloqué)
+// On envoie l'URL à Claude et on lui demande d'extraire les infos
+// depuis sa connaissance ou depuis le contexte de l'URL.
+// ─────────────────────────────────────────────────────────────────
+
+async function extractJobWithClaude(
+  url: string,
+  source: JobSource
+): Promise<Partial<NormalizedJobOffer> | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return null
+
+  const prompt = `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
+
+L'URL suivante est une offre d'emploi LinkedIn : ${url}
+
+À partir de cette URL uniquement (qui contient souvent le titre et l'ID du poste), extrait les informations disponibles.
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans explication :
+{
+  "title": "titre du poste ou null",
+  "company_name": "nom de l'entreprise ou null",
+  "location_text": "lieu ou null",
+  "employment_type": "type de contrat ou null",
+  "seniority_level": "niveau ou null",
+  "description": null,
+  "external_job_id": "ID numérique extrait de l'URL ou null"
+}
+
+Exemples d'extraction depuis une URL LinkedIn :
+- /jobs/view/marketing-director-at-acme-corp-123456789/ → title: "Marketing Director", company_name: "Acme Corp", external_job_id: "123456789"
+- /jobs/view/head-of-product-imerys-987654321/ → title: "Head of Product", company_name: "Imerys", external_job_id: "987654321"
+
+Extrait uniquement ce qui est explicitement dans l'URL. Ne devine pas.`
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    })
+
+    if (!response.ok) return null
+
+    const data = await response.json()
+    const text = data?.content?.[0]?.text ?? ''
+    const cleaned = text.replace(/```json|```/g, '').trim()
+    return JSON.parse(cleaned) as Partial<NormalizedJobOffer>
+  } catch {
+    return null
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// FETCH AVEC PLUSIEURS STRATÉGIES POUR CONTOURNER LE BLOCAGE
+// ─────────────────────────────────────────────────────────────────
+
+async function fetchJobPage(url: string, source: JobSource): Promise<{
   ok: boolean
   status: number
   html: string | null
   error: string | null
+  wasBlocked: boolean
 }> {
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
+  // Stratégie 1 : fetch standard avec headers navigateur
+  const strategies = [
+    {
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
-        Referer: 'https://www.google.com/',
-        Connection: 'keep-alive',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://www.google.fr/',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'sec-ch-ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'cross-site',
+        'Upgrade-Insecure-Requests': '1',
       },
-      redirect: 'follow',
-      cache: 'no-store',
-    })
+    },
+    // Stratégie 2 : via version mobile (parfois moins bloquée)
+    {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'fr-FR,fr;q=0.9',
+        'Referer': 'https://www.google.fr/',
+      },
+    },
+  ]
 
-    const html = await response.text()
+  for (const strategy of strategies) {
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: strategy.headers,
+        redirect: 'follow',
+        cache: 'no-store',
+      })
 
-    if (!response.ok) {
+      const html = await response.text()
+      const wasBlocked = isBlockedPage(html)
+
+      if (response.ok && !wasBlocked) {
+        return { ok: true, status: response.status, html, error: null, wasBlocked: false }
+      }
+
+      if (wasBlocked) {
+        // On continue avec la stratégie suivante
+        continue
+      }
+
       return {
         ok: false,
         status: response.status,
         html,
         error: `Échec récupération page (${response.status})`,
+        wasBlocked: false,
       }
+    } catch (error) {
+      // Continue vers stratégie suivante
     }
+  }
 
-    return {
-      ok: true,
-      status: response.status,
-      html,
-      error: null,
-    }
-  } catch (error) {
-    return {
-      ok: false,
-      status: 0,
-      html: null,
-      error: error instanceof Error ? error.message : 'Erreur réseau inconnue',
-    }
+  // Toutes les stratégies ont échoué ou sont bloquées
+  return {
+    ok: false,
+    status: 0,
+    html: null,
+    error: 'Page bloquée ou inaccessible depuis le serveur',
+    wasBlocked: true,
   }
 }
 
@@ -225,10 +348,7 @@ async function saveImportedJob({
       importError: importError ?? 'duplicate_detected',
     })
 
-    return {
-      jobId: duplicateId,
-      duplicateOf: duplicateId,
-    }
+    return { jobId: duplicateId, duplicateOf: duplicateId }
   }
 
   const { data, error } = await supabase
@@ -263,9 +383,7 @@ async function saveImportedJob({
     .select('id')
     .single()
 
-  if (error) {
-    throw new Error(error.message)
-  }
+  if (error) throw new Error(error.message)
 
   const jobId = data?.id as string
 
@@ -283,9 +401,49 @@ async function saveImportedJob({
     importError,
   })
 
+  return { jobId, duplicateOf: null }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CONSTRUCTION D'UN JOB MINIMAL DEPUIS L'URL (dernier recours)
+// Quand ni le scraping ni Claude ne fonctionnent, on construit
+// une fiche vide mais importable, que l'utilisateur peut compléter.
+// ─────────────────────────────────────────────────────────────────
+
+function buildMinimalJobFromUrl(
+  url: string,
+  source: JobSource,
+  claudeData: Partial<NormalizedJobOffer> | null
+): NormalizedJobOffer {
+  // Extraction de l'ID depuis l'URL LinkedIn
+  const jobIdMatch = url.match(/\/jobs\/view\/(?:[^/]*?-)?(\d{6,})\/?/)
+  const externalId = claudeData?.external_job_id ?? jobIdMatch?.[1] ?? null
+
   return {
-    jobId,
-    duplicateOf: null,
+    source_platform: source,
+    source_url: url,
+    source_hostname: getSafeHostname(url),
+    external_job_id: externalId,
+    title: claudeData?.title ?? null,
+    company_name: claudeData?.company_name ?? null,
+    location_text: claudeData?.location_text ?? null,
+    workplace_type: null,
+    employment_type: claudeData?.employment_type ?? null,
+    seniority_level: claudeData?.seniority_level ?? null,
+    department: null,
+    salary_text: null,
+    salary_min: null,
+    salary_max: null,
+    currency: null,
+    description: null,
+    requirements: null,
+    benefits: null,
+    posted_at_text: null,
+    raw_text: null,
+    import_status: 'needs_review',
+    extraction_confidence: claudeData?.title ? 0.35 : 0.1,
+    parser_name: claudeData?.title ? 'claudeFallbackAdapter' : 'urlOnlyAdapter',
+    parser_version: '1.0.0',
   }
 }
 
@@ -326,43 +484,41 @@ export async function importJobFromUrl({
   const source = detectJobSource(normalizedUrl)
   const sourceHostname = getSafeHostname(normalizedUrl)
 
-  const fetchResult = await fetchJobPage(normalizedUrl)
-
-  if (!fetchResult.ok || !fetchResult.html) {
-    await logImportEvent({
-      userId,
-      accessToken,
-      sourcePlatform: source,
-      sourceUrl: normalizedUrl,
-      sourceHostname,
-      rawPayload: {
-        source,
-        hostname: sourceHostname,
-        status: fetchResult.status,
-      },
-      rawText: fetchResult.html,
-      importError: fetchResult.error,
-    })
-
-    return {
-      success: false,
-      source,
-      job: null,
-      savedJobId: null,
-      editUrl: null,
-      duplicateOf: null,
-      message: 'Impossible de récupérer le contenu de la page.',
-      error: fetchResult.error,
-    }
-  }
+  // ── ÉTAPE 1 : Tentative de scraping normal ─────────────────────
+  const fetchResult = await fetchJobPage(normalizedUrl, source)
 
   let job: NormalizedJobOffer
 
-  try {
-    job = parseJobHtml(normalizedUrl, fetchResult.html)
-  } catch (error) {
-    const parserError =
-      error instanceof Error ? error.message : 'Erreur de parsing inconnue'
+  if (fetchResult.ok && fetchResult.html) {
+    // Scraping réussi → parsing normal
+    try {
+      job = parseJobHtml(normalizedUrl, fetchResult.html)
+    } catch (error) {
+      const parserError = error instanceof Error ? error.message : 'Erreur de parsing'
+      await logImportEvent({
+        userId,
+        accessToken,
+        sourcePlatform: source,
+        sourceUrl: normalizedUrl,
+        sourceHostname,
+        rawText: fetchResult.html,
+        importError: parserError,
+      })
+      return {
+        success: false,
+        source,
+        job: null,
+        savedJobId: null,
+        editUrl: null,
+        duplicateOf: null,
+        message: 'Le parsing de la page a échoué.',
+        error: parserError,
+      }
+    }
+  } else {
+    // ── ÉTAPE 2 : Scraping bloqué → fallback Claude ────────────────
+    const claudeData = await extractJobWithClaude(normalizedUrl, source)
+    job = buildMinimalJobFromUrl(normalizedUrl, source, claudeData)
 
     await logImportEvent({
       userId,
@@ -370,26 +526,12 @@ export async function importJobFromUrl({
       sourcePlatform: source,
       sourceUrl: normalizedUrl,
       sourceHostname,
-      rawPayload: {
-        source,
-        hostname: sourceHostname,
-      },
-      rawText: fetchResult.html,
-      importError: parserError,
+      rawPayload: { fetchError: fetchResult.error, wasBlocked: fetchResult.wasBlocked, claudeData },
+      importError: fetchResult.wasBlocked ? 'page_blocked_claude_fallback' : fetchResult.error,
     })
-
-    return {
-      success: false,
-      source,
-      job: null,
-      savedJobId: null,
-      editUrl: null,
-      duplicateOf: null,
-      message: 'Le parsing de la page a échoué.',
-      error: parserError,
-    }
   }
 
+  // ── ÉTAPE 3 : Sauvegarde ───────────────────────────────────────
   try {
     const { jobId, duplicateOf } = await saveImportedJob({
       userId,
@@ -399,36 +541,25 @@ export async function importJobFromUrl({
       importError: null,
     })
 
+    const wasBlocked = !fetchResult.ok || fetchResult.wasBlocked
+    const message = duplicateOf
+      ? 'Cette offre existe déjà dans ton tableau de bord.'
+      : wasBlocked
+        ? 'Offre importée depuis l\'URL (LinkedIn a bloqué le scraping — complète les infos manquantes).'
+        : 'Offre importée avec succès.'
+
     return {
       success: true,
       source,
       job,
       savedJobId: jobId,
-      editUrl: jobId ? `/dashboard/jobs/${jobId}` : null,
+      editUrl: jobId ? `/dashboard/job/${jobId}` : null,
       duplicateOf,
-      message: duplicateOf
-        ? 'Cette offre existe déjà.'
-        : 'Offre importée avec succès.',
+      message,
       error: null,
     }
   } catch (error) {
-    const saveError =
-      error instanceof Error ? error.message : 'Erreur de sauvegarde inconnue'
-
-    await logImportEvent({
-      userId,
-      accessToken,
-      jobId: null,
-      sourcePlatform: job.source_platform,
-      sourceUrl: job.source_url,
-      sourceHostname: job.source_hostname,
-      parserName: job.parser_name,
-      parserVersion: job.parser_version,
-      rawPayload: job as Record<string, unknown>,
-      rawText: job.raw_text ?? fetchResult.html,
-      importError: saveError,
-    })
-
+    const saveError = error instanceof Error ? error.message : 'Erreur de sauvegarde'
     return {
       success: false,
       source,
