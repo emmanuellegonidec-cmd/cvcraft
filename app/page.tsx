@@ -65,7 +65,7 @@ export default function LandingPage() {
 
       {/* HERO */}
       <section style={{ background:'#fff',borderBottom:'2.5px solid #111',overflow:'hidden' }}>
-        <div className="hero-grid" style={{ maxWidth:'95vw',margin:'0 auto',padding:'3.5rem 3rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'3rem',alignItems:'center' }}>
+        <div className="hero-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'3.5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'3rem',alignItems:'center' }}>
           <div>
             <div className="fade1" style={{ display:'inline-flex',alignItems:'center',gap:6,background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1.5rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>
               ⚡ Propulsé par Claude AI
