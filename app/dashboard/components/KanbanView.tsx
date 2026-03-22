@@ -9,15 +9,15 @@ type Props = {
   stages: Stage[];
   onJobClick: (job: Job) => void;
   onAddJob: (stageId: string) => void;
+  onOpenSettings: () => void;
 };
 
-export default function KanbanView({ jobs, stages, onJobClick, onAddJob }: Props) {
+export default function KanbanView({ jobs, stages, onJobClick, onAddJob, onOpenSettings }: Props) {
   const jobsByStatus = (s: string) => jobs.filter(j => j.status === s);
 
-  // Colonnes vides repliées par défaut
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
-    stages.forEach(s => { init[s.id] = true; }); // sera affiné au premier render
+    stages.forEach(s => { init[s.id] = true; });
     return init;
   });
 
@@ -38,7 +38,6 @@ export default function KanbanView({ jobs, stages, onJobClick, onAddJob }: Props
               border: '1.5px solid #E0E0E0',
               borderRadius: 10,
               padding: 8,
-              // Colonnes vides repliées : largeur fixe réduite ; sinon flex grow
               flex: isCollapsed ? '0 0 auto' : '1 1 0',
               minWidth: isCollapsed ? 'unset' : 200,
               width: isCollapsed ? 'auto' : undefined,
@@ -47,80 +46,40 @@ export default function KanbanView({ jobs, stages, onJobClick, onAddJob }: Props
             }}
           >
             {/* En-tête */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isCollapsed ? 4 : 8, gap: 4 }}>
-              <div
-                style={{
-                  fontSize: 9,
-                  fontWeight: 800,
-                  color: '#111',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.02em',
-                  lineHeight: 1.3,
-                  whiteSpace: isCollapsed ? 'nowrap' : 'normal',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 4 }}>
+              <div style={{
+                fontSize: 9, fontWeight: 800, color: '#111',
+                textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.3,
+                whiteSpace: isCollapsed ? 'nowrap' : 'normal',
+                overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
                 {col.label}
               </div>
-              <div style={{
-                width: 16, height: 16, borderRadius: '50%',
-                background: col.color + '22', color: col.color,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 9, fontWeight: 800, flexShrink: 0,
-              }}>
-                {count}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                <div style={{
+                  width: 16, height: 16, borderRadius: '50%',
+                  background: col.color + '22', color: col.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 9, fontWeight: 800,
+                }}>
+                  {count}
+                </div>
+                {isEmpty && (
+                  <button
+                    onClick={() => toggle(col.id)}
+                    title={isCollapsed ? 'Déplier' : 'Replier'}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      padding: '0 2px', fontSize: 13, color: '#bbb',
+                      lineHeight: 1, fontWeight: 700,
+                    }}
+                  >
+                    {isCollapsed ? '+' : '−'}
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Bouton + sous le titre, uniquement si vide et replié */}
-            {isEmpty && isCollapsed && (
-              <button
-                onClick={() => toggle(col.id)}
-                title="Déplier"
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  background: 'none',
-                  border: '1px dashed #ccc',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  padding: '4px 0',
-                  fontSize: 14,
-                  color: '#bbb',
-                  textAlign: 'center',
-                  lineHeight: 1,
-                }}
-              >
-                +
-              </button>
-            )}
-
-            {/* Bouton − pour replier une colonne vide dépliée */}
-            {isEmpty && !isCollapsed && (
-              <button
-                onClick={() => toggle(col.id)}
-                title="Replier"
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  background: 'none',
-                  border: '1px dashed #ccc',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  padding: '2px 0',
-                  fontSize: 14,
-                  color: '#bbb',
-                  textAlign: 'center',
-                  lineHeight: 1,
-                  marginBottom: 6,
-                }}
-              >
-                −
-              </button>
-            )}
-
-            {/* Contenu masqué si replié */}
             {!isCollapsed && (
               <>
                 {jobsByStatus(col.id).map(job => (
@@ -139,13 +98,40 @@ export default function KanbanView({ jobs, stages, onJobClick, onAddJob }: Props
                     <div className="date-tag">📅 {formatRelative(job.created_at)}</div>
                   </div>
                 ))}
-
                 <div className="add-card" onClick={() => onAddJob(col.id)}>+ Ajouter</div>
               </>
             )}
           </div>
         );
       })}
+
+      {/* Colonne fantôme : + Nouvelle étape */}
+      <div
+        onClick={onOpenSettings}
+        title="Ajouter une étape"
+        style={{
+          flex: '0 0 auto',
+          width: 120,
+          minHeight: 80,
+          background: 'transparent',
+          border: '1.5px dashed #ccc',
+          borderRadius: 10,
+          padding: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          gap: 4,
+          opacity: 0.6,
+          transition: 'opacity 0.15s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
+      >
+        <div style={{ fontSize: 18, color: '#aaa', lineHeight: 1 }}>+</div>
+        <div style={{ fontSize: 9, fontWeight: 800, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>Nouvelle étape</div>
+      </div>
     </div>
   );
 }
