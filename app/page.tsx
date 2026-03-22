@@ -70,7 +70,7 @@ export default function LandingPage() {
             <div className="fade1" style={{ display:'inline-flex',alignItems:'center',gap:6,background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1.5rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>
               ⚡ Propulsé par Claude AI
             </div>
-            <h1 className="fade2" style={{ fontSize:'clamp(3rem,5vw,5.5rem)',lineHeight:1.0,marginBottom:'1.25rem',fontWeight:900,letterSpacing:'-0.03em' }}>
+            <h1 className="fade2" style={{ fontSize:'clamp(1.8rem,2.4vw,2.8rem)',lineHeight:1.1,marginBottom:'1.25rem',fontWeight:900,letterSpacing:'-0.03em' }}>
               Trouvez votre job,<br />
               <span style={{ color:'#E8151B',fontStyle:'italic' }}>sans vous perdre</span><br />
               dans le chaos
@@ -89,7 +89,7 @@ export default function LandingPage() {
 
           {/* HERO DROITE — Logo grand format */}
           <div style={{ display:'flex',alignItems:'center',justifyContent:'center',padding:'0' }}>
-            <img src="/logo.png" alt="Jean Find My Job" className="hero-logo-img" style={{ width:'100%',maxWidth:500,height:'auto',objectFit:'contain' }} />
+            <img src="/logo.png" alt="Jean Find My Job" className="hero-logo-img" style={{ width:'100%',maxWidth:620,height:'auto',objectFit:'contain' }} />
           </div>
         </div>
       </section>
