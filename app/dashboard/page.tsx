@@ -270,19 +270,24 @@ export default function DashboardPage() {
     finally { setImportLoading(false); }
   }
 
-  async function uploadDocument(jobId: string, file: File, type: 'cv' | 'lm') {
-    if (!userId || !accessToken) return;
-    const supabase = createClient();
-    const ext = file.name.split('.').pop();
-    const path = `${userId}/${jobId}/${type}.${ext}`;
-    const { error } = await supabase.storage.from('job-documents').upload(path, file, { upsert: true });
-    if (error) { alert('Erreur upload : ' + error.message); return; }
-    const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
-    const field = type === 'cv' ? 'cv_url' : 'cover_letter_url';
-    const checkField = type === 'cv' ? 'cv_sent' : 'cover_letter_sent';
-    await updateJobField(jobId, field, urlData.publicUrl);
-    await updateJobField(jobId, checkField, true);
-  }
+ async function uploadDocument(jobId: string, file: File, type: 'cv' | 'lm') {
+  if (!userId || !accessToken) return;
+  const supabase = createClient();
+  const ext = file.name.split('.').pop();
+  const path = `${userId}/${jobId}/${type}.${ext}`;
+  const { error } = await supabase.storage.from('job-documents').upload(path, file, { upsert: true });
+  if (error) { alert('Erreur upload : ' + error.message); return; }
+
+  // URL signée valable 1 an (au lieu de URL publique)
+  const { data: signedData } = await supabase.storage
+    .from('job-documents')
+    .createSignedUrl(path, 60 * 60 * 24 * 365);
+
+  const field = type === 'cv' ? 'cv_url' : 'cover_letter_url';
+  const checkField = type === 'cv' ? 'cv_sent' : 'cover_letter_sent';
+  await updateJobField(jobId, field, signedData?.signedUrl ?? '');
+  await updateJobField(jobId, checkField, true);
+}
 
   const filteredJobs = jobs.filter(j => (!searchQuery || j.title.toLowerCase().includes(searchQuery.toLowerCase()) || j.company.toLowerCase().includes(searchQuery.toLowerCase())) && (filterStatus === 'all' || j.status === filterStatus));
   const jobsByStatus = useCallback((s: string) => jobs.filter(j => j.status === s), [jobs]);
