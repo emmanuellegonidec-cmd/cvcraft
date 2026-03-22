@@ -65,12 +65,12 @@ export default function LandingPage() {
 
       {/* HERO */}
       <section style={{ background:'#fff',borderBottom:'2.5px solid #111',overflow:'hidden' }}>
-        <div className="hero-grid" style={{ maxWidth:1100,margin:'0 auto',padding:'3rem 2rem',display:'grid',gridTemplateColumns:'1.4fr 0.6fr',gap:'2rem',alignItems:'center' }}>
+        <div className="hero-grid" style={{ maxWidth:'95vw',margin:'0 auto',padding:'3.5rem 3rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'3rem',alignItems:'center' }}>
           <div>
             <div className="fade1" style={{ display:'inline-flex',alignItems:'center',gap:6,background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1.5rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>
               ⚡ Propulsé par Claude AI
             </div>
-            <h1 className="fade2" style={{ fontSize:'clamp(2.8rem,5vw,4.8rem)',lineHeight:1.05,marginBottom:'1.25rem',fontWeight:900,letterSpacing:'-0.03em' }}>
+            <h1 className="fade2" style={{ fontSize:'clamp(3rem,5vw,5.5rem)',lineHeight:1.0,marginBottom:'1.25rem',fontWeight:900,letterSpacing:'-0.03em' }}>
               Trouvez votre job,<br />
               <span style={{ color:'#E8151B',fontStyle:'italic' }}>sans vous perdre</span><br />
               dans le chaos
@@ -89,7 +89,7 @@ export default function LandingPage() {
 
           {/* HERO DROITE — Logo grand format */}
           <div style={{ display:'flex',alignItems:'center',justifyContent:'center',padding:'0' }}>
-            <img src="/logo.png" alt="Jean Find My Job" className="hero-logo-img" style={{ width:'100%',maxWidth:360,height:'auto',objectFit:'contain' }} />
+            <img src="/logo.png" alt="Jean Find My Job" className="hero-logo-img" style={{ width:'100%',maxWidth:500,height:'auto',objectFit:'contain' }} />
           </div>
         </div>
       </section>
@@ -107,7 +107,7 @@ export default function LandingPage() {
 
       {/* FEATURE 1 */}
       <div style={{ height:'2.5px',background:'#111' }} />
-      <section className="feat-grid" style={{ maxWidth:1100,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
+      <section className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
         <div>
           <div style={{ fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111',fontFamily:'Montserrat,sans-serif' }}>01</div>
           <div style={{ display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>📋 Tableau de bord</div>
@@ -150,10 +150,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <div style={{ height:'2.5px',background:'#111',maxWidth:1100,margin:'0 auto' }} />
+      <div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
 
       {/* FEATURE 2 */}
-      <section id="cv" className="feat-grid" style={{ maxWidth:1100,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
+      <section id="cv" className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
         <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ padding:'12px 16px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>CV Creator — Aperçu</div>
           <div style={{ padding:16,display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
@@ -194,7 +194,7 @@ export default function LandingPage() {
 
       {/* HOW IT WORKS */}
       <section id="comment" style={{ background:'#111',borderTop:'2.5px solid #111',borderBottom:'2.5px solid #111',padding:'5rem 2rem' }}>
-        <div style={{ maxWidth:900,margin:'0 auto',textAlign:'center' }}>
+        <div style={{ maxWidth:1100,margin:'0 auto',textAlign:'center' }}>
           <div style={{ display:'inline-block',background:'#F5C400',border:'2px solid rgba(255,255,255,0.2)',borderRadius:20,padding:'5px 16px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1rem',textTransform:'uppercase',letterSpacing:'0.05em' }}>Simple comme bonjour</div>
           <h2 style={{ fontSize:'2.5rem',color:'#fff',marginBottom:'0.75rem',fontWeight:900,letterSpacing:'-0.02em' }}>Comment ça marche ?</h2>
           <p style={{ color:'rgba(255,255,255,0.6)',marginBottom:'3rem',fontWeight:500 }}>Trois étapes pour décrocher plus d&apos;entretiens</p>
@@ -217,7 +217,7 @@ export default function LandingPage() {
 
       {/* FEATURES GRID */}
       <section id="fonctionnalites" style={{ padding:'5rem 2rem',background:'#FAFAFA',borderBottom:'2.5px solid #111' }}>
-        <div style={{ maxWidth:1100,margin:'0 auto' }}>
+        <div style={{ maxWidth:1400,margin:'0 auto' }}>
           <div style={{ textAlign:'center',marginBottom:'3rem' }}>
             <div style={{ display:'inline-block',background:'#F5C400',border:'2px solid #111',borderRadius:20,padding:'5px 16px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>Tout inclus</div>
             <h2 style={{ fontSize:'2.2rem',fontWeight:900,letterSpacing:'-0.02em' }}>Tout ce qu&apos;il vous faut</h2>
@@ -247,7 +247,7 @@ export default function LandingPage() {
 
       {/* TESTIMONIALS */}
       <section style={{ padding:'5rem 2rem',background:'#fff',borderBottom:'2.5px solid #111' }}>
-        <div style={{ maxWidth:1100,margin:'0 auto' }}>
+        <div style={{ maxWidth:1400,margin:'0 auto' }}>
           <div style={{ textAlign:'center',marginBottom:'3rem' }}>
             <h2 style={{ fontSize:'2.2rem',fontWeight:900,letterSpacing:'-0.02em' }}>Ils ont trouvé leur job avec Jean Find My Job</h2>
           </div>
@@ -275,7 +275,7 @@ export default function LandingPage() {
 
       {/* BLOG */}
       <section style={{ padding:'5rem 2rem',background:'#FAFAFA',borderBottom:'2.5px solid #111' }}>
-        <div style={{ maxWidth:1100,margin:'0 auto' }}>
+        <div style={{ maxWidth:1400,margin:'0 auto' }}>
           <div style={{ textAlign:'center',marginBottom:'3rem' }}>
             <div style={{ display:'inline-block',background:'#F5C400',border:'2px solid #111',borderRadius:20,padding:'5px 16px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>Conseils & actus</div>
             <h2 style={{ fontSize:'2.2rem',fontWeight:900,letterSpacing:'-0.02em' }}>Jean a quelque chose à vous dire</h2>
@@ -358,7 +358,7 @@ export default function LandingPage() {
 
       {/* FOOTER */}
       <footer style={{ background:'#fff',borderTop:'2.5px solid #111',padding:'3.5rem 3rem 2rem' }}>
-        <div className="footer-grid" style={{ display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:'3rem',maxWidth:1100,margin:'0 auto' }}>
+        <div className="footer-grid" style={{ display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:'3rem',maxWidth:1400,margin:'0 auto' }}>
 
           <div>
             <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:'1rem' }}>
@@ -417,7 +417,7 @@ export default function LandingPage() {
 
         </div>
 
-        <div style={{ maxWidth:1100,margin:'2rem auto 0',paddingTop:'1.5rem',borderTop:'1.5px solid #E0E0E0',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8 }}>
+        <div style={{ maxWidth:1400,margin:'2rem auto 0',paddingTop:'1.5rem',borderTop:'1.5px solid #E0E0E0',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8 }}>
           <p style={{ fontSize:12,color:'#888',fontWeight:500 }}>© 2026 Jean Find My Job · Propulsé par Claude AI</p>
           <p style={{ fontSize:12,color:'#888',fontWeight:500 }}>Fait avec ♥ pour les candidats</p>
         </div>
