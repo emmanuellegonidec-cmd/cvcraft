@@ -209,7 +209,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {view === 'kanban' && <KanbanView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onAddJob={openAddJobModal} />}
+          {view === 'kanban' && <KanbanView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onAddJob={openAddJobModal} onOpenSettings={() => setShowSettings(true)} />}
           {view === 'list' && <ListView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onDeleteJob={deleteJob} onAddJob={openAddJobModal} />}
           {view === 'contacts' && <ContactsView contacts={contacts} onAddContact={() => setShowAddContact(true)} onDeleteContact={deleteContact} />}
           {view === 'agenda' && <AgendaView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onBackToKanban={() => setView('kanban')} />}
