@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import NewsletterForm from './NewsletterForm';
 
 export default function LandingPage() {
   return (
@@ -384,14 +385,7 @@ export default function LandingPage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
               </a>
             </div>
-            <div style={{ background:'#F4F4F4',border:'2px solid #E0E0E0',borderRadius:10,padding:'1rem',marginTop:'0.5rem' }}>
-              <div style={{ fontSize:12,fontWeight:800,color:'#111',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.05em' }}>📬 Newsletter</div>
-              <div style={{ fontSize:12,color:'#888',fontWeight:500,marginBottom:8 }}>Conseils emploi chaque semaine</div>
-              <div style={{ display:'flex',gap:6 }}>
-                <input placeholder="votre@email.com" style={{ flex:1,border:'2px solid #E0E0E0',borderRadius:6,padding:'7px 10px',fontSize:12,fontFamily:'Montserrat,sans-serif',outline:'none' }} />
-                <button style={{ background:'#111',color:'#F5C400',border:'2px solid #111',borderRadius:6,padding:'7px 12px',fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'Montserrat,sans-serif',whiteSpace:'nowrap' }}>OK →</button>
-              </div>
-            </div>
+            <NewsletterForm />
           </div>
 
           <div>
