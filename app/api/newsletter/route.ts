@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     if (!email || !email.includes('@')) {
       return NextResponse.json({ error: 'Email invalide' }, { status: 400 });
     }
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase.from('newsletter_subscribers').insert({ email });
     if (error) {
       if (error.code === '23505') {
