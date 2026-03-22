@@ -18,6 +18,11 @@ export default function JobPage() {
   const [customStages, setCustomStages] = useState<Stage[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Modal ajout étape
+  const [showAddStage, setShowAddStage] = useState(false);
+  const [newStageName, setNewStageName] = useState('');
+  const [newStageColor, setNewStageColor] = useState('#7A1ADB');
+
   useEffect(() => {
     async function load() {
       const supabase = createClient();
@@ -41,7 +46,6 @@ export default function JobPage() {
     load();
   }, [jobId, router]);
 
-  // Pipeline détaillé = étapes fixes + étapes perso insérées avant "offer"
   const detailStages: Stage[] = [
     ...DETAIL_STAGES.filter(s => !['offer', 'archived'].includes(s.id)),
     ...customStages,
@@ -74,6 +78,30 @@ export default function JobPage() {
     if (data.job) setJob(data.job);
   }
 
+  async function addCustomStage() {
+    if (!newStageName.trim() || !userId) return;
+    const supabase = createClient();
+    const maxPos = customStages.length > 0 ? Math.max(...customStages.map(s => s.position)) : 5;
+    const { data } = await supabase.from('pipeline_stages').insert({
+      user_id: userId,
+      label: newStageName.trim(),
+      color: newStageColor,
+      position: maxPos + 1,
+    }).select().single();
+    if (data) {
+      setCustomStages(prev => [...prev, { id: data.id, label: data.label, color: data.color, position: data.position, is_default: false, global_status: 'in_progress' }]);
+      setNewStageName('');
+      setShowAddStage(false);
+    }
+  }
+
+  async function deleteCustomStage(stageId: string) {
+    if (!confirm('Supprimer cette étape ?')) return;
+    const supabase = createClient();
+    await supabase.from('pipeline_stages').delete().eq('id', stageId);
+    setCustomStages(prev => prev.filter(s => s.id !== stageId));
+  }
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Montserrat,sans-serif' }}>
       <div style={{ textAlign: 'center' }}><div style={{ fontSize: 32 }}>⚡</div><div style={{ fontWeight: 700, color: '#888' }}>Chargement...</div></div>
@@ -104,46 +132,86 @@ export default function JobPage() {
 
         {/* Pipeline détaillé */}
         <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '1.25rem', marginBottom: '1.25rem', boxShadow: '3px 3px 0 #111' }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Pipeline</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pipeline</div>
+            <button
+              onClick={() => setShowAddStage(true)}
+              style={{ background: 'none', border: '1.5px dashed #ccc', borderRadius: 6, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: '#aaa', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif' }}
+            >
+              + Étape
+            </button>
+          </div>
+
           <div style={{ display: 'flex', gap: 0, overflowX: 'auto', paddingBottom: 4 }}>
             {detailStages.map((s, i) => {
               const isActive = currentSubStatus === s.id;
               const isPast = currentStageIndex > i;
+              const isCustom = !s.is_default && customStages.find(c => c.id === s.id);
               return (
-                <button
-                  key={s.id}
-                  onClick={() => handleStageChange(s.id)}
-                  style={{
-                    flex: '1 1 0',
-                    minWidth: 80,
-                    background: isActive ? s.color : isPast ? s.color + '33' : '#F4F4F4',
-                    color: isActive ? '#fff' : isPast ? s.color : '#888',
-                    border: `2px solid ${isActive ? s.color : isPast ? s.color + '66' : '#E0E0E0'}`,
-                    borderRadius: i === 0 ? '8px 0 0 8px' : i === detailStages.length - 1 ? '0 8px 8px 0' : '0',
-                    marginLeft: i === 0 ? 0 : -2,
-                    padding: '8px 10px',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontFamily: 'Montserrat,sans-serif',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s',
-                    zIndex: isActive ? 2 : 1,
-                    position: 'relative',
-                    textAlign: 'center',
-                  }}
-                >
-                  {s.label}
-                </button>
+                <div key={s.id} style={{ position: 'relative', flex: '1 1 0', minWidth: 80, zIndex: isActive ? 2 : 1 }}>
+                  <button
+                    onClick={() => handleStageChange(s.id)}
+                    style={{
+                      width: '100%',
+                      background: isActive ? s.color : isPast ? s.color + '33' : '#F4F4F4',
+                      color: isActive ? '#fff' : isPast ? s.color : '#888',
+                      border: `2px solid ${isActive ? s.color : isPast ? s.color + '66' : '#E0E0E0'}`,
+                      borderRadius: i === 0 ? '8px 0 0 8px' : i === detailStages.length - 1 ? '0 8px 8px 0' : '0',
+                      marginLeft: i === 0 ? 0 : -2,
+                      padding: '8px 6px',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: 'Montserrat,sans-serif',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.15s',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {s.label}
+                    {isCustom && (
+                      <span
+                        onClick={e => { e.stopPropagation(); deleteCustomStage(s.id); }}
+                        style={{ marginLeft: 4, opacity: 0.5, cursor: 'pointer', fontSize: 9 }}
+                        title="Supprimer cette étape"
+                      >✕</span>
+                    )}
+                  </button>
+                </div>
               );
             })}
           </div>
+
+          {/* Mini modal ajout étape */}
+          {showAddStage && (
+            <div style={{ marginTop: 12, background: '#F4F4F4', border: '1.5px solid #E0E0E0', borderRadius: 8, padding: 12, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                value={newStageName}
+                onChange={e => setNewStageName(e.target.value)}
+                placeholder="Nom de l'étape..."
+                className="fi"
+                style={{ flex: 1, minWidth: 150 }}
+                onKeyDown={e => e.key === 'Enter' && addCustomStage()}
+                autoFocus
+              />
+              <input
+                type="color"
+                value={newStageColor}
+                onChange={e => setNewStageColor(e.target.value)}
+                style={{ width: 36, height: 36, border: '2px solid #E0E0E0', borderRadius: 6, cursor: 'pointer', padding: 2 }}
+              />
+              <button className="btn-main" style={{ padding: '7px 14px', fontSize: 12 }} onClick={addCustomStage}>
+                Ajouter
+              </button>
+              <button className="btn-ghost" style={{ padding: '7px 14px', fontSize: 12 }} onClick={() => { setShowAddStage(false); setNewStageName(''); }}>
+                Annuler
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Infos + Documents */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
-
-          {/* Infos offre */}
           <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '1.25rem', boxShadow: '3px 3px 0 #111' }}>
             <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Informations</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -160,29 +228,24 @@ export default function JobPage() {
             )}
           </div>
 
-          {/* Documents */}
           <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '1.25rem', boxShadow: '3px 3px 0 #111' }}>
             <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Documents</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* CV */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div className={'check-box' + ((job as any).cv_sent ? ' checked' : '')} onClick={() => handleFieldUpdate('cv_sent', !(job as any).cv_sent)}>
                   {(job as any).cv_sent && '✓'}
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 700, flex: 1 }}>CV envoyé</span>
-                <button className={'doc-btn' + ((job as any).cv_url ? ' done' : '')}
-                  onClick={() => (job as any).cv_url && window.open((job as any).cv_url)}>
+                <button className={'doc-btn' + ((job as any).cv_url ? ' done' : '')} onClick={() => (job as any).cv_url && window.open((job as any).cv_url)}>
                   {(job as any).cv_url ? '📎 Voir' : '📎 Non joint'}
                 </button>
               </div>
-              {/* LM */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div className={'check-box' + ((job as any).cover_letter_sent ? ' checked' : '')} onClick={() => handleFieldUpdate('cover_letter_sent', !(job as any).cover_letter_sent)}>
                   {(job as any).cover_letter_sent && '✓'}
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 700, flex: 1 }}>LM envoyée</span>
-                <button className={'doc-btn' + ((job as any).cover_letter_url ? ' done' : '')}
-                  onClick={() => (job as any).cover_letter_url && window.open((job as any).cover_letter_url)}>
+                <button className={'doc-btn' + ((job as any).cover_letter_url ? ' done' : '')} onClick={() => (job as any).cover_letter_url && window.open((job as any).cover_letter_url)}>
                   {(job as any).cover_letter_url ? '📎 Voir' : '📎 Non jointe'}
                 </button>
               </div>
