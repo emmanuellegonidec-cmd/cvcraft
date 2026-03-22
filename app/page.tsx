@@ -65,15 +65,14 @@ export default function LandingPage() {
 
       {/* HERO */}
       <section style={{ background:'#fff',borderBottom:'2.5px solid #111',overflow:'hidden' }}>
-        <div className="hero-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'3.5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'3rem',alignItems:'center' }}>
+        <div className="hero-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'3.5rem 2rem',display:'grid',gridTemplateColumns:'40fr 60fr',gap:'3rem',alignItems:'center' }}>
           <div>
             <div className="fade1" style={{ display:'inline-flex',alignItems:'center',gap:6,background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1.5rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>
               ⚡ Propulsé par Claude AI
             </div>
-            <h1 className="fade2" style={{ fontSize:'2.4rem',lineHeight:1.05,marginBottom:'1.25rem',fontWeight:900,letterSpacing:'-0.03em' }}>
+            <h1 className="fade2" style={{ fontSize:'3rem',lineHeight:1.05,marginBottom:'1.25rem',fontWeight:900,letterSpacing:'-0.03em' }}>
               <span style={{ display:'block',whiteSpace:'nowrap' }}>Trouvez votre job,</span>
-              <span style={{ display:'block',whiteSpace:'nowrap',color:'#E8151B',fontStyle:'italic' }}>sans vous</span>
-              <span style={{ display:'block',whiteSpace:'nowrap',color:'#E8151B',fontStyle:'italic' }}>perdre</span>
+              <span style={{ display:'block',whiteSpace:'nowrap',color:'#E8151B',fontStyle:'italic' }}>sans vous perdre</span>
               <span style={{ display:'block',whiteSpace:'nowrap' }}>dans le chaos</span>
             </h1>
             <p className="fade3" style={{ fontSize:'1.05rem',color:'#555',marginBottom:'2rem',lineHeight:1.75,maxWidth:460,fontWeight:500 }}>
