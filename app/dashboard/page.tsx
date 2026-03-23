@@ -45,6 +45,13 @@ export default function DashboardPage() {
   const [newStageColor, setNewStageColor] = useState('#E8151B');
   const [newStagePosition, setNewStagePosition] = useState(3);
 
+  // Rendre le token accessible globalement pour les composants enfants
+  useEffect(() => {
+    if (accessToken) {
+      (window as any).__jfmj_token = accessToken;
+    }
+  }, [accessToken]);
+
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   function authFetch(url: string, options: RequestInit = {}) {

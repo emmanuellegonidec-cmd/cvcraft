@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { Contact } from '@/lib/jobs';
 import { Stage } from './types';
-import { createClient } from '@/lib/supabase';
 
 type NoteType = 'appel' | 'email' | 'rdv' | 'visio' | 'message' | 'linkedin' | 'autre';
 
@@ -47,11 +46,10 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return { 'Content-Type': 'application/json' };
-  return { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
+function getAuthHeaders(): Record<string, string> {
+  const token = (typeof window !== 'undefined') ? (window as any).__jfmj_token : null;
+  if (!token) return { 'Content-Type': 'application/json' };
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
 
 // ── CONTACT MODAL ─────────────────────────────────────────────────────────────
@@ -101,14 +99,14 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
   }, [isOpen, contact]);
 
   async function fetchJobs() {
-    const h = await getAuthHeaders();
+    const h = getAuthHeaders();
     const res = await fetch('/api/jobs', { headers: h });
     const data = await res.json();
     if (data.jobs) setJobs(data.jobs);
   }
 
   async function fetchNotes(contactId: string) {
-    const h = await getAuthHeaders();
+    const h = getAuthHeaders();
     const res = await fetch(`/api/contacts/notes?contact_id=${contactId}`, { headers: h });
     if (!res.ok) return;
     const data = await res.json();
@@ -141,7 +139,7 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
     setLoading(true);
     setError(null);
     try {
-      const h = await getAuthHeaders();
+      const h = getAuthHeaders();
       if (!h.Authorization) { setError('Session expirée, recharge la page.'); setLoading(false); return; }
 
       const contactData = {
