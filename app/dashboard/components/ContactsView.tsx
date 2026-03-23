@@ -13,11 +13,9 @@ type Props = {
   onAddContact: () => void;
   onDeleteContact: (id: string) => void;
   onRefresh: () => void;
-  userId: string | null;
-  accessToken: string | null;
 };
 
-export default function ContactsView({ contacts, onDeleteContact, onRefresh, userId, accessToken }: Props) {
+export default function ContactsView({ contacts, onDeleteContact, onRefresh }: Props) {
   const [modalOpen, setModalOpen]       = useState(false);
   const [contactEdite, setContactEdite] = useState<ContactWithJob | null>(null);
 
@@ -39,8 +37,7 @@ export default function ContactsView({ contacts, onDeleteContact, onRefresh, use
       <ContactModal
         isOpen={modalOpen}
         contact={contactEdite}
-        userId={userId}
-        accessToken={accessToken}
+
         onSave={() => { setModalOpen(false); onRefresh(); }}
         onClose={() => setModalOpen(false)}
       />

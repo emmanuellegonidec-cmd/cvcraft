@@ -218,8 +218,6 @@ export default function DashboardPage() {
               onAddContact={() => {}}
               onDeleteContact={deleteContact}
               onRefresh={fetchContacts}
-              userId={userId}
-              accessToken={accessToken}
             />
           )}
           {view === 'agenda' && <AgendaView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onBackToKanban={() => setView('kanban')} />}

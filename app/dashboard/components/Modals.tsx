@@ -61,13 +61,11 @@ function formatDate(d: string) {
 type ContactModalProps = {
   isOpen: boolean;
   contact?: Partial<Contact> | null;
-  userId: string | null;
-  accessToken: string | null;
   onSave: () => void;
   onClose: () => void;
 };
 
-export function ContactModal({ isOpen, contact, userId, accessToken, onSave, onClose }: ContactModalProps) {
+export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalProps) {
 
   const [name, setName]           = useState('');
   const [role, setRole]           = useState('');
@@ -87,10 +85,7 @@ export function ContactModal({ isOpen, contact, userId, accessToken, onSave, onC
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-  };
+  const headers = { 'Content-Type': 'application/json' };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -150,7 +145,7 @@ export function ContactModal({ isOpen, contact, userId, accessToken, onSave, onC
 
   async function handleSubmit() {
     if (!name.trim()) { setError('Le nom est obligatoire.'); return; }
-    if (!accessToken) { setError('Session expirée, recharge la page.'); return; }
+
     setLoading(true);
     setError(null);
 
