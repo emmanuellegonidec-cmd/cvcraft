@@ -13,9 +13,11 @@ type Props = {
   onAddContact: () => void;
   onDeleteContact: (id: string) => void;
   onRefresh: () => void;
+  userId: string | null;
+  accessToken: string | null;
 };
 
-export default function ContactsView({ contacts, onDeleteContact, onRefresh }: Props) {
+export default function ContactsView({ contacts, onDeleteContact, onRefresh, userId, accessToken }: Props) {
   const [modalOpen, setModalOpen]       = useState(false);
   const [contactEdite, setContactEdite] = useState<ContactWithJob | null>(null);
 
@@ -37,6 +39,8 @@ export default function ContactsView({ contacts, onDeleteContact, onRefresh }: P
       <ContactModal
         isOpen={modalOpen}
         contact={contactEdite}
+        userId={userId}
+        accessToken={accessToken}
         onSave={() => { setModalOpen(false); onRefresh(); }}
         onClose={() => setModalOpen(false)}
       />
@@ -54,7 +58,6 @@ export default function ContactsView({ contacts, onDeleteContact, onRefresh }: P
 
         {contacts.map(c => (
           <div key={c.id} className="ccard" style={{ cursor: 'pointer' }} onClick={() => ouvrirEdition(c)}>
-
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#FDEAEA', border: '2px solid #E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#E8151B', flexShrink: 0 }}>
                 {initials(c.name)}
@@ -81,7 +84,6 @@ export default function ContactsView({ contacts, onDeleteContact, onRefresh }: P
               {c.linkedin && <button className="cbtn" onClick={() => window.open(c.linkedin!)}>💼 LinkedIn</button>}
               <button className="cbtn" style={{ color: '#E8151B' }} onClick={() => onDeleteContact(c.id)}>✕</button>
             </div>
-
           </div>
         ))}
 

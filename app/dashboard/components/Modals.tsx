@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { Contact } from '@/lib/jobs';
 import { Stage } from './types';
-import { createClient } from '@/lib/supabase';
 
 // ── Types internes ────────────────────────────────────────────────────────────
 
@@ -62,12 +61,13 @@ function formatDate(d: string) {
 type ContactModalProps = {
   isOpen: boolean;
   contact?: Partial<Contact> | null;
+  userId: string | null;
+  accessToken: string | null;
   onSave: () => void;
   onClose: () => void;
 };
 
-export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalProps) {
-  const supabase = createClient();
+export function ContactModal({ isOpen, contact, userId, accessToken, onSave, onClose }: ContactModalProps) {
 
   const [name, setName]           = useState('');
   const [role, setRole]           = useState('');
@@ -87,6 +87,11 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
 
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     fetchJobs();
@@ -101,7 +106,6 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
       setJobManual((contact as any).job_manual || '');
       fetchNotes(contact.id);
     } else {
-      // reset pour un nouveau contact
       setName(''); setRole(''); setCompany(''); setEmail('');
       setPhone(''); setLinkedin(''); setJobId(''); setJobManual('');
       setNotes([]);
@@ -109,20 +113,16 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
   }, [isOpen, contact]);
 
   async function fetchJobs() {
-    const { data } = await supabase
-      .from('jobs')
-      .select('id, title, company')
-      .order('created_at', { ascending: false });
-    if (data) setJobs(data);
+    const res = await fetch('/api/jobs', { headers });
+    const data = await res.json();
+    if (data.jobs) setJobs(data.jobs);
   }
 
   async function fetchNotes(contactId: string) {
-    const { data } = await supabase
-      .from('contact_notes')
-      .select('*')
-      .eq('contact_id', contactId)
-      .order('date', { ascending: false });
-    if (data) setNotes(data);
+    const res = await fetch(`/api/contacts/notes?contact_id=${contactId}`, { headers });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.notes) setNotes(data.notes);
   }
 
   function ajouterNote() {
@@ -130,7 +130,7 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
     setNotes(prev => [{
       id: 'new-' + Date.now(),
       contact_id: contact?.id || '',
-      user_id: '',
+      user_id: userId || '',
       date: noteDate,
       type: noteType,
       contenu: noteContenu.trim(),
@@ -150,13 +150,11 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
 
   async function handleSubmit() {
     if (!name.trim()) { setError('Le nom est obligatoire.'); return; }
+    if (!accessToken) { setError('Session expirée, recharge la page.'); return; }
     setLoading(true);
     setError(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Non connecté');
-
       const contactData = {
         name:       name.trim(),
         role:       role.trim() || null,
@@ -166,26 +164,21 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
         linkedin:   linkedin.trim() || null,
         job_id:     jobId || null,
         job_manual: jobManual.trim() || null,
-        user_id:    user.id,
       };
 
+      // 1. Sauvegarder le contact via API
       let contactId: string;
-
       if (contact?.id) {
-        // Mise à jour via API
         const res = await fetch('/api/contacts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers,
           body: JSON.stringify({ id: contact.id, ...contactData }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erreur mise à jour');
         contactId = data.contact.id;
       } else {
-        // Création via API
         const res = await fetch('/api/contacts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers,
           body: JSON.stringify(contactData),
         });
         const data = await res.json();
@@ -193,25 +186,24 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
         contactId = data.contact.id;
       }
 
-      // Nouvelles notes → directement via Supabase
+      // 2. Sauvegarder les nouvelles notes via API
       const nouvelles = notes.filter(n => n.isNew && !n.toDelete);
-      if (nouvelles.length > 0) {
-        const { error: errN } = await supabase
-          .from('contact_notes')
-          .insert(nouvelles.map(n => ({
+      for (const n of nouvelles) {
+        await fetch('/api/contacts/notes', {
+          method: 'POST', headers,
+          body: JSON.stringify({
             contact_id: contactId,
-            user_id:    user.id,
-            date:       n.date,
-            type:       n.type,
-            contenu:    n.contenu,
-          })));
-        if (errN) throw errN;
+            date: n.date,
+            type: n.type,
+            contenu: n.contenu,
+          }),
+        });
       }
 
-      // Notes supprimées
+      // 3. Supprimer les notes marquées
       const aSupprimer = notes.filter(n => n.toDelete && !n.isNew);
       for (const n of aSupprimer) {
-        await supabase.from('contact_notes').delete().eq('id', n.id);
+        await fetch(`/api/contacts/notes?id=${n.id}`, { method: 'DELETE', headers });
       }
 
       handleClose();
@@ -238,12 +230,8 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
 
   return (
     <div className="modal-bg" onClick={handleClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
+      <div className="modal" style={{ maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 900 }}>
             {contact?.id ? 'Modifier le contact' : 'Ajouter un contact'}
@@ -251,93 +239,48 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
           <button onClick={handleClose} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
         </div>
 
-        {/* Nom + Rôle */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-          <div>
-            <label className="fl">Nom complet *</label>
-            <input className="fi" value={name} onChange={e => setName(e.target.value)} placeholder="Sophie Martin" />
-          </div>
-          <div>
-            <label className="fl">Rôle</label>
-            <input className="fi" value={role} onChange={e => setRole(e.target.value)} placeholder="Talent Acquisition" />
-          </div>
+          <div><label className="fl">Nom complet *</label><input className="fi" value={name} onChange={e => setName(e.target.value)} placeholder="Sophie Martin" /></div>
+          <div><label className="fl">Rôle</label><input className="fi" value={role} onChange={e => setRole(e.target.value)} placeholder="Talent Acquisition" /></div>
         </div>
 
-        {/* Entreprise + Email */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-          <div>
-            <label className="fl">Entreprise</label>
-            <input className="fi" value={company} onChange={e => setCompany(e.target.value)} placeholder="BNP Paribas" />
-          </div>
-          <div>
-            <label className="fl">Email</label>
-            <input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="s.martin@bnp.fr" />
-          </div>
+          <div><label className="fl">Entreprise</label><input className="fi" value={company} onChange={e => setCompany(e.target.value)} placeholder="BNP Paribas" /></div>
+          <div><label className="fl">Email</label><input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="s.martin@bnp.fr" /></div>
         </div>
 
-        {/* Téléphone + LinkedIn */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-          <div>
-            <label className="fl">Téléphone</label>
-            <input className="fi" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+33 6 12 34 56 78" />
-          </div>
-          <div>
-            <label className="fl">LinkedIn</label>
-            <input className="fi" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="linkedin.com/in/..." />
-          </div>
+          <div><label className="fl">Téléphone</label><input className="fi" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+33 6 12 34 56 78" /></div>
+          <div><label className="fl">LinkedIn</label><input className="fi" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="linkedin.com/in/..." /></div>
         </div>
 
         <hr style={{ border: 'none', borderTop: '1.5px solid #F0EEEA', marginBottom: 16 }} />
 
-        {/* Poste associé */}
         <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: 14, marginBottom: 16 }}>
           <label className="fl" style={{ marginBottom: 8 }}>Poste associé</label>
-          <select
-            className="fi"
-            value={jobId}
-            onChange={e => setJobId(e.target.value)}
-            style={{ marginBottom: 8, background: '#fff' }}
-          >
+          <select className="fi" value={jobId} onChange={e => setJobId(e.target.value)} style={{ marginBottom: 8, background: '#fff' }}>
             <option value="">Sélectionner un poste existant…</option>
-            {jobs.map(j => (
-              <option key={j.id} value={j.id}>
-                {j.title}{j.company ? ` — ${j.company}` : ''}
-              </option>
-            ))}
+            {jobs.map(j => <option key={j.id} value={j.id}>{j.title}{j.company ? ` — ${j.company}` : ''}</option>)}
           </select>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <span style={{ flex: 1, height: 1, background: '#E0E0E0' }} />
             <span style={{ fontSize: 11, color: '#aaa' }}>ou saisir manuellement</span>
             <span style={{ flex: 1, height: 1, background: '#E0E0E0' }} />
           </div>
-          <input
-            className="fi"
-            value={jobManual}
-            onChange={e => setJobManual(e.target.value)}
-            placeholder="Ex : Responsable marketing — Canal+"
-            style={{ background: '#fff' }}
-          />
+          <input className="fi" value={jobManual} onChange={e => setJobManual(e.target.value)} placeholder="Ex : Responsable marketing — Canal+" style={{ background: '#fff' }} />
         </div>
 
         <hr style={{ border: 'none', borderTop: '1.5px solid #F0EEEA', marginBottom: 16 }} />
 
-        {/* Notes */}
         <label className="fl" style={{ marginBottom: 10 }}>Notes</label>
 
         {notesVisibles.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             {notesVisibles.map(note => (
               <div key={note.id} style={{ border: '1.5px solid #F0EEEA', borderRadius: 10, padding: '10px 12px', marginBottom: 8, position: 'relative' }}>
-                <button
-                  onClick={() => supprimerNote(note.id)}
-                  style={{ position: 'absolute', top: 8, right: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', fontSize: 12, padding: '0 4px' }}
-                >✕</button>
+                <button onClick={() => supprimerNote(note.id)} style={{ position: 'absolute', top: 8, right: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', fontSize: 12, padding: '0 4px' }}>✕</button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
-                    background: NOTE_BADGE[note.type]?.bg,
-                    color: NOTE_BADGE[note.type]?.color,
-                  }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: NOTE_BADGE[note.type]?.bg, color: NOTE_BADGE[note.type]?.color }}>
                     {NOTE_TYPES.find(t => t.value === note.type)?.label}
                   </span>
                   <span style={{ fontSize: 11, color: '#aaa' }}>{formatDate(note.date)}</span>
@@ -348,53 +291,21 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
           </div>
         )}
 
-        {/* Zone nouvelle note */}
         <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: 12, marginBottom: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8, marginBottom: 8 }}>
-            <input
-              type="date"
-              className="fi"
-              value={noteDate}
-              onChange={e => setNoteDate(e.target.value)}
-              style={{ background: '#fff' }}
-            />
-            <select
-              className="fi"
-              value={noteType}
-              onChange={e => setNoteType(e.target.value as NoteType)}
-              style={{ background: '#fff' }}
-            >
-              {NOTE_TYPES.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
+            <input type="date" className="fi" value={noteDate} onChange={e => setNoteDate(e.target.value)} style={{ background: '#fff' }} />
+            <select className="fi" value={noteType} onChange={e => setNoteType(e.target.value as NoteType)} style={{ background: '#fff' }}>
+              {NOTE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
-          <textarea
-            className="fi"
-            value={noteContenu}
-            onChange={e => setNoteContenu(e.target.value)}
-            placeholder="Contenu de la note…"
-            rows={3}
-            style={{ resize: 'none', background: '#fff', marginBottom: 8 }}
-          />
-          <button
-            onClick={ajouterNote}
-            disabled={!noteContenu.trim()}
-            style={{
-              width: '100%', padding: '8px 0', borderRadius: 8,
-              border: '1.5px dashed #E8B84B', background: 'transparent',
-              color: '#C4931A', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              opacity: noteContenu.trim() ? 1 : 0.4,
-            }}
-          >
+          <textarea className="fi" value={noteContenu} onChange={e => setNoteContenu(e.target.value)} placeholder="Contenu de la note…" rows={3} style={{ resize: 'none', background: '#fff', marginBottom: 8 }} />
+          <button onClick={ajouterNote} disabled={!noteContenu.trim()} style={{ width: '100%', padding: '8px 0', borderRadius: 8, border: '1.5px dashed #E8B84B', background: 'transparent', color: '#C4931A', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: noteContenu.trim() ? 1 : 0.4 }}>
             + Ajouter cette note
           </button>
         </div>
 
         {error && (
-          <div style={{ background: '#FEE', border: '1.5px solid #fca', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#E8151B', marginBottom: 12 }}>
-            {error}
-          </div>
+          <div style={{ background: '#FEE', border: '1.5px solid #fca', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#E8151B', marginBottom: 12 }}>{error}</div>
         )}
 
         <div style={{ display: 'flex', gap: 10 }}>
@@ -424,12 +335,7 @@ type SettingsModalProps = {
   onClose: () => void;
 };
 
-export function SettingsModal({
-  stages, newStageName, setNewStageName,
-  newStageColor, setNewStageColor,
-  newStagePosition, setNewStagePosition,
-  onAddStage, onDeleteStage, onClose,
-}: SettingsModalProps) {
+export function SettingsModal({ stages, newStageName, setNewStageName, newStageColor, setNewStageColor, newStagePosition, setNewStagePosition, onAddStage, onDeleteStage, onClose }: SettingsModalProps) {
   return (
     <div className="modal-bg" onClick={onClose}>
       <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
@@ -437,7 +343,6 @@ export function SettingsModal({
           <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: 0 }}>⚙️ Paramètres du pipeline</h2>
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
         </div>
-
         <label className="fl" style={{ marginBottom: 10 }}>Étapes actuelles</label>
         <div style={{ marginBottom: 20 }}>
           {stages.map(stage => (
@@ -453,29 +358,15 @@ export function SettingsModal({
             </div>
           ))}
         </div>
-
         <label className="fl" style={{ marginBottom: 10 }}>Ajouter une étape personnalisée</label>
         <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '14px', marginBottom: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 10, marginBottom: 10 }}>
-            <div>
-              <label className="fl">Nom de l&apos;étape</label>
-              <input className="fi" value={newStageName} onChange={e => setNewStageName(e.target.value)} placeholder="Ex: Test technique" />
-            </div>
-            <div>
-              <label className="fl">Couleur</label>
-              <input type="color" value={newStageColor} onChange={e => setNewStageColor(e.target.value)} style={{ width: 44, height: 42, border: '2px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', padding: 2 }} />
-            </div>
-            <div>
-              <label className="fl">Position</label>
-              <input type="number" className="fi" value={newStagePosition} onChange={e => setNewStagePosition(Number(e.target.value))} style={{ width: 60 }} min={1} max={98} />
-            </div>
+            <div><label className="fl">Nom de l&apos;étape</label><input className="fi" value={newStageName} onChange={e => setNewStageName(e.target.value)} placeholder="Ex: Test technique" /></div>
+            <div><label className="fl">Couleur</label><input type="color" value={newStageColor} onChange={e => setNewStageColor(e.target.value)} style={{ width: 44, height: 42, border: '2px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', padding: 2 }} /></div>
+            <div><label className="fl">Position</label><input type="number" className="fi" value={newStagePosition} onChange={e => setNewStagePosition(Number(e.target.value))} style={{ width: 60 }} min={1} max={98} /></div>
           </div>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 10 }}>
-            💡 La position détermine l&apos;ordre. Ex: 3.5 s&apos;insère entre la position 3 et 4.
-          </div>
-          <button className="btn-main" style={{ width: '100%', justifyContent: 'center' }} onClick={onAddStage} disabled={!newStageName.trim()}>
-            + Ajouter cette étape
-          </button>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 10 }}>💡 La position détermine l&apos;ordre. Ex: 3.5 s&apos;insère entre la position 3 et 4.</div>
+          <button className="btn-main" style={{ width: '100%', justifyContent: 'center' }} onClick={onAddStage} disabled={!newStageName.trim()}>+ Ajouter cette étape</button>
         </div>
       </div>
     </div>
