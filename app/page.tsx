@@ -20,6 +20,7 @@ export default function LandingPage() {
         .feat-card:hover { transform:translate(-2px,-2px);box-shadow:5px 5px 0 #E8151B; }
         .testi-card { background:#fff;border:2px solid #111;border-radius:12px;padding:1.5rem;box-shadow:3px 3px 0 #111; }
         .step-card { background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.15);border-radius:12px;padding:1.75rem; }
+        .step-card-IA { background:rgba(232,21,27,0.12);border:2px solid rgba(232,21,27,0.35);border-radius:12px;padding:1.75rem; }
         .blog-card { background:#fff;border:2px solid #111;border-radius:12px;overflow:hidden;box-shadow:3px 3px 0 #111;transition:all 0.2s;text-decoration:none;color:#111;display:block; }
         .blog-card:hover { transform:translate(-2px,-2px);box-shadow:5px 5px 0 #E8151B; }
         .social-link { display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;border:2px solid #E0E0E0;background:#fff;color:#555;transition:all 0.15s;text-decoration:none;font-size:16px; }
@@ -38,10 +39,16 @@ export default function LandingPage() {
           .hero-grid,.feat-grid,.steps-grid,.testi-grid,.blog-grid{grid-template-columns:1fr!important}
           .feats-grid{grid-template-columns:1fr 1fr!important}
           .footer-grid{grid-template-columns:1fr!important}
-          .hero-logo-img{max-width:300px!important;margin:0 auto!important;}
+          .hero-logo-img{max-width:260px!important;margin:0 auto!important;}
+          .hero-title span{white-space:normal!important;}
+          .hero-title{font-size:2.2rem!important;}
+          .hero-grid{padding:2rem 1.25rem!important;gap:1.5rem!important;}
+          .hero-logo-wrap{order:-1;}
+          .steps-grid{grid-template-columns:1fr!important}
         }
         @media(max-width:480px){
           .nav-btns{display:none!important}
+          .hero-title{font-size:1.9rem!important;}
         }
       `}</style>
 
@@ -71,13 +78,13 @@ export default function LandingPage() {
             <div className="fade1" style={{ display:'inline-flex',alignItems:'center',gap:6,background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1.5rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>
               ⚡ Propulsé par Claude AI
             </div>
-            <h1 className="fade2" style={{ fontSize:'3rem',lineHeight:1.05,marginBottom:'1.25rem',fontWeight:900,letterSpacing:'-0.03em' }}>
+            <h1 className="fade2 hero-title" style={{ fontSize:'3rem',lineHeight:1.05,marginBottom:'1.25rem',fontWeight:900,letterSpacing:'-0.03em' }}>
               <span style={{ display:'block',whiteSpace:'nowrap' }}>Trouvez votre job,</span>
               <span style={{ display:'block',whiteSpace:'nowrap',color:'#E8151B',fontStyle:'italic' }}>sans vous perdre</span>
               <span style={{ display:'block',whiteSpace:'nowrap' }}>dans le chaos</span>
             </h1>
             <p className="fade3" style={{ fontSize:'1.05rem',color:'#555',marginBottom:'2rem',lineHeight:1.75,maxWidth:460,fontWeight:500 }}>
-              Jean Find My Job centralise votre recherche d&apos;emploi — tableau de bord Kanban, pipeline de suivi par offre, CV personnalisé par IA. Tout au même endroit, enfin.
+              Jean Find My Job centralise votre recherche d&apos;emploi — tableau de bord, suivi de candidatures, CV personnalisé par IA. Tout au même endroit, enfin.
             </p>
             <div className="fade4" style={{ display:'flex',gap:12,flexWrap:'wrap',alignItems:'center' }}>
               <Link href="/auth/signup" className="btn-black" style={{ fontSize:15,padding:'14px 32px' }}>Commencer gratuitement →</Link>
@@ -87,23 +94,33 @@ export default function LandingPage() {
               Déjà utilisé par des candidats en recherche active
             </div>
           </div>
-
-          {/* HERO DROITE — Logo grand format */}
-          <div style={{ display:'flex',alignItems:'center',justifyContent:'center',padding:'0' }}>
+          <div className="hero-logo-wrap" style={{ display:'flex',alignItems:'center',justifyContent:'center',padding:'0' }}>
             <img src="/logo.png" alt="Jean Find My Job" className="hero-logo-img" style={{ width:'100%',maxWidth:680,height:'auto',objectFit:'contain' }} />
           </div>
         </div>
       </section>
 
-      {/* STATS */}
-      <div style={{ background:'#111',borderBottom:'2.5px solid #111',padding:'2rem 3rem',display:'flex',justifyContent:'center',gap:'6rem',flexWrap:'wrap' }}>
-        {[['100%','Gratuit','pour commencer'],['1 pipeline','par offre','suivi détaillé'],['30s','pour un CV','généré par IA'],['Kanban +','Liste','deux vues au choix']].map(([n,l,s]) => (
-          <div key={l} style={{ textAlign:'center' }}>
-            <div style={{ fontSize:'2.2rem',fontWeight:900,color:'#F5C400',letterSpacing:'-0.02em',fontFamily:'Montserrat,sans-serif' }}>{n}</div>
-            <div style={{ fontSize:13,color:'rgba(255,255,255,0.7)',marginTop:2,fontWeight:600 }}>{l}</div>
-            <div style={{ fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:500 }}>{s}</div>
+      {/* BANDEAU NOIR — phrase accroche + stats */}
+      <div style={{ background:'#111',borderBottom:'2.5px solid #111',padding:'2rem 3rem' }}>
+        <div style={{ maxWidth:1400,margin:'0 auto' }}>
+          <p style={{ textAlign:'center',fontStyle:'italic',fontWeight:700,color:'#F5C400',fontSize:'1.05rem',marginBottom:'2rem',paddingBottom:'1.5rem',borderBottom:'1px solid rgba(255,255,255,0.15)' }}>
+            &ldquo;Si vous avez déjà oublié où vous avez postulé, vous êtes au bon endroit.&rdquo;
+          </p>
+          <div style={{ display:'flex',justifyContent:'center',gap:'6rem',flexWrap:'wrap' }}>
+            {[
+              ['Gratuit','candidatures illimitées','IA en option'],
+              ['4,9★','Satisfaction','utilisateurs'],
+              ['1 dossier','par candidature','tout centralisé'],
+              ['30s','pour un CV','généré par IA'],
+            ].map(([n,l,s]) => (
+              <div key={l} style={{ textAlign:'center' }}>
+                <div style={{ fontSize:'2.2rem',fontWeight:900,color:'#F5C400',letterSpacing:'-0.02em',fontFamily:'Montserrat,sans-serif' }}>{n}</div>
+                <div style={{ fontSize:13,color:'rgba(255,255,255,0.7)',marginTop:2,fontWeight:600 }}>{l}</div>
+                <div style={{ fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:500 }}>{s}</div>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       {/* FEATURE 1 */}
@@ -113,11 +130,11 @@ export default function LandingPage() {
           <div style={{ fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111',fontFamily:'Montserrat,sans-serif' }}>01</div>
           <div style={{ display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>📋 Tableau de bord</div>
           <h3 style={{ fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Votre recherche,<br />enfin organisée</h3>
-          <p style={{ fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Fini les tableurs Excel. Jean Find My Job centralise toutes vos candidatures dans un tableau Kanban visuel avec un pipeline détaillé pour chaque offre.</p>
+          <p style={{ fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Fini les tableurs Excel. Jean Find My Job centralise toutes vos candidatures dans un tableau de bord visuel avec un parcours de candidature détaillé pour chaque offre.</p>
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
             {[
-              'Vue Kanban globale : 5 grandes étapes claires',
-              'Pipeline détaillé par offre : entretien tél, RH, manager…',
+              'Vue globale : 5 grandes étapes claires',
+              'Parcours de candidature par offre : entretien tél, RH, manager…',
               'Étapes personnalisables selon votre process',
               'Statistiques de votre recherche en temps réel',
             ].map(item => (
@@ -141,7 +158,7 @@ export default function LandingPage() {
                 <div style={{ fontSize:20,fontWeight:900,color:'#B8900A' }}>3</div>
               </div>
             </div>
-            {[['📨','BNP Paribas','Entretien RH — pipeline à jour'],['⭐','Sanofi','Offre reçue !'],['📋','Decathlon','Entretien manager demain']].map(([ic,co,msg]) => (
+            {[['📨','BNP Paribas','Entretien RH — parcours à jour'],['⭐','Sanofi','Offre reçue !'],['📋','Decathlon','Entretien manager demain']].map(([ic,co,msg]) => (
               <div key={co as string} style={{ display:'flex',alignItems:'center',gap:8,padding:7,background:'#F4F4F4',borderRadius:6,marginBottom:5,border:'1.5px solid #E0E0E0' }}>
                 <span style={{ fontSize:12 }}>{ic as string}</span>
                 <div style={{ fontSize:10,fontWeight:600 }}><b>{co as string}</b> — {msg as string}</div>
@@ -195,20 +212,20 @@ export default function LandingPage() {
 
       {/* HOW IT WORKS */}
       <section id="comment" style={{ background:'#111',borderTop:'2.5px solid #111',borderBottom:'2.5px solid #111',padding:'5rem 2rem' }}>
-        <div style={{ maxWidth:1100,margin:'0 auto',textAlign:'center' }}>
+        <div style={{ maxWidth:1400,margin:'0 auto',textAlign:'center' }}>
           <div style={{ display:'inline-block',background:'#F5C400',border:'2px solid rgba(255,255,255,0.2)',borderRadius:20,padding:'5px 16px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1rem',textTransform:'uppercase',letterSpacing:'0.05em' }}>Simple comme bonjour</div>
           <h2 style={{ fontSize:'2.5rem',color:'#fff',marginBottom:'0.75rem',fontWeight:900,letterSpacing:'-0.02em' }}>Comment ça marche ?</h2>
-          <p style={{ color:'rgba(255,255,255,0.6)',marginBottom:'3rem',fontWeight:500 }}>Trois étapes pour décrocher plus d&apos;entretiens</p>
-          <div className="steps-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'2rem',textAlign:'left' }}>
+          <p style={{ color:'rgba(255,255,255,0.6)',marginBottom:'3rem',fontWeight:500 }}>Quatre étapes pour candidater avec méthode</p>
+          <div className="steps-grid" style={{ display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'1.5rem',textAlign:'left' }}>
             {[
-              { icon:'👤',num:'01',title:'Créez votre profil',desc:'Inscrivez-vous gratuitement et importez votre profil LinkedIn en PDF. Jean Find My Job extrait automatiquement toutes vos informations.' },
-              { icon:'📋',num:'02',title:'Suivez chaque candidature',desc:"Ajoutez vos offres et ouvrez le dossier de chaque candidature. Kanban global pour la vue d'ensemble, pipeline détaillé par offre pour ne rater aucune étape." },
-              { icon:'✨',num:'03',title:'Générez votre CV par IA',desc:'Pour chaque candidature, laissez Claude AI créer un CV percutant et optimisé pour le poste. Exportez en PDF et postulez.' },
+              { num:'01', title:'Vous créez votre profil', desc:"Un compte sécurisé… et c'est parti. Jean prépare la base. Vous êtes prêt à postuler sans repartir de zéro à chaque fois et sans multiplier les tableaux de suivi.", ia: false },
+              { num:'02', title:'Vous ajoutez vos candidatures', desc:"Importez une offre ou ajoutez-la manuellement. Chaque candidature a son propre espace. Vous adaptez votre CV, vos documents et votre préparation à chaque recrutement. Jean vous donne votre score ATS.", ia: false },
+              { num:'03', title:'Vous suivez sans vous perdre', desc:"Toutes vos candidatures, au même endroit. Vous savez où vous en êtes, sans réfléchir. Adaptez votre CV, suivez vos réponses, progressez à chaque candidature.", ia: false },
+              { num:'04', title:"L'IA vous aide à mieux candidater", desc:"Jean vous donne un coup de main quand vous en avez besoin — améliorer votre CV, mieux comprendre une offre, préparer vos candidatures.", ia: true },
             ].map(s => (
-              <div key={s.num} className="step-card">
-                <div style={{ width:44,height:44,borderRadius:10,background:'#E8151B',border:'2px solid rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,marginBottom:'1rem' }}>{s.icon}</div>
-                <div style={{ fontSize:11,fontWeight:800,color:'#F5C400',letterSpacing:'0.08em',marginBottom:6,textTransform:'uppercase' }}>ÉTAPE {s.num}</div>
-                <h4 style={{ color:'#fff',fontSize:'1rem',fontWeight:800,marginBottom:8 }}>{s.title}</h4>
+              <div key={s.num} className={s.ia ? 'step-card-IA' : 'step-card'}>
+                <div style={{ fontSize:11,fontWeight:800,color:'#F5C400',letterSpacing:'0.08em',marginBottom:8,textTransform:'uppercase' }}>ÉTAPE {s.num}</div>
+                <h4 style={{ color:'#fff',fontSize:'1.05rem',fontWeight:800,marginBottom:10 }}>{s.title}</h4>
                 <p style={{ color:'rgba(255,255,255,0.6)',fontSize:13,lineHeight:1.65,fontWeight:500 }}>{s.desc}</p>
               </div>
             ))}
@@ -226,14 +243,14 @@ export default function LandingPage() {
           </div>
           <div className="feats-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1.5rem' }}>
             {[
-              { icon:'📊',title:'Tableau de bord Kanban',desc:"5 grandes colonnes pour visualiser toutes vos candidatures d'un coup d'œil." },
-              { icon:'🗂️',title:'Pipeline par candidature',desc:'Un dossier détaillé pour chaque offre : entretien tél, RH, manager… et vos étapes personnalisées.' },
+              { icon:'📊',title:'Tableau de bord',desc:"5 grandes étapes pour visualiser toutes vos candidatures d'un coup d'œil." },
+              { icon:'🗂️',title:'Votre dossier par offre',desc:'Un espace dédié pour chaque candidature : parcours de suivi, entretiens, documents, notes.' },
               { icon:'🤖',title:'CV Creator IA',desc:'Claude AI rédige votre CV avec des formulations percutantes, adapté à chaque poste.' },
+              { icon:'📊',title:'Score ATS',desc:'Jean analyse votre CV et vous donne un score de compatibilité avec l\'offre pour maximiser vos chances de passer les filtres automatiques.' },
               { icon:'🔗',title:'Import LinkedIn',desc:'Exportez votre profil LinkedIn en PDF et Jean Find My Job remplit automatiquement toutes vos informations.' },
               { icon:'👥',title:'Suivi des contacts',desc:'Gardez une trace de tous les recruteurs et managers. Ne perdez plus aucune relation clé.' },
               { icon:'📅',title:'Gestion des entretiens',desc:'Planifiez et préparez vos entretiens. Stockez les questions, réponses et retours.' },
               { icon:'📈',title:'Statistiques',desc:"Taux de réponse, délais moyens, canaux efficaces. Optimisez votre stratégie avec les données." },
-              { icon:'💾',title:'Sauvegarde cloud',desc:"Tous vos CVs et données sauvegardés en sécurité, accessibles depuis n'importe quel appareil." },
               { icon:'📥',title:'Export PDF',desc:'Téléchargez votre CV en PDF professionnel prêt à envoyer, en un seul clic.' },
             ].map(f => (
               <div key={f.title} className="feat-card">
@@ -302,7 +319,6 @@ export default function LandingPage() {
                 </div>
               </div>
             </a>
-
             <a href="#" className="blog-card">
               <div style={{ height:180,background:'linear-gradient(135deg,#E8151B 0%,#C01116 100%)',display:'flex',alignItems:'center',justifyContent:'center',padding:'1.5rem',position:'relative',overflow:'hidden' }}>
                 <div style={{ position:'absolute',top:12,left:12 }}>
@@ -322,7 +338,6 @@ export default function LandingPage() {
                 </div>
               </div>
             </a>
-
             <a href="#" className="blog-card">
               <div style={{ height:180,background:'linear-gradient(135deg,#1A4A8A 0%,#1A6FDB 100%)',display:'flex',alignItems:'center',justifyContent:'center',padding:'1.5rem',position:'relative',overflow:'hidden' }}>
                 <div style={{ position:'absolute',top:12,left:12 }}>
@@ -360,7 +375,6 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer style={{ background:'#fff',borderTop:'2.5px solid #111',padding:'3.5rem 3rem 2rem' }}>
         <div className="footer-grid" style={{ display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:'3rem',maxWidth:1400,margin:'0 auto' }}>
-
           <div>
             <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:'1rem' }}>
               <img src="/logo.png" alt="Jean Find My Job" style={{ height:52,width:'auto',objectFit:'contain' }} />
@@ -369,7 +383,7 @@ export default function LandingPage() {
               </span>
             </div>
             <p style={{ fontSize:13,color:'#555',lineHeight:1.7,fontWeight:500,marginBottom:'1.25rem',maxWidth:260 }}>
-              La plateforme de recherche d&apos;emploi propulsée par Claude AI. Tableau de bord Kanban, pipeline par offre, CV Creator.
+              La plateforme de recherche d&apos;emploi propulsée par Claude AI. Tableau de bord, parcours de candidature, CV Creator.
             </p>
             <div style={{ display:'flex',gap:8,marginBottom:'1rem' }}>
               <a href="https://www.linkedin.com/company/jean-find-my-job/" target="_blank" rel="noopener noreferrer" className="social-link" title="LinkedIn" style={{ background:'#0077B5',borderColor:'#0077B5',color:'#fff' }}>
@@ -387,30 +401,25 @@ export default function LandingPage() {
             </div>
             <NewsletterForm />
           </div>
-
           <div>
             <h5 style={{ fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Produit</h5>
-            {[['Tableau de bord','#fonctionnalites'],['Pipeline par offre','#fonctionnalites'],['CV Creator','#cv'],['Suivi contacts','#fonctionnalites'],['Statistiques','#fonctionnalites']].map(([label,href]) => (
+            {[['Tableau de bord','#fonctionnalites'],['Votre dossier par offre','#fonctionnalites'],['CV Creator','#cv'],['Suivi contacts','#fonctionnalites'],['Statistiques','#fonctionnalites']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
           </div>
-
           <div>
             <h5 style={{ fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Ressources</h5>
             {[['Guide de démarrage','#'],['Blog','#'],['Templates CV','#'],['Conseils entretien','#'],['Chaîne YouTube','https://www.youtube.com/channel/UCDgezWysIr83yW5dUlkKbSg']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link" target={href.startsWith('http') ? '_blank' : undefined} rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}>{label}</a>
             ))}
           </div>
-
           <div>
             <h5 style={{ fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Entreprise</h5>
             {[['À propos','#'],['Tarifs','#'],['Contact','mailto:contact@jeanfindmyjob.fr'],['Confidentialité','#'],['CGU','#']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
           </div>
-
         </div>
-
         <div style={{ maxWidth:1400,margin:'2rem auto 0',paddingTop:'1.5rem',borderTop:'1.5px solid #E0E0E0',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8 }}>
           <p style={{ fontSize:12,color:'#888',fontWeight:500 }}>© 2026 Jean Find My Job · Propulsé par Claude AI</p>
           <p style={{ fontSize:12,color:'#888',fontWeight:500 }}>Fait avec ♥ pour les candidats</p>
