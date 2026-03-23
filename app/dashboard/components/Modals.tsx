@@ -4,8 +4,6 @@ import { Contact } from '@/lib/jobs';
 import { Stage } from './types';
 import { createClient } from '@/lib/supabase';
 
-// ── Types internes ────────────────────────────────────────────────────────────
-
 type NoteType = 'appel' | 'email' | 'rdv' | 'visio' | 'message' | 'linkedin' | 'autre';
 
 interface ContactNote {
@@ -20,11 +18,7 @@ interface ContactNote {
   toDelete?: boolean;
 }
 
-interface Job {
-  id: string;
-  title: string;
-  company: string | null;
-}
+interface Job { id: string; title: string; company: string | null; }
 
 const NOTE_TYPES: { value: NoteType; label: string }[] = [
   { value: 'appel',    label: 'Appel' },
@@ -46,15 +40,18 @@ const NOTE_BADGE: Record<NoteType, { bg: string; color: string }> = {
   autre:    { bg: '#F0EEEA', color: '#888' },
 };
 
-function today() {
-  return new Date().toISOString().split('T')[0];
-}
+function today() { return new Date().toISOString().split('T')[0]; }
 
 function formatDate(d: string) {
   if (!d) return '';
-  return new Date(d).toLocaleDateString('fr-FR', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  });
+  return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { 'Content-Type': 'application/json' };
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
 }
 
 // ── CONTACT MODAL ─────────────────────────────────────────────────────────────
@@ -67,7 +64,6 @@ type ContactModalProps = {
 };
 
 export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalProps) {
-
   const [name, setName]           = useState('');
   const [role, setRole]           = useState('');
   const [company, setCompany]     = useState('');
@@ -76,12 +72,10 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
   const [linkedin, setLinkedin]   = useState('');
   const [jobId, setJobId]         = useState('');
   const [jobManual, setJobManual] = useState('');
-
   const [notes, setNotes]             = useState<ContactNote[]>([]);
   const [noteDate, setNoteDate]       = useState(today());
   const [noteType, setNoteType]       = useState<NoteType>('appel');
   const [noteContenu, setNoteContenu] = useState('');
-
   const [jobs, setJobs]       = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
@@ -107,20 +101,14 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
   }, [isOpen, contact]);
 
   async function fetchJobs() {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
+    const h = await getAuthHeaders();
     const res = await fetch('/api/jobs', { headers: h });
     const data = await res.json();
     if (data.jobs) setJobs(data.jobs);
   }
 
   async function fetchNotes(contactId: string) {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
+    const h = await getAuthHeaders();
     const res = await fetch(`/api/contacts/notes?contact_id=${contactId}`, { headers: h });
     if (!res.ok) return;
     const data = await res.json();
@@ -145,73 +133,50 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
   }
 
   function supprimerNote(noteId: string) {
-    setNotes(prev => prev.map(n =>
-      n.id === noteId ? { ...n, toDelete: true } : n
-    ));
+    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, toDelete: true } : n));
   }
 
   async function handleSubmit() {
     if (!name.trim()) { setError('Le nom est obligatoire.'); return; }
-
     setLoading(true);
     setError(null);
-
     try {
+      const h = await getAuthHeaders();
+      if (!h.Authorization) { setError('Session expirée, recharge la page.'); setLoading(false); return; }
+
       const contactData = {
-        name:       name.trim(),
-        role:       role.trim() || null,
-        company:    company.trim() || null,
-        email:      email.trim() || null,
-        phone:      phone.trim() || null,
-        linkedin:   linkedin.trim() || null,
-        job_id:     jobId || null,
-        job_manual: jobManual.trim() || null,
+        name: name.trim(), role: role.trim() || null,
+        company: company.trim() || null, email: email.trim() || null,
+        phone: phone.trim() || null, linkedin: linkedin.trim() || null,
+        job_id: jobId || null, job_manual: jobManual.trim() || null,
       };
 
-      // 1. Sauvegarder le contact via API
       let contactId: string;
       if (contact?.id) {
-        const res = await fetch('/api/contacts', {
-          method: 'POST', headers: authHeaders,
-          body: JSON.stringify({ id: contact.id, ...contactData }),
-        });
+        const res = await fetch('/api/contacts', { method: 'POST', headers: h, body: JSON.stringify({ id: contact.id, ...contactData }) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erreur mise à jour');
         contactId = data.contact.id;
       } else {
-        const res = await fetch('/api/contacts', {
-          method: 'POST', headers: authHeaders,
-          body: JSON.stringify(contactData),
-        });
+        const res = await fetch('/api/contacts', { method: 'POST', headers: h, body: JSON.stringify(contactData) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erreur création');
         contactId = data.contact.id;
       }
 
-      // 2. Sauvegarder les nouvelles notes via API
       const nouvelles = notes.filter(n => n.isNew && !n.toDelete);
       for (const n of nouvelles) {
-        await fetch('/api/contacts/notes', {
-          method: 'POST', headers: authHeaders,
-          body: JSON.stringify({
-            contact_id: contactId,
-            date: n.date,
-            type: n.type,
-            contenu: n.contenu,
-          }),
-        });
+        await fetch('/api/contacts/notes', { method: 'POST', headers: h, body: JSON.stringify({ contact_id: contactId, date: n.date, type: n.type, contenu: n.contenu }) });
       }
 
-      // 3. Supprimer les notes marquées
       const aSupprimer = notes.filter(n => n.toDelete && !n.isNew);
       for (const n of aSupprimer) {
-        await fetch(`/api/contacts/notes?id=${n.id}`, { method: 'DELETE', headers: authHeaders });
+        await fetch(`/api/contacts/notes?id=${n.id}`, { method: 'DELETE', headers: h });
       }
 
       handleClose();
       onSave();
     } catch (err: any) {
-      console.error(err);
       setError('Erreur : ' + (err.message || 'Réessaie.'));
     } finally {
       setLoading(false);
@@ -227,7 +192,6 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
   }
 
   if (!isOpen) return null;
-
   const notesVisibles = notes.filter(n => !n.toDelete);
 
   return (
@@ -235,9 +199,7 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
       <div className="modal" style={{ maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 900 }}>
-            {contact?.id ? 'Modifier le contact' : 'Ajouter un contact'}
-          </h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 900 }}>{contact?.id ? 'Modifier le contact' : 'Ajouter un contact'}</h2>
           <button onClick={handleClose} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
         </div>
 
@@ -245,12 +207,10 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
           <div><label className="fl">Nom complet *</label><input className="fi" value={name} onChange={e => setName(e.target.value)} placeholder="Sophie Martin" /></div>
           <div><label className="fl">Rôle</label><input className="fi" value={role} onChange={e => setRole(e.target.value)} placeholder="Talent Acquisition" /></div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
           <div><label className="fl">Entreprise</label><input className="fi" value={company} onChange={e => setCompany(e.target.value)} placeholder="BNP Paribas" /></div>
           <div><label className="fl">Email</label><input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="s.martin@bnp.fr" /></div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
           <div><label className="fl">Téléphone</label><input className="fi" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+33 6 12 34 56 78" /></div>
           <div><label className="fl">LinkedIn</label><input className="fi" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="linkedin.com/in/..." /></div>
@@ -280,7 +240,7 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
           <div style={{ marginBottom: 12 }}>
             {notesVisibles.map(note => (
               <div key={note.id} style={{ border: '1.5px solid #F0EEEA', borderRadius: 10, padding: '10px 12px', marginBottom: 8, position: 'relative' }}>
-                <button onClick={() => supprimerNote(note.id)} style={{ position: 'absolute', top: 8, right: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', fontSize: 12, padding: '0 4px' }}>✕</button>
+                <button onClick={() => supprimerNote(note.id)} style={{ position: 'absolute', top: 8, right: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', fontSize: 12 }}>✕</button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: NOTE_BADGE[note.type]?.bg, color: NOTE_BADGE[note.type]?.color }}>
                     {NOTE_TYPES.find(t => t.value === note.type)?.label}
@@ -306,9 +266,7 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
           </button>
         </div>
 
-        {error && (
-          <div style={{ background: '#FEE', border: '1.5px solid #fca', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#E8151B', marginBottom: 12 }}>{error}</div>
-        )}
+        {error && <div style={{ background: '#FEE', border: '1.5px solid #fca', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#E8151B', marginBottom: 12 }}>{error}</div>}
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={handleClose}>Annuler</button>
@@ -326,14 +284,10 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
 
 type SettingsModalProps = {
   stages: Stage[];
-  newStageName: string;
-  setNewStageName: (v: string) => void;
-  newStageColor: string;
-  setNewStageColor: (v: string) => void;
-  newStagePosition: number;
-  setNewStagePosition: (v: number) => void;
-  onAddStage: () => void;
-  onDeleteStage: (id: string) => void;
+  newStageName: string; setNewStageName: (v: string) => void;
+  newStageColor: string; setNewStageColor: (v: string) => void;
+  newStagePosition: number; setNewStagePosition: (v: number) => void;
+  onAddStage: () => void; onDeleteStage: (id: string) => void;
   onClose: () => void;
 };
 
@@ -352,11 +306,9 @@ export function SettingsModal({ stages, newStageName, setNewStageName, newStageC
               <div style={{ width: 12, height: 12, borderRadius: '50%', background: stage.color, flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{stage.label}</span>
               <span style={{ fontSize: 10, color: '#aaa' }}>pos. {stage.position}</span>
-              {!stage.is_default ? (
-                <button onClick={() => onDeleteStage(stage.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8151B', fontSize: 14, padding: '0 4px' }}>✕</button>
-              ) : (
-                <span style={{ fontSize: 9, color: '#aaa', fontWeight: 700 }}>DÉFAUT</span>
-              )}
+              {!stage.is_default
+                ? <button onClick={() => onDeleteStage(stage.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8151B', fontSize: 14, padding: '0 4px' }}>✕</button>
+                : <span style={{ fontSize: 9, color: '#aaa', fontWeight: 700 }}>DÉFAUT</span>}
             </div>
           ))}
         </div>
