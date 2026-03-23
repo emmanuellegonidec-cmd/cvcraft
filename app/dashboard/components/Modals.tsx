@@ -1,49 +1,418 @@
 'use client';
+import { useState, useEffect } from 'react';
 import { Contact } from '@/lib/jobs';
 import { Stage } from './types';
+import { createClient } from '@/lib/supabase';
 
-// ── CONTACT MODAL ─────────────────────────────────────────────────
+// ── Types internes ────────────────────────────────────────────────────────────
+
+type NoteType = 'appel' | 'email' | 'rdv' | 'message' | 'autre';
+
+interface ContactNote {
+  id: string;
+  contact_id: string;
+  user_id: string;
+  date: string;
+  type: NoteType;
+  contenu: string;
+  created_at: string;
+  isNew?: boolean;
+  toDelete?: boolean;
+}
+
+interface Job {
+  id: string;
+  title: string;
+  company: string | null;
+}
+
+const NOTE_TYPES: { value: NoteType; label: string }[] = [
+  { value: 'appel',   label: 'Appel' },
+  { value: 'email',   label: 'Email' },
+  { value: 'rdv',     label: 'RDV' },
+  { value: 'message', label: 'Message' },
+  { value: 'autre',   label: 'Autre' },
+];
+
+const NOTE_BADGE: Record<NoteType, string> = {
+  appel:   { bg: '#EBF0FD', color: '#1a56db' },
+  email:   { bg: '#FEF3C7', color: '#d97706' },
+  rdv:     { bg: '#E6F5EE', color: '#0e7c4a' },
+  message: { bg: '#F3E8FF', color: '#7c3aed' },
+  autre:   { bg: '#F0EEEA', color: '#888' },
+} as any;
+
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function formatDate(d: string) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
+
+// ── CONTACT MODAL ─────────────────────────────────────────────────────────────
 
 type ContactModalProps = {
-  newContact: Partial<Contact>;
-  setNewContact: (fn: (prev: Partial<Contact>) => Partial<Contact>) => void;
+  isOpen: boolean;
+  contact?: Partial<Contact> | null;
   onSave: () => void;
   onClose: () => void;
 };
 
-export function ContactModal({ newContact, setNewContact, onSave, onClose }: ContactModalProps) {
-  const fields = [
-    { l: 'Nom complet *', k: 'name', p: 'Sophie Martin' },
-    { l: 'Rôle', k: 'role', p: 'Talent Acquisition' },
-    { l: 'Entreprise', k: 'company', p: 'BNP Paribas' },
-    { l: 'Email', k: 'email', p: 's.martin@bnp.fr' },
-    { l: 'Téléphone', k: 'phone', p: '+33 6 12 34 56 78' },
-    { l: 'LinkedIn', k: 'linkedin', p: 'linkedin.com/in/...' },
-  ];
+export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalProps) {
+  const supabase = createClient();
+
+  // Champs contact
+  const [name, setName]           = useState('');
+  const [role, setRole]           = useState('');
+  const [company, setCompany]     = useState('');
+  const [email, setEmail]         = useState('');
+  const [phone, setPhone]         = useState('');
+  const [linkedin, setLinkedin]   = useState('');
+  const [jobId, setJobId]         = useState('');
+  const [jobManual, setJobManual] = useState('');
+
+  // Notes
+  const [notes, setNotes]               = useState<ContactNote[]>([]);
+  const [noteDate, setNoteDate]         = useState(today());
+  const [noteType, setNoteType]         = useState<NoteType>('appel');
+  const [noteContenu, setNoteContenu]   = useState('');
+
+  // Jobs pour la liste déroulante
+  const [jobs, setJobs] = useState<Job[]>([]);
+
+  // UI
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  // ── Chargement ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchJobs();
+    if (contact?.id) {
+      setName(contact.name || '');
+      setRole(contact.role || '');
+      setCompany(contact.company || '');
+      setEmail(contact.email || '');
+      setPhone(contact.phone || '');
+      setLinkedin(contact.linkedin || '');
+      setJobId((contact as any).job_id || '');
+      setJobManual((contact as any).job_manual || '');
+      fetchNotes(contact.id);
+    }
+  }, [isOpen, contact]);
+
+  async function fetchJobs() {
+    const { data } = await supabase
+      .from('jobs')
+      .select('id, title, company')
+      .order('created_at', { ascending: false });
+    if (data) setJobs(data);
+  }
+
+  async function fetchNotes(contactId: string) {
+    const { data } = await supabase
+      .from('contact_notes')
+      .select('*')
+      .eq('contact_id', contactId)
+      .order('date', { ascending: false });
+    if (data) setNotes(data);
+  }
+
+  // ── Notes ────────────────────────────────────────────────────────────────────
+  function ajouterNote() {
+    if (!noteContenu.trim()) return;
+    setNotes(prev => [{
+      id: 'new-' + Date.now(),
+      contact_id: contact?.id || '',
+      user_id: '',
+      date: noteDate,
+      type: noteType,
+      contenu: noteContenu.trim(),
+      created_at: new Date().toISOString(),
+      isNew: true,
+    }, ...prev]);
+    setNoteContenu('');
+    setNoteDate(today());
+    setNoteType('appel');
+  }
+
+  function supprimerNote(noteId: string) {
+    setNotes(prev => prev.map(n =>
+      n.id === noteId ? { ...n, toDelete: true } : n
+    ));
+  }
+
+  // ── Sauvegarde ───────────────────────────────────────────────────────────────
+  async function handleSubmit() {
+    if (!name.trim()) { setError('Le nom est obligatoire.'); return; }
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Non connecté');
+
+      const contactData = {
+        name:       name.trim(),
+        role:       role.trim() || null,
+        company:    company.trim() || null,
+        email:      email.trim() || null,
+        phone:      phone.trim() || null,
+        linkedin:   linkedin.trim() || null,
+        job_id:     jobId || null,
+        job_manual: jobManual.trim() || null,
+        user_id:    user.id,
+      };
+
+      let contactId: string;
+
+      if (contact?.id) {
+        // Mise à jour
+        const { data, error: err } = await supabase
+          .from('contacts')
+          .update(contactData)
+          .eq('id', contact.id)
+          .select()
+          .single();
+        if (err) throw err;
+        contactId = data.id;
+      } else {
+        // Création
+        const { data, error: err } = await supabase
+          .from('contacts')
+          .insert(contactData)
+          .select()
+          .single();
+        if (err) throw err;
+        contactId = data.id;
+      }
+
+      // Nouvelles notes
+      const nouvelles = notes.filter(n => n.isNew && !n.toDelete);
+      if (nouvelles.length > 0) {
+        const { error: errN } = await supabase
+          .from('contact_notes')
+          .insert(nouvelles.map(n => ({
+            contact_id: contactId,
+            user_id:    user.id,
+            date:       n.date,
+            type:       n.type,
+            contenu:    n.contenu,
+          })));
+        if (errN) throw errN;
+      }
+
+      // Notes supprimées
+      const aSupprimer = notes.filter(n => n.toDelete && !n.isNew);
+      for (const n of aSupprimer) {
+        await supabase.from('contact_notes').delete().eq('id', n.id);
+      }
+
+      handleClose();
+      onSave(); // recharge la liste dans le parent
+    } catch (err: any) {
+      setError('Erreur : ' + (err.message || 'Réessaie.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleClose() {
+    setName(''); setRole(''); setCompany(''); setEmail('');
+    setPhone(''); setLinkedin(''); setJobId(''); setJobManual('');
+    setNotes([]); setNoteDate(today()); setNoteType('appel'); setNoteContenu('');
+    setError(null);
+    onClose();
+  }
+
+  if (!isOpen) return null;
+
+  const notesVisibles = notes.filter(n => !n.toDelete);
 
   return (
-    <div className="modal-bg" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+    <div className="modal-bg" onClick={handleClose}>
+      <div
+        className="modal"
+        style={{ maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Ajouter un contact</h2>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 900 }}>
+            {contact?.id ? 'Modifier le contact' : 'Ajouter un contact'}
+          </h2>
+          <button onClick={handleClose} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
         </div>
-        {fields.map(f => (
-          <div key={f.k} style={{ marginBottom: 12 }}>
-            <label className="fl">{f.l}</label>
-            <input className="fi" value={(newContact as any)[f.k] || ''} onChange={e => setNewContact(prev => ({ ...prev, [f.k]: e.target.value }))} placeholder={f.p} />
+
+        {/* Nom + Rôle */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+          <div>
+            <label className="fl">Nom complet *</label>
+            <input className="fi" value={name} onChange={e => setName(e.target.value)} placeholder="Sophie Martin" />
           </div>
-        ))}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={onClose}>Annuler</button>
-          <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={onSave} disabled={!newContact.name}>Ajouter le contact</button>
+          <div>
+            <label className="fl">Rôle</label>
+            <input className="fi" value={role} onChange={e => setRole(e.target.value)} placeholder="Talent Acquisition" />
+          </div>
         </div>
+
+        {/* Entreprise + Email */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+          <div>
+            <label className="fl">Entreprise</label>
+            <input className="fi" value={company} onChange={e => setCompany(e.target.value)} placeholder="BNP Paribas" />
+          </div>
+          <div>
+            <label className="fl">Email</label>
+            <input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="s.martin@bnp.fr" />
+          </div>
+        </div>
+
+        {/* Téléphone + LinkedIn */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+          <div>
+            <label className="fl">Téléphone</label>
+            <input className="fi" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+33 6 12 34 56 78" />
+          </div>
+          <div>
+            <label className="fl">LinkedIn</label>
+            <input className="fi" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="linkedin.com/in/..." />
+          </div>
+        </div>
+
+        {/* Séparateur */}
+        <hr style={{ border: 'none', borderTop: '1.5px solid #F0EEEA', marginBottom: 16 }} />
+
+        {/* Poste associé */}
+        <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+          <label className="fl" style={{ marginBottom: 8 }}>Poste associé</label>
+          <select
+            className="fi"
+            value={jobId}
+            onChange={e => setJobId(e.target.value)}
+            style={{ marginBottom: 8, background: '#fff' }}
+          >
+            <option value="">Sélectionner un poste existant…</option>
+            {jobs.map(j => (
+              <option key={j.id} value={j.id}>
+                {j.title}{j.company ? ` — ${j.company}` : ''}
+              </option>
+            ))}
+          </select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span style={{ flex: 1, height: 1, background: '#E0E0E0' }} />
+            <span style={{ fontSize: 11, color: '#aaa' }}>ou saisir manuellement</span>
+            <span style={{ flex: 1, height: 1, background: '#E0E0E0' }} />
+          </div>
+          <input
+            className="fi"
+            value={jobManual}
+            onChange={e => setJobManual(e.target.value)}
+            placeholder="Ex : Responsable marketing — Canal+"
+            style={{ background: '#fff' }}
+          />
+        </div>
+
+        {/* Séparateur */}
+        <hr style={{ border: 'none', borderTop: '1.5px solid #F0EEEA', marginBottom: 16 }} />
+
+        {/* Notes */}
+        <label className="fl" style={{ marginBottom: 10 }}>Notes</label>
+
+        {/* Notes existantes */}
+        {notesVisibles.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            {notesVisibles.map(note => (
+              <div key={note.id} style={{ border: '1.5px solid #F0EEEA', borderRadius: 10, padding: '10px 12px', marginBottom: 8, position: 'relative' }}>
+                <button
+                  onClick={() => supprimerNote(note.id)}
+                  style={{ position: 'absolute', top: 8, right: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', fontSize: 12, padding: '0 4px' }}
+                >✕</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                    background: (NOTE_BADGE as any)[note.type]?.bg,
+                    color: (NOTE_BADGE as any)[note.type]?.color,
+                  }}>
+                    {NOTE_TYPES.find(t => t.value === note.type)?.label}
+                  </span>
+                  <span style={{ fontSize: 11, color: '#aaa' }}>{formatDate(note.date)}</span>
+                  {note.isNew && <span style={{ fontSize: 10, color: '#E8151B', marginLeft: 'auto' }}>non sauvegardé</span>}
+                </div>
+                <p style={{ fontSize: 13, color: '#444', lineHeight: 1.5, margin: 0, paddingRight: 20 }}>{note.contenu}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Zone nouvelle note */}
+        <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: 12, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8, marginBottom: 8 }}>
+            <input
+              type="date"
+              className="fi"
+              value={noteDate}
+              onChange={e => setNoteDate(e.target.value)}
+              style={{ background: '#fff' }}
+            />
+            <select
+              className="fi"
+              value={noteType}
+              onChange={e => setNoteType(e.target.value as NoteType)}
+              style={{ background: '#fff' }}
+            >
+              {NOTE_TYPES.map(t => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </div>
+          <textarea
+            className="fi"
+            value={noteContenu}
+            onChange={e => setNoteContenu(e.target.value)}
+            placeholder="Contenu de la note…"
+            rows={3}
+            style={{ resize: 'none', background: '#fff', marginBottom: 8 }}
+          />
+          <button
+            onClick={ajouterNote}
+            disabled={!noteContenu.trim()}
+            style={{
+              width: '100%', padding: '8px 0', borderRadius: 8,
+              border: '1.5px dashed #E8B84B', background: 'transparent',
+              color: '#C4931A', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              opacity: noteContenu.trim() ? 1 : 0.4,
+            }}
+          >
+            + Ajouter cette note
+          </button>
+        </div>
+
+        {/* Erreur */}
+        {error && (
+          <div style={{ background: '#FEE', border: '1.5px solid #fca', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#E8151B', marginBottom: 12 }}>
+            {error}
+          </div>
+        )}
+
+        {/* Boutons */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={handleClose}>Annuler</button>
+          <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={handleSubmit} disabled={loading || !name.trim()}>
+            {loading ? 'Enregistrement…' : contact?.id ? 'Mettre à jour' : 'Ajouter le contact'}
+          </button>
+        </div>
+
       </div>
     </div>
   );
 }
 
-// ── SETTINGS MODAL ────────────────────────────────────────────────
+// ── SETTINGS MODAL ────────────────────────────────────────────────────────────
 
 type SettingsModalProps = {
   stages: Stage[];

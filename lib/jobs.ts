@@ -29,11 +29,13 @@ export interface Contact {
   phone: string;
   linkedin: string;
   notes: string;
+  job_id: string | null;     // ← NOUVEAU : lien vers un job existant
+  job_manual: string | null; // ← NOUVEAU : poste saisi manuellement
   created_at: string;
 }
 
 export const STATUS_LABELS: Record<JobStatus, string> = {
-  to_apply: 'À postuler',
+  to_apply: 'Envie de postuler',
   applied: 'Postulé',
   interview: 'Entretien',
   offer: 'Offre reçue',

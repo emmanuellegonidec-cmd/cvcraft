@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { Job, Contact, JobStatus } from '@/lib/jobs';
@@ -12,7 +12,7 @@ import ContactsView from './components/ContactsView';
 import { AgendaView, StatsView } from './components/AgendaStatsViews';
 import JobDetailPanel from './components/JobDetailPanel';
 import JobModal from './components/JobModal';
-import { ContactModal, SettingsModal } from './components/Modals';
+import { SettingsModal } from './components/Modals';
 
 import {
   View, Stage, NewJobState,
@@ -34,7 +34,6 @@ export default function DashboardPage() {
   const [view, setView] = useState<View>('kanban');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showAddJob, setShowAddJob] = useState(false);
-  const [showAddContact, setShowAddContact] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [newJob, setNewJob] = useState<NewJobState>({ ...EMPTY_JOB });
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
@@ -42,7 +41,6 @@ export default function DashboardPage() {
   const [importUrl, setImportUrl] = useState('');
   const [importError, setImportError] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
-  const [newContact, setNewContact] = useState<Partial<Contact>>({});
   const [newStageName, setNewStageName] = useState('');
   const [newStageColor, setNewStageColor] = useState('#E8151B');
   const [newStagePosition, setNewStagePosition] = useState(3);
@@ -55,6 +53,17 @@ export default function DashboardPage() {
       headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), ...(options.headers || {}) },
     });
   }
+
+  // ── Chargement des contacts (fonction nommée pour pouvoir la rappeler) ───────
+  const fetchContacts = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
+    const cr = await fetch('/api/contacts', { headers: h });
+    const cd = await cr.json();
+    setContacts(cd.contacts || []);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -146,12 +155,6 @@ export default function DashboardPage() {
     finally { setImportLoading(false); }
   }
 
-  async function saveContact() {
-    const res = await authFetch('/api/contacts', { method: 'POST', body: JSON.stringify(newContact) });
-    const data = await res.json();
-    if (data.contact) { setContacts(prev => [data.contact, ...prev]); setShowAddContact(false); setNewContact({}); }
-  }
-
   async function deleteContact(id: string) {
     await authFetch('/api/contacts?id=' + id, { method: 'DELETE' });
     setContacts(prev => prev.filter(c => c.id !== id));
@@ -192,7 +195,7 @@ export default function DashboardPage() {
             <div style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
             <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#111' }}>Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋</div>
           </div>
-          <button className="btn-main" onClick={() => view === 'contacts' ? setShowAddContact(true) : openAddJobModal()}>
+          <button className="btn-main" onClick={() => view === 'contacts' ? {} : openAddJobModal()}>
             {view === 'contacts' ? '+ Ajouter un contact' : '+ Ajouter une offre'}
           </button>
         </div>
@@ -211,7 +214,14 @@ export default function DashboardPage() {
 
           {view === 'kanban' && <KanbanView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onAddJob={openAddJobModal} onOpenSettings={() => setShowSettings(true)} />}
           {view === 'list' && <ListView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onDeleteJob={deleteJob} onAddJob={openAddJobModal} />}
-          {view === 'contacts' && <ContactsView contacts={contacts} onAddContact={() => setShowAddContact(true)} onDeleteContact={deleteContact} />}
+          {view === 'contacts' && (
+            <ContactsView
+              contacts={contacts}
+              onAddContact={() => {}}
+              onDeleteContact={deleteContact}
+              onRefresh={fetchContacts}
+            />
+          )}
           {view === 'agenda' && <AgendaView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onBackToKanban={() => setView('kanban')} />}
           {view === 'stats' && <StatsView jobs={jobs} stages={stages} contactCount={contacts.length} />}
         </div>
@@ -223,10 +233,6 @@ export default function DashboardPage() {
 
       {showAddJob && (
         <JobModal editingJobId={editingJobId} newJob={newJob} setNewJob={setNewJob} stages={stages} importUrl={importUrl} setImportUrl={setImportUrl} addJobMode={addJobMode} setAddJobMode={setAddJobMode} importError={importError} setImportError={setImportError} importLoading={importLoading} onImport={importJobFromUrl} onSave={saveJob} onClose={() => setShowAddJob(false)} />
-      )}
-
-      {showAddContact && (
-        <ContactModal newContact={newContact} setNewContact={setNewContact} onSave={saveContact} onClose={() => setShowAddContact(false)} />
       )}
 
       {showSettings && (
