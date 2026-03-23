@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase';
 
 // ── Types internes ────────────────────────────────────────────────────────────
 
-type NoteType = 'appel' | 'email' | 'rdv' | 'message' | 'autre';
+type NoteType = 'appel' | 'email' | 'rdv' | 'visio' | 'message' | 'linkedin' | 'autre';
 
 interface ContactNote {
   id: string;
@@ -27,20 +27,24 @@ interface Job {
 }
 
 const NOTE_TYPES: { value: NoteType; label: string }[] = [
-  { value: 'appel',   label: 'Appel' },
-  { value: 'email',   label: 'Email' },
-  { value: 'rdv',     label: 'RDV' },
-  { value: 'message', label: 'Message' },
-  { value: 'autre',   label: 'Autre' },
+  { value: 'appel',    label: 'Appel' },
+  { value: 'visio',    label: 'Visio' },
+  { value: 'email',    label: 'Email' },
+  { value: 'rdv',      label: 'RDV' },
+  { value: 'message',  label: 'Message' },
+  { value: 'linkedin', label: 'Message LinkedIn' },
+  { value: 'autre',    label: 'Autre' },
 ];
 
-const NOTE_BADGE: Record<NoteType, string> = {
-  appel:   { bg: '#EBF0FD', color: '#1a56db' },
-  email:   { bg: '#FEF3C7', color: '#d97706' },
-  rdv:     { bg: '#E6F5EE', color: '#0e7c4a' },
-  message: { bg: '#F3E8FF', color: '#7c3aed' },
-  autre:   { bg: '#F0EEEA', color: '#888' },
-} as any;
+const NOTE_BADGE: Record<NoteType, { bg: string; color: string }> = {
+  appel:    { bg: '#EBF0FD', color: '#1a56db' },
+  visio:    { bg: '#E0F2FE', color: '#0369a1' },
+  email:    { bg: '#FEF3C7', color: '#d97706' },
+  rdv:      { bg: '#E6F5EE', color: '#0e7c4a' },
+  message:  { bg: '#F3E8FF', color: '#7c3aed' },
+  linkedin: { bg: '#E0F0FF', color: '#0a66c2' },
+  autre:    { bg: '#F0EEEA', color: '#888' },
+};
 
 function today() {
   return new Date().toISOString().split('T')[0];
@@ -65,7 +69,6 @@ type ContactModalProps = {
 export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalProps) {
   const supabase = createClient();
 
-  // Champs contact
   const [name, setName]           = useState('');
   const [role, setRole]           = useState('');
   const [company, setCompany]     = useState('');
@@ -75,20 +78,15 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
   const [jobId, setJobId]         = useState('');
   const [jobManual, setJobManual] = useState('');
 
-  // Notes
-  const [notes, setNotes]               = useState<ContactNote[]>([]);
-  const [noteDate, setNoteDate]         = useState(today());
-  const [noteType, setNoteType]         = useState<NoteType>('appel');
-  const [noteContenu, setNoteContenu]   = useState('');
+  const [notes, setNotes]             = useState<ContactNote[]>([]);
+  const [noteDate, setNoteDate]       = useState(today());
+  const [noteType, setNoteType]       = useState<NoteType>('appel');
+  const [noteContenu, setNoteContenu] = useState('');
 
-  // Jobs pour la liste déroulante
-  const [jobs, setJobs] = useState<Job[]>([]);
-
-  // UI
+  const [jobs, setJobs]       = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
 
-  // ── Chargement ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
     fetchJobs();
@@ -102,6 +100,11 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
       setJobId((contact as any).job_id || '');
       setJobManual((contact as any).job_manual || '');
       fetchNotes(contact.id);
+    } else {
+      // reset pour un nouveau contact
+      setName(''); setRole(''); setCompany(''); setEmail('');
+      setPhone(''); setLinkedin(''); setJobId(''); setJobManual('');
+      setNotes([]);
     }
   }, [isOpen, contact]);
 
@@ -122,7 +125,6 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
     if (data) setNotes(data);
   }
 
-  // ── Notes ────────────────────────────────────────────────────────────────────
   function ajouterNote() {
     if (!noteContenu.trim()) return;
     setNotes(prev => [{
@@ -146,7 +148,6 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
     ));
   }
 
-  // ── Sauvegarde ───────────────────────────────────────────────────────────────
   async function handleSubmit() {
     if (!name.trim()) { setError('Le nom est obligatoire.'); return; }
     setLoading(true);
@@ -171,27 +172,28 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
       let contactId: string;
 
       if (contact?.id) {
-        // Mise à jour
-        const { data, error: err } = await supabase
-          .from('contacts')
-          .update(contactData)
-          .eq('id', contact.id)
-          .select()
-          .single();
-        if (err) throw err;
-        contactId = data.id;
+        // Mise à jour via API
+        const res = await fetch('/api/contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: contact.id, ...contactData }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur mise à jour');
+        contactId = data.contact.id;
       } else {
-        // Création
-        const { data, error: err } = await supabase
-          .from('contacts')
-          .insert(contactData)
-          .select()
-          .single();
-        if (err) throw err;
-        contactId = data.id;
+        // Création via API
+        const res = await fetch('/api/contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(contactData),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur création');
+        contactId = data.contact.id;
       }
 
-      // Nouvelles notes
+      // Nouvelles notes → directement via Supabase
       const nouvelles = notes.filter(n => n.isNew && !n.toDelete);
       if (nouvelles.length > 0) {
         const { error: errN } = await supabase
@@ -213,8 +215,9 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
       }
 
       handleClose();
-      onSave(); // recharge la liste dans le parent
+      onSave();
     } catch (err: any) {
+      console.error(err);
       setError('Erreur : ' + (err.message || 'Réessaie.'));
     } finally {
       setLoading(false);
@@ -284,7 +287,6 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
           </div>
         </div>
 
-        {/* Séparateur */}
         <hr style={{ border: 'none', borderTop: '1.5px solid #F0EEEA', marginBottom: 16 }} />
 
         {/* Poste associé */}
@@ -317,13 +319,11 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
           />
         </div>
 
-        {/* Séparateur */}
         <hr style={{ border: 'none', borderTop: '1.5px solid #F0EEEA', marginBottom: 16 }} />
 
         {/* Notes */}
         <label className="fl" style={{ marginBottom: 10 }}>Notes</label>
 
-        {/* Notes existantes */}
         {notesVisibles.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             {notesVisibles.map(note => (
@@ -335,13 +335,12 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <span style={{
                     fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
-                    background: (NOTE_BADGE as any)[note.type]?.bg,
-                    color: (NOTE_BADGE as any)[note.type]?.color,
+                    background: NOTE_BADGE[note.type]?.bg,
+                    color: NOTE_BADGE[note.type]?.color,
                   }}>
                     {NOTE_TYPES.find(t => t.value === note.type)?.label}
                   </span>
                   <span style={{ fontSize: 11, color: '#aaa' }}>{formatDate(note.date)}</span>
-                  {note.isNew && <span style={{ fontSize: 10, color: '#E8151B', marginLeft: 'auto' }}>non sauvegardé</span>}
                 </div>
                 <p style={{ fontSize: 13, color: '#444', lineHeight: 1.5, margin: 0, paddingRight: 20 }}>{note.contenu}</p>
               </div>
@@ -392,14 +391,12 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
           </button>
         </div>
 
-        {/* Erreur */}
         {error && (
           <div style={{ background: '#FEE', border: '1.5px solid #fca', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#E8151B', marginBottom: 12 }}>
             {error}
           </div>
         )}
 
-        {/* Boutons */}
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={handleClose}>Annuler</button>
           <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={handleSubmit} disabled={loading || !name.trim()}>
