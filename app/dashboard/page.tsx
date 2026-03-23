@@ -56,14 +56,12 @@ export default function DashboardPage() {
 
   // ── Chargement des contacts (fonction nommée pour pouvoir la rappeler) ───────
   const fetchContacts = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
+    if (!accessToken) return;
+    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` };
     const cr = await fetch('/api/contacts', { headers: h });
     const cd = await cr.json();
     setContacts(cd.contacts || []);
-  }, []);
+  }, [accessToken]);
 
   useEffect(() => {
     async function load() {
