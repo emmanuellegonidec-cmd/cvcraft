@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Contact } from '@/lib/jobs';
 import { Stage } from './types';
+import { createClient } from '@/lib/supabase';
 
 // ── Types internes ────────────────────────────────────────────────────────────
 
@@ -85,8 +86,6 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
 
-  const headers = { 'Content-Type': 'application/json' };
-
   useEffect(() => {
     if (!isOpen) return;
     fetchJobs();
@@ -108,13 +107,21 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
   }, [isOpen, contact]);
 
   async function fetchJobs() {
-    const res = await fetch('/api/jobs', { headers });
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
+    const res = await fetch('/api/jobs', { headers: h });
     const data = await res.json();
     if (data.jobs) setJobs(data.jobs);
   }
 
   async function fetchNotes(contactId: string) {
-    const res = await fetch(`/api/contacts/notes?contact_id=${contactId}`, { headers });
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
+    const res = await fetch(`/api/contacts/notes?contact_id=${contactId}`, { headers: h });
     if (!res.ok) return;
     const data = await res.json();
     if (data.notes) setNotes(data.notes);
@@ -165,7 +172,7 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
       let contactId: string;
       if (contact?.id) {
         const res = await fetch('/api/contacts', {
-          method: 'POST', headers,
+          method: 'POST', headers: authHeaders,
           body: JSON.stringify({ id: contact.id, ...contactData }),
         });
         const data = await res.json();
@@ -173,7 +180,7 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
         contactId = data.contact.id;
       } else {
         const res = await fetch('/api/contacts', {
-          method: 'POST', headers,
+          method: 'POST', headers: authHeaders,
           body: JSON.stringify(contactData),
         });
         const data = await res.json();
@@ -185,7 +192,7 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
       const nouvelles = notes.filter(n => n.isNew && !n.toDelete);
       for (const n of nouvelles) {
         await fetch('/api/contacts/notes', {
-          method: 'POST', headers,
+          method: 'POST', headers: authHeaders,
           body: JSON.stringify({
             contact_id: contactId,
             date: n.date,
@@ -198,7 +205,7 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
       // 3. Supprimer les notes marquées
       const aSupprimer = notes.filter(n => n.toDelete && !n.isNew);
       for (const n of aSupprimer) {
-        await fetch(`/api/contacts/notes?id=${n.id}`, { method: 'DELETE', headers });
+        await fetch(`/api/contacts/notes?id=${n.id}`, { method: 'DELETE', headers: authHeaders });
       }
 
       handleClose();
