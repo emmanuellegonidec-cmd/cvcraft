@@ -125,7 +125,7 @@ export function ContactModal({ isOpen, contact, onSave, onClose }: ContactModalP
     setNotes(prev => [{
       id: 'new-' + Date.now(),
       contact_id: contact?.id || '',
-      user_id: userId || '',
+      user_id: '',
       date: noteDate,
       type: noteType,
       contenu: noteContenu.trim(),
