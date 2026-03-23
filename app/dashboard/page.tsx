@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showAddJob, setShowAddJob] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [triggerAddContact, setTriggerAddContact] = useState(0);
   const [newJob, setNewJob] = useState<NewJobState>({ ...EMPTY_JOB });
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [addJobMode, setAddJobMode] = useState<null | 'url' | 'manual'>(null);
@@ -200,7 +201,7 @@ export default function DashboardPage() {
             <div style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
             <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#111' }}>Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋</div>
           </div>
-          <button className="btn-main" onClick={() => view === 'contacts' ? {} : openAddJobModal()}>
+          <button className="btn-main" onClick={() => view === 'contacts' ? setTriggerAddContact(n => n + 1) : openAddJobModal()}>
             {view === 'contacts' ? '+ Ajouter un contact' : '+ Ajouter une offre'}
           </button>
         </div>
@@ -222,7 +223,7 @@ export default function DashboardPage() {
           {view === 'contacts' && (
             <ContactsView
               contacts={contacts}
-              onAddContact={() => {}}
+              onAddContact={triggerAddContact}
               onDeleteContact={deleteContact}
               onRefresh={fetchContacts}
             />
