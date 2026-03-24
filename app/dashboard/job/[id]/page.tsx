@@ -557,10 +557,10 @@ export default function JobDetailPage() {
                       </div>
 
                       {[
-                        { field: 'content', label: 'Déroulement & impressions', placeholder: 'Comment s'est passé l'échange ? Ambiance, durée, interlocuteur...' },
-                        { field: 'questions', label: 'Questions posées', placeholder: 'Ce qui a été abordé, les questions difficiles...' },
-                        { field: 'answers', label: 'Mes réponses & points à améliorer', placeholder: 'Ce que j'ai bien dit, ce que je reformulerais...' },
-                        { field: 'next_step', label: 'Prochaine étape annoncée', placeholder: 'Suite du process, délai, contact...' },
+                        { field: 'content', label: 'Déroulement & impressions', placeholder: "Comment s'est passé l'échange ? Ambiance, durée, interlocuteur..." },
+                        { field: 'questions', label: 'Questions posées', placeholder: "Ce qui a été abordé, les questions difficiles..." },
+                        { field: 'answers', label: 'Mes réponses & points à améliorer', placeholder: "Ce que j'ai bien dit, ce que je reformulerais..." },
+                        { field: 'next_step', label: 'Prochaine étape annoncée', placeholder: "Suite du process, délai, contact..." },
                       ].map(({ field, label, placeholder }) => (
                         <div key={field} style={{ marginBottom: 12 }}>
                           <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: '#bbb', display: 'block', marginBottom: 6 }}>{label}</label>
