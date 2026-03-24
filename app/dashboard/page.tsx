@@ -85,9 +85,27 @@ export default function DashboardPage() {
       const [jr, cr] = await Promise.all([fetch('/api/jobs', { headers: h }), fetch('/api/contacts', { headers: h })]);
       const jd = await jr.json(); const cd = await cr.json();
       setJobs(jd.jobs || []); setContacts(cd.contacts || []);
-      const { data: customStages } = await supabase.from('pipeline_stages').select('*').eq('user_id', session.user.id).order('position');
+
+      // ✅ CORRIGÉ : on ne charge que les étapes globales (job_id IS NULL)
+      // Les étapes liées à une offre spécifique sont exclues du kanban global
+      const { data: customStages } = await supabase
+        .from('pipeline_stages')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .is('job_id', null)           // ← AJOUT : exclut les étapes liées à un job
+        .order('position');
+
       if (customStages && customStages.length > 0) {
-        const all = [...DEFAULT_STAGES, ...customStages.map((s: any) => ({ id: s.id, label: s.label, color: s.color, position: s.position, is_default: false }))].sort((a, b) => a.position - b.position);
+        const all = [
+          ...DEFAULT_STAGES,
+          ...customStages.map((s: any) => ({
+            id: s.id,
+            label: s.label,
+            color: s.color,
+            position: s.position,
+            is_default: false,
+          })),
+        ].sort((a, b) => a.position - b.position);
         setStages(all);
       }
       setLoading(false);
@@ -169,7 +187,14 @@ export default function DashboardPage() {
   async function addCustomStage() {
     if (!newStageName.trim() || !userId) return;
     const supabase = createClient();
-    const { data } = await supabase.from('pipeline_stages').insert({ user_id: userId, label: newStageName.trim(), color: newStageColor, position: newStagePosition }).select().single();
+    // Les étapes créées depuis les Paramètres (kanban global) ont job_id = null
+    const { data } = await supabase.from('pipeline_stages').insert({
+      user_id: userId,
+      label: newStageName.trim(),
+      color: newStageColor,
+      position: newStagePosition,
+      // job_id est null par défaut = étape globale visible dans le kanban
+    }).select().single();
     if (data) {
       const updated = [...stages, { id: data.id, label: data.label, color: data.color, position: data.position, is_default: false }].sort((a, b) => a.position - b.position);
       setStages(updated); setNewStageName('');
