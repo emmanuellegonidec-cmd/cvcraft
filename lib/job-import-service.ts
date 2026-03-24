@@ -593,13 +593,3 @@ export async function importJobFromUrl({
     }
   }
 }
-// Dans fetchJobPage, après la boucle des stratégies :
-console.log('[fetchJobPage] wasBlocked:', fetchResult.wasBlocked, 'ok:', fetchResult.ok)
-
-// Dans extractJobWithClaude, après le fetch Anthropic :
-console.log('[claude] response status:', response.status)
-console.log('[claude] raw content:', JSON.stringify(data?.content))
-
-// Dans importJobFromUrl, après buildMinimalJobFromUrl :
-console.log('[import] claudeData:', JSON.stringify(claudeData))
-console.log('[import] job built:', JSON.stringify(job))
