@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase'
 import { JobExchange, ExchangeType, EXCHANGE_TYPE_LABELS } from '@/lib/types'
 
 // ─── Types locaux ─────────────────────────────────────────────────────────────
