@@ -115,9 +115,8 @@ function isBlockedPage(html: string): boolean {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// EXTRACTION VIA CLAUDE (fallback quand le scraping est bloqué)
-// On envoie l'URL à Claude et on lui demande d'extraire les infos
-// depuis sa connaissance ou depuis le contexte de l'URL.
+// EXTRACTION VIA CLAUDE + WEB SEARCH (fallback quand scraping bloqué)
+// On active web_search pour que Claude retrouve l'offre depuis son ID.
 // ─────────────────────────────────────────────────────────────────
 
 async function extractJobWithClaude(
@@ -127,28 +126,44 @@ async function extractJobWithClaude(
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return null
 
-  const prompt = `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
+  // Extraire l'ID LinkedIn depuis l'URL
+  const jobIdMatch = url.match(/\/jobs\/view\/(?:[^/]*?-)?(\d{6,})\/?/)
+  const jobId = jobIdMatch?.[1] ?? null
 
-L'URL suivante est une offre d'emploi LinkedIn : ${url}
+  const prompt = jobId
+    ? `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
 
-À partir de cette URL uniquement (qui contient souvent le titre et l'ID du poste), extrait les informations disponibles.
+Voici une URL d'offre LinkedIn : ${url}
+ID LinkedIn de l'offre : ${jobId}
+
+Cherche cette offre d'emploi LinkedIn (ID: ${jobId}) et extrais les informations disponibles.
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans explication :
 {
   "title": "titre du poste ou null",
   "company_name": "nom de l'entreprise ou null",
   "location_text": "lieu ou null",
-  "employment_type": "type de contrat ou null",
-  "seniority_level": "niveau ou null",
+  "employment_type": "type de contrat (CDI, CDD, Stage, etc.) ou null",
+  "seniority_level": "niveau hiérarchique ou null",
+  "description": "courte description du poste ou null",
+  "external_job_id": "${jobId}"
+}`
+    : `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
+
+URL : ${url}
+
+Extrait uniquement ce qui est explicitement dans l'URL. Ne devine pas.
+
+Réponds UNIQUEMENT avec un objet JSON valide :
+{
+  "title": null,
+  "company_name": null,
+  "location_text": null,
+  "employment_type": null,
+  "seniority_level": null,
   "description": null,
-  "external_job_id": "ID numérique extrait de l'URL ou null"
-}
-
-Exemples d'extraction depuis une URL LinkedIn :
-- /jobs/view/marketing-director-at-acme-corp-123456789/ → title: "Marketing Director", company_name: "Acme Corp", external_job_id: "123456789"
-- /jobs/view/head-of-product-imerys-987654321/ → title: "Head of Product", company_name: "Imerys", external_job_id: "987654321"
-
-Extrait uniquement ce qui est explicitement dans l'URL. Ne devine pas.`
+  "external_job_id": null
+}`
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -159,8 +174,9 @@ Extrait uniquement ce qui est explicitement dans l'URL. Ne devine pas.`
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: prompt }],
       }),
     })
@@ -168,8 +184,13 @@ Extrait uniquement ce qui est explicitement dans l'URL. Ne devine pas.`
     if (!response.ok) return null
 
     const data = await response.json()
-    const text = data?.content?.[0]?.text ?? ''
-    const cleaned = text.replace(/```json|```/g, '').trim()
+
+    // Récupérer le dernier bloc text (après éventuel tool_use)
+    const textBlock = data?.content
+      ?.filter((b: { type: string }) => b.type === 'text')
+      ?.at(-1)?.text ?? ''
+
+    const cleaned = textBlock.replace(/```json|```/g, '').trim()
     return JSON.parse(cleaned) as Partial<NormalizedJobOffer>
   } catch {
     return null
@@ -435,7 +456,7 @@ function buildMinimalJobFromUrl(
     salary_min: null,
     salary_max: null,
     currency: null,
-    description: null,
+    description: claudeData?.description ?? null,
     requirements: null,
     benefits: null,
     posted_at_text: null,
@@ -516,7 +537,7 @@ export async function importJobFromUrl({
       }
     }
   } else {
-    // ── ÉTAPE 2 : Scraping bloqué → fallback Claude ────────────────
+    // ── ÉTAPE 2 : Scraping bloqué → fallback Claude + web search ──
     const claudeData = await extractJobWithClaude(normalizedUrl, source)
     job = buildMinimalJobFromUrl(normalizedUrl, source, claudeData)
 
