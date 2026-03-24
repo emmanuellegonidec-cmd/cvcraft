@@ -3,7 +3,16 @@
 // Pattern auth identique aux autres routes : Bearer token + cookies fallback
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAuthedClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
+
+function createAuthedClient(token: string) {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
+  )
+}
 
 async function getAuth(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
