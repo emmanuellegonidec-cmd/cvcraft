@@ -116,7 +116,9 @@ function isBlockedPage(html: string): boolean {
 
 // ─────────────────────────────────────────────────────────────────
 // EXTRACTION VIA CLAUDE + WEB SEARCH (fallback quand scraping bloqué)
-// On active web_search pour que Claude retrouve l'offre depuis son ID.
+// Claude recherche l'offre sur le web depuis son ID LinkedIn et
+// extrait toutes les infos disponibles : titre, entreprise, lieu,
+// description complète, type de contrat, etc.
 // ─────────────────────────────────────────────────────────────────
 
 async function extractJobWithClaude(
@@ -133,28 +135,33 @@ async function extractJobWithClaude(
   const prompt = jobId
     ? `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
 
-Voici une URL d'offre LinkedIn : ${url}
-ID LinkedIn de l'offre : ${jobId}
+Recherche l'offre d'emploi LinkedIn avec l'ID ${jobId} (URL : ${url}).
 
-Cherche cette offre d'emploi LinkedIn (ID: ${jobId}) et extrais les informations disponibles.
+Utilise la recherche web pour trouver cette offre et extraire toutes les informations disponibles, notamment :
+- Le titre exact du poste
+- Le nom de l'entreprise qui recrute
+- Le lieu (ville, pays, hybride/présentiel/remote)
+- Le type de contrat (CDI, CDD, Stage, Alternance, Freelance...)
+- Le niveau hiérarchique (Junior, Senior, Manager, Directeur...)
+- La description complète du poste : missions, responsabilités, profil recherché, compétences requises
+- Le salaire si mentionné
 
-Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans explication :
+Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après :
 {
-  "title": "titre du poste ou null",
+  "title": "titre exact du poste ou null",
   "company_name": "nom de l'entreprise ou null",
-  "location_text": "lieu ou null",
-  "employment_type": "type de contrat (CDI, CDD, Stage, etc.) ou null",
+  "location_text": "ville et mode de travail (ex: Paris · Hybride) ou null",
+  "employment_type": "CDI ou CDD ou Stage ou Alternance ou Freelance ou null",
   "seniority_level": "niveau hiérarchique ou null",
-  "description": "courte description du poste ou null",
+  "description": "description complète du poste (missions, profil, compétences) ou null",
+  "salary_text": "fourchette salariale ou null",
   "external_job_id": "${jobId}"
 }`
     : `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
 
-URL : ${url}
+Recherche cette offre d'emploi : ${url}
 
-Extrait uniquement ce qui est explicitement dans l'URL. Ne devine pas.
-
-Réponds UNIQUEMENT avec un objet JSON valide :
+Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après :
 {
   "title": null,
   "company_name": null,
@@ -162,6 +169,7 @@ Réponds UNIQUEMENT avec un objet JSON valide :
   "employment_type": null,
   "seniority_level": null,
   "description": null,
+  "salary_text": null,
   "external_job_id": null
 }`
 
@@ -175,7 +183,7 @@ Réponds UNIQUEMENT avec un objet JSON valide :
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        max_tokens: 2000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: prompt }],
       }),
