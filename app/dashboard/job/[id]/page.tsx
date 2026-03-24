@@ -162,7 +162,7 @@ export default function JobDetailPage() {
       const data: JobExchange[] = await res.json()
       setExchanges(data)
       // Ouvrir le dernier échange par défaut
-      if (data.length > 0) setOpenExchanges(new Set([data[data.length - 1].id]))
+      if (data.length > 0) setOpenExchanges(new Set(Array.from([data[data.length - 1].id])))
     }
   }, [jobId])
 
@@ -208,7 +208,7 @@ export default function JobDetailPage() {
 
   const toggleExchange = (id: string) => {
     setOpenExchanges(prev => {
-      const next = new Set(prev)
+      const next = new Set(Array.from(prev))
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
@@ -230,7 +230,7 @@ export default function JobDetailPage() {
     if (res.ok) {
       const newEx: JobExchange = await res.json()
       setExchanges(prev => [...prev, newEx])
-      setOpenExchanges(prev => new Set([...prev, newEx.id]))
+      setOpenExchanges(prev => { const s = new Set(Array.from(prev)); s.add(newEx.id); return s })
     }
   }
 
