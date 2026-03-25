@@ -433,7 +433,7 @@ export default function JobDetailPage() {
                                 {(Object.entries(EXCHANGE_TYPE_LABELS) as [ExchangeType, string][]).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                               </select>
                             ) : (
-                              <input type={f.type} defaultValue={f.val} onBlur={e => updateExchange(ex.id, f.field, e.target.value)} style={inp} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} />
+                              <input type={f.type} defaultValue={f.val} style={inp} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee'; updateExchange(ex.id, f.field, e.target.value) }} />
                             )}
                           </div>
                         ))}
