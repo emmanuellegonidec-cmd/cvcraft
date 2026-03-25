@@ -128,6 +128,7 @@ export default function JobDetailPage() {
   const [showModal, setShowModal] = useState(false)
   const [newStepName, setNewStepName] = useState('')
   const [newStepPos, setNewStepPos] = useState(5)
+  const [stepToDelete, setStepToDelete] = useState<{ id: string; label: string } | null>(null)
   const notesTimer = useRef<NodeJS.Timeout | null>(null)
 
   const loadJob = useCallback(async () => {
@@ -176,9 +177,12 @@ export default function JobDetailPage() {
     }, 800)
   }
 
+  // Étapes triées par position — customSteps insérées entre les étapes de base selon leur position
+  // Position 100-199 = après étape 1, 200-299 = après étape 2... 500-599 = après étape 5 (avant Offre)
+  const sortedCustom = [...customSteps].sort((a, b) => a.position - b.position)
   const allSteps = [
     ...BASE_STEPS.slice(0, 5),
-    ...customSteps.map((cs, i) => ({ id: cs.id, label: cs.label, num: 6 + i })),
+    ...sortedCustom.map((cs, i) => ({ id: cs.id, label: cs.label, num: 6 + i })),
     { ...BASE_STEPS[5], num: 6 + customSteps.length },
   ]
 
@@ -196,30 +200,32 @@ export default function JobDetailPage() {
   const handleAddCustomStep = async () => {
     if (!newStepName.trim() || !userId) return
     const supabase = createClient()
-    const position = newStepPos + 10 // position relative dans le parcours
+    // newStepPos = index dans allSteps APRÈS lequel on insère
+    // On encode la position : (newStepPos+1)*1000 + timestamp%100 pour unicité
+    const position = (newStepPos + 1) * 1000 + (Date.now() % 100)
     const { data } = await supabase
       .from('pipeline_stages')
-      .insert({
-        user_id: userId,
-        job_id: jobId,
-        label: newStepName.trim(),
-        color: '#F5C400',
-        position,
-      })
+      .insert({ user_id: userId, job_id: jobId, label: newStepName.trim(), color: '#F5C400', position })
       .select()
       .single()
     if (data) {
-      const newStep = { id: data.id, label: data.label, position: data.position }
-      setCustomSteps(prev => {
-        const insertAt = Math.max(0, newStepPos - (BASE_STEPS.length - 1))
-        const next = [...prev]
-        next.splice(insertAt, 0, newStep)
-        return next
-      })
+      setCustomSteps(prev => [...prev, { id: data.id, label: data.label, position: data.position }])
     }
     setNewStepName('')
-    setNewStepPos(allSteps.length - 1)
+    setNewStepPos(allSteps.length - 2)
     setShowModal(false)
+  }
+
+  const handleDeleteCustomStep = async (stepId: string) => {
+    const supabase = createClient()
+    await supabase.from('pipeline_stages').delete().eq('id', stepId)
+    setCustomSteps(prev => prev.filter(s => s.id !== stepId))
+    // Si l'étape supprimée était l'étape active, revenir à manager_interview
+    if (currentStepId === stepId) {
+      const patch = { sub_status: 'manager_interview', status: 'in_progress' }
+      await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch) })
+      setJob(prev => prev ? { ...prev, ...patch } : prev)
+    }
   }
 
   const toggleExchange = (id: string) => {
@@ -359,12 +365,19 @@ export default function JobDetailPage() {
               const isDone = idx < currentStepIndex
               const isActive = step.id === currentStepId
               return (
-                <div key={step.id} onClick={() => handleStepClick(step.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 80, position: 'relative', cursor: 'pointer' }}>
+                <div key={step.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 80, position: 'relative' }}>
                   {idx < allSteps.length - 1 && <div style={{ position: 'absolute', top: 18, left: 'calc(50% + 18px)', right: 'calc(-50% + 18px)', height: 3, background: isDone ? '#F5C400' : '#E5E5E5', zIndex: 0 }} />}
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1, flexShrink: 0, background: isActive ? '#111' : isDone ? '#F5C400' : '#fff', border: `3px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#E5E5E5'}`, color: isActive ? '#F5C400' : isDone ? '#111' : '#ccc', boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.2)' : 'none', fontFamily: FONT }}>
+                  <div onClick={() => handleStepClick(step.id)} style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1, flexShrink: 0, cursor: 'pointer', background: isActive ? '#111' : isDone ? '#F5C400' : '#fff', border: `3px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#E5E5E5'}`, color: isActive ? '#F5C400' : isDone ? '#111' : '#ccc', boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.2)' : 'none', fontFamily: FONT }}>
                     {step.num}
                   </div>
-                  <p style={{ fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 7, lineHeight: 1.3, color: isActive ? '#111' : isDone ? '#888' : '#ccc', fontFamily: FONT }}>{step.label}</p>
+                  <p onClick={() => handleStepClick(step.id)} style={{ fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 7, lineHeight: 1.3, color: isActive ? '#111' : isDone ? '#888' : '#ccc', fontFamily: FONT, cursor: 'pointer' }}>{step.label}</p>
+                  {customSteps.find(cs => cs.id === step.id) && (
+                    <button onClick={e => { e.stopPropagation(); setStepToDelete({ id: step.id, label: step.label }) }}
+                      title="Supprimer cette étape"
+                      style={{ position: 'absolute', top: -6, right: 'calc(50% - 28px)', width: 16, height: 16, borderRadius: '50%', background: '#E8151B', border: 'none', color: '#fff', fontSize: 10, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, lineHeight: 1 }}>
+                      ×
+                    </button>
+                  )}
                 </div>
               )
             })}
@@ -556,6 +569,36 @@ export default function JobDetailPage() {
         </div>
 
       </div>
+
+        {/* MODALE SUPPRESSION ÉTAPE */}
+        {stepToDelete && (
+          <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: '#fff', borderRadius: 14, padding: 28, width: '100%', maxWidth: 420, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
+              <div style={{ fontSize: 28, marginBottom: 12, textAlign: 'center' }}>🗑️</div>
+              <h3 style={{ fontSize: 17, fontWeight: 900, color: '#111', marginBottom: 8, textAlign: 'center', fontFamily: FONT }}>Supprimer cette étape ?</h3>
+              <p style={{ fontSize: 13, color: '#666', marginBottom: 6, textAlign: 'center', lineHeight: 1.5, fontFamily: FONT }}>
+                Vous êtes sur le point de supprimer l'étape
+              </p>
+              <p style={{ fontSize: 15, fontWeight: 800, color: '#111', marginBottom: 20, textAlign: 'center', fontFamily: FONT }}>
+                "{stepToDelete.label}"
+              </p>
+              <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 20, textAlign: 'center', fontFamily: FONT }}>
+                Cette action est définitive et ne peut pas être annulée.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => setStepToDelete(null)}
+                  style={{ flex: 1, background: '#F5F5F0', color: '#666', fontSize: 13, fontWeight: 700, padding: '11px 0', borderRadius: 10, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
+                  Annuler
+                </button>
+                <button onClick={async () => { await handleDeleteCustomStep(stepToDelete.id); setStepToDelete(null) }}
+                  style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '11px 0', borderRadius: 10, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>
+                  Supprimer définitivement
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
     </div>
   )
 }
