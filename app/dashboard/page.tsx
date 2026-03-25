@@ -20,6 +20,15 @@ import {
   capitalize, cleanJobTitle, cleanLocation, detectSource, isInterviewStage,
 } from './components/types';
 
+// Correspondance status kanban → sub_status par défaut quand on dépose dans une colonne
+const STATUS_TO_SUB: Record<string, string> = {
+  to_apply:    'to_apply',
+  applied:     'applied',
+  in_progress: 'phone_interview',
+  offer:       'offer',
+  archived:    'archived',
+};
+
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -47,19 +56,36 @@ export default function DashboardPage() {
   const [newStagePosition, setNewStagePosition] = useState(3);
 
   useEffect(() => {
-    if (accessToken) {
-      (window as any).__jfmj_token = accessToken;
-    }
+    if (accessToken) (window as any).__jfmj_token = accessToken;
   }, [accessToken]);
 
-  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const today = new Date().toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
 
   function authFetch(url: string, options: RequestInit = {}) {
     return fetch(url, {
       ...options,
-      headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), ...(options.headers || {}) },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...(options.headers || {}),
+      },
     });
   }
+
+  // ✅ fetchJobs séparé et mémoïsé — utilisé aussi pour le refresh du kanban
+  const fetchJobs = useCallback(async (token: string) => {
+    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+    const jr = await fetch('/api/jobs', { headers: h });
+    const jd = await jr.json();
+    setJobs(jd.jobs || []);
+  }, []);
+
+  // ✅ onRefresh appelé par KanbanView au retour sur la page
+  const handleRefresh = useCallback(() => {
+    if (accessToken) fetchJobs(accessToken);
+  }, [accessToken, fetchJobs]);
 
   const fetchContacts = useCallback(async () => {
     if (!accessToken) return;
@@ -78,11 +104,19 @@ export default function DashboardPage() {
       setUserId(session.user.id);
       setUserEmail(session.user.email || '');
       const meta = session.user.user_metadata;
-      setFirstName(capitalize(meta?.first_name || meta?.full_name?.split(' ')[0] || session.user.email?.split('@')[0] || ''));
+      setFirstName(capitalize(
+        meta?.first_name || meta?.full_name?.split(' ')[0] ||
+        session.user.email?.split('@')[0] || ''
+      ));
       const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
-      const [jr, cr] = await Promise.all([fetch('/api/jobs', { headers: h }), fetch('/api/contacts', { headers: h })]);
-      const jd = await jr.json(); const cd = await cr.json();
-      setJobs(jd.jobs || []); setContacts(cd.contacts || []);
+      const [jr, cr] = await Promise.all([
+        fetch('/api/jobs', { headers: h }),
+        fetch('/api/contacts', { headers: h }),
+      ]);
+      const jd = await jr.json();
+      const cd = await cr.json();
+      setJobs(jd.jobs || []);
+      setContacts(cd.contacts || []);
 
       const { data: customStages } = await supabase
         .from('pipeline_stages')
@@ -95,11 +129,8 @@ export default function DashboardPage() {
         const all = [
           ...DEFAULT_STAGES,
           ...customStages.map((s: any) => ({
-            id: s.id,
-            label: s.label,
-            color: s.color,
-            position: s.position,
-            is_default: false,
+            id: s.id, label: s.label, color: s.color,
+            position: s.position, is_default: false,
           })),
         ].sort((a, b) => a.position - b.position);
         setStages(all);
@@ -111,53 +142,99 @@ export default function DashboardPage() {
 
   const stats = {
     total: jobs.length,
-    responseRate: jobs.length ? Math.round((jobs.filter(j => isInterviewStage(j.status, stages) || j.status === 'offer').length / jobs.length) * 100) : 0,
+    responseRate: jobs.length
+      ? Math.round((jobs.filter(j => isInterviewStage(j.status, stages) || j.status === 'offer').length / jobs.length) * 100)
+      : 0,
     interviews: jobs.filter(j => isInterviewStage(j.status, stages)).length,
     offers: jobs.filter(j => j.status === 'offer').length,
   };
 
   function openAddJobModal(defaultStatus?: string) {
     setNewJob({ ...EMPTY_JOB, status: (defaultStatus || 'to_apply') as JobStatus });
-    setImportUrl(''); setImportError(false); setAddJobMode(null); setEditingJobId(null); setShowAddJob(true);
+    setImportUrl(''); setImportError(false); setAddJobMode(null);
+    setEditingJobId(null); setShowAddJob(true);
   }
 
   function openEditJobModal(job: Job) {
-    setNewJob({ status: job.status, job_type: job.job_type || 'CDI', title: job.title || '', company: job.company || '', location: job.location || '', description: job.description || '', notes: job.notes || '', salary: (job as any).salary_text || '', source: (job as any).source_platform || '', url: (job as any).source_url || '', favorite: (job as any).favorite || 0 });
-    setEditingJobId(job.id); setAddJobMode('manual'); setImportUrl(''); setImportError(false); setSelectedJob(null); setShowAddJob(true);
+    setNewJob({
+      status: job.status, job_type: job.job_type || 'CDI',
+      title: job.title || '', company: job.company || '',
+      location: job.location || '', description: job.description || '',
+      notes: job.notes || '', salary: (job as any).salary_text || '',
+      source: (job as any).source_platform || '', url: (job as any).source_url || '',
+      favorite: (job as any).favorite || 0,
+    });
+    setEditingJobId(job.id); setAddJobMode('manual');
+    setImportUrl(''); setImportError(false);
+    setSelectedJob(null); setShowAddJob(true);
   }
 
   async function saveJob() {
     if (!newJob.title || !newJob.company) return;
-    const payload = { title: newJob.title, company: newJob.company, location: newJob.location || '', description: newJob.description || '', job_type: newJob.job_type || 'CDI', status: newJob.status || 'to_apply', notes: newJob.notes || '', ...(newJob.salary ? { salary_text: newJob.salary } : {}), ...(newJob.source ? { source_platform: newJob.source } : {}), ...(newJob.url ? { source_url: newJob.url } : {}), ...(newJob.favorite !== undefined ? { favorite: newJob.favorite } : {}) };
+    const payload = {
+      title: newJob.title, company: newJob.company,
+      location: newJob.location || '', description: newJob.description || '',
+      job_type: newJob.job_type || 'CDI', status: newJob.status || 'to_apply',
+      notes: newJob.notes || '',
+      ...(newJob.salary ? { salary_text: newJob.salary } : {}),
+      ...(newJob.source ? { source_platform: newJob.source } : {}),
+      ...(newJob.url ? { source_url: newJob.url } : {}),
+      ...(newJob.favorite !== undefined ? { favorite: newJob.favorite } : {}),
+    };
     if (editingJobId) {
       const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: editingJobId, ...payload }) });
       const data = await res.json();
-      if (data.job) { setJobs(prev => prev.map(j => j.id === editingJobId ? data.job : j)); setShowAddJob(false); setEditingJobId(null); }
-      else alert('Erreur : ' + (data.error || 'inconnue'));
+      if (data.job) {
+        setJobs(prev => prev.map(j => j.id === editingJobId ? data.job : j));
+        setShowAddJob(false); setEditingJobId(null);
+      } else alert('Erreur : ' + (data.error || 'inconnue'));
     } else {
       const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify(payload) });
       const data = await res.json();
-      if (data.job) { setJobs(prev => [data.job, ...prev]); setShowAddJob(false); setNewJob({ ...EMPTY_JOB }); }
-      else alert('Erreur : ' + (data.error || 'inconnue'));
+      if (data.job) {
+        setJobs(prev => [data.job, ...prev]);
+        setShowAddJob(false); setNewJob({ ...EMPTY_JOB });
+      } else alert('Erreur : ' + (data.error || 'inconnue'));
     }
   }
 
-  async function updateJobStatus(id: string, status: string) {
-    const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id, status }) });
+  // ✅ Mise à jour status (kanban drag & drop) — PATCH + optimiste
+  async function updateJobStatus(id: string, newStatus: string) {
+    // Mise à jour optimiste immédiate
+    const subStatus = STATUS_TO_SUB[newStatus] ?? newStatus;
+    setJobs(prev => prev.map(j =>
+      j.id === id ? { ...j, status: newStatus as JobStatus, sub_status: subStatus } as any : j
+    ));
+    if (selectedJob?.id === id) {
+      setSelectedJob(prev => prev ? { ...prev, status: newStatus as JobStatus } : prev);
+    }
+    // Persistance en BDD via PATCH
+    const res = await authFetch(`/api/jobs?id=${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus, sub_status: subStatus }),
+    });
     const data = await res.json();
-    if (data.job) { setJobs(prev => prev.map(j => j.id === id ? data.job : j)); if (selectedJob?.id === id) setSelectedJob(data.job); }
+    // On resynchronise avec la vraie valeur BDD
+    if (data.job) {
+      setJobs(prev => prev.map(j => j.id === id ? data.job : j));
+      if (selectedJob?.id === id) setSelectedJob(data.job);
+    }
   }
 
   async function updateJobField(id: string, field: string, value: any) {
     const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id, [field]: value }) });
     const data = await res.json();
-    if (data.job) { setJobs(prev => prev.map(j => j.id === id ? data.job : j)); if (selectedJob?.id === id) setSelectedJob(data.job); }
+    if (data.job) {
+      setJobs(prev => prev.map(j => j.id === id ? data.job : j));
+      if (selectedJob?.id === id) setSelectedJob(data.job);
+    }
   }
 
   async function deleteJob(id: string) {
     if (!confirm('Supprimer cette offre ?')) return;
     await authFetch('/api/jobs?id=' + id, { method: 'DELETE' });
-    setJobs(prev => prev.filter(j => j.id !== id)); setSelectedJob(null);
+    setJobs(prev => prev.filter(j => j.id !== id));
+    setSelectedJob(null);
   }
 
   async function importJobFromUrl(url: string) {
@@ -168,8 +245,14 @@ export default function DashboardPage() {
       const data = await res.json();
       if (!res.ok || !data.success) { setImportError(true); return; }
       const job = data.job || {};
-      const description = (job.description && job.description.length > 150) ? job.description : (job.raw_text || job.description || '');
-      setNewJob({ title: cleanJobTitle(job.title), company: job.company_name || '', location: cleanLocation(job.location_text), description, job_type: 'CDI', status: 'to_apply', notes: '', salary: job.salary_text || '', source: detectSource(url), url, favorite: 0 });
+      const description = (job.description && job.description.length > 150)
+        ? job.description : (job.raw_text || job.description || '');
+      setNewJob({
+        title: cleanJobTitle(job.title), company: job.company_name || '',
+        location: cleanLocation(job.location_text), description,
+        job_type: 'CDI', status: 'to_apply', notes: '',
+        salary: job.salary_text || '', source: detectSource(url), url, favorite: 0,
+      });
       setAddJobMode('manual');
     } catch { setImportError(true); }
     finally { setImportLoading(false); }
@@ -184,14 +267,16 @@ export default function DashboardPage() {
     if (!newStageName.trim() || !userId) return;
     const supabase = createClient();
     const { data } = await supabase.from('pipeline_stages').insert({
-      user_id: userId,
-      label: newStageName.trim(),
-      color: newStageColor,
-      position: newStagePosition,
+      user_id: userId, label: newStageName.trim(),
+      color: newStageColor, position: newStagePosition,
     }).select().single();
     if (data) {
-      const updated = [...stages, { id: data.id, label: data.label, color: data.color, position: data.position, is_default: false }].sort((a, b) => a.position - b.position);
-      setStages(updated); setNewStageName('');
+      const updated = [
+        ...stages,
+        { id: data.id, label: data.label, color: data.color, position: data.position, is_default: false },
+      ].sort((a, b) => a.position - b.position);
+      setStages(updated);
+      setNewStageName('');
     }
   }
 
@@ -204,7 +289,10 @@ export default function DashboardPage() {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Montserrat,sans-serif' }}>
-      <div style={{ textAlign: 'center' }}><div style={{ fontSize: 32 }}>⚡</div><div style={{ fontWeight: 700, color: '#888' }}>Chargement...</div></div>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 32 }}>⚡</div>
+        <div style={{ fontWeight: 700, color: '#888' }}>Chargement...</div>
+      </div>
     </div>
   );
 
@@ -212,21 +300,27 @@ export default function DashboardPage() {
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: "'Montserrat', sans-serif" }}>
       <style>{GLOBAL_STYLES}</style>
 
-      <Sidebar view={view} setView={setView} firstName={firstName} userEmail={userEmail} jobCount={jobs.length} contactCount={contacts.length} interviewCount={stats.interviews} onSettings={() => setShowSettings(true)} />
+      <Sidebar
+        view={view} setView={setView} firstName={firstName} userEmail={userEmail}
+        jobCount={jobs.length} contactCount={contacts.length}
+        interviewCount={stats.interviews} onSettings={() => setShowSettings(true)}
+      />
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Barre du haut */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', borderBottom: '2px solid #111', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#111' }}>Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#111' }}>
+              Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
+            </div>
           </div>
           <button className="btn-main" onClick={() => view === 'contacts' ? setTriggerAddContact(n => n + 1) : openAddJobModal()}>
             {view === 'contacts' ? '+ Ajouter un contact' : '+ Ajouter une offre'}
           </button>
         </div>
 
-        {/* Contenu principal — pleine largeur avec padding harmonisé */}
+        {/* Contenu principal */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
 
           {/* Stats */}
@@ -247,8 +341,20 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {view === 'kanban' && <KanbanView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onAddJob={openAddJobModal} onOpenSettings={() => setShowSettings(true)} />}
-          {view === 'list' && <ListView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onDeleteJob={deleteJob} onAddJob={openAddJobModal} />}
+          {view === 'kanban' && (
+            <KanbanView
+              jobs={jobs}
+              stages={stages}
+              onJobClick={setSelectedJob}
+              onAddJob={openAddJobModal}
+              onOpenSettings={() => setShowSettings(true)}
+              onRefresh={handleRefresh}          // ✅ refetch au retour sur la page
+              onStatusChange={updateJobStatus}   // ✅ drag & drop → PATCH BDD
+            />
+          )}
+          {view === 'list' && (
+            <ListView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onDeleteJob={deleteJob} onAddJob={openAddJobModal} />
+          )}
           {view === 'contacts' && (
             <ContactsView
               contacts={contacts}
@@ -257,21 +363,41 @@ export default function DashboardPage() {
               onRefresh={fetchContacts}
             />
           )}
-          {view === 'agenda' && <AgendaView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onBackToKanban={() => setView('kanban')} />}
-          {view === 'stats' && <StatsView jobs={jobs} stages={stages} contactCount={contacts.length} />}
+          {view === 'agenda' && (
+            <AgendaView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onBackToKanban={() => setView('kanban')} />
+          )}
+          {view === 'stats' && (
+            <StatsView jobs={jobs} stages={stages} contactCount={contacts.length} />
+          )}
         </div>
       </main>
 
       {selectedJob && (
-        <JobDetailPanel job={selectedJob} stages={stages} userId={userId} accessToken={accessToken} onClose={() => setSelectedJob(null)} onStatusChange={updateJobStatus} onFieldUpdate={updateJobField} onEdit={openEditJobModal} onDelete={deleteJob} />
+        <JobDetailPanel
+          job={selectedJob} stages={stages} userId={userId} accessToken={accessToken}
+          onClose={() => setSelectedJob(null)} onStatusChange={updateJobStatus}
+          onFieldUpdate={updateJobField} onEdit={openEditJobModal} onDelete={deleteJob}
+        />
       )}
 
       {showAddJob && (
-        <JobModal editingJobId={editingJobId} newJob={newJob} setNewJob={setNewJob} stages={stages} importUrl={importUrl} setImportUrl={setImportUrl} addJobMode={addJobMode} setAddJobMode={setAddJobMode} importError={importError} setImportError={setImportError} importLoading={importLoading} onImport={importJobFromUrl} onSave={saveJob} onClose={() => setShowAddJob(false)} />
+        <JobModal
+          editingJobId={editingJobId} newJob={newJob} setNewJob={setNewJob} stages={stages}
+          importUrl={importUrl} setImportUrl={setImportUrl} addJobMode={addJobMode}
+          setAddJobMode={setAddJobMode} importError={importError} setImportError={setImportError}
+          importLoading={importLoading} onImport={importJobFromUrl} onSave={saveJob}
+          onClose={() => setShowAddJob(false)}
+        />
       )}
 
       {showSettings && (
-        <SettingsModal stages={stages} newStageName={newStageName} setNewStageName={setNewStageName} newStageColor={newStageColor} setNewStageColor={setNewStageColor} newStagePosition={newStagePosition} setNewStagePosition={setNewStagePosition} onAddStage={addCustomStage} onDeleteStage={deleteCustomStage} onClose={() => setShowSettings(false)} />
+        <SettingsModal
+          stages={stages} newStageName={newStageName} setNewStageName={setNewStageName}
+          newStageColor={newStageColor} setNewStageColor={setNewStageColor}
+          newStagePosition={newStagePosition} setNewStagePosition={setNewStagePosition}
+          onAddStage={addCustomStage} onDeleteStage={deleteCustomStage}
+          onClose={() => setShowSettings(false)}
+        />
       )}
     </div>
   );

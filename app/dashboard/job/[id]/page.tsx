@@ -4,6 +4,18 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { JobExchange, ExchangeType, EXCHANGE_TYPE_LABELS } from '@/lib/types'
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+} from '@dnd-kit/core'
 
 interface Job {
   id: string; title: string; company: string; location: string; job_type: string
@@ -109,7 +121,109 @@ function getToken(): string | null {
 }
 function authHeaders(): HeadersInit {
   const token = getToken()
-  return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
+  return token
+    ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    : { 'Content-Type': 'application/json' }
+}
+
+// ─── Bulle d'étape draggable (étapes custom uniquement) ───────────────────────
+function DraggableStep({
+  step, isActive, isDone, isCustom, currentStepId,
+  onStepClick, onDeleteRequest, allStepsLength,
+}: {
+  step: { id: string; label: string; num: number }
+  isActive: boolean; isDone: boolean; isCustom: boolean
+  currentStepId: string
+  onStepClick: (id: string) => void
+  onDeleteRequest: (id: string, label: string) => void
+  allStepsLength: number
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: step.id,
+    disabled: !isCustom, // seules les étapes custom sont draggables
+    data: { stepId: step.id },
+  })
+
+  return (
+    <div
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        flex: 1, minWidth: 80, position: 'relative',
+        opacity: isDragging ? 0.4 : 1,
+        transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
+        zIndex: isDragging ? 50 : 1,
+      }}
+    >
+      <div
+        ref={isCustom ? setNodeRef : undefined}
+        {...(isCustom ? { ...listeners, ...attributes } : {})}
+        onClick={() => onStepClick(step.id)}
+        title={isCustom ? 'Glisser pour réordonner' : undefined}
+        style={{
+          width: 36, height: 36, borderRadius: '50%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1,
+          flexShrink: 0,
+          cursor: isCustom ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+          background: isActive ? '#111' : isDone ? '#F5C400' : '#fff',
+          border: `3px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#E5E5E5'}`,
+          color: isActive ? '#F5C400' : isDone ? '#111' : '#ccc',
+          boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.2)' : 'none',
+          fontFamily: FONT,
+          touchAction: 'none',
+        }}
+      >
+        {step.num}
+      </div>
+      <p
+        onClick={() => onStepClick(step.id)}
+        style={{
+          fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 7,
+          lineHeight: 1.3, color: isActive ? '#111' : isDone ? '#888' : '#ccc',
+          fontFamily: FONT, cursor: 'pointer',
+        }}
+      >
+        {step.label}
+      </p>
+      {isCustom && (
+        <button
+          onClick={e => { e.stopPropagation(); onDeleteRequest(step.id, step.label) }}
+          title="Supprimer cette étape"
+          style={{
+            position: 'absolute', top: -6, right: 'calc(50% - 28px)',
+            width: 16, height: 16, borderRadius: '50%',
+            background: '#E8151B', border: 'none', color: '#fff',
+            fontSize: 10, fontWeight: 900, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 2, lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Zone de dépôt entre étapes ───────────────────────────────────────────────
+function DropZone({ id, isOver }: { id: string; isOver: boolean }) {
+  const { setNodeRef } = useDroppable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        width: isOver ? 32 : 14,
+        height: 36,
+        borderRadius: 8,
+        background: isOver ? '#F5C400' : 'transparent',
+        border: isOver ? '2px dashed #111' : '2px dashed transparent',
+        flexShrink: 0,
+        transition: 'all .15s',
+        alignSelf: 'center',
+        marginBottom: 20,
+      }}
+    />
+  )
 }
 
 export default function JobDetailPage() {
@@ -129,11 +243,12 @@ export default function JobDetailPage() {
   const [newStepName, setNewStepName] = useState('')
   const [newStepPos, setNewStepPos] = useState(5)
   const [stepToDelete, setStepToDelete] = useState<{ id: string; label: string } | null>(null)
+  const [activeStepId, setActiveStepId] = useState<string | null>(null) // drag overlay
+  const [overDropZone, setOverDropZone] = useState<string | null>(null)
   const notesTimer = useRef<NodeJS.Timeout | null>(null)
 
   const loadJob = useCallback(async () => {
     const supabase = createClient()
-    // Récupérer la session pour avoir userId
     const { data: { session } } = await supabase.auth.getSession()
     if (session) setUserId(session.user.id)
     const { data } = await supabase.from('jobs').select('*').eq('id', jobId).single()
@@ -143,10 +258,7 @@ export default function JobDetailPage() {
   const loadCustomSteps = useCallback(async () => {
     const supabase = createClient()
     const { data } = await supabase
-      .from('pipeline_stages')
-      .select('*')
-      .eq('job_id', jobId)
-      .order('position')
+      .from('pipeline_stages').select('*').eq('job_id', jobId).order('position')
     if (data && data.length > 0) {
       setCustomSteps(data.map((s: any) => ({ id: s.id, label: s.label, position: s.position })))
     }
@@ -158,9 +270,7 @@ export default function JobDetailPage() {
       const data: JobExchange[] = await res.json()
       setExchanges(data)
       if (data.length > 0) {
-        const s = new Set<string>()
-        s.add(data[data.length - 1].id)
-        setOpenExchanges(s)
+        const s = new Set<string>(); s.add(data[data.length - 1].id); setOpenExchanges(s)
       }
     }
   }, [jobId])
@@ -173,12 +283,12 @@ export default function JobDetailPage() {
     setNotes(val)
     if (notesTimer.current) clearTimeout(notesTimer.current)
     notesTimer.current = setTimeout(async () => {
-      await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ notes: val }) })
+      await fetch(`/api/jobs?id=${jobId}`, {
+        method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ notes: val }),
+      })
     }, 800)
   }
 
-  // Étapes triées par position — customSteps insérées entre les étapes de base selon leur position
-  // Position 100-199 = après étape 1, 200-299 = après étape 2... 500-599 = après étape 5 (avant Offre)
   const sortedCustom = [...customSteps].sort((a, b) => a.position - b.position)
   const allSteps = [
     ...BASE_STEPS.slice(0, 5),
@@ -189,28 +299,32 @@ export default function JobDetailPage() {
   const currentStepId = job?.sub_status || job?.status || 'to_apply'
   const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId)
 
+  // ✅ handleStepClick — utilise PATCH (corrigé)
   const handleStepClick = async (stepId: string) => {
     if (!job) return
     const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
     const patch = { sub_status: stepId, status: globalStatus }
-    await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch) })
+    // Optimiste
     setJob(prev => prev ? { ...prev, ...patch } : prev)
+    // Persistance via PATCH
+    const res = await fetch(`/api/jobs?id=${jobId}`, {
+      method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.job) setJob(data.job)
+    }
   }
 
   const handleAddCustomStep = async () => {
     if (!newStepName.trim() || !userId) return
     const supabase = createClient()
-    // newStepPos = index dans allSteps APRÈS lequel on insère
-    // On encode la position : (newStepPos+1)*1000 + timestamp%100 pour unicité
     const position = (newStepPos + 1) * 1000 + (Date.now() % 100)
     const { data } = await supabase
       .from('pipeline_stages')
       .insert({ user_id: userId, job_id: jobId, label: newStepName.trim(), color: '#F5C400', position })
-      .select()
-      .single()
-    if (data) {
-      setCustomSteps(prev => [...prev, { id: data.id, label: data.label, position: data.position }])
-    }
+      .select().single()
+    if (data) setCustomSteps(prev => [...prev, { id: data.id, label: data.label, position: data.position }])
     setNewStepName('')
     setNewStepPos(allSteps.length - 2)
     setShowModal(false)
@@ -220,12 +334,71 @@ export default function JobDetailPage() {
     const supabase = createClient()
     await supabase.from('pipeline_stages').delete().eq('id', stepId)
     setCustomSteps(prev => prev.filter(s => s.id !== stepId))
-    // Si l'étape supprimée était l'étape active, revenir à manager_interview
     if (currentStepId === stepId) {
       const patch = { sub_status: 'manager_interview', status: 'in_progress' }
-      await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch) })
+      await fetch(`/api/jobs?id=${jobId}`, {
+        method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch),
+      })
       setJob(prev => prev ? { ...prev, ...patch } : prev)
     }
+  }
+
+  // ─── Drag & drop sur les étapes custom ─────────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
+  )
+
+  function handleStepDragStart(event: DragStartEvent) {
+    setActiveStepId(event.active.id as string)
+  }
+
+  function handleStepDragOver(event: any) {
+    setOverDropZone(event.over?.id ?? null)
+  }
+
+  async function handleStepDragEnd(event: DragEndEvent) {
+    setActiveStepId(null)
+    setOverDropZone(null)
+    const { active, over } = event
+    if (!over) return
+
+    const draggedId = active.id as string
+    const dropZoneId = over.id as string // format: "after-{stepId}" ou "before-{stepId}"
+
+    const draggedStep = customSteps.find(s => s.id === draggedId)
+    if (!draggedStep) return
+
+    // Extraire l'index cible depuis le drop zone id
+    const match = dropZoneId.match(/^(after|before)-(.+)$/)
+    if (!match) return
+    const [, position, targetStepId] = match
+
+    const sorted = [...customSteps].sort((a, b) => a.position - b.position)
+    const targetStep = customSteps.find(s => s.id === targetStepId)
+    if (!targetStep || draggedId === targetStepId) return
+
+    // Recalcul des positions
+    const withoutDragged = sorted.filter(s => s.id !== draggedId)
+    const targetIdx = withoutDragged.findIndex(s => s.id === targetStepId)
+    const insertIdx = position === 'after' ? targetIdx + 1 : targetIdx
+    const reordered = [
+      ...withoutDragged.slice(0, insertIdx),
+      draggedStep,
+      ...withoutDragged.slice(insertIdx),
+    ]
+
+    // Recalcul positions numériques
+    const updated = reordered.map((s, i) => ({ ...s, position: (i + 1) * 1000 }))
+    setCustomSteps(updated)
+
+    // Persister en BDD
+    const supabase = createClient()
+    await Promise.all(
+      updated.map(s =>
+        supabase.from('pipeline_stages').update({ position: s.position }).eq('id', s.id)
+      )
+    )
   }
 
   const toggleExchange = (id: string) => {
@@ -240,20 +413,24 @@ export default function JobDetailPage() {
     const step = allSteps.find(s => s.id === currentStepId)
     const res = await fetch('/api/jobs/exchanges', {
       method: 'POST', headers: authHeaders(),
-      body: JSON.stringify({ job_id: jobId, title: 'Nouvel échange', exchange_type: 'autre', exchange_date: new Date().toISOString().split('T')[0], step_label: step?.label ?? null }),
+      body: JSON.stringify({
+        job_id: jobId, title: 'Nouvel échange', exchange_type: 'autre',
+        exchange_date: new Date().toISOString().split('T')[0],
+        step_label: step?.label ?? null,
+      }),
     })
     if (res.ok) {
       const newEx: JobExchange = await res.json()
       setExchanges(prev => [...prev, newEx])
-      const s = new Set(Array.from(openExchanges))
-      s.add(newEx.id)
-      setOpenExchanges(s)
+      const s = new Set(Array.from(openExchanges)); s.add(newEx.id); setOpenExchanges(s)
     }
   }
 
   const updateExchange = async (id: string, field: string, value: string) => {
     setExchanges(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e))
-    await fetch(`/api/jobs/exchanges?id=${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }) })
+    await fetch(`/api/jobs/exchanges?id=${id}`, {
+      method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }),
+    })
   }
 
   const deleteExchange = async (id: string) => {
@@ -288,6 +465,9 @@ export default function JobDetailPage() {
   const lbl: React.CSSProperties = { fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#bbb', marginBottom: 16, display: 'block', fontFamily: FONT }
   const inp: React.CSSProperties = { width: '100%', border: '1.5px solid #eee', borderRadius: 9, padding: '9px 12px', fontSize: 13, fontFamily: FONT, outline: 'none', background: '#fff', color: '#111', boxSizing: 'border-box' }
   const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 80, lineHeight: '1.6' }
+
+  // Étape ghost pour DragOverlay
+  const activeStep = activeStepId ? allSteps.find(s => s.id === activeStepId) : null
 
   return (
     <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, width: '100%' }}>
@@ -357,31 +537,66 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {/* PARCOURS */}
+        {/* PARCOURS avec drag & drop sur étapes custom */}
         <div style={card}>
           <span style={lbl}>Parcours de candidature</span>
-          <div style={{ display: 'flex', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 8 }}>
-            {allSteps.map((step, idx) => {
-              const isDone = idx < currentStepIndex
-              const isActive = step.id === currentStepId
-              return (
-                <div key={step.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 80, position: 'relative' }}>
-                  {idx < allSteps.length - 1 && <div style={{ position: 'absolute', top: 18, left: 'calc(50% + 18px)', right: 'calc(-50% + 18px)', height: 3, background: isDone ? '#F5C400' : '#E5E5E5', zIndex: 0 }} />}
-                  <div onClick={() => handleStepClick(step.id)} style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1, flexShrink: 0, cursor: 'pointer', background: isActive ? '#111' : isDone ? '#F5C400' : '#fff', border: `3px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#E5E5E5'}`, color: isActive ? '#F5C400' : isDone ? '#111' : '#ccc', boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.2)' : 'none', fontFamily: FONT }}>
-                    {step.num}
+          <p style={{ fontSize: 11, color: '#bbb', fontWeight: 600, marginBottom: 12, fontFamily: FONT }}>
+            💡 Cliquez sur une étape pour avancer — glissez les étapes personnalisées pour les réordonner
+          </p>
+
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleStepDragStart}
+            onDragOver={handleStepDragOver}
+            onDragEnd={handleStepDragEnd}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 8 }}>
+              {allSteps.map((step, idx) => {
+                const isDone = idx < currentStepIndex
+                const isActive = step.id === currentStepId
+                const isCustom = !!customSteps.find(cs => cs.id === step.id)
+
+                return (
+                  <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 80 }}>
+                    {/* Connecteur de progression */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
+                      {idx < allSteps.length - 1 && (
+                        <div style={{ position: 'absolute', top: 18, left: 'calc(50% + 18px)', right: 'calc(-50% + 18px)', height: 3, background: isDone ? '#F5C400' : '#E5E5E5', zIndex: 0 }} />
+                      )}
+                      <DraggableStep
+                        step={step} isActive={isActive} isDone={isDone}
+                        isCustom={isCustom} currentStepId={currentStepId}
+                        onStepClick={handleStepClick}
+                        onDeleteRequest={(id, label) => setStepToDelete({ id, label })}
+                        allStepsLength={allSteps.length}
+                      />
+                    </div>
+
+                    {/* Zone de dépôt entre étapes (pour les étapes custom) */}
+                    {isCustom && idx < allSteps.length - 1 && (
+                      <DropZone id={`after-${step.id}`} isOver={overDropZone === `after-${step.id}`} />
+                    )}
                   </div>
-                  <p onClick={() => handleStepClick(step.id)} style={{ fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 7, lineHeight: 1.3, color: isActive ? '#111' : isDone ? '#888' : '#ccc', fontFamily: FONT, cursor: 'pointer' }}>{step.label}</p>
-                  {customSteps.find(cs => cs.id === step.id) && (
-                    <button onClick={e => { e.stopPropagation(); setStepToDelete({ id: step.id, label: step.label }) }}
-                      title="Supprimer cette étape"
-                      style={{ position: 'absolute', top: -6, right: 'calc(50% - 28px)', width: 16, height: 16, borderRadius: '50%', background: '#E8151B', border: 'none', color: '#fff', fontSize: 10, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, lineHeight: 1 }}>
-                      ×
-                    </button>
-                  )}
+                )
+              })}
+            </div>
+
+            <DragOverlay>
+              {activeStep ? (
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: '#F5C400', border: '3px solid #111',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, fontWeight: 900, color: '#111',
+                  boxShadow: '3px 3px 0 #E8151B', cursor: 'grabbing',
+                  fontFamily: FONT,
+                }}>
+                  {activeStep.num}
                 </div>
-              )
-            })}
-          </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+
           <button onClick={() => setShowModal(true)}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#F5F5F0', border: '2px dashed #ddd', color: '#999', fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 9, cursor: 'pointer', marginTop: 16, fontFamily: FONT }}
             onMouseOver={e => { const el = e.currentTarget; el.style.borderColor = '#F5C400'; el.style.color = '#111'; el.style.background = '#FFFDE7' }}
@@ -391,7 +606,7 @@ export default function JobDetailPage() {
           </button>
         </div>
 
-        {/* MODALE */}
+        {/* MODALE AJOUT ÉTAPE */}
         {showModal && (
           <div style={{ background: 'rgba(0,0,0,0.5)', borderRadius: 14, padding: '40px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
             <div style={{ background: '#fff', borderRadius: 14, padding: 28, width: '100%', maxWidth: 460, border: '2px solid #111', boxShadow: '4px 4px 0 #111' }}>
@@ -488,7 +703,9 @@ export default function JobDetailPage() {
                                 {(Object.entries(EXCHANGE_TYPE_LABELS) as [ExchangeType, string][]).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                               </select>
                             ) : (
-                              <input type={f.type} defaultValue={f.val} style={inp} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee'; updateExchange(ex.id, f.field, e.target.value) }} />
+                              <input type={f.type} defaultValue={f.val} style={inp}
+                                onFocus={e => { e.target.style.borderColor = '#F5C400' }}
+                                onBlur={e => { e.target.style.borderColor = '#eee'; updateExchange(ex.id, f.field, e.target.value) }} />
                             )}
                           </div>
                         ))}
@@ -549,7 +766,8 @@ export default function JobDetailPage() {
           </div>
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={lbl}>Mes notes</span>
-            <textarea value={notes} onChange={e => handleNotesChange(e.target.value)} placeholder="Impressions générales, contacts, points à surveiller..."
+            <textarea value={notes} onChange={e => handleNotesChange(e.target.value)}
+              placeholder="Impressions générales, contacts, points à surveiller..."
               style={{ ...ta, minHeight: 110 }}
               onFocus={e => { e.target.style.borderColor = '#F5C400' }}
               onBlur={e => { e.target.style.borderColor = '#eee' }} />
@@ -570,35 +788,28 @@ export default function JobDetailPage() {
 
       </div>
 
-        {/* MODALE SUPPRESSION ÉTAPE */}
-        {stepToDelete && (
-          <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ background: '#fff', borderRadius: 14, padding: 28, width: '100%', maxWidth: 420, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
-              <div style={{ fontSize: 28, marginBottom: 12, textAlign: 'center' }}>🗑️</div>
-              <h3 style={{ fontSize: 17, fontWeight: 900, color: '#111', marginBottom: 8, textAlign: 'center', fontFamily: FONT }}>Supprimer cette étape ?</h3>
-              <p style={{ fontSize: 13, color: '#666', marginBottom: 6, textAlign: 'center', lineHeight: 1.5, fontFamily: FONT }}>
-                Vous êtes sur le point de supprimer l'étape
-              </p>
-              <p style={{ fontSize: 15, fontWeight: 800, color: '#111', marginBottom: 20, textAlign: 'center', fontFamily: FONT }}>
-                "{stepToDelete.label}"
-              </p>
-              <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 20, textAlign: 'center', fontFamily: FONT }}>
-                Cette action est définitive et ne peut pas être annulée.
-              </p>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => setStepToDelete(null)}
-                  style={{ flex: 1, background: '#F5F5F0', color: '#666', fontSize: 13, fontWeight: 700, padding: '11px 0', borderRadius: 10, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
-                  Annuler
-                </button>
-                <button onClick={async () => { await handleDeleteCustomStep(stepToDelete.id); setStepToDelete(null) }}
-                  style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '11px 0', borderRadius: 10, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>
-                  Supprimer définitivement
-                </button>
-              </div>
+      {/* MODALE SUPPRESSION ÉTAPE */}
+      {stepToDelete && (
+        <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 28, width: '100%', maxWidth: 420, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
+            <div style={{ fontSize: 28, marginBottom: 12, textAlign: 'center' }}>🗑️</div>
+            <h3 style={{ fontSize: 17, fontWeight: 900, color: '#111', marginBottom: 8, textAlign: 'center', fontFamily: FONT }}>Supprimer cette étape ?</h3>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 6, textAlign: 'center', lineHeight: 1.5, fontFamily: FONT }}>Vous êtes sur le point de supprimer l'étape</p>
+            <p style={{ fontSize: 15, fontWeight: 800, color: '#111', marginBottom: 20, textAlign: 'center', fontFamily: FONT }}>"{stepToDelete.label}"</p>
+            <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 20, textAlign: 'center', fontFamily: FONT }}>Cette action est définitive et ne peut pas être annulée.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setStepToDelete(null)}
+                style={{ flex: 1, background: '#F5F5F0', color: '#666', fontSize: 13, fontWeight: 700, padding: '11px 0', borderRadius: 10, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
+                Annuler
+              </button>
+              <button onClick={async () => { await handleDeleteCustomStep(stepToDelete.id); setStepToDelete(null) }}
+                style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '11px 0', borderRadius: 10, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>
+                Supprimer définitivement
+              </button>
             </div>
           </div>
-        )}
-
+        </div>
+      )}
     </div>
   )
 }
