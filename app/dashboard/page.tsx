@@ -46,7 +46,6 @@ export default function DashboardPage() {
   const [newStageColor, setNewStageColor] = useState('#E8151B');
   const [newStagePosition, setNewStagePosition] = useState(3);
 
-  // Rendre le token accessible globalement pour les composants enfants
   useEffect(() => {
     if (accessToken) {
       (window as any).__jfmj_token = accessToken;
@@ -62,7 +61,6 @@ export default function DashboardPage() {
     });
   }
 
-  // ── Chargement des contacts (fonction nommée pour pouvoir la rappeler) ───────
   const fetchContacts = useCallback(async () => {
     if (!accessToken) return;
     const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` };
@@ -86,13 +84,11 @@ export default function DashboardPage() {
       const jd = await jr.json(); const cd = await cr.json();
       setJobs(jd.jobs || []); setContacts(cd.contacts || []);
 
-      // ✅ CORRIGÉ : on ne charge que les étapes globales (job_id IS NULL)
-      // Les étapes liées à une offre spécifique sont exclues du kanban global
       const { data: customStages } = await supabase
         .from('pipeline_stages')
         .select('*')
         .eq('user_id', session.user.id)
-        .is('job_id', null)           // ← AJOUT : exclut les étapes liées à un job
+        .is('job_id', null)
         .order('position');
 
       if (customStages && customStages.length > 0) {
@@ -187,13 +183,11 @@ export default function DashboardPage() {
   async function addCustomStage() {
     if (!newStageName.trim() || !userId) return;
     const supabase = createClient();
-    // Les étapes créées depuis les Paramètres (kanban global) ont job_id = null
     const { data } = await supabase.from('pipeline_stages').insert({
       user_id: userId,
       label: newStageName.trim(),
       color: newStageColor,
       position: newStagePosition,
-      // job_id est null par défaut = étape globale visible dans le kanban
     }).select().single();
     if (data) {
       const updated = [...stages, { id: data.id, label: data.label, color: data.color, position: data.position, is_default: false }].sort((a, b) => a.position - b.position);
@@ -221,7 +215,8 @@ export default function DashboardPage() {
       <Sidebar view={view} setView={setView} firstName={firstName} userEmail={userEmail} jobCount={jobs.length} contactCount={contacts.length} interviewCount={stats.interviews} onSettings={() => setShowSettings(true)} />
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.5rem', background: '#fff', borderBottom: '2px solid #111', flexShrink: 0 }}>
+        {/* Barre du haut */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', borderBottom: '2px solid #111', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
             <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#111' }}>Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋</div>
@@ -231,10 +226,19 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
+        {/* Contenu principal — pleine largeur avec padding harmonisé */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
+
+          {/* Stats */}
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: '1.25rem' }}>
-              {[{ l: 'Total', v: stats.total, c: '#111' }, { l: 'Taux réponse', v: stats.responseRate + '%', c: '#E8151B' }, { l: 'Entretiens', v: stats.interviews, c: '#1A7A4A' }, { l: 'Offres', v: stats.offers, c: '#B8900A' }, { l: 'Contacts', v: contacts.length, c: '#888' }].map(s => (
+              {[
+                { l: 'Total', v: stats.total, c: '#111' },
+                { l: 'Taux réponse', v: stats.responseRate + '%', c: '#E8151B' },
+                { l: 'Entretiens', v: stats.interviews, c: '#1A7A4A' },
+                { l: 'Offres', v: stats.offers, c: '#B8900A' },
+                { l: 'Contacts', v: contacts.length, c: '#888' },
+              ].map(s => (
                 <div key={s.l} className="stat-card">
                   <div style={{ fontSize: 9, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 900, color: s.c }}>{s.v}</div>

@@ -119,7 +119,8 @@ export default function JobDetailPage() {
 
   const [job, setJob] = useState<Job | null>(null)
   const [exchanges, setExchanges] = useState<JobExchange[]>([])
-  const [customSteps, setCustomSteps] = useState<{ id: string; label: string }[]>([])
+  const [customSteps, setCustomSteps] = useState<{ id: string; label: string; position: number }[]>([])
+  const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [descExpanded, setDescExpanded] = useState(false)
   const [openExchanges, setOpenExchanges] = useState<Set<string>>(new Set())
@@ -131,8 +132,23 @@ export default function JobDetailPage() {
 
   const loadJob = useCallback(async () => {
     const supabase = createClient()
+    // Récupérer la session pour avoir userId
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) setUserId(session.user.id)
     const { data } = await supabase.from('jobs').select('*').eq('id', jobId).single()
     if (data) { setJob(data); setNotes(data.notes ?? '') }
+  }, [jobId])
+
+  const loadCustomSteps = useCallback(async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('pipeline_stages')
+      .select('*')
+      .eq('job_id', jobId)
+      .order('position')
+    if (data && data.length > 0) {
+      setCustomSteps(data.map((s: any) => ({ id: s.id, label: s.label, position: s.position })))
+    }
   }, [jobId])
 
   const loadExchanges = useCallback(async () => {
@@ -149,8 +165,8 @@ export default function JobDetailPage() {
   }, [jobId])
 
   useEffect(() => {
-    Promise.all([loadJob(), loadExchanges()]).finally(() => setLoading(false))
-  }, [loadJob, loadExchanges])
+    Promise.all([loadJob(), loadCustomSteps(), loadExchanges()]).finally(() => setLoading(false))
+  }, [loadJob, loadCustomSteps, loadExchanges])
 
   const handleNotesChange = (val: string) => {
     setNotes(val)
@@ -177,10 +193,32 @@ export default function JobDetailPage() {
     setJob(prev => prev ? { ...prev, ...patch } : prev)
   }
 
-  const handleAddCustomStep = () => {
-    if (!newStepName.trim()) return
-    setCustomSteps(prev => [...prev, { id: `custom_${Date.now()}`, label: newStepName.trim() }])
+  const handleAddCustomStep = async () => {
+    if (!newStepName.trim() || !userId) return
+    const supabase = createClient()
+    const position = newStepPos + 10 // position relative dans le parcours
+    const { data } = await supabase
+      .from('pipeline_stages')
+      .insert({
+        user_id: userId,
+        job_id: jobId,
+        label: newStepName.trim(),
+        color: '#F5C400',
+        position,
+      })
+      .select()
+      .single()
+    if (data) {
+      const newStep = { id: data.id, label: data.label, position: data.position }
+      setCustomSteps(prev => {
+        const insertAt = Math.max(0, newStepPos - (BASE_STEPS.length - 1))
+        const next = [...prev]
+        next.splice(insertAt, 0, newStep)
+        return next
+      })
+    }
     setNewStepName('')
+    setNewStepPos(allSteps.length - 1)
     setShowModal(false)
   }
 
@@ -352,15 +390,19 @@ export default function JobDetailPage() {
                 onFocus={e => { e.target.style.borderColor = '#F5C400' }}
                 onBlur={e => { e.target.style.borderColor = '#eee' }} />
               <label style={{ ...lbl, marginTop: 14, marginBottom: 8 }}>Où l'insérer ?</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {[
-                  { pos: 4, label: "Après Entretien RH", sub: "Entre étape 4 et 5" },
-                  { pos: 5, label: "Après Entretien manager", sub: "Entre étape 5 et Offre" },
-                ].map(opt => (
-                  <button key={opt.pos} onClick={() => setNewStepPos(opt.pos)} style={{ background: newStepPos === opt.pos ? '#111' : '#F5F5F0', color: newStepPos === opt.pos ? '#F5C400' : '#666', border: `1.5px solid ${newStepPos === opt.pos ? '#111' : '#E5E5E5'}`, borderRadius: 9, padding: 10, cursor: 'pointer', fontSize: 11, fontWeight: 700, fontFamily: FONT, textAlign: 'left' }}>
-                    {opt.label}<br /><span style={{ fontSize: 9, fontWeight: 500, opacity: 0.7 }}>{opt.sub}</span>
-                  </button>
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {allSteps.slice(0, -1).map((step, idx) => {
+                  const nextStep = allSteps[idx + 1]
+                  const pos = idx + 1
+                  const isSelected = newStepPos === pos
+                  return (
+                    <button key={pos} onClick={() => setNewStepPos(pos)}
+                      style={{ background: isSelected ? '#111' : '#F5F5F0', color: isSelected ? '#F5C400' : '#666', border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`, borderRadius: 9, padding: '10px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>Après <strong style={{ color: isSelected ? '#F5C400' : '#111' }}>{step.label}</strong></span>
+                      <span style={{ fontSize: 10, fontWeight: 500, opacity: 0.6 }}>→ avant {nextStep.label}</span>
+                    </button>
+                  )
+                })}
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
                 <button onClick={() => setShowModal(false)} style={{ background: '#F5F5F0', color: '#666', fontSize: 12, fontWeight: 700, padding: '8px 16px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
