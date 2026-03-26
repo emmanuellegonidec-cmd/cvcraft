@@ -22,7 +22,8 @@ interface Job {
   status: string; sub_status: string; description: string; notes: string; source_url: string
   salary_text: string | null; salary_min: number | null; salary_max: number | null; currency: string | null
   cv_sent: boolean; cover_letter_sent: boolean; cv_url: string | null; cover_letter_url: string | null
-  ats_score: number | null; ats_keywords: { present: string[]; missing: string[] } | null; created_at: string
+  ats_score: number | null; ats_keywords: { present: string[]; missing: string[] } | null
+  created_at: string; applied_at: string | null
 }
 
 const BASE_STEPS = [
@@ -38,6 +39,25 @@ const STATUS_MAP: Record<string, string> = {
   to_apply: 'to_apply', applied: 'applied',
   phone_interview: 'in_progress', hr_interview: 'in_progress',
   manager_interview: 'in_progress', offer: 'offer',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  to_apply: 'Envie de postuler', applied: 'Postulé',
+  in_progress: 'En cours', offer: 'Offre reçue', archived: 'Archivé',
+}
+
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  to_apply:    { bg: '#F5F5F0', color: '#888' },
+  applied:     { bg: '#E8F0FE', color: '#1A6FDB' },
+  in_progress: { bg: '#FFF8E1', color: '#B8900A' },
+  offer:       { bg: '#E8F5E9', color: '#1A7A4A' },
+  archived:    { bg: '#F5F5F5', color: '#aaa' },
+}
+
+const SUB_STATUS_LABELS: Record<string, string> = {
+  to_apply: 'Envie de postuler', applied: 'Postulé',
+  phone_interview: 'Entretien tél.', hr_interview: 'Entretien RH',
+  manager_interview: 'Entretien manager', offer: 'Offre reçue',
 }
 
 interface StepAction { icon: string; title: string; sub: string; type: 'included' | 'action' | 'new' }
@@ -59,7 +79,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: StepAction[] }> = {
       { icon: '📄', title: 'CV', sub: 'Envoyé à cette étape', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Envoyée à cette étape', type: 'included' },
       { icon: '🔔', title: 'Programmer une relance', sub: 'Dans 7 à 10 jours', type: 'action' },
-      { icon: '📏', title: 'Confirmer la réception', sub: 'Email de confirmation reçu ?', type: 'action' },
+      { icon: '📋', title: 'Confirmer la réception', sub: 'Email de confirmation reçu ?', type: 'action' },
     ],
   },
   phone_interview: {
@@ -113,7 +133,10 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: StepAction[] }> = {
 const FONT = "'Montserrat', sans-serif"
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+function formatDateShort(iso: string) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 }
 function getToken(): string | null {
   if (typeof window !== 'undefined') return (window as any).__jfmj_token ?? null
@@ -126,10 +149,96 @@ function authHeaders(): HeadersInit {
     : { 'Content-Type': 'application/json' }
 }
 
-// ─── Bulle d'étape draggable (étapes custom uniquement) ───────────────────────
+// ─── Sidebar : liste des offres ───────────────────────────────────────────────
+function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect: (id: string) => void }) {
+  const [jobs, setJobs] = useState<Job[]>([])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('jobs').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      if (data) setJobs(data)
+    })
+  }, [])
+
+  return (
+    <div style={{
+      width: 280, flexShrink: 0,
+      position: 'sticky', top: 0, height: '100vh',
+      overflowY: 'auto', overflowX: 'hidden',
+      background: '#fff',
+      borderRight: '1.5px solid #EBEBEB',
+      display: 'flex', flexDirection: 'column',
+      fontFamily: FONT,
+    }}>
+      {/* En-tête sidebar */}
+      <div style={{ padding: '18px 16px 14px', borderBottom: '1.5px solid #EBEBEB', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#111', letterSpacing: '-0.2px' }}>Mes candidatures</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#888', background: '#F5F5F0', padding: '2px 8px', borderRadius: 20 }}>
+            {jobs.length}
+          </span>
+        </div>
+      </div>
+
+      {/* Liste des offres */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {jobs.map(job => {
+          const isActive = job.id === currentJobId
+          const statusColor = STATUS_COLORS[job.status] ?? STATUS_COLORS['to_apply']
+          const stepLabel = job.sub_status ? (SUB_STATUS_LABELS[job.sub_status] ?? STATUS_LABELS[job.status]) : STATUS_LABELS[job.status]
+          const dateRef = job.applied_at || job.created_at
+
+          return (
+            <div
+              key={job.id}
+              onClick={() => onSelect(job.id)}
+              style={{
+                padding: '12px 16px',
+                borderBottom: '1px solid #F5F5F0',
+                cursor: 'pointer',
+                background: isActive ? '#111' : 'transparent',
+                transition: 'background 0.1s',
+              }}
+              onMouseOver={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#F9F9F7' }}
+              onMouseOut={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            >
+              {/* Titre */}
+              <div style={{
+                fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 4,
+                color: isActive ? '#fff' : '#111',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {job.title}
+              </div>
+              {/* Entreprise + ville */}
+              <div style={{ fontSize: 12, color: isActive ? '#aaa' : '#666', marginBottom: 7, fontWeight: 500 }}>
+                {job.company}{job.location ? ` · ${job.location}` : ''}
+              </div>
+              {/* Étape + date */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                  background: isActive ? '#222' : statusColor.bg,
+                  color: isActive ? '#F5C400' : statusColor.color,
+                }}>
+                  {stepLabel}
+                </span>
+                <span style={{ fontSize: 10, color: isActive ? '#666' : '#bbb', fontWeight: 600, flexShrink: 0 }}>
+                  {formatDateShort(dateRef)}
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Bulle d'étape draggable ──────────────────────────────────────────────────
 function DraggableStep({
-  step, isActive, isDone, isCustom, currentStepId,
-  onStepClick, onDeleteRequest, allStepsLength,
+  step, isActive, isDone, isCustom,
+  onStepClick, onDeleteRequest,
 }: {
   step: { id: string; label: string; num: number }
   isActive: boolean; isDone: boolean; isCustom: boolean
@@ -139,50 +248,41 @@ function DraggableStep({
   allStepsLength: number
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: step.id,
-    disabled: !isCustom,
-    data: { stepId: step.id },
+    id: step.id, disabled: !isCustom, data: { stepId: step.id },
   })
 
   return (
-    <div
-      style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        flex: 1, minWidth: 80, position: 'relative',
-        opacity: isDragging ? 0.4 : 1,
-        transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
-        zIndex: isDragging ? 50 : 1,
-      }}
-    >
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      flex: 1, minWidth: 72, position: 'relative',
+      opacity: isDragging ? 0.4 : 1,
+      transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
+      zIndex: isDragging ? 50 : 1,
+    }}>
       <div
         ref={isCustom ? setNodeRef : undefined}
         {...(isCustom ? { ...listeners, ...attributes } : {})}
         onClick={() => onStepClick(step.id)}
         title={isCustom ? 'Glisser pour réordonner' : undefined}
         style={{
-          width: 36, height: 36, borderRadius: '50%',
+          width: 34, height: 34, borderRadius: '50%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1,
-          flexShrink: 0,
+          fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1, flexShrink: 0,
           cursor: isCustom ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
           background: isActive ? '#111' : isDone ? '#F5C400' : '#fff',
-          border: `3px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#E5E5E5'}`,
+          border: `2.5px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#DEDEDE'}`,
           color: isActive ? '#F5C400' : isDone ? '#111' : '#ccc',
-          boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.2)' : 'none',
-          fontFamily: FONT,
-          touchAction: 'none',
+          boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.18)' : 'none',
+          fontFamily: FONT, touchAction: 'none',
         }}
       >
         {step.num}
       </div>
-      <p
-        onClick={() => onStepClick(step.id)}
-        style={{
-          fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 7,
-          lineHeight: 1.3, color: isActive ? '#111' : isDone ? '#888' : '#ccc',
-          fontFamily: FONT, cursor: 'pointer',
-        }}
-      >
+      <p onClick={() => onStepClick(step.id)} style={{
+        fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 6,
+        lineHeight: 1.3, color: isActive ? '#111' : isDone ? '#777' : '#ccc',
+        fontFamily: FONT, cursor: 'pointer', maxWidth: 70,
+      }}>
         {step.label}
       </p>
       {isCustom && (
@@ -190,42 +290,33 @@ function DraggableStep({
           onClick={e => { e.stopPropagation(); onDeleteRequest(step.id, step.label) }}
           title="Supprimer cette étape"
           style={{
-            position: 'absolute', top: -6, right: 'calc(50% - 28px)',
-            width: 16, height: 16, borderRadius: '50%',
+            position: 'absolute', top: -5, right: 'calc(50% - 27px)',
+            width: 15, height: 15, borderRadius: '50%',
             background: '#E8151B', border: 'none', color: '#fff',
-            fontSize: 10, fontWeight: 900, cursor: 'pointer',
+            fontSize: 9, fontWeight: 900, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 2, lineHeight: 1,
           }}
-        >
-          ×
-        </button>
+        >×</button>
       )}
     </div>
   )
 }
 
-// ─── Zone de dépôt entre étapes ───────────────────────────────────────────────
+// ─── Zone de dépôt ────────────────────────────────────────────────────────────
 function DropZone({ id, isOver }: { id: string; isOver: boolean }) {
   const { setNodeRef } = useDroppable({ id })
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        width: isOver ? 32 : 14,
-        height: 36,
-        borderRadius: 8,
-        background: isOver ? '#F5C400' : 'transparent',
-        border: isOver ? '2px dashed #111' : '2px dashed transparent',
-        flexShrink: 0,
-        transition: 'all .15s',
-        alignSelf: 'center',
-        marginBottom: 20,
-      }}
-    />
+    <div ref={setNodeRef} style={{
+      width: isOver ? 28 : 12, height: 34, borderRadius: 6,
+      background: isOver ? '#F5C400' : 'transparent',
+      border: isOver ? '2px dashed #111' : '2px dashed transparent',
+      flexShrink: 0, transition: 'all .15s', alignSelf: 'center', marginBottom: 20,
+    }} />
   )
 }
 
+// ─── Page principale ──────────────────────────────────────────────────────────
 export default function JobDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -257,11 +348,9 @@ export default function JobDetailPage() {
 
   const loadCustomSteps = useCallback(async () => {
     const supabase = createClient()
-    const { data } = await supabase
-      .from('pipeline_stages').select('*').eq('job_id', jobId).order('position')
-    if (data && data.length > 0) {
+    const { data } = await supabase.from('pipeline_stages').select('*').eq('job_id', jobId).order('position')
+    if (data && data.length > 0)
       setCustomSteps(data.map((s: any) => ({ id: s.id, label: s.label, position: s.position })))
-    }
   }, [jobId])
 
   const loadExchanges = useCallback(async () => {
@@ -307,24 +396,18 @@ export default function JobDetailPage() {
     const res = await fetch(`/api/jobs?id=${jobId}`, {
       method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch),
     })
-    if (res.ok) {
-      const data = await res.json()
-      if (data.job) setJob(data.job)
-    }
+    if (res.ok) { const data = await res.json(); if (data.job) setJob(data.job) }
   }
 
   const handleAddCustomStep = async () => {
     if (!newStepName.trim() || !userId) return
     const supabase = createClient()
     const position = (newStepPos + 1) * 1000 + (Date.now() % 100)
-    const { data } = await supabase
-      .from('pipeline_stages')
+    const { data } = await supabase.from('pipeline_stages')
       .insert({ user_id: userId, job_id: jobId, label: newStepName.trim(), color: '#F5C400', position })
       .select().single()
     if (data) setCustomSteps(prev => [...prev, { id: data.id, label: data.label, position: data.position }])
-    setNewStepName('')
-    setNewStepPos(allSteps.length - 2)
-    setShowModal(false)
+    setNewStepName(''); setNewStepPos(allSteps.length - 2); setShowModal(false)
   }
 
   const handleDeleteCustomStep = async (stepId: string) => {
@@ -333,9 +416,7 @@ export default function JobDetailPage() {
     setCustomSteps(prev => prev.filter(s => s.id !== stepId))
     if (currentStepId === stepId) {
       const patch = { sub_status: 'manager_interview', status: 'in_progress' }
-      await fetch(`/api/jobs?id=${jobId}`, {
-        method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch),
-      })
+      await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch) })
       setJob(prev => prev ? { ...prev, ...patch } : prev)
     }
   }
@@ -345,52 +426,31 @@ export default function JobDetailPage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   )
 
-  function handleStepDragStart(event: DragStartEvent) {
-    setActiveStepId(event.active.id as string)
-  }
-
-  function handleStepDragOver(event: any) {
-    setOverDropZone(event.over?.id ?? null)
-  }
+  function handleStepDragStart(event: DragStartEvent) { setActiveStepId(event.active.id as string) }
+  function handleStepDragOver(event: any) { setOverDropZone(event.over?.id ?? null) }
 
   async function handleStepDragEnd(event: DragEndEvent) {
-    setActiveStepId(null)
-    setOverDropZone(null)
+    setActiveStepId(null); setOverDropZone(null)
     const { active, over } = event
     if (!over) return
-
     const draggedId = active.id as string
     const dropZoneId = over.id as string
-
     const draggedStep = customSteps.find(s => s.id === draggedId)
     if (!draggedStep) return
-
     const match = dropZoneId.match(/^(after|before)-(.+)$/)
     if (!match) return
     const [, position, targetStepId] = match
-
     const sorted = [...customSteps].sort((a, b) => a.position - b.position)
     const targetStep = customSteps.find(s => s.id === targetStepId)
     if (!targetStep || draggedId === targetStepId) return
-
     const withoutDragged = sorted.filter(s => s.id !== draggedId)
     const targetIdx = withoutDragged.findIndex(s => s.id === targetStepId)
     const insertIdx = position === 'after' ? targetIdx + 1 : targetIdx
-    const reordered = [
-      ...withoutDragged.slice(0, insertIdx),
-      draggedStep,
-      ...withoutDragged.slice(insertIdx),
-    ]
-
+    const reordered = [...withoutDragged.slice(0, insertIdx), draggedStep, ...withoutDragged.slice(insertIdx)]
     const updated = reordered.map((s, i) => ({ ...s, position: (i + 1) * 1000 }))
     setCustomSteps(updated)
-
     const supabase = createClient()
-    await Promise.all(
-      updated.map(s =>
-        supabase.from('pipeline_stages').update({ position: s.position }).eq('id', s.id)
-      )
-    )
+    await Promise.all(updated.map(s => supabase.from('pipeline_stages').update({ position: s.position }).eq('id', s.id)))
   }
 
   const toggleExchange = (id: string) => {
@@ -433,12 +493,12 @@ export default function JobDetailPage() {
 
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}>
-      <p style={{ color: '#999', fontWeight: 700 }}>Chargement…</p>
+      <p style={{ color: '#999', fontWeight: 700, fontSize: 15 }}>Chargement…</p>
     </div>
   )
   if (!job) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}>
-      <p style={{ color: '#E8151B', fontWeight: 700 }}>Offre introuvable.</p>
+      <p style={{ color: '#E8151B', fontWeight: 700, fontSize: 15 }}>Offre introuvable.</p>
     </div>
   )
 
@@ -453,72 +513,107 @@ export default function JobDetailPage() {
       : job.salary_max ? `Jusqu'à ${job.salary_max.toLocaleString('fr-FR')} €`
       : null
 
-  const card: React.CSSProperties = { background: '#fff', borderRadius: 14, padding: '22px 26px', marginBottom: 18, border: '2px solid #111', boxShadow: '3px 3px 0 #111' }
-  const lbl: React.CSSProperties = { fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#bbb', marginBottom: 16, display: 'block', fontFamily: FONT }
-  const inp: React.CSSProperties = { width: '100%', border: '1.5px solid #eee', borderRadius: 9, padding: '9px 12px', fontSize: 13, fontFamily: FONT, outline: 'none', background: '#fff', color: '#111', boxSizing: 'border-box' }
+  // Styles réutilisables
+  const card: React.CSSProperties = {
+    background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 14,
+    border: '1.5px solid #EBEBEB',
+  }
+  const sectionLabel: React.CSSProperties = {
+    fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px',
+    color: '#bbb', marginBottom: 14, display: 'block', fontFamily: FONT,
+  }
+  const inp: React.CSSProperties = {
+    width: '100%', border: '1.5px solid #eee', borderRadius: 8, padding: '9px 12px',
+    fontSize: 14, fontFamily: FONT, outline: 'none', background: '#fff', color: '#111',
+    boxSizing: 'border-box', fontWeight: 500,
+  }
   const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 80, lineHeight: '1.6' }
 
   const activeStep = activeStepId ? allSteps.find(s => s.id === activeStepId) : null
 
   return (
-    <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, width: '100%' }}>
+    <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, display: 'flex' }}>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {/* ── Responsive styles ── */}
       <style>{`
-        .jfmj-container {
-          width: 100%;
-          padding: 24px 32px 64px;
-          box-sizing: border-box;
+        .jfmj-sidebar { display: flex; }
+        .jfmj-main { flex: 1; padding: 24px 28px 64px; min-width: 0; }
+        @media (max-width: 900px) {
+          .jfmj-sidebar { display: none; }
+          .jfmj-main { padding: 16px 16px 48px; }
         }
-        .jfmj-docs-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 18px;
-          margin-bottom: 18px;
-        }
-        @media (max-width: 768px) {
-          .jfmj-container {
-            padding: 16px 16px 48px;
-          }
-          .jfmj-docs-grid {
-            grid-template-columns: 1fr;
-          }
-        }
+        .jfmj-docs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+        @media (max-width: 600px) { .jfmj-docs-grid { grid-template-columns: 1fr; } }
+        .jfmj-back-mobile { display: none; }
+        @media (max-width: 900px) { .jfmj-back-mobile { display: flex !important; } }
       `}</style>
 
-      <div className="jfmj-container">
+      {/* SIDEBAR */}
+      <div className="jfmj-sidebar">
+        <JobSidebar
+          currentJobId={jobId}
+          onSelect={(id) => router.push(`/dashboard/job/${id}`)}
+        />
+      </div>
+
+      {/* CONTENU PRINCIPAL */}
+      <div className="jfmj-main">
+
+        {/* Bouton retour mobile uniquement */}
+        <div className="jfmj-back-mobile" style={{ display: 'none', marginBottom: 14 }}>
+          <button onClick={() => router.back()} style={{
+            background: '#fff', border: '1.5px solid #EBEBEB', borderRadius: 8, padding: '8px 14px',
+            fontSize: 13, fontWeight: 700, color: '#111', cursor: 'pointer', fontFamily: FONT,
+          }}>← Mes candidatures</button>
+        </div>
 
         {/* HEADER */}
-        <div style={{ background: '#111', borderRadius: 14, padding: '22px 28px', marginBottom: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, border: '2px solid #111', boxShadow: '3px 3px 0 #E8151B', flexWrap: 'wrap' }}>
+        <div style={{
+          background: '#111', borderRadius: 12, padding: '22px 26px', marginBottom: 14,
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20,
+          border: '2px solid #111', boxShadow: '3px 3px 0 #E8151B', flexWrap: 'wrap',
+        }}>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 11, color: '#888', marginBottom: 8, fontFamily: FONT }}>
-              <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#F5C400', fontWeight: 700, cursor: 'pointer', fontFamily: FONT, fontSize: 11, padding: 0 }}>← Mes candidatures</button>
-              {' / '}<span style={{ color: '#888' }}>{job.company}</span>
+            {/* Fil d'ariane desktop */}
+            <div style={{ fontSize: 12, color: '#666', marginBottom: 8, fontFamily: FONT }}>
+              <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#F5C400', fontWeight: 700, cursor: 'pointer', fontFamily: FONT, fontSize: 12, padding: 0 }}>
+                ← Mes candidatures
+              </button>
+              {' / '}<span style={{ color: '#555' }}>{job.company}</span>
             </div>
-            <h1 style={{ fontSize: 24, fontWeight: 900, color: '#fff', lineHeight: 1.15, marginBottom: 12, fontFamily: FONT }}>{job.title}</h1>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: salaryDisplay ? 16 : 0 }}>
-              <span style={{ background: '#F5C400', color: '#111', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, fontFamily: FONT }}>{job.job_type || 'CDI'}</span>
-              {job.location && <span style={{ background: '#222', color: '#ccc', fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 20, border: '1px solid #333', fontFamily: FONT }}>{job.location}</span>}
-              <span style={{ background: '#222', color: '#ccc', fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 20, border: '1px solid #333', fontFamily: FONT }}>{formatDate(job.created_at)}</span>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: 12, fontFamily: FONT }}>
+              {job.title}
+            </h1>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: salaryDisplay ? 14 : 0 }}>
+              <span style={{ background: '#F5C400', color: '#111', fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, fontFamily: FONT }}>
+                {job.job_type || 'CDI'}
+              </span>
+              {job.location && (
+                <span style={{ background: '#222', color: '#bbb', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 20, border: '1px solid #333', fontFamily: FONT }}>
+                  {job.location}
+                </span>
+              )}
+              <span style={{ background: '#222', color: '#bbb', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 20, border: '1px solid #333', fontFamily: FONT }}>
+                {formatDate(job.created_at)}
+              </span>
             </div>
             {salaryDisplay && (
-              <div style={{ borderTop: '1px solid #2a2a2a', paddingTop: 14 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#666', marginBottom: 4, fontFamily: FONT }}>Salaire</div>
+              <div style={{ borderTop: '1px solid #2a2a2a', paddingTop: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#555', marginBottom: 4, fontFamily: FONT }}>Salaire</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 20, fontWeight: 900, color: '#F5C400', fontFamily: FONT }}>{salaryDisplay}</span>
-                  <span style={{ background: '#1a1a1a', color: '#aaa', fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20, border: '1px solid #333', fontFamily: FONT }}>Brut / an</span>
+                  <span style={{ background: '#1a1a1a', color: '#888', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, border: '1px solid #333', fontFamily: FONT }}>Brut / an</span>
                 </div>
               </div>
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
             {job.source_url && (
-              <button onClick={() => window.open(job.source_url, '_blank')} style={{ background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 10, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #fff', whiteSpace: 'nowrap' }}>
+              <button onClick={() => window.open(job.source_url, '_blank')} style={{ background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #fff', whiteSpace: 'nowrap' }}>
                 Voir l'offre ↗
               </button>
             )}
-            <button onClick={() => router.push(`/dashboard/editor?job_id=${jobId}`)} style={{ background: '#F5C400', color: '#111', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 10, border: '2px solid #111', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' }}>
+            <button onClick={() => router.push(`/dashboard/editor?job_id=${jobId}`)} style={{ background: '#F5C400', color: '#111', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #111', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' }}>
               Générer un CV
             </button>
           </div>
@@ -526,61 +621,54 @@ export default function JobDetailPage() {
 
         {/* SCORE ATS */}
         {(atsScore !== null || atsKw.present.length > 0 || atsKw.missing.length > 0) && (
-          <div style={{ ...card, boxShadow: '3px 3px 0 #F5C400', border: '2px solid #F5C400', display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ ...card, border: '1.5px solid #F5C400', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
             {atsScore !== null && (
-              <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
-                <svg width="80" height="80" viewBox="0 0 80 80" style={{ transform: 'rotate(-90deg)', display: 'block' }}>
-                  <circle cx="40" cy="40" r="32" fill="none" stroke="#F0F0F0" strokeWidth="7" />
-                  <circle cx="40" cy="40" r="32" fill="none" stroke="#F5C400" strokeWidth="7" strokeDasharray="201" strokeDashoffset={201 - (201 * atsScore / 100)} strokeLinecap="round" />
+              <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
+                <svg width="72" height="72" viewBox="0 0 72 72" style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+                  <circle cx="36" cy="36" r="28" fill="none" stroke="#F0F0F0" strokeWidth="6" />
+                  <circle cx="36" cy="36" r="28" fill="none" stroke="#F5C400" strokeWidth="6" strokeDasharray="176" strokeDashoffset={176 - (176 * atsScore / 100)} strokeLinecap="round" />
                 </svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 22, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
+                  <span style={{ fontSize: 20, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
                   <small style={{ fontSize: 10, color: '#999', fontWeight: 700, fontFamily: FONT }}>/100</small>
                 </div>
               </div>
             )}
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 900, color: '#111', marginBottom: 4, fontFamily: FONT }}>Score ATS — Compatibilité avec l'offre</h3>
-              <p style={{ fontSize: 13, color: '#666', lineHeight: 1.5, marginBottom: 10, fontFamily: FONT }}>
-                {atsScore !== null && atsScore >= 70 ? 'Bonne compatibilité globale. Quelques mots-clés à ajouter.' : 'Des mots-clés importants manquent dans votre CV.'}
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 4, fontFamily: FONT }}>Score ATS — Compatibilité avec l'offre</h3>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, marginBottom: 8, fontFamily: FONT }}>
+                {atsScore !== null && atsScore >= 70 ? 'Bonne compatibilité. Quelques mots-clés à ajouter.' : 'Des mots-clés importants manquent dans votre CV.'}
               </p>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {atsKw.present.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: '#E8F5E9', color: '#2E7D32', fontFamily: FONT }}>{k} ✓</span>)}
-                {atsKw.missing.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: '#FFEBEE', color: '#C62828', fontFamily: FONT }}>{k} ✗</span>)}
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {atsKw.present.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: '#E8F5E9', color: '#2E7D32', fontFamily: FONT }}>{k} ✓</span>)}
+                {atsKw.missing.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: '#FFEBEE', color: '#C62828', fontFamily: FONT }}>{k} ✗</span>)}
               </div>
             </div>
           </div>
         )}
 
-        {/* PARCOURS avec drag & drop */}
+        {/* PARCOURS */}
         <div style={card}>
-          <span style={lbl}>Parcours de candidature</span>
-          <p style={{ fontSize: 11, color: '#bbb', fontWeight: 600, marginBottom: 12, fontFamily: FONT }}>
+          <span style={sectionLabel}>Parcours de candidature</span>
+          <p style={{ fontSize: 12, color: '#bbb', fontWeight: 600, marginBottom: 14, fontFamily: FONT }}>
             💡 Cliquez sur une étape pour avancer — glissez les étapes personnalisées pour les réordonner
           </p>
 
-          <DndContext
-            sensors={sensors}
-            onDragStart={handleStepDragStart}
-            onDragOver={handleStepDragOver}
-            onDragEnd={handleStepDragEnd}
-          >
+          <DndContext sensors={sensors} onDragStart={handleStepDragStart} onDragOver={handleStepDragOver} onDragEnd={handleStepDragEnd}>
             <div style={{ display: 'flex', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 8 }}>
               {allSteps.map((step, idx) => {
                 const isDone = idx < currentStepIndex
                 const isActive = step.id === currentStepId
                 const isCustom = !!customSteps.find(cs => cs.id === step.id)
-
                 return (
-                  <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 80 }}>
+                  <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 72 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
                       {idx < allSteps.length - 1 && (
-                        <div style={{ position: 'absolute', top: 18, left: 'calc(50% + 18px)', right: 'calc(-50% + 18px)', height: 3, background: isDone ? '#F5C400' : '#E5E5E5', zIndex: 0 }} />
+                        <div style={{ position: 'absolute', top: 17, left: 'calc(50% + 17px)', right: 'calc(-50% + 17px)', height: 2.5, background: isDone ? '#F5C400' : '#EBEBEB', zIndex: 0 }} />
                       )}
                       <DraggableStep
-                        step={step} isActive={isActive} isDone={isDone}
-                        isCustom={isCustom} currentStepId={currentStepId}
-                        onStepClick={handleStepClick}
+                        step={step} isActive={isActive} isDone={isDone} isCustom={isCustom}
+                        currentStepId={currentStepId} onStepClick={handleStepClick}
                         onDeleteRequest={(id, label) => setStepToDelete({ id, label })}
                         allStepsLength={allSteps.length}
                       />
@@ -592,17 +680,9 @@ export default function JobDetailPage() {
                 )
               })}
             </div>
-
             <DragOverlay>
               {activeStep ? (
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: '#F5C400', border: '3px solid #111',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 13, fontWeight: 900, color: '#111',
-                  boxShadow: '3px 3px 0 #E8151B', cursor: 'grabbing',
-                  fontFamily: FONT,
-                }}>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#F5C400', border: '2.5px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#111', boxShadow: '3px 3px 0 #E8151B', cursor: 'grabbing', fontFamily: FONT }}>
                   {activeStep.num}
                 </div>
               ) : null}
@@ -610,43 +690,43 @@ export default function JobDetailPage() {
           </DndContext>
 
           <button onClick={() => setShowModal(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#F5F5F0', border: '2px dashed #ddd', color: '#999', fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 9, cursor: 'pointer', marginTop: 16, fontFamily: FONT }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#F9F9F7', border: '1.5px dashed #ddd', color: '#999', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', marginTop: 14, fontFamily: FONT }}
             onMouseOver={e => { const el = e.currentTarget; el.style.borderColor = '#F5C400'; el.style.color = '#111'; el.style.background = '#FFFDE7' }}
-            onMouseOut={e => { const el = e.currentTarget; el.style.borderColor = '#ddd'; el.style.color = '#999'; el.style.background = '#F5F5F0' }}>
-            <span style={{ width: 16, height: 16, background: '#ddd', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#fff' }}>+</span>
+            onMouseOut={e => { const el = e.currentTarget; el.style.borderColor = '#ddd'; el.style.color = '#999'; el.style.background = '#F9F9F7' }}>
+            <span style={{ width: 15, height: 15, background: '#ddd', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: '#fff' }}>+</span>
             Ajouter une étape personnalisée
           </button>
         </div>
 
         {/* MODALE AJOUT ÉTAPE */}
         {showModal && (
-          <div style={{ background: 'rgba(0,0,0,0.5)', borderRadius: 14, padding: '40px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
-            <div style={{ background: '#fff', borderRadius: 14, padding: 28, width: '100%', maxWidth: 460, border: '2px solid #111', boxShadow: '4px 4px 0 #111' }}>
-              <h3 style={{ fontSize: 17, fontWeight: 900, color: '#111', marginBottom: 6, fontFamily: FONT }}>Ajouter une étape personnalisée</h3>
-              <p style={{ fontSize: 12, color: '#666', marginBottom: 18, lineHeight: 1.5, fontFamily: FONT }}>Donnez un nom à cette étape et choisissez où l'insérer.</p>
-              <label style={{ ...lbl, marginBottom: 6 }}>Nom de l'étape</label>
+          <div style={{ background: 'rgba(0,0,0,0.45)', borderRadius: 12, padding: '32px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+            <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 440, border: '2px solid #111', boxShadow: '4px 4px 0 #111' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', marginBottom: 5, fontFamily: FONT }}>Ajouter une étape personnalisée</h3>
+              <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.5, fontFamily: FONT }}>Donnez un nom à cette étape et choisissez où l'insérer.</p>
+              <label style={{ ...sectionLabel, marginBottom: 5 }}>Nom de l'étape</label>
               <input style={inp} placeholder="Ex : Test technique, Entretien DRH..." value={newStepName}
                 onChange={e => setNewStepName(e.target.value)}
                 onFocus={e => { e.target.style.borderColor = '#F5C400' }}
                 onBlur={e => { e.target.style.borderColor = '#eee' }} />
-              <label style={{ ...lbl, marginTop: 14, marginBottom: 8 }}>Où l'insérer ?</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ ...sectionLabel, marginTop: 14, marginBottom: 8 }}>Où l'insérer ?</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {allSteps.slice(0, -1).map((step, idx) => {
                   const nextStep = allSteps[idx + 1]
                   const pos = idx + 1
                   const isSelected = newStepPos === pos
                   return (
                     <button key={pos} onClick={() => setNewStepPos(pos)}
-                      style={{ background: isSelected ? '#111' : '#F5F5F0', color: isSelected ? '#F5C400' : '#666', border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`, borderRadius: 9, padding: '10px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      style={{ background: isSelected ? '#111' : '#F9F9F7', color: isSelected ? '#F5C400' : '#555', border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '9px 13px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span>Après <strong style={{ color: isSelected ? '#F5C400' : '#111' }}>{step.label}</strong></span>
                       <span style={{ fontSize: 10, fontWeight: 500, opacity: 0.6 }}>→ avant {nextStep.label}</span>
                     </button>
                   )
                 })}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-                <button onClick={() => setShowModal(false)} style={{ background: '#F5F5F0', color: '#666', fontSize: 12, fontWeight: 700, padding: '8px 16px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
-                <button onClick={handleAddCustomStep} style={{ background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT }}>Ajouter l'étape</button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+                <button onClick={() => setShowModal(false)} style={{ background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
+                <button onClick={handleAddCustomStep} style={{ background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT }}>Ajouter l'étape</button>
               </div>
             </div>
           </div>
@@ -654,24 +734,29 @@ export default function JobDetailPage() {
 
         {/* BLOC ÉTAPE ACTIVE */}
         {stepData && (
-          <div style={{ background: '#FFFDE7', borderRadius: 14, padding: '20px 26px', marginBottom: 18, border: '2px solid #F5C400', boxShadow: '3px 3px 0 #F5C400' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-              <span style={{ background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '3px 12px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONT }}>Étape {currentStepIndex + 1} — En cours</span>
-              <span style={{ fontSize: 16, fontWeight: 900, color: '#111', fontFamily: FONT }}>{allSteps.find(s => s.id === currentStepId)?.label}</span>
+          <div style={{ background: '#FFFDE7', borderRadius: 12, padding: '18px 22px', marginBottom: 14, border: '1.5px solid #F5C400' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8, flexWrap: 'wrap' }}>
+              <span style={{ background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '3px 11px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONT }}>
+                Étape {currentStepIndex + 1} — En cours
+              </span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#111', fontFamily: FONT }}>
+                {allSteps.find(s => s.id === currentStepId)?.label}
+              </span>
             </div>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.5, fontFamily: FONT }}>{stepData.desc}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 10 }}>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 14, lineHeight: 1.6, fontFamily: FONT }}>{stepData.desc}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 8 }}>
               {stepData.actions.map((action, i) => (
-                <div key={i} style={{ background: action.type === 'included' ? '#F1F8E9' : '#fff', border: `1.5px solid ${action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#E5E5E5'}`, borderRadius: 12, padding: '13px 15px', cursor: action.type === 'included' ? 'default' : 'pointer' }}
+                <div key={i}
+                  style={{ background: action.type === 'included' ? '#F1F8E9' : '#fff', border: `1.5px solid ${action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#EBEBEB'}`, borderRadius: 10, padding: '12px 14px', cursor: action.type === 'included' ? 'default' : 'pointer' }}
                   onMouseOver={e => { if (action.type !== 'included') (e.currentTarget as HTMLElement).style.borderColor = '#111' }}
-                  onMouseOut={e => { (e.currentTarget as HTMLElement).style.borderColor = action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#E5E5E5' }}>
-                  <span style={{ fontSize: 16, display: 'block', marginBottom: 5 }}>{action.icon}</span>
+                  onMouseOut={e => { (e.currentTarget as HTMLElement).style.borderColor = action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#EBEBEB' }}>
+                  <span style={{ fontSize: 15, display: 'block', marginBottom: 5 }}>{action.icon}</span>
                   <span style={{ fontSize: 12, fontWeight: 800, color: action.type === 'included' ? '#2E7D32' : '#111', display: 'block', fontFamily: FONT }}>
                     {action.title}
-                    {action.type === 'included' && <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 20, marginLeft: 4 }}>✓</span>}
-                    {action.type === 'new' && <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 20, marginLeft: 4 }}>Nouveau</span>}
+                    {action.type === 'included' && <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>✓</span>}
+                    {action.type === 'new' && <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>Nouveau</span>}
                   </span>
-                  <span style={{ fontSize: 10, color: '#999', marginTop: 2, display: 'block', fontFamily: FONT }}>{action.sub}</span>
+                  <span style={{ fontSize: 11, color: '#888', marginTop: 3, display: 'block', fontFamily: FONT }}>{action.sub}</span>
                 </div>
               ))}
             </div>
@@ -680,36 +765,36 @@ export default function JobDetailPage() {
 
         {/* SYNTHÈSE ÉCHANGES */}
         <div style={card}>
-          <span style={lbl}>Synthèse des échanges</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <span style={sectionLabel}>Synthèse des échanges</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {exchanges.map((ex, idx) => {
               const isOpen = openExchanges.has(ex.id)
               const isLatest = idx === exchanges.length - 1
               return (
-                <div key={ex.id} style={{ border: `1.5px solid ${isLatest ? '#F5C400' : '#EBEBEB'}`, borderRadius: 11, overflow: 'hidden' }}>
-                  <div onClick={() => toggleExchange(ex.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 15px', background: isLatest ? '#FFFDE7' : '#F8F8F6', cursor: 'pointer' }}>
+                <div key={ex.id} style={{ border: `1.5px solid ${isLatest ? '#F5C400' : '#EBEBEB'}`, borderRadius: 10, overflow: 'hidden' }}>
+                  <div onClick={() => toggleExchange(ex.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: isLatest ? '#FFFDE7' : '#F9F9F7', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#111', color: '#F5C400', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: FONT }}>{idx + 1}</div>
+                      <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#111', color: '#F5C400', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: FONT }}>{idx + 1}</div>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 800, color: '#111', margin: 0, fontFamily: FONT }}>{ex.title}</p>
-                        <p style={{ fontSize: 11, color: '#999', margin: 0, fontFamily: FONT }}>{ex.step_label && `${ex.step_label} · `}{formatDate(ex.exchange_date)}</p>
+                        <p style={{ fontSize: 11, color: '#888', margin: 0, fontFamily: FONT, fontWeight: 500 }}>{ex.step_label && `${ex.step_label} · `}{formatDate(ex.exchange_date)}</p>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ background: '#F5C400', color: '#111', fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20, fontFamily: FONT }}>{EXCHANGE_TYPE_LABELS[ex.exchange_type]}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{ background: '#F5C400', color: '#111', fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 20, fontFamily: FONT }}>{EXCHANGE_TYPE_LABELS[ex.exchange_type]}</span>
                       <span style={{ fontSize: 10, color: '#bbb', display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
                     </div>
                   </div>
                   {isOpen && (
-                    <div style={{ padding: 16, borderTop: '1px solid #F0F0F0' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 14 }}>
+                    <div style={{ padding: 14, borderTop: '1px solid #F0F0F0' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 10, marginBottom: 12 }}>
                         {[
                           { field: 'title', label: 'Titre', type: 'text', val: ex.title },
                           { field: 'exchange_type', label: 'Type', type: 'select', val: ex.exchange_type },
                           { field: 'exchange_date', label: 'Date', type: 'date', val: ex.exchange_date },
                         ].map(f => (
                           <div key={f.field}>
-                            <label style={{ ...lbl, marginBottom: 5 }}>{f.label}</label>
+                            <label style={{ ...sectionLabel, marginBottom: 5 }}>{f.label}</label>
                             {f.type === 'select' ? (
                               <select defaultValue={f.val} onChange={e => updateExchange(ex.id, f.field, e.target.value)} style={{ ...inp, background: '#fff' }}>
                                 {(Object.entries(EXCHANGE_TYPE_LABELS) as [ExchangeType, string][]).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -728,11 +813,11 @@ export default function JobDetailPage() {
                         { field: 'answers', label: 'Mes réponses & points à améliorer', placeholder: "Ce que j'ai bien dit, ce que je reformulerais..." },
                         { field: 'next_step', label: 'Prochaine étape annoncée', placeholder: "Suite du process, délai, contact..." },
                       ].map(({ field, label, placeholder }) => (
-                        <div key={field} style={{ marginBottom: 12 }}>
-                          <label style={{ ...lbl, marginBottom: 6 }}>{label}</label>
+                        <div key={field} style={{ marginBottom: 10 }}>
+                          <label style={{ ...sectionLabel, marginBottom: 5 }}>{label}</label>
                           <textarea defaultValue={(ex as any)[field] ?? ''} placeholder={placeholder}
                             onBlur={e => updateExchange(ex.id, field, e.target.value)}
-                            style={{ ...ta, minHeight: field === 'next_step' ? 56 : 80 }}
+                            style={{ ...ta, minHeight: field === 'next_step' ? 52 : 76 }}
                             onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
                         </div>
                       ))}
@@ -746,10 +831,10 @@ export default function JobDetailPage() {
             })}
           </div>
           <button onClick={addExchange}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: '#F5F5F0', border: '2px dashed #ddd', color: '#999', fontSize: 13, fontWeight: 700, padding: '13px 18px', borderRadius: 11, cursor: 'pointer', marginTop: 10, fontFamily: FONT }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', background: '#F9F9F7', border: '1.5px dashed #ddd', color: '#888', fontSize: 13, fontWeight: 700, padding: '12px 16px', borderRadius: 10, cursor: 'pointer', marginTop: 8, fontFamily: FONT }}
             onMouseOver={e => { const el = e.currentTarget; el.style.borderColor = '#F5C400'; el.style.color = '#111'; el.style.background = '#FFFDE7' }}
-            onMouseOut={e => { const el = e.currentTarget; el.style.borderColor = '#ddd'; el.style.color = '#999'; el.style.background = '#F5F5F0' }}>
-            <span style={{ width: 20, height: 20, background: '#ddd', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#fff', flexShrink: 0 }}>+</span>
+            onMouseOut={e => { const el = e.currentTarget; el.style.borderColor = '#ddd'; el.style.color = '#888'; el.style.background = '#F9F9F7' }}>
+            <span style={{ width: 19, height: 19, background: '#ddd', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#fff', flexShrink: 0 }}>+</span>
             Ajouter un échange
           </button>
         </div>
@@ -757,30 +842,34 @@ export default function JobDetailPage() {
         {/* DOCUMENTS + NOTES */}
         <div className="jfmj-docs-grid">
           <div style={{ ...card, marginBottom: 0 }}>
-            <span style={lbl}>Documents</span>
+            <span style={sectionLabel}>Documents</span>
             {[
               { sent: job.cv_sent, name: 'CV', url: job.cv_url },
               { sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url },
             ].map(doc => (
-              <div key={doc.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #F0F0F0' }}>
+              <div key={doc.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #F5F5F0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <div style={{ width: 22, height: 22, background: doc.sent ? '#111' : '#eee', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {doc.sent && <svg viewBox="0 0 12 12" fill="none" width="12" height="12"><path d="M2 6l3 3 5-5" stroke="#F5C400" strokeWidth="2" strokeLinecap="round" /></svg>}
+                    {doc.sent && <svg viewBox="0 0 12 12" fill="none" width="10" height="10"><path d="M2 6l3 3 5-5" stroke="#F5C400" strokeWidth="2.5" strokeLinecap="round" /></svg>}
                   </div>
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: '#333', margin: 0, fontFamily: FONT }}>{doc.name}</p>
-                    <p style={{ fontSize: 10, color: '#bbb', margin: 0, fontFamily: FONT }}>{doc.sent ? 'Envoyé — étape Postulé' : 'Non envoyé'}</p>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: '#222', margin: 0, fontFamily: FONT }}>{doc.name}</p>
+                    <p style={{ fontSize: 11, color: '#aaa', margin: 0, fontFamily: FONT, fontWeight: 500 }}>{doc.sent ? 'Envoyé — étape Postulé' : 'Non envoyé'}</p>
                   </div>
                 </div>
-                {doc.url && <button onClick={() => doc.url && window.open(doc.url, '_blank')} style={{ background: '#F5F5F0', color: '#111', fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 7, border: '1px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Voir</button>}
+                {doc.url && (
+                  <button onClick={() => doc.url && window.open(doc.url, '_blank')} style={{ background: '#F9F9F7', color: '#111', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 7, border: '1.5px solid #EBEBEB', cursor: 'pointer', fontFamily: FONT }}>
+                    Voir
+                  </button>
+                )}
               </div>
             ))}
           </div>
           <div style={{ ...card, marginBottom: 0 }}>
-            <span style={lbl}>Mes notes</span>
+            <span style={sectionLabel}>Mes notes</span>
             <textarea value={notes} onChange={e => handleNotesChange(e.target.value)}
               placeholder="Impressions générales, contacts, points à surveiller..."
-              style={{ ...ta, minHeight: 110 }}
+              style={{ ...ta, minHeight: 100 }}
               onFocus={e => { e.target.style.borderColor = '#F5C400' }}
               onBlur={e => { e.target.style.borderColor = '#eee' }} />
           </div>
@@ -788,12 +877,12 @@ export default function JobDetailPage() {
 
         {/* DESCRIPTION */}
         <div style={card}>
-          <span style={lbl}>Description du poste</span>
-          <div style={{ fontSize: 14, color: '#555', lineHeight: 1.8, maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden', position: 'relative', fontFamily: FONT }}>
+          <span style={sectionLabel}>Description du poste</span>
+          <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden', position: 'relative', fontFamily: FONT, fontWeight: 500 }}>
             {job.description}
             {!descExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(transparent, #fff)' }} />}
           </div>
-          <button onClick={() => setDescExpanded(v => !v)} style={{ background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800, border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', marginTop: 12, fontFamily: FONT, boxShadow: '2px 2px 0 #E8151B' }}>
+          <button onClick={() => setDescExpanded(v => !v)} style={{ background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800, border: 'none', borderRadius: 9, padding: '9px 18px', cursor: 'pointer', marginTop: 12, fontFamily: FONT, boxShadow: '2px 2px 0 #E8151B' }}>
             {descExpanded ? 'Réduire ↑' : 'Lire la description complète ↓'}
           </button>
         </div>
@@ -803,20 +892,19 @@ export default function JobDetailPage() {
       {/* MODALE SUPPRESSION ÉTAPE */}
       {stepToDelete && (
         <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 14, padding: 28, width: '100%', maxWidth: 420, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
-            <div style={{ fontSize: 28, marginBottom: 12, textAlign: 'center' }}>🗑️</div>
-            <h3 style={{ fontSize: 17, fontWeight: 900, color: '#111', marginBottom: 8, textAlign: 'center', fontFamily: FONT }}>Supprimer cette étape ?</h3>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 6, textAlign: 'center', lineHeight: 1.5, fontFamily: FONT }}>Vous êtes sur le point de supprimer l'étape</p>
-            <p style={{ fontSize: 15, fontWeight: 800, color: '#111', marginBottom: 20, textAlign: 'center', fontFamily: FONT }}>"{stepToDelete.label}"</p>
-            <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 20, textAlign: 'center', fontFamily: FONT }}>Cette action est définitive et ne peut pas être annulée.</p>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 400, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
+            <div style={{ fontSize: 26, marginBottom: 12, textAlign: 'center' }}>🗑️</div>
+            <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', marginBottom: 8, textAlign: 'center', fontFamily: FONT }}>Supprimer cette étape ?</h3>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 6, textAlign: 'center', lineHeight: 1.5, fontFamily: FONT }}>Vous êtes sur le point de supprimer l'étape</p>
+            <p style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>"{stepToDelete.label}"</p>
+            <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>Cette action est définitive.</p>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setStepToDelete(null)}
-                style={{ flex: 1, background: '#F5F5F0', color: '#666', fontSize: 13, fontWeight: 700, padding: '11px 0', borderRadius: 10, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
+              <button onClick={() => setStepToDelete(null)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
                 Annuler
               </button>
               <button onClick={async () => { await handleDeleteCustomStep(stepToDelete.id); setStepToDelete(null) }}
-                style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '11px 0', borderRadius: 10, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>
-                Supprimer définitivement
+                style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>
+                Supprimer
               </button>
             </div>
           </div>
