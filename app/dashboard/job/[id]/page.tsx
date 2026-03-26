@@ -59,7 +59,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: StepAction[] }> = {
       { icon: '📄', title: 'CV', sub: 'Envoyé à cette étape', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Envoyée à cette étape', type: 'included' },
       { icon: '🔔', title: 'Programmer une relance', sub: 'Dans 7 à 10 jours', type: 'action' },
-      { icon: '📋', title: 'Confirmer la réception', sub: 'Email de confirmation reçu ?', type: 'action' },
+      { icon: '📏', title: 'Confirmer la réception', sub: 'Email de confirmation reçu ?', type: 'action' },
     ],
   },
   phone_interview: {
@@ -68,7 +68,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: StepAction[] }> = {
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
       { icon: '🎯', title: 'Préparer mon pitch', sub: '2 min chrono', type: 'action' },
-      { icon: '❓', title: 'Mes questions', sub: 'À poser au recruteur', type: 'action' },
+      { icon: '⏰', title: 'Mes questions', sub: 'À poser au recruteur', type: 'action' },
       { icon: '📅', title: 'Ajouter un rappel', sub: "Date & heure de l'appel", type: 'action' },
       { icon: '🔔', title: 'Note de remerciement', sub: 'Email post-entretien', type: 'new' },
     ],
@@ -78,10 +78,10 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: StepAction[] }> = {
     actions: [
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
-      { icon: '🧠', title: 'Méthode STAR', sub: 'Préparer mes exemples', type: 'new' },
-      { icon: '💬', title: 'Questions RH types', sub: 'Points forts, faiblesse...', type: 'new' },
+      { icon: '⭐', title: 'Méthode STAR', sub: 'Préparer mes exemples', type: 'new' },
+      { icon: '🧠', title: 'Questions RH types', sub: 'Points forts, faiblesse...', type: 'new' },
       { icon: '🏢', title: "Connaître l'entreprise", sub: 'Valeurs, actualités, équipe', type: 'action' },
-      { icon: '❓', title: 'Mes questions RH', sub: 'Culture, équipe, mobilité', type: 'action' },
+      { icon: '⏰', title: 'Mes questions RH', sub: 'Culture, équipe, mobilité', type: 'action' },
       { icon: '🔔', title: 'Note de remerciement', sub: 'Email post-entretien', type: 'new' },
     ],
   },
@@ -91,18 +91,18 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: StepAction[] }> = {
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
       { icon: '📊', title: 'Portfolio / cas pratique', sub: 'Exemples chiffrés', type: 'new' },
-      { icon: '🔬', title: 'Analyse du poste', sub: 'Enjeux, priorités, KPIs', type: 'new' },
-      { icon: '👥', title: 'Références professionnelles', sub: 'Prévenir ses contacts', type: 'new' },
-      { icon: '❓', title: 'Mes questions manager', sub: 'Équipe, objectifs, style', type: 'action' },
+      { icon: '🔧', title: 'Analyse du poste', sub: 'Enjeux, priorités, KPIs', type: 'new' },
+      { icon: '👤', title: 'Références professionnelles', sub: 'Prévenir ses contacts', type: 'new' },
+      { icon: '⏰', title: 'Mes questions manager', sub: 'Équipe, objectifs, style', type: 'action' },
       { icon: '🔔', title: 'Note de remerciement', sub: 'Email post-entretien', type: 'new' },
     ],
   },
   offer: {
     desc: "Félicitations ! Prenez le temps d'analyser l'offre avant de répondre. Négociez si nécessaire.",
     actions: [
-      { icon: '📑', title: 'Analyser le contrat', sub: 'Salaire, avantages, conditions', type: 'new' },
+      { icon: '📋', title: 'Analyser le contrat', sub: 'Salaire, avantages, conditions', type: 'new' },
       { icon: '⚖️', title: 'Comparer les offres', sub: 'Si vous avez plusieurs pistes', type: 'new' },
-      { icon: '💰', title: 'Négocier le salaire', sub: 'Conseils & arguments', type: 'new' },
+      { icon: '💬', title: 'Négocier le salaire', sub: 'Conseils & arguments', type: 'new' },
       { icon: '📅', title: 'Date de prise de poste', sub: 'Préavis, disponibilité', type: 'action' },
       { icon: '✅', title: "Accepter l'offre", sub: 'Confirmer par écrit', type: 'action' },
       { icon: '❌', title: 'Refuser poliment', sub: 'Garder le contact', type: 'action' },
@@ -140,7 +140,7 @@ function DraggableStep({
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: step.id,
-    disabled: !isCustom, // seules les étapes custom sont draggables
+    disabled: !isCustom,
     data: { stepId: step.id },
   })
 
@@ -243,7 +243,7 @@ export default function JobDetailPage() {
   const [newStepName, setNewStepName] = useState('')
   const [newStepPos, setNewStepPos] = useState(5)
   const [stepToDelete, setStepToDelete] = useState<{ id: string; label: string } | null>(null)
-  const [activeStepId, setActiveStepId] = useState<string | null>(null) // drag overlay
+  const [activeStepId, setActiveStepId] = useState<string | null>(null)
   const [overDropZone, setOverDropZone] = useState<string | null>(null)
   const notesTimer = useRef<NodeJS.Timeout | null>(null)
 
@@ -299,14 +299,11 @@ export default function JobDetailPage() {
   const currentStepId = job?.sub_status || job?.status || 'to_apply'
   const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId)
 
-  // ✅ handleStepClick — utilise PATCH (corrigé)
   const handleStepClick = async (stepId: string) => {
     if (!job) return
     const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
     const patch = { sub_status: stepId, status: globalStatus }
-    // Optimiste
     setJob(prev => prev ? { ...prev, ...patch } : prev)
-    // Persistance via PATCH
     const res = await fetch(`/api/jobs?id=${jobId}`, {
       method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch),
     })
@@ -343,7 +340,6 @@ export default function JobDetailPage() {
     }
   }
 
-  // ─── Drag & drop sur les étapes custom ─────────────────────────────────────
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
@@ -364,12 +360,11 @@ export default function JobDetailPage() {
     if (!over) return
 
     const draggedId = active.id as string
-    const dropZoneId = over.id as string // format: "after-{stepId}" ou "before-{stepId}"
+    const dropZoneId = over.id as string
 
     const draggedStep = customSteps.find(s => s.id === draggedId)
     if (!draggedStep) return
 
-    // Extraire l'index cible depuis le drop zone id
     const match = dropZoneId.match(/^(after|before)-(.+)$/)
     if (!match) return
     const [, position, targetStepId] = match
@@ -378,7 +373,6 @@ export default function JobDetailPage() {
     const targetStep = customSteps.find(s => s.id === targetStepId)
     if (!targetStep || draggedId === targetStepId) return
 
-    // Recalcul des positions
     const withoutDragged = sorted.filter(s => s.id !== draggedId)
     const targetIdx = withoutDragged.findIndex(s => s.id === targetStepId)
     const insertIdx = position === 'after' ? targetIdx + 1 : targetIdx
@@ -388,11 +382,9 @@ export default function JobDetailPage() {
       ...withoutDragged.slice(insertIdx),
     ]
 
-    // Recalcul positions numériques
     const updated = reordered.map((s, i) => ({ ...s, position: (i + 1) * 1000 }))
     setCustomSteps(updated)
 
-    // Persister en BDD
     const supabase = createClient()
     await Promise.all(
       updated.map(s =>
@@ -466,17 +458,40 @@ export default function JobDetailPage() {
   const inp: React.CSSProperties = { width: '100%', border: '1.5px solid #eee', borderRadius: 9, padding: '9px 12px', fontSize: 13, fontFamily: FONT, outline: 'none', background: '#fff', color: '#111', boxSizing: 'border-box' }
   const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 80, lineHeight: '1.6' }
 
-  // Étape ghost pour DragOverlay
   const activeStep = activeStepId ? allSteps.find(s => s.id === activeStepId) : null
 
   return (
     <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, width: '100%' }}>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 32px 64px' }}>
+
+      {/* ── Responsive styles ── */}
+      <style>{`
+        .jfmj-container {
+          width: 100%;
+          padding: 24px 32px 64px;
+          box-sizing: border-box;
+        }
+        .jfmj-docs-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+          margin-bottom: 18px;
+        }
+        @media (max-width: 768px) {
+          .jfmj-container {
+            padding: 16px 16px 48px;
+          }
+          .jfmj-docs-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      <div className="jfmj-container">
 
         {/* HEADER */}
-        <div style={{ background: '#111', borderRadius: 14, padding: '22px 28px', marginBottom: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, border: '2px solid #111', boxShadow: '3px 3px 0 #E8151B' }}>
-          <div style={{ flex: 1 }}>
+        <div style={{ background: '#111', borderRadius: 14, padding: '22px 28px', marginBottom: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, border: '2px solid #111', boxShadow: '3px 3px 0 #E8151B', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontSize: 11, color: '#888', marginBottom: 8, fontFamily: FONT }}>
               <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#F5C400', fontWeight: 700, cursor: 'pointer', fontFamily: FONT, fontSize: 11, padding: 0 }}>← Mes candidatures</button>
               {' / '}<span style={{ color: '#888' }}>{job.company}</span>
@@ -490,7 +505,7 @@ export default function JobDetailPage() {
             {salaryDisplay && (
               <div style={{ borderTop: '1px solid #2a2a2a', paddingTop: 14 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#666', marginBottom: 4, fontFamily: FONT }}>Salaire</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 20, fontWeight: 900, color: '#F5C400', fontFamily: FONT }}>{salaryDisplay}</span>
                   <span style={{ background: '#1a1a1a', color: '#aaa', fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20, border: '1px solid #333', fontFamily: FONT }}>Brut / an</span>
                 </div>
@@ -511,7 +526,7 @@ export default function JobDetailPage() {
 
         {/* SCORE ATS */}
         {(atsScore !== null || atsKw.present.length > 0 || atsKw.missing.length > 0) && (
-          <div style={{ ...card, boxShadow: '3px 3px 0 #F5C400', border: '2px solid #F5C400', display: 'flex', alignItems: 'center', gap: 24 }}>
+          <div style={{ ...card, boxShadow: '3px 3px 0 #F5C400', border: '2px solid #F5C400', display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
             {atsScore !== null && (
               <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
                 <svg width="80" height="80" viewBox="0 0 80 80" style={{ transform: 'rotate(-90deg)', display: 'block' }}>
@@ -524,7 +539,7 @@ export default function JobDetailPage() {
                 </div>
               </div>
             )}
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
               <h3 style={{ fontSize: 15, fontWeight: 900, color: '#111', marginBottom: 4, fontFamily: FONT }}>Score ATS — Compatibilité avec l'offre</h3>
               <p style={{ fontSize: 13, color: '#666', lineHeight: 1.5, marginBottom: 10, fontFamily: FONT }}>
                 {atsScore !== null && atsScore >= 70 ? 'Bonne compatibilité globale. Quelques mots-clés à ajouter.' : 'Des mots-clés importants manquent dans votre CV.'}
@@ -537,7 +552,7 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {/* PARCOURS avec drag & drop sur étapes custom */}
+        {/* PARCOURS avec drag & drop */}
         <div style={card}>
           <span style={lbl}>Parcours de candidature</span>
           <p style={{ fontSize: 11, color: '#bbb', fontWeight: 600, marginBottom: 12, fontFamily: FONT }}>
@@ -558,7 +573,6 @@ export default function JobDetailPage() {
 
                 return (
                   <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 80 }}>
-                    {/* Connecteur de progression */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
                       {idx < allSteps.length - 1 && (
                         <div style={{ position: 'absolute', top: 18, left: 'calc(50% + 18px)', right: 'calc(-50% + 18px)', height: 3, background: isDone ? '#F5C400' : '#E5E5E5', zIndex: 0 }} />
@@ -571,8 +585,6 @@ export default function JobDetailPage() {
                         allStepsLength={allSteps.length}
                       />
                     </div>
-
-                    {/* Zone de dépôt entre étapes (pour les étapes custom) */}
                     {isCustom && idx < allSteps.length - 1 && (
                       <DropZone id={`after-${step.id}`} isOver={overDropZone === `after-${step.id}`} />
                     )}
@@ -643,7 +655,7 @@ export default function JobDetailPage() {
         {/* BLOC ÉTAPE ACTIVE */}
         {stepData && (
           <div style={{ background: '#FFFDE7', borderRadius: 14, padding: '20px 26px', marginBottom: 18, border: '2px solid #F5C400', boxShadow: '3px 3px 0 #F5C400' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
               <span style={{ background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '3px 12px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONT }}>Étape {currentStepIndex + 1} — En cours</span>
               <span style={{ fontSize: 16, fontWeight: 900, color: '#111', fontFamily: FONT }}>{allSteps.find(s => s.id === currentStepId)?.label}</span>
             </div>
@@ -690,7 +702,7 @@ export default function JobDetailPage() {
                   </div>
                   {isOpen && (
                     <div style={{ padding: 16, borderTop: '1px solid #F0F0F0' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 14 }}>
                         {[
                           { field: 'title', label: 'Titre', type: 'text', val: ex.title },
                           { field: 'exchange_type', label: 'Type', type: 'select', val: ex.exchange_type },
@@ -743,7 +755,7 @@ export default function JobDetailPage() {
         </div>
 
         {/* DOCUMENTS + NOTES */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
+        <div className="jfmj-docs-grid">
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={lbl}>Documents</span>
             {[
