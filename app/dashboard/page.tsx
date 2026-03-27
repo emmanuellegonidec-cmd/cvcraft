@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const [triggerAddContact, setTriggerAddContact] = useState(0);
   const [newJob, setNewJob] = useState<NewJobState>({ ...EMPTY_JOB });
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
-  const [addJobMode, setAddJobMode] = useState<null | 'url' | 'manual'>(null);
+  const [addJobMode, setAddJobMode] = useState<null | 'url' | 'manual' | 'spontaneous'>(null);
   const [importUrl, setImportUrl] = useState('');
   const [importError, setImportError] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
@@ -348,8 +348,8 @@ export default function DashboardPage() {
               onJobClick={setSelectedJob}
               onAddJob={openAddJobModal}
               onOpenSettings={() => setShowSettings(true)}
-              onRefresh={handleRefresh}          // ✅ refetch au retour sur la page
-              onStatusChange={updateJobStatus}   // ✅ drag & drop → PATCH BDD
+              onRefresh={handleRefresh}
+              onStatusChange={updateJobStatus}
             />
           )}
           {view === 'list' && (
