@@ -24,16 +24,16 @@ interface Job {
   cv_sent: boolean; cover_letter_sent: boolean; cv_url: string | null; cover_letter_url: string | null
   ats_score: number | null; ats_keywords: { present: string[]; missing: string[] } | null
   created_at: string; applied_at: string | null
+  interview_at: string | null; interview_time: string | null; interview_time_end: string | null
+  interview_type: string | null; interview_contact_id: string | null
+  interview_location: string | null; interview_link: string | null; interview_phone: string | null
 }
 
+interface ContactMin { id: string; name: string; role?: string | null; company?: string | null }
+
 interface StepActionRow {
-  id: string
-  title: string
-  icon: string
-  sub: string
-  position: number
-  is_custom: boolean
-  type: 'included' | 'action' | 'new'
+  id: string; title: string; icon: string; sub: string; position: number
+  is_custom: boolean; type: 'included' | 'action' | 'new'
 }
 
 const BASE_STEPS = [
@@ -44,6 +44,8 @@ const BASE_STEPS = [
   { id: 'manager_interview', label: 'Entretien manager',      num: 5 },
   { id: 'offer',             label: 'Offre reçue',            num: 6 },
 ]
+
+const INTERVIEW_STEP_IDS = ['phone_interview', 'hr_interview', 'manager_interview']
 
 const STATUS_MAP: Record<string, string> = {
   to_apply: 'to_apply', applied: 'applied',
@@ -68,6 +70,12 @@ const SUB_STATUS_LABELS: Record<string, string> = {
   to_apply: 'Envie de postuler', applied: 'Postulé',
   phone_interview: 'Entretien tél.', hr_interview: 'Entretien RH',
   manager_interview: 'Entretien manager', offer: 'Offre reçue',
+}
+
+const INTERVIEW_TYPE_LABELS: Record<string, string> = {
+  telephone: '📞 Téléphone',
+  visio: '💻 Visio',
+  presentiel: '🏢 Présentiel',
 }
 
 interface StepAction { icon: string; title: string; sub: string; type: 'included' | 'action' | 'new' }
@@ -164,30 +172,18 @@ function authHeaders(): HeadersInit {
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect: (id: string) => void }) {
   const [jobs, setJobs] = useState<Job[]>([])
-
   useEffect(() => {
     const supabase = createClient()
     supabase.from('jobs').select('*').order('created_at', { ascending: false }).then(({ data }) => {
       if (data) setJobs(data)
     })
   }, [])
-
   return (
-    <div style={{
-      width: 280, flexShrink: 0,
-      position: 'sticky', top: 0, height: '100vh',
-      overflowY: 'auto', overflowX: 'hidden',
-      background: '#fff',
-      borderRight: '1.5px solid #EBEBEB',
-      display: 'flex', flexDirection: 'column',
-      fontFamily: FONT,
-    }}>
+    <div style={{ width: 280, flexShrink: 0, position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', overflowX: 'hidden', background: '#fff', borderRight: '1.5px solid #EBEBEB', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
       <div style={{ padding: '18px 16px 14px', borderBottom: '1.5px solid #EBEBEB', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 13, fontWeight: 800, color: '#111', letterSpacing: '-0.2px' }}>Mes candidatures</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#888', background: '#F5F5F0', padding: '2px 8px', borderRadius: 20 }}>
-            {jobs.length}
-          </span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#888', background: '#F5F5F0', padding: '2px 8px', borderRadius: 20 }}>{jobs.length}</span>
         </div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -197,26 +193,14 @@ function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect
           const stepLabel = job.sub_status ? (SUB_STATUS_LABELS[job.sub_status] ?? STATUS_LABELS[job.status]) : STATUS_LABELS[job.status]
           const dateRef = job.applied_at || job.created_at
           return (
-            <div
-              key={job.id}
-              onClick={() => onSelect(job.id)}
-              style={{ padding: '12px 16px', borderBottom: '1px solid #F5F5F0', cursor: 'pointer', background: isActive ? '#111' : 'transparent', transition: 'background 0.1s' }}
+            <div key={job.id} onClick={() => onSelect(job.id)} style={{ padding: '12px 16px', borderBottom: '1px solid #F5F5F0', cursor: 'pointer', background: isActive ? '#111' : 'transparent', transition: 'background 0.1s' }}
               onMouseOver={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#F9F9F7' }}
-              onMouseOut={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 4, color: isActive ? '#fff' : '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {job.title}
-              </div>
-              <div style={{ fontSize: 12, color: isActive ? '#aaa' : '#666', marginBottom: 7, fontWeight: 500 }}>
-                {job.company}{job.location ? ` · ${job.location}` : ''}
-              </div>
+              onMouseOut={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 4, color: isActive ? '#fff' : '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+              <div style={{ fontSize: 12, color: isActive ? '#aaa' : '#666', marginBottom: 7, fontWeight: 500 }}>{job.company}{job.location ? ` · ${job.location}` : ''}</div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: isActive ? '#222' : statusColor.bg, color: isActive ? '#F5C400' : statusColor.color }}>
-                  {stepLabel}
-                </span>
-                <span style={{ fontSize: 10, color: isActive ? '#666' : '#bbb', fontWeight: 600, flexShrink: 0 }}>
-                  {formatDateShort(dateRef)}
-                </span>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: isActive ? '#222' : statusColor.bg, color: isActive ? '#F5C400' : statusColor.color }}>{stepLabel}</span>
+                <span style={{ fontSize: 10, color: isActive ? '#666' : '#bbb', fontWeight: 600, flexShrink: 0 }}>{formatDateShort(dateRef)}</span>
               </div>
             </div>
           )
@@ -227,97 +211,44 @@ function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect
 }
 
 // ─── Bulle d'étape draggable ──────────────────────────────────────────────────
-function DraggableStep({
-  step, isActive, isDone, isCustom,
-  onStepClick, onDeleteRequest,
-}: {
-  step: { id: string; label: string; num: number }
-  isActive: boolean; isDone: boolean; isCustom: boolean
-  currentStepId: string
-  onStepClick: (id: string) => void
-  onDeleteRequest: (id: string, label: string) => void
-  allStepsLength: number
+function DraggableStep({ step, isActive, isDone, isCustom, onStepClick, onDeleteRequest }: {
+  step: { id: string; label: string; num: number }; isActive: boolean; isDone: boolean; isCustom: boolean
+  currentStepId: string; onStepClick: (id: string) => void; onDeleteRequest: (id: string, label: string) => void; allStepsLength: number
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: step.id, disabled: !isCustom, data: { stepId: step.id },
-  })
-
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: step.id, disabled: !isCustom, data: { stepId: step.id } })
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 72, position: 'relative', opacity: isDragging ? 0.4 : 1, transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined, zIndex: isDragging ? 50 : 1 }}>
-      <div
-        ref={isCustom ? setNodeRef : undefined}
-        {...(isCustom ? { ...listeners, ...attributes } : {})}
-        onClick={() => onStepClick(step.id)}
-        title={isCustom ? 'Glisser pour réordonner' : undefined}
-        style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1, flexShrink: 0, cursor: isCustom ? (isDragging ? 'grabbing' : 'grab') : 'pointer', background: isActive ? '#111' : isDone ? '#F5C400' : '#fff', border: `2.5px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#DEDEDE'}`, color: isActive ? '#F5C400' : isDone ? '#111' : '#ccc', boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.18)' : 'none', fontFamily: FONT, touchAction: 'none' }}
-      >
+      <div ref={isCustom ? setNodeRef : undefined} {...(isCustom ? { ...listeners, ...attributes } : {})} onClick={() => onStepClick(step.id)} title={isCustom ? 'Glisser pour réordonner' : undefined}
+        style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1, flexShrink: 0, cursor: isCustom ? (isDragging ? 'grabbing' : 'grab') : 'pointer', background: isActive ? '#111' : isDone ? '#F5C400' : '#fff', border: `2.5px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#DEDEDE'}`, color: isActive ? '#F5C400' : isDone ? '#111' : '#ccc', boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.18)' : 'none', fontFamily: FONT, touchAction: 'none' }}>
         {step.num}
       </div>
-      <p onClick={() => onStepClick(step.id)} style={{ fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 6, lineHeight: 1.3, color: isActive ? '#111' : isDone ? '#777' : '#ccc', fontFamily: FONT, cursor: 'pointer', maxWidth: 70 }}>
-        {step.label}
-      </p>
+      <p onClick={() => onStepClick(step.id)} style={{ fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 6, lineHeight: 1.3, color: isActive ? '#111' : isDone ? '#777' : '#ccc', fontFamily: FONT, cursor: 'pointer', maxWidth: 70 }}>{step.label}</p>
       {isCustom && (
-        <button
-          onClick={e => { e.stopPropagation(); onDeleteRequest(step.id, step.label) }}
-          title="Supprimer cette étape"
-          style={{ position: 'absolute', top: -5, right: 'calc(50% - 27px)', width: 15, height: 15, borderRadius: '50%', background: '#E8151B', border: 'none', color: '#fff', fontSize: 9, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, lineHeight: 1 }}
-        >×</button>
+        <button onClick={e => { e.stopPropagation(); onDeleteRequest(step.id, step.label) }} title="Supprimer cette étape"
+          style={{ position: 'absolute', top: -5, right: 'calc(50% - 27px)', width: 15, height: 15, borderRadius: '50%', background: '#E8151B', border: 'none', color: '#fff', fontSize: 9, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, lineHeight: 1 }}>×</button>
       )}
     </div>
   )
 }
 
-// ─── Zone de dépôt pour étapes ────────────────────────────────────────────────
 function DropZone({ id, isOver }: { id: string; isOver: boolean }) {
   const { setNodeRef } = useDroppable({ id })
-  return (
-    <div ref={setNodeRef} style={{ width: isOver ? 28 : 12, height: 34, borderRadius: 6, background: isOver ? '#F5C400' : 'transparent', border: isOver ? '2px dashed #111' : '2px dashed transparent', flexShrink: 0, transition: 'all .15s', alignSelf: 'center', marginBottom: 20 }} />
-  )
+  return <div ref={setNodeRef} style={{ width: isOver ? 28 : 12, height: 34, borderRadius: 6, background: isOver ? '#F5C400' : 'transparent', border: isOver ? '2px dashed #111' : '2px dashed transparent', flexShrink: 0, transition: 'all .15s', alignSelf: 'center', marginBottom: 20 }} />
 }
 
-// ─── Carte d'action draggable ─────────────────────────────────────────────────
-function DraggableActionCard({
-  action, dragId, onDelete,
-}: {
-  action: StepActionRow
-  dragId: string
-  onDelete: (id: string, title: string) => void
-}) {
+function DraggableActionCard({ action, dragId, onDelete }: { action: StepActionRow; dragId: string; onDelete: (id: string, title: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId })
-
   const borderColor = action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#EBEBEB'
   const bgColor = action.type === 'included' ? '#F1F8E9' : '#fff'
-
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        background: bgColor,
-        border: `1.5px solid ${isDragging ? '#F5C400' : borderColor}`,
-        borderRadius: 10,
-        padding: '12px 14px',
-        cursor: isDragging ? 'grabbing' : 'grab',
-        opacity: isDragging ? 0.5 : 1,
-        transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
-        zIndex: isDragging ? 50 : 1,
-        position: 'relative',
-        touchAction: 'none',
-        userSelect: 'none',
-      }}
-      {...listeners}
-      {...attributes}
-    >
+    <div ref={setNodeRef} style={{ background: bgColor, border: `1.5px solid ${isDragging ? '#F5C400' : borderColor}`, borderRadius: 10, padding: '12px 14px', cursor: isDragging ? 'grabbing' : 'grab', opacity: isDragging ? 0.5 : 1, transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined, zIndex: isDragging ? 50 : 1, position: 'relative', touchAction: 'none', userSelect: 'none' }} {...listeners} {...attributes}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
         <span style={{ fontSize: 15, display: 'block', marginBottom: 5 }}>{action.icon}</span>
         <div style={{ display: 'flex', gap: 4, marginTop: -2 }}>
           <span style={{ fontSize: 9, color: '#ccc', cursor: 'grab', lineHeight: 1, paddingTop: 2 }}>⠿</span>
           {action.is_custom && (
-            <button
-              onPointerDown={e => e.stopPropagation()}
-              onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
-              style={{ background: 'none', border: 'none', color: '#ccc', fontSize: 12, cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              title="Supprimer cette action"
-            >×</button>
+            <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
+              style={{ background: 'none', border: 'none', color: '#ccc', fontSize: 12, cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Supprimer cette action">×</button>
           )}
         </div>
       </div>
@@ -331,12 +262,9 @@ function DraggableActionCard({
   )
 }
 
-// ─── Zone de dépôt entre cartes d'action ─────────────────────────────────────
 function ActionDropZone({ id, isOver }: { id: string; isOver: boolean }) {
   const { setNodeRef } = useDroppable({ id })
-  return (
-    <div ref={setNodeRef} style={{ height: isOver ? 44 : 6, borderRadius: 8, background: isOver ? '#FFFDE7' : 'transparent', border: isOver ? '2px dashed #F5C400' : '2px dashed transparent', transition: 'all .15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gridColumn: isOver ? '1 / -1' : undefined }} />
-  )
+  return <div ref={setNodeRef} style={{ height: isOver ? 44 : 6, borderRadius: 8, background: isOver ? '#FFFDE7' : 'transparent', border: isOver ? '2px dashed #F5C400' : '2px dashed transparent', transition: 'all .15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gridColumn: isOver ? '1 / -1' : undefined }} />
 }
 
 // ─── Page principale ──────────────────────────────────────────────────────────
@@ -361,7 +289,6 @@ export default function JobDetailPage() {
   const [overDropZone, setOverDropZone] = useState<string | null>(null)
   const notesTimer = useRef<NodeJS.Timeout | null>(null)
 
-  // ── State pour les cartes d'action ─────────────────────────────────────────
   const [stepActions, setStepActions] = useState<StepActionRow[]>([])
   const [actionsLoading, setActionsLoading] = useState(false)
   const [activeActionId, setActiveActionId] = useState<string | null>(null)
@@ -372,6 +299,9 @@ export default function JobDetailPage() {
   const [newActionIcon, setNewActionIcon] = useState('⭐')
   const [newActionPosition, setNewActionPosition] = useState<number>(-1)
   const [actionToDelete, setActionToDelete] = useState<{ id: string; title: string } | null>(null)
+
+  // ── Contacts pour l'entretien ───────────────────────────────────────────────
+  const [contacts, setContacts] = useState<ContactMin[]>([])
 
   const loadJob = useCallback(async () => {
     const supabase = createClient()
@@ -384,8 +314,7 @@ export default function JobDetailPage() {
   const loadCustomSteps = useCallback(async () => {
     const supabase = createClient()
     const { data } = await supabase.from('pipeline_stages').select('*').eq('job_id', jobId).order('position')
-    if (data && data.length > 0)
-      setCustomSteps(data.map((s: any) => ({ id: s.id, label: s.label, position: s.position })))
+    if (data && data.length > 0) setCustomSteps(data.map((s: any) => ({ id: s.id, label: s.label, position: s.position })))
   }, [jobId])
 
   const loadExchanges = useCallback(async () => {
@@ -393,67 +322,46 @@ export default function JobDetailPage() {
     if (res.ok) {
       const data: JobExchange[] = await res.json()
       setExchanges(data)
-      if (data.length > 0) {
-        const s = new Set<string>(); s.add(data[data.length - 1].id); setOpenExchanges(s)
-      }
+      if (data.length > 0) { const s = new Set<string>(); s.add(data[data.length - 1].id); setOpenExchanges(s) }
     }
   }, [jobId])
 
-  useEffect(() => {
-    Promise.all([loadJob(), loadCustomSteps(), loadExchanges()]).finally(() => setLoading(false))
-  }, [loadJob, loadCustomSteps, loadExchanges])
+  const loadContacts = useCallback(async () => {
+    const res = await fetch('/api/contacts', { headers: authHeaders() })
+    if (res.ok) { const data = await res.json(); if (data.contacts) setContacts(data.contacts) }
+  }, [])
 
-  // ── Charger / initialiser les cartes d'action pour une étape ───────────────
+  useEffect(() => {
+    Promise.all([loadJob(), loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
+  }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
+
   const loadStepActions = useCallback(async (stepId: string, uid: string) => {
     if (!stepId || !uid) return
     setActionsLoading(true)
     const supabase = createClient()
-    const { data: existing } = await supabase
-      .from('job_step_actions')
-      .select('*')
-      .eq('job_id', jobId)
-      .eq('step_id', stepId)
-      .order('position')
-
+    const { data: existing } = await supabase.from('job_step_actions').select('*').eq('job_id', jobId).eq('step_id', stepId).order('position')
     if (existing && existing.length > 0) {
-      setStepActions(existing.map((r: any) => ({
-        id: r.id, title: r.title, icon: r.icon, sub: r.sub,
-        position: r.position, is_custom: r.is_custom,
-        type: r.is_custom ? 'action' : (r.type ?? 'action'),
-      })))
+      setStepActions(existing.map((r: any) => ({ id: r.id, title: r.title, icon: r.icon, sub: r.sub, position: r.position, is_custom: r.is_custom, type: r.is_custom ? 'action' : (r.type ?? 'action') })))
     } else {
-      // Initialiser avec les actions de base
       const baseData = STEP_ACTIONS[stepId] || STEP_ACTIONS['hr_interview']
-      const rows = baseData.actions.map((a, i) => ({
-        user_id: uid,
-        job_id: jobId,
-        step_id: stepId,
-        title: a.title,
-        icon: a.icon,
-        sub: a.sub,
-        position: (i + 1) * 1000,
-        is_custom: false,
-        type: a.type,
-      }))
+      const rows = baseData.actions.map((a, i) => ({ user_id: uid, job_id: jobId, step_id: stepId, title: a.title, icon: a.icon, sub: a.sub, position: (i + 1) * 1000, is_custom: false, type: a.type }))
       const { data: inserted } = await supabase.from('job_step_actions').insert(rows).select()
-      if (inserted) {
-        setStepActions(inserted.map((r: any) => ({
-          id: r.id, title: r.title, icon: r.icon, sub: r.sub,
-          position: r.position, is_custom: r.is_custom,
-          type: r.type ?? 'action',
-        })))
-      }
+      if (inserted) setStepActions(inserted.map((r: any) => ({ id: r.id, title: r.title, icon: r.icon, sub: r.sub, position: r.position, is_custom: r.is_custom, type: r.type ?? 'action' })))
     }
     setActionsLoading(false)
+  }, [jobId])
+
+  // Patch un champ du job (interview ou autre)
+  const patchJob = useCallback(async (field: string, value: any) => {
+    setJob(prev => prev ? { ...prev, [field]: value } : prev)
+    await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }) })
   }, [jobId])
 
   const handleNotesChange = (val: string) => {
     setNotes(val)
     if (notesTimer.current) clearTimeout(notesTimer.current)
     notesTimer.current = setTimeout(async () => {
-      await fetch(`/api/jobs?id=${jobId}`, {
-        method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ notes: val }),
-      })
+      await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ notes: val }) })
     }, 800)
   }
 
@@ -467,34 +375,27 @@ export default function JobDetailPage() {
   const currentStepId = job?.sub_status || job?.status || 'to_apply'
   const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId)
 
+  const isInterviewStep = INTERVIEW_STEP_IDS.includes(currentStepId) || (customSteps.some(cs => cs.id === currentStepId))
+
   const handleStepClick = async (stepId: string) => {
     if (!job) return
     const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
     const patch = { sub_status: stepId, status: globalStatus }
     setJob(prev => prev ? { ...prev, ...patch } : prev)
-    const res = await fetch(`/api/jobs?id=${jobId}`, {
-      method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch),
-    })
+    const res = await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch) })
     if (res.ok) { const data = await res.json(); if (data.job) setJob(data.job) }
-    // Charger les actions pour cette étape
     if (userId) await loadStepActions(stepId, userId)
   }
 
-  // Charger les actions au montage une fois le job chargé
   useEffect(() => {
-    if (job && userId) {
-      const stepId = job.sub_status || job.status || 'to_apply'
-      loadStepActions(stepId, userId)
-    }
+    if (job && userId) { const stepId = job.sub_status || job.status || 'to_apply'; loadStepActions(stepId, userId) }
   }, [job?.id, userId])
 
   const handleAddCustomStep = async () => {
     if (!newStepName.trim() || !userId) return
     const supabase = createClient()
     const position = (newStepPos + 1) * 1000 + (Date.now() % 100)
-    const { data } = await supabase.from('pipeline_stages')
-      .insert({ user_id: userId, job_id: jobId, label: newStepName.trim(), color: '#F5C400', position })
-      .select().single()
+    const { data } = await supabase.from('pipeline_stages').insert({ user_id: userId, job_id: jobId, label: newStepName.trim(), color: '#F5C400', position }).select().single()
     if (data) setCustomSteps(prev => [...prev, { id: data.id, label: data.label, position: data.position }])
     setNewStepName(''); setNewStepPos(allSteps.length - 2); setShowModal(false)
   }
@@ -510,44 +411,23 @@ export default function JobDetailPage() {
     }
   }
 
-  // ── Ajouter une carte d'action custom ──────────────────────────────────────
   const handleAddAction = async () => {
     if (!newActionTitle.trim() || !userId) return
     const supabase = createClient()
     const sorted = [...stepActions].sort((a, b) => a.position - b.position)
-    // Calculer la position selon le choix de l'utilisateur
     let insertPosition: number
     if (newActionPosition === -1 || newActionPosition >= sorted.length) {
-      // En dernier
       insertPosition = sorted.length > 0 ? Math.max(...sorted.map(a => a.position)) + 1000 : 1000
     } else {
-      // Après l'index choisi
       const afterCard = sorted[newActionPosition]
       const nextCard = sorted[newActionPosition + 1]
-      if (nextCard) {
-        insertPosition = Math.round((afterCard.position + nextCard.position) / 2)
-      } else {
-        insertPosition = afterCard.position + 1000
-      }
+      insertPosition = nextCard ? Math.round((afterCard.position + nextCard.position) / 2) : afterCard.position + 1000
     }
-    const { data } = await supabase.from('job_step_actions').insert({
-      user_id: userId,
-      job_id: jobId,
-      step_id: currentStepId,
-      title: newActionTitle.trim(),
-      icon: newActionIcon,
-      sub: newActionSub.trim(),
-      position: insertPosition,
-      is_custom: true,
-      type: 'action',
-    }).select().single()
-    if (data) {
-      setStepActions(prev => [...prev, { id: data.id, title: data.title, icon: data.icon, sub: data.sub, position: data.position, is_custom: true, type: 'action' }])
-    }
+    const { data } = await supabase.from('job_step_actions').insert({ user_id: userId, job_id: jobId, step_id: currentStepId, title: newActionTitle.trim(), icon: newActionIcon, sub: newActionSub.trim(), position: insertPosition, is_custom: true, type: 'action' }).select().single()
+    if (data) setStepActions(prev => [...prev, { id: data.id, title: data.title, icon: data.icon, sub: data.sub, position: data.position, is_custom: true, type: 'action' }])
     setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setNewActionPosition(-1); setShowAddAction(false)
   }
 
-  // ── Supprimer une carte d'action custom ────────────────────────────────────
   const confirmDeleteAction = async () => {
     if (!actionToDelete) return
     const supabase = createClient()
@@ -556,29 +436,20 @@ export default function JobDetailPage() {
     setActionToDelete(null)
   }
 
-  // ── DnD pour les étapes ────────────────────────────────────────────────────
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
-  )
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }))
+  const actionSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }))
 
   function handleStepDragStart(event: DragStartEvent) { setActiveStepId(event.active.id as string) }
   function handleStepDragOver(event: any) { setOverDropZone(event.over?.id ?? null) }
-
   async function handleStepDragEnd(event: DragEndEvent) {
     setActiveStepId(null); setOverDropZone(null)
     const { active, over } = event
     if (!over) return
-    const draggedId = active.id as string
-    const dropZoneId = over.id as string
-    const draggedStep = customSteps.find(s => s.id === draggedId)
-    if (!draggedStep) return
-    const match = dropZoneId.match(/^(after|before)-(.+)$/)
-    if (!match) return
+    const draggedId = active.id as string; const dropZoneId = over.id as string
+    const draggedStep = customSteps.find(s => s.id === draggedId); if (!draggedStep) return
+    const match = dropZoneId.match(/^(after|before)-(.+)$/); if (!match) return
     const [, position, targetStepId] = match
     const sorted = [...customSteps].sort((a, b) => a.position - b.position)
-    const targetStep = customSteps.find(s => s.id === targetStepId)
-    if (!targetStep || draggedId === targetStepId) return
     const withoutDragged = sorted.filter(s => s.id !== draggedId)
     const targetIdx = withoutDragged.findIndex(s => s.id === targetStepId)
     const insertIdx = position === 'after' ? targetIdx + 1 : targetIdx
@@ -589,35 +460,18 @@ export default function JobDetailPage() {
     await Promise.all(updated.map(s => supabase.from('pipeline_stages').update({ position: s.position }).eq('id', s.id)))
   }
 
-  // ── DnD pour les cartes d'action ───────────────────────────────────────────
-  const actionSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } })
-  )
-
-  function handleActionDragStart(event: DragStartEvent) {
-    setActiveActionId(event.active.id as string)
-  }
-  function handleActionDragOver(event: any) {
-    setOverActionZone(event.over?.id ?? null)
-  }
-
+  function handleActionDragStart(event: DragStartEvent) { setActiveActionId(event.active.id as string) }
+  function handleActionDragOver(event: any) { setOverActionZone(event.over?.id ?? null) }
   async function handleActionDragEnd(event: DragEndEvent) {
     setActiveActionId(null); setOverActionZone(null)
-    const { active, over } = event
-    if (!over) return
-    const draggedId = active.id as string
-    const dropZoneId = over.id as string
-    const match = dropZoneId.match(/^action-(before|after)-(.+)$/)
-    if (!match) return
-    const [, pos, targetId] = match
-    if (draggedId === targetId) return
+    const { active, over } = event; if (!over) return
+    const draggedId = active.id as string; const dropZoneId = over.id as string
+    const match = dropZoneId.match(/^action-(before|after)-(.+)$/); if (!match) return
+    const [, pos, targetId] = match; if (draggedId === targetId) return
     const sorted = [...stepActions].sort((a, b) => a.position - b.position)
-    const dragged = sorted.find(a => a.id === draggedId)
-    if (!dragged) return
+    const dragged = sorted.find(a => a.id === draggedId); if (!dragged) return
     const withoutDragged = sorted.filter(a => a.id !== draggedId)
-    const targetIdx = withoutDragged.findIndex(a => a.id === targetId)
-    if (targetIdx === -1) return
+    const targetIdx = withoutDragged.findIndex(a => a.id === targetId); if (targetIdx === -1) return
     const insertIdx = pos === 'after' ? targetIdx + 1 : targetIdx
     const reordered = [...withoutDragged.slice(0, insertIdx), dragged, ...withoutDragged.slice(insertIdx)]
     const updated = reordered.map((a, i) => ({ ...a, position: (i + 1) * 1000 }))
@@ -627,23 +481,12 @@ export default function JobDetailPage() {
   }
 
   const toggleExchange = (id: string) => {
-    setOpenExchanges(prev => {
-      const next = new Set(Array.from(prev))
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+    setOpenExchanges(prev => { const next = new Set(Array.from(prev)); next.has(id) ? next.delete(id) : next.add(id); return next })
   }
 
   const addExchange = async () => {
     const step = allSteps.find(s => s.id === currentStepId)
-    const res = await fetch('/api/jobs/exchanges', {
-      method: 'POST', headers: authHeaders(),
-      body: JSON.stringify({
-        job_id: jobId, title: 'Nouvel échange', exchange_type: 'autre',
-        exchange_date: new Date().toISOString().split('T')[0],
-        step_label: step?.label ?? null,
-      }),
-    })
+    const res = await fetch('/api/jobs/exchanges', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ job_id: jobId, title: 'Nouvel échange', exchange_type: 'autre', exchange_date: new Date().toISOString().split('T')[0], step_label: step?.label ?? null }) })
     if (res.ok) {
       const newEx: JobExchange = await res.json()
       setExchanges(prev => [...prev, newEx])
@@ -653,9 +496,7 @@ export default function JobDetailPage() {
 
   const updateExchange = async (id: string, field: string, value: string) => {
     setExchanges(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e))
-    await fetch(`/api/jobs/exchanges?id=${id}`, {
-      method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }),
-    })
+    await fetch(`/api/jobs/exchanges?id=${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }) })
   }
 
   const deleteExchange = async (id: string) => {
@@ -664,72 +505,45 @@ export default function JobDetailPage() {
     setExchanges(prev => prev.filter(e => e.id !== id))
   }
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}>
-      <p style={{ color: '#999', fontWeight: 700, fontSize: 15 }}>Chargement…</p>
-    </div>
-  )
-  if (!job) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}>
-      <p style={{ color: '#E8151B', fontWeight: 700, fontSize: 15 }}>Offre introuvable.</p>
-    </div>
-  )
+  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#999', fontWeight: 700, fontSize: 15 }}>Chargement…</p></div>
+  if (!job) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#E8151B', fontWeight: 700, fontSize: 15 }}>Offre introuvable.</p></div>
 
   const stepData = STEP_ACTIONS[currentStepId] || STEP_ACTIONS['hr_interview']
   const atsScore = job.ats_score ?? null
   const atsKw = job.ats_keywords ?? { present: [], missing: [] }
-  const salaryDisplay = job.salary_text
-    ? job.salary_text
-    : job.salary_min && job.salary_max
-      ? `${job.salary_min.toLocaleString('fr-FR')} € — ${job.salary_max.toLocaleString('fr-FR')} €`
-      : job.salary_min ? `À partir de ${job.salary_min.toLocaleString('fr-FR')} €`
-      : job.salary_max ? `Jusqu'à ${job.salary_max.toLocaleString('fr-FR')} €`
-      : null
+  const salaryDisplay = job.salary_text ? job.salary_text : job.salary_min && job.salary_max ? `${job.salary_min.toLocaleString('fr-FR')} € — ${job.salary_max.toLocaleString('fr-FR')} €` : job.salary_min ? `À partir de ${job.salary_min.toLocaleString('fr-FR')} €` : job.salary_max ? `Jusqu'à ${job.salary_max.toLocaleString('fr-FR')} €` : null
 
-  const card: React.CSSProperties = {
-    background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 14,
-    border: '1.5px solid #EBEBEB',
-  }
-  const sectionLabel: React.CSSProperties = {
-    fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px',
-    color: '#bbb', marginBottom: 14, display: 'block', fontFamily: FONT,
-  }
-  const inp: React.CSSProperties = {
-    width: '100%', border: '1.5px solid #eee', borderRadius: 8, padding: '9px 12px',
-    fontSize: 14, fontFamily: FONT, outline: 'none', background: '#fff', color: '#111',
-    boxSizing: 'border-box', fontWeight: 500,
-  }
+  const card: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '1.5px solid #EBEBEB' }
+  const sectionLabel: React.CSSProperties = { fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#bbb', marginBottom: 14, display: 'block', fontFamily: FONT }
+  const inp: React.CSSProperties = { width: '100%', border: '1.5px solid #eee', borderRadius: 8, padding: '9px 12px', fontSize: 14, fontFamily: FONT, outline: 'none', background: '#fff', color: '#111', boxSizing: 'border-box', fontWeight: 500 }
   const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 80, lineHeight: '1.6' }
 
   const activeStep = activeStepId ? allSteps.find(s => s.id === activeStepId) : null
   const activeAction = activeActionId ? stepActions.find(a => a.id === activeActionId) : null
   const sortedStepActions = [...stepActions].sort((a, b) => a.position - b.position)
 
+  const selectedContact = contacts.find(c => c.id === job.interview_contact_id)
+
   return (
     <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, display: 'flex' }}>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
-
       <style>{`
         .jfmj-sidebar { display: flex; }
         .jfmj-main { flex: 1; padding: 24px 28px 64px; min-width: 0; }
-        @media (max-width: 900px) {
-          .jfmj-sidebar { display: none; }
-          .jfmj-main { padding: 16px 16px 48px; }
-        }
+        @media (max-width: 900px) { .jfmj-sidebar { display: none; } .jfmj-main { padding: 16px 16px 48px; } }
         .jfmj-docs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
         @media (max-width: 600px) { .jfmj-docs-grid { grid-template-columns: 1fr; } }
         .jfmj-back-mobile { display: none; }
         @media (max-width: 900px) { .jfmj-back-mobile { display: flex !important; } }
+        .interview-type-btn { flex: 1; padding: 8px 6px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 2px solid #E0E0E0; background: #fff; color: #888; cursor: pointer; font-family: ${FONT}; transition: all 0.15s; }
+        .interview-type-btn.active { border-color: #F5C400; background: #FEF9E0; color: #111; }
+        .interview-inp { width: 100%; border: 1.5px solid #eee; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: ${FONT}; outline: none; background: #fff; color: #111; box-sizing: border-box; font-weight: 500; }
+        .interview-inp:focus { border-color: #F5C400; }
       `}</style>
 
-      {/* SIDEBAR */}
-      <div className="jfmj-sidebar">
-        <JobSidebar currentJobId={jobId} onSelect={(id) => router.push(`/dashboard/job/${id}`)} />
-      </div>
+      <div className="jfmj-sidebar"><JobSidebar currentJobId={jobId} onSelect={(id) => router.push(`/dashboard/job/${id}`)} /></div>
 
-      {/* CONTENU PRINCIPAL */}
       <div className="jfmj-main">
-
         <div className="jfmj-back-mobile" style={{ display: 'none', marginBottom: 14 }}>
           <button onClick={() => router.back()} style={{ background: '#fff', border: '1.5px solid #EBEBEB', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: '#111', cursor: 'pointer', fontFamily: FONT }}>← Mes candidatures</button>
         </div>
@@ -758,9 +572,7 @@ export default function JobDetailPage() {
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-            {job.source_url && (
-              <button onClick={() => window.open(job.source_url, '_blank')} style={{ background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #fff', whiteSpace: 'nowrap' }}>Voir l'offre ↗</button>
-            )}
+            {job.source_url && <button onClick={() => window.open(job.source_url, '_blank')} style={{ background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #fff', whiteSpace: 'nowrap' }}>Voir l'offre ↗</button>}
             <button onClick={() => router.push(`/dashboard/editor?job_id=${jobId}`)} style={{ background: '#F5C400', color: '#111', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #111', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' }}>Générer un CV</button>
           </div>
         </div>
@@ -782,9 +594,7 @@ export default function JobDetailPage() {
             )}
             <div style={{ flex: 1, minWidth: 180 }}>
               <h3 style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 4, fontFamily: FONT }}>Score ATS — Compatibilité avec l'offre</h3>
-              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, marginBottom: 8, fontFamily: FONT }}>
-                {atsScore !== null && atsScore >= 70 ? 'Bonne compatibilité. Quelques mots-clés à ajouter.' : 'Des mots-clés importants manquent dans votre CV.'}
-              </p>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, marginBottom: 8, fontFamily: FONT }}>{atsScore !== null && atsScore >= 70 ? 'Bonne compatibilité. Quelques mots-clés à ajouter.' : 'Des mots-clés importants manquent dans votre CV.'}</p>
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                 {atsKw.present.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: '#E8F5E9', color: '#2E7D32', fontFamily: FONT }}>{k} ✓</span>)}
                 {atsKw.missing.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: '#FFEBEE', color: '#C62828', fontFamily: FONT }}>{k} ✗</span>)}
@@ -793,12 +603,123 @@ export default function JobDetailPage() {
           </div>
         )}
 
+        {/* ── BLOC ENTRETIEN (visible uniquement si étape entretien) ── */}
+        {isInterviewStep && (
+          <div style={{ background: '#FEF9E0', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '2px solid #F5C400', boxShadow: '2px 2px 0 #F5C400' }}>
+            <span style={{ ...sectionLabel, color: '#B8900A' }}>📅 Détails de l'entretien</span>
+
+            {/* Date + Début + Fin */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Date</label>
+                <input type="date" className="interview-inp"
+                  defaultValue={job.interview_at ? job.interview_at.slice(0, 10) : ''}
+                  onBlur={e => patchJob('interview_at', e.target.value || null)}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Début</label>
+                <input type="time" className="interview-inp"
+                  defaultValue={job.interview_time || ''}
+                  onBlur={e => patchJob('interview_time', e.target.value || null)}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fin</label>
+                <input type="time" className="interview-inp"
+                  defaultValue={job.interview_time_end || ''}
+                  onBlur={e => patchJob('interview_time_end', e.target.value || null)}
+                />
+              </div>
+            </div>
+
+            {/* Type */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Type d'entretien</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['telephone', 'visio', 'presentiel'] as const).map(t => (
+                  <button key={t}
+                    className={`interview-type-btn${job.interview_type === t ? ' active' : ''}`}
+                    onClick={() => patchJob('interview_type', job.interview_type === t ? null : t)}
+                  >
+                    {INTERVIEW_TYPE_LABELS[t]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Champ contextuel selon le type */}
+            {job.interview_type === 'telephone' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>📞 Numéro de téléphone</label>
+                <input type="tel" className="interview-inp" placeholder="Ex : +33 6 12 34 56 78"
+                  defaultValue={job.interview_phone || ''}
+                  onBlur={e => patchJob('interview_phone', e.target.value || null)}
+                />
+              </div>
+            )}
+            {job.interview_type === 'visio' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>💻 Lien de la visio</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input type="url" className="interview-inp" placeholder="https://meet.google.com/..."
+                    defaultValue={job.interview_link || ''}
+                    onBlur={e => patchJob('interview_link', e.target.value || null)}
+                  />
+                  {job.interview_link && (
+                    <button onClick={() => window.open(job.interview_link!, '_blank')}
+                      style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>
+                      Rejoindre →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            {job.interview_type === 'presentiel' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Adresse</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input type="text" className="interview-inp" placeholder="Ex : 12 rue de la Paix, 75001 Paris"
+                    defaultValue={job.interview_location || ''}
+                    onBlur={e => patchJob('interview_location', e.target.value || null)}
+                  />
+                  {job.interview_location && (
+                    <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(job.interview_location!)}`, '_blank')}
+                      style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>
+                      Maps →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Contact */}
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>👤 Contact pour l'entretien</label>
+              <select className="interview-inp"
+                value={job.interview_contact_id || ''}
+                onChange={e => patchJob('interview_contact_id', e.target.value || null)}
+              >
+                <option value="">— Aucun contact —</option>
+                {contacts.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.role ? ` – ${c.role}` : ''}{c.company ? ` (${c.company})` : ''}
+                  </option>
+                ))}
+              </select>
+              {selectedContact && (
+                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#B8900A' }}>
+                  👤 {selectedContact.name}{selectedContact.role ? ` – ${selectedContact.role}` : ''}{selectedContact.company ? ` · ${selectedContact.company}` : ''}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* PARCOURS */}
         <div style={card}>
           <span style={sectionLabel}>Parcours de candidature</span>
-          <p style={{ fontSize: 12, color: '#bbb', fontWeight: 600, marginBottom: 14, fontFamily: FONT }}>
-            💡 Cliquez sur une étape pour avancer — glissez les étapes personnalisées pour les réordonner
-          </p>
+          <p style={{ fontSize: 12, color: '#bbb', fontWeight: 600, marginBottom: 14, fontFamily: FONT }}>💡 Cliquez sur une étape pour avancer — glissez les étapes personnalisées pour les réordonner</p>
           <DndContext sensors={sensors} onDragStart={handleStepDragStart} onDragOver={handleStepDragOver} onDragEnd={handleStepDragEnd}>
             <div style={{ display: 'flex', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 8 }}>
               {allSteps.map((step, idx) => {
@@ -808,27 +729,18 @@ export default function JobDetailPage() {
                 return (
                   <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 72 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
-                      {idx < allSteps.length - 1 && (
-                        <div style={{ position: 'absolute', top: 17, left: 'calc(50% + 17px)', right: 'calc(-50% + 17px)', height: 2.5, background: isDone ? '#F5C400' : '#EBEBEB', zIndex: 0 }} />
-                      )}
+                      {idx < allSteps.length - 1 && <div style={{ position: 'absolute', top: 17, left: 'calc(50% + 17px)', right: 'calc(-50% + 17px)', height: 2.5, background: isDone ? '#F5C400' : '#EBEBEB', zIndex: 0 }} />}
                       <DraggableStep step={step} isActive={isActive} isDone={isDone} isCustom={isCustom} currentStepId={currentStepId} onStepClick={handleStepClick} onDeleteRequest={(id, label) => setStepToDelete({ id, label })} allStepsLength={allSteps.length} />
                     </div>
-                    {isCustom && idx < allSteps.length - 1 && (
-                      <DropZone id={`after-${step.id}`} isOver={overDropZone === `after-${step.id}`} />
-                    )}
+                    {isCustom && idx < allSteps.length - 1 && <DropZone id={`after-${step.id}`} isOver={overDropZone === `after-${step.id}`} />}
                   </div>
                 )
               })}
             </div>
             <DragOverlay>
-              {activeStep ? (
-                <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#F5C400', border: '2.5px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#111', boxShadow: '3px 3px 0 #E8151B', cursor: 'grabbing', fontFamily: FONT }}>
-                  {activeStep.num}
-                </div>
-              ) : null}
+              {activeStep ? <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#F5C400', border: '2.5px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#111', boxShadow: '3px 3px 0 #E8151B', cursor: 'grabbing', fontFamily: FONT }}>{activeStep.num}</div> : null}
             </DragOverlay>
           </DndContext>
-
           <button onClick={() => setShowModal(true)}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#F9F9F7', border: '1.5px dashed #ddd', color: '#999', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', marginTop: 14, fontFamily: FONT }}
             onMouseOver={e => { const el = e.currentTarget; el.style.borderColor = '#F5C400'; el.style.color = '#111'; el.style.background = '#FFFDE7' }}
@@ -845,19 +757,13 @@ export default function JobDetailPage() {
               <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', marginBottom: 5, fontFamily: FONT }}>Ajouter une étape personnalisée</h3>
               <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.5, fontFamily: FONT }}>Donnez un nom à cette étape et choisissez où l'insérer.</p>
               <label style={{ ...sectionLabel, marginBottom: 5 }}>Nom de l'étape</label>
-              <input style={inp} placeholder="Ex : Test technique, Entretien DRH..." value={newStepName}
-                onChange={e => setNewStepName(e.target.value)}
-                onFocus={e => { e.target.style.borderColor = '#F5C400' }}
-                onBlur={e => { e.target.style.borderColor = '#eee' }} />
+              <input style={inp} placeholder="Ex : Test technique, Entretien DRH..." value={newStepName} onChange={e => setNewStepName(e.target.value)} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} />
               <label style={{ ...sectionLabel, marginTop: 14, marginBottom: 8 }}>Où l'insérer ?</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {allSteps.slice(0, -1).map((step, idx) => {
-                  const nextStep = allSteps[idx + 1]
-                  const pos = idx + 1
-                  const isSelected = newStepPos === pos
+                  const nextStep = allSteps[idx + 1]; const pos = idx + 1; const isSelected = newStepPos === pos
                   return (
-                    <button key={pos} onClick={() => setNewStepPos(pos)}
-                      style={{ background: isSelected ? '#111' : '#F9F9F7', color: isSelected ? '#F5C400' : '#555', border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '9px 13px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button key={pos} onClick={() => setNewStepPos(pos)} style={{ background: isSelected ? '#111' : '#F9F9F7', color: isSelected ? '#F5C400' : '#555', border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '9px 13px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span>Après <strong style={{ color: isSelected ? '#F5C400' : '#111' }}>{step.label}</strong></span>
                       <span style={{ fontSize: 10, fontWeight: 500, opacity: 0.6 }}>→ avant {nextStep.label}</span>
                     </button>
@@ -872,121 +778,69 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {/* BLOC ÉTAPE ACTIVE — avec DnD sur les cartes */}
+        {/* BLOC ÉTAPE ACTIVE */}
         <div style={{ background: '#FFFDE7', borderRadius: 12, padding: '18px 22px', marginBottom: 14, border: '1.5px solid #F5C400' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8, flexWrap: 'wrap' }}>
-            <span style={{ background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '3px 11px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONT }}>
-              Étape {currentStepIndex + 1} — En cours
-            </span>
-            <span style={{ fontSize: 15, fontWeight: 800, color: '#111', fontFamily: FONT }}>
-              {allSteps.find(s => s.id === currentStepId)?.label}
-            </span>
+            <span style={{ background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '3px 11px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONT }}>Étape {currentStepIndex + 1} — En cours</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#111', fontFamily: FONT }}>{allSteps.find(s => s.id === currentStepId)?.label}</span>
           </div>
           <p style={{ fontSize: 13, color: '#555', marginBottom: 14, lineHeight: 1.6, fontFamily: FONT }}>{stepData.desc}</p>
-
           {actionsLoading ? (
             <p style={{ fontSize: 12, color: '#bbb', fontWeight: 600, fontFamily: FONT }}>Chargement des actions…</p>
           ) : (
             <DndContext sensors={actionSensors} onDragStart={handleActionDragStart} onDragOver={handleActionDragOver} onDragEnd={handleActionDragEnd}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
-                {sortedStepActions.map((action, i) => (
+                {sortedStepActions.map((action) => (
                   <div key={action.id} style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
-                    <ActionDropZone
-                      id={`action-before-${action.id}`}
-                      isOver={overActionZone === `action-before-${action.id}`}
-                    />
-                    <div style={{ width: 148 }}>
-                      <DraggableActionCard
-                        action={action}
-                        dragId={action.id}
-                        onDelete={(id, title) => setActionToDelete({ id, title })}
-                      />
-                    </div>
+                    <ActionDropZone id={`action-before-${action.id}`} isOver={overActionZone === `action-before-${action.id}`} />
+                    <div style={{ width: 148 }}><DraggableActionCard action={action} dragId={action.id} onDelete={(id, title) => setActionToDelete({ id, title })} /></div>
                   </div>
                 ))}
-                <ActionDropZone
-                  id={`action-after-${sortedStepActions[sortedStepActions.length - 1]?.id ?? 'end'}`}
-                  isOver={overActionZone === `action-after-${sortedStepActions[sortedStepActions.length - 1]?.id ?? 'end'}`}
-                />
+                <ActionDropZone id={`action-after-${sortedStepActions[sortedStepActions.length - 1]?.id ?? 'end'}`} isOver={overActionZone === `action-after-${sortedStepActions[sortedStepActions.length - 1]?.id ?? 'end'}`} />
               </div>
               <DragOverlay>
-                {activeAction ? (
-                  <div style={{ background: '#fff', border: '1.5px solid #F5C400', borderRadius: 10, padding: '12px 14px', boxShadow: '3px 3px 0 #111', cursor: 'grabbing', width: 148 }}>
-                    <span style={{ fontSize: 15, display: 'block', marginBottom: 5 }}>{activeAction.icon}</span>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: '#111', display: 'block', fontFamily: FONT }}>{activeAction.title}</span>
-                    <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT }}>{activeAction.sub}</span>
-                  </div>
-                ) : null}
+                {activeAction ? <div style={{ background: '#fff', border: '1.5px solid #F5C400', borderRadius: 10, padding: '12px 14px', boxShadow: '3px 3px 0 #111', cursor: 'grabbing', width: 148 }}><span style={{ fontSize: 15, display: 'block', marginBottom: 5 }}>{activeAction.icon}</span><span style={{ fontSize: 12, fontWeight: 800, color: '#111', display: 'block', fontFamily: FONT }}>{activeAction.title}</span><span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT }}>{activeAction.sub}</span></div> : null}
               </DragOverlay>
             </DndContext>
           )}
-
-          {/* Formulaire inline ajout d'action */}
           {showAddAction ? (
             <div style={{ background: '#fff', border: '1.5px solid #F5C400', borderRadius: 10, padding: '14px 16px', marginTop: 8 }}>
               <p style={{ fontSize: 12, fontWeight: 800, color: '#111', marginBottom: 10, fontFamily: FONT }}>Nouvelle action</p>
-              {/* Choix icône */}
               <div style={{ marginBottom: 10 }}>
                 <label style={{ ...sectionLabel, marginBottom: 6 }}>Icône</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {ICON_CHOICES.map(ic => (
-                    <button key={ic} onClick={() => setNewActionIcon(ic)}
-                      style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${newActionIcon === ic ? '#111' : '#eee'}`, background: newActionIcon === ic ? '#FFFDE7' : '#F9F9F7', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {ic}
-                    </button>
+                    <button key={ic} onClick={() => setNewActionIcon(ic)} style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${newActionIcon === ic ? '#111' : '#eee'}`, background: newActionIcon === ic ? '#FFFDE7' : '#F9F9F7', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{ic}</button>
                   ))}
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                 <div>
                   <label style={{ ...sectionLabel, marginBottom: 5 }}>Titre *</label>
-                  <input style={inp} placeholder="Ex : Préparer mes questions" value={newActionTitle}
-                    onChange={e => setNewActionTitle(e.target.value)}
-                    onFocus={e => { e.target.style.borderColor = '#F5C400' }}
-                    onBlur={e => { e.target.style.borderColor = '#eee' }} />
+                  <input style={inp} placeholder="Ex : Préparer mes questions" value={newActionTitle} onChange={e => setNewActionTitle(e.target.value)} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} />
                 </div>
                 <div>
                   <label style={{ ...sectionLabel, marginBottom: 5 }}>Sous-titre</label>
-                  <input style={inp} placeholder="Courte description" value={newActionSub}
-                    onChange={e => setNewActionSub(e.target.value)}
-                    onFocus={e => { e.target.style.borderColor = '#F5C400' }}
-                    onBlur={e => { e.target.style.borderColor = '#eee' }} />
+                  <input style={inp} placeholder="Courte description" value={newActionSub} onChange={e => setNewActionSub(e.target.value)} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} />
                 </div>
               </div>
-              {/* Position */}
               <div style={{ marginBottom: 12 }}>
                 <label style={{ ...sectionLabel, marginBottom: 6 }}>Position</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {sortedStepActions.map((a, idx) => {
                     const isSelected = newActionPosition === idx
-                    return (
-                      <button key={a.id} onClick={() => setNewActionPosition(idx)}
-                        style={{ background: isSelected ? '#111' : '#F9F9F7', color: isSelected ? '#F5C400' : '#555', border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 13 }}>{a.icon}</span>
-                        Après <strong style={{ color: isSelected ? '#F5C400' : '#111' }}>{a.title}</strong>
-                      </button>
-                    )
+                    return <button key={a.id} onClick={() => setNewActionPosition(idx)} style={{ background: isSelected ? '#111' : '#F9F9F7', color: isSelected ? '#F5C400' : '#555', border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 13 }}>{a.icon}</span>Après <strong style={{ color: isSelected ? '#F5C400' : '#111' }}>{a.title}</strong></button>
                   })}
-                  <button onClick={() => setNewActionPosition(-1)}
-                    style={{ background: newActionPosition === -1 ? '#111' : '#F9F9F7', color: newActionPosition === -1 ? '#F5C400' : '#555', border: `1.5px solid ${newActionPosition === -1 ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left' }}>
-                    En dernier
-                  </button>
+                  <button onClick={() => setNewActionPosition(-1)} style={{ background: newActionPosition === -1 ? '#111' : '#F9F9F7', color: newActionPosition === -1 ? '#F5C400' : '#555', border: `1.5px solid ${newActionPosition === -1 ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left' }}>En dernier</button>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={() => { setShowAddAction(false); setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setNewActionPosition(-1) }}
-                  style={{ background: '#F9F9F7', color: '#555', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
-                  Annuler
-                </button>
-                <button onClick={handleAddAction}
-                  style={{ background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT }}>
-                  Ajouter
-                </button>
+                <button onClick={() => { setShowAddAction(false); setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setNewActionPosition(-1) }} style={{ background: '#F9F9F7', color: '#555', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
+                <button onClick={handleAddAction} style={{ background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT }}>Ajouter</button>
               </div>
             </div>
           ) : (
-            <button onClick={() => setShowAddAction(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.7)', border: '1.5px dashed #F5C400', color: '#B8900A', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', marginTop: 4, fontFamily: FONT }}
+            <button onClick={() => setShowAddAction(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.7)', border: '1.5px dashed #F5C400', color: '#B8900A', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', marginTop: 4, fontFamily: FONT }}
               onMouseOver={e => { const el = e.currentTarget; el.style.background = '#fff'; el.style.borderColor = '#111'; el.style.color = '#111' }}
               onMouseOut={e => { const el = e.currentTarget; el.style.background = 'rgba(255,255,255,0.7)'; el.style.borderColor = '#F5C400'; el.style.color = '#B8900A' }}>
               <span style={{ width: 15, height: 15, background: '#F5C400', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: '#111' }}>+</span>
@@ -1000,8 +854,7 @@ export default function JobDetailPage() {
           <span style={sectionLabel}>Synthèse des échanges</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {exchanges.map((ex, idx) => {
-              const isOpen = openExchanges.has(ex.id)
-              const isLatest = idx === exchanges.length - 1
+              const isOpen = openExchanges.has(ex.id); const isLatest = idx === exchanges.length - 1
               return (
                 <div key={ex.id} style={{ border: `1.5px solid ${isLatest ? '#F5C400' : '#EBEBEB'}`, borderRadius: 10, overflow: 'hidden' }}>
                   <div onClick={() => toggleExchange(ex.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: isLatest ? '#FFFDE7' : '#F9F9F7', cursor: 'pointer' }}>
@@ -1032,9 +885,7 @@ export default function JobDetailPage() {
                                 {(Object.entries(EXCHANGE_TYPE_LABELS) as [ExchangeType, string][]).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                               </select>
                             ) : (
-                              <input type={f.type} defaultValue={f.val} style={inp}
-                                onFocus={e => { e.target.style.borderColor = '#F5C400' }}
-                                onBlur={e => { e.target.style.borderColor = '#eee'; updateExchange(ex.id, f.field, e.target.value) }} />
+                              <input type={f.type} defaultValue={f.val} style={inp} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee'; updateExchange(ex.id, f.field, e.target.value) }} />
                             )}
                           </div>
                         ))}
@@ -1047,23 +898,17 @@ export default function JobDetailPage() {
                       ].map(({ field, label, placeholder }) => (
                         <div key={field} style={{ marginBottom: 10 }}>
                           <label style={{ ...sectionLabel, marginBottom: 5 }}>{label}</label>
-                          <textarea defaultValue={(ex as any)[field] ?? ''} placeholder={placeholder}
-                            onBlur={e => updateExchange(ex.id, field, e.target.value)}
-                            style={{ ...ta, minHeight: field === 'next_step' ? 52 : 76 }}
-                            onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
+                          <textarea defaultValue={(ex as any)[field] ?? ''} placeholder={placeholder} onBlur={e => updateExchange(ex.id, field, e.target.value)} style={{ ...ta, minHeight: field === 'next_step' ? 52 : 76 }} onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
                         </div>
                       ))}
-                      <button onClick={() => deleteExchange(ex.id)} style={{ background: 'none', border: 'none', color: '#E8151B', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, padding: 0, marginTop: 4 }}>
-                        Supprimer cet échange
-                      </button>
+                      <button onClick={() => deleteExchange(ex.id)} style={{ background: 'none', border: 'none', color: '#E8151B', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, padding: 0, marginTop: 4 }}>Supprimer cet échange</button>
                     </div>
                   )}
                 </div>
               )
             })}
           </div>
-          <button onClick={addExchange}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', background: '#F9F9F7', border: '1.5px dashed #ddd', color: '#888', fontSize: 13, fontWeight: 700, padding: '12px 16px', borderRadius: 10, cursor: 'pointer', marginTop: 8, fontFamily: FONT }}
+          <button onClick={addExchange} style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', background: '#F9F9F7', border: '1.5px dashed #ddd', color: '#888', fontSize: 13, fontWeight: 700, padding: '12px 16px', borderRadius: 10, cursor: 'pointer', marginTop: 8, fontFamily: FONT }}
             onMouseOver={e => { const el = e.currentTarget; el.style.borderColor = '#F5C400'; el.style.color = '#111'; el.style.background = '#FFFDE7' }}
             onMouseOut={e => { const el = e.currentTarget; el.style.borderColor = '#ddd'; el.style.color = '#888'; el.style.background = '#F9F9F7' }}>
             <span style={{ width: 19, height: 19, background: '#ddd', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#fff', flexShrink: 0 }}>+</span>
@@ -1075,10 +920,7 @@ export default function JobDetailPage() {
         <div className="jfmj-docs-grid">
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={sectionLabel}>Documents</span>
-            {[
-              { sent: job.cv_sent, name: 'CV', url: job.cv_url },
-              { sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url },
-            ].map(doc => (
+            {[{ sent: job.cv_sent, name: 'CV', url: job.cv_url }, { sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url }].map(doc => (
               <div key={doc.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #F5F5F0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <div style={{ width: 22, height: 22, background: doc.sent ? '#111' : '#eee', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1089,19 +931,13 @@ export default function JobDetailPage() {
                     <p style={{ fontSize: 11, color: '#aaa', margin: 0, fontFamily: FONT, fontWeight: 500 }}>{doc.sent ? 'Envoyé — étape Postulé' : 'Non envoyé'}</p>
                   </div>
                 </div>
-                {doc.url && (
-                  <button onClick={() => doc.url && window.open(doc.url, '_blank')} style={{ background: '#F9F9F7', color: '#111', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 7, border: '1.5px solid #EBEBEB', cursor: 'pointer', fontFamily: FONT }}>Voir</button>
-                )}
+                {doc.url && <button onClick={() => doc.url && window.open(doc.url, '_blank')} style={{ background: '#F9F9F7', color: '#111', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 7, border: '1.5px solid #EBEBEB', cursor: 'pointer', fontFamily: FONT }}>Voir</button>}
               </div>
             ))}
           </div>
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={sectionLabel}>Mes notes</span>
-            <textarea value={notes} onChange={e => handleNotesChange(e.target.value)}
-              placeholder="Impressions générales, contacts, points à surveiller..."
-              style={{ ...ta, minHeight: 100 }}
-              onFocus={e => { e.target.style.borderColor = '#F5C400' }}
-              onBlur={e => { e.target.style.borderColor = '#eee' }} />
+            <textarea value={notes} onChange={e => handleNotesChange(e.target.value)} placeholder="Impressions générales, contacts, points à surveiller..." style={{ ...ta, minHeight: 100 }} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} />
           </div>
         </div>
 
@@ -1116,7 +952,6 @@ export default function JobDetailPage() {
             {descExpanded ? 'Réduire ↑' : 'Lire la description complète ↓'}
           </button>
         </div>
-
       </div>
 
       {/* MODALE SUPPRESSION ACTION */}
@@ -1125,7 +960,6 @@ export default function JobDetailPage() {
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 400, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
             <div style={{ fontSize: 26, marginBottom: 12, textAlign: 'center' }}>🗑️</div>
             <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', marginBottom: 8, textAlign: 'center', fontFamily: FONT }}>Supprimer cette action ?</h3>
-            <p style={{ fontSize: 13, color: '#555', marginBottom: 6, textAlign: 'center', lineHeight: 1.5, fontFamily: FONT }}>Vous êtes sur le point de supprimer</p>
             <p style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>"{actionToDelete.title}"</p>
             <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>Cette action est définitive.</p>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -1142,15 +976,11 @@ export default function JobDetailPage() {
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 400, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
             <div style={{ fontSize: 26, marginBottom: 12, textAlign: 'center' }}>🗑️</div>
             <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', marginBottom: 8, textAlign: 'center', fontFamily: FONT }}>Supprimer cette étape ?</h3>
-            <p style={{ fontSize: 13, color: '#555', marginBottom: 6, textAlign: 'center', lineHeight: 1.5, fontFamily: FONT }}>Vous êtes sur le point de supprimer l'étape</p>
             <p style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>"{stepToDelete.label}"</p>
             <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>Cette action est définitive.</p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setStepToDelete(null)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
-              <button onClick={async () => { await handleDeleteCustomStep(stepToDelete.id); setStepToDelete(null) }}
-                style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>
-                Supprimer
-              </button>
+              <button onClick={async () => { await handleDeleteCustomStep(stepToDelete.id); setStepToDelete(null) }} style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>Supprimer</button>
             </div>
           </div>
         </div>
