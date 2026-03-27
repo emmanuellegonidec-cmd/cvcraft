@@ -40,13 +40,15 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
   const [uploadingLm, setUploadingLm] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
 
+  const isInterview = isInterviewStage(job.status, stages);
+
   useEffect(() => {
-    if (!isInterviewStage(job.status, stages)) return;
+    if (!isInterview) return;
     fetch('/api/contacts', { headers: getAuthHeaders() })
       .then(r => r.json())
       .then(data => { if (data.contacts) setContacts(data.contacts); })
       .catch(() => {});
-  }, [job.status, stages]);
+  }, [isInterview]);
 
   const customStages: Stage[] = stages.filter(s => !s.is_default).map(s => ({ ...s, global_status: 'in_progress' }));
 
@@ -57,14 +59,11 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
     DETAIL_STAGES.find(s => s.id === 'archived')!,
   ];
 
-  const currentSubStatus = (job as any).sub_status || job.status;
-  const currentDetailStage = detailStages.find(s => s.id === currentSubStatus);
+  const currentSubStatus   = (job as any).sub_status || job.status;
+  const currentStageIndex  = detailStages.findIndex(s => s.id === currentSubStatus);
 
-  async function handleDetailStageChange(subStatusId: string) {
-    const globalStatus = getGlobalStatus(subStatusId, customStages);
-    await onFieldUpdate(job.id, 'sub_status', subStatusId);
-    if (globalStatus !== job.status) onStatusChange(job.id, globalStatus);
-  }
+  // Étapes déjà franchies (toutes celles avant l'étape courante, incluse)
+  const completedStages = detailStages.slice(0, currentStageIndex + 1);
 
   async function uploadDocument(file: File, type: 'cv' | 'lm') {
     if (!userId || !accessToken) return;
@@ -74,7 +73,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
     const { error } = await supabase.storage.from('job-documents').upload(path, file, { upsert: true });
     if (error) { alert('Erreur upload : ' + error.message); return; }
     const { data: signedData } = await supabase.storage.from('job-documents').createSignedUrl(path, 60 * 60 * 24 * 365);
-    const field = type === 'cv' ? 'cv_url' : 'cover_letter_url';
+    const field     = type === 'cv' ? 'cv_url' : 'cover_letter_url';
     const checkField = type === 'cv' ? 'cv_sent' : 'cover_letter_sent';
     onFieldUpdate(job.id, field, signedData?.signedUrl ?? '');
     onFieldUpdate(job.id, checkField, true);
@@ -97,48 +96,55 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
         </div>
 
-        {/* Pills */}
+        {/* Pills localisation + salaire */}
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: '0.75rem' }}>
           {job.location && <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0' }}>{job.location}</span>}
           {(job as any).salary_text && <span className="pill" style={{ background: '#E8F5EE', color: '#1A7A4A', border: '1px solid #1A7A4A' }}>💰 {(job as any).salary_text}</span>}
-          {currentDetailStage && (
-            <span className="pill" style={{ background: currentDetailStage.color + '22', color: currentDetailStage.color }}>
-              {currentDetailStage.label}
-            </span>
-          )}
         </div>
 
         {(job as any).favorite > 0 && <div style={{ marginBottom: '0.75rem' }}><HeartDisplay value={(job as any).favorite} /></div>}
         <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: '1rem' }}>📅 Créé le {formatDate(job.created_at)}</div>
 
-        {/* Pipeline détaillé */}
+        {/* ── PARCOURS : étapes franchies ── */}
         <div style={{ marginBottom: '1rem' }}>
-          <label className="fl">Pipeline</label>
-          <div style={{ display: 'flex', gap: 0, overflowX: 'auto', paddingBottom: 4 }}>
-            {detailStages.map((s, i) => {
-              const isActive = currentSubStatus === s.id;
-              const isPast   = detailStages.findIndex(d => d.id === currentSubStatus) > i;
+          <label className="fl">Parcours</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {completedStages.map((s, i) => {
+              const isLast = i === completedStages.length - 1;
               return (
-                <button key={s.id} onClick={() => handleDetailStageChange(s.id)} style={{
-                  flex: '0 0 auto',
-                  background: isActive ? s.color : isPast ? s.color + '33' : '#F4F4F4',
-                  color: isActive ? '#fff' : isPast ? s.color : '#888',
-                  border: `2px solid ${isActive ? s.color : isPast ? s.color + '66' : '#E0E0E0'}`,
-                  borderRadius: i === 0 ? '8px 0 0 8px' : i === detailStages.length - 1 ? '0 8px 8px 0' : '0',
-                  marginLeft: i === 0 ? 0 : -2,
-                  padding: '5px 10px', fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                  fontFamily: 'Montserrat,sans-serif', whiteSpace: 'nowrap', transition: 'all 0.15s',
-                  zIndex: isActive ? 2 : 1, position: 'relative',
-                }}>
-                  {s.label}
-                </button>
+                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Ligne de connexion */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 16, flexShrink: 0 }}>
+                    <div style={{
+                      width: 12, height: 12, borderRadius: '50%',
+                      background: isLast ? s.color : s.color + '88',
+                      border: `2px solid ${s.color}`,
+                      flexShrink: 0,
+                    }} />
+                    {!isLast && <div style={{ width: 2, flex: 1, minHeight: 10, background: '#E0E0E0', marginTop: 2 }} />}
+                  </div>
+                  <span style={{
+                    fontSize: 11, fontWeight: isLast ? 800 : 600,
+                    color: isLast ? s.color : '#888',
+                    background: isLast ? s.color + '18' : 'transparent',
+                    padding: isLast ? '2px 8px' : '2px 0',
+                    borderRadius: 6,
+                  }}>
+                    {s.label}
+                  </span>
+                  {isLast && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', background: s.color, borderRadius: 4, padding: '1px 6px', marginLeft: 2 }}>
+                      ACTUEL
+                    </span>
+                  )}
+                </div>
               );
             })}
           </div>
         </div>
 
         {/* ── SECTION ENTRETIEN ── */}
-        {isInterviewStage(job.status, stages) && (
+        {isInterview && (
           <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -163,7 +169,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
               />
             </div>
 
-            {/* Heure début + fin */}
+            {/* Début + Fin */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
               <div>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Début</label>
@@ -270,7 +276,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
         )}
 
         {/* Synthèse entretien */}
-        {isInterviewStage(job.status, stages) && (
+        {isInterview && (
           <div style={{ marginBottom: '1rem' }}>
             <label className="fl">Synthèse de l&apos;entretien</label>
             <textarea
@@ -299,10 +305,6 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
             onBlur={async e => onFieldUpdate(job.id, 'notes', e.target.value)} />
         </div>
 
-        <button className="btn-main" style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }}
-          onClick={() => router.push('/dashboard/editor?targetJob=' + encodeURIComponent(job.title + ' chez ' + job.company))}>
-          ✦ Générer un CV pour ce poste →
-        </button>
         <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center', marginBottom: 8 }} onClick={() => onEdit(job)}>
           ✏️ Modifier l&apos;offre
         </button>

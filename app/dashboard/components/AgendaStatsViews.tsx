@@ -33,7 +33,6 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
 
   const interviewJobs = jobs.filter(j => isInterviewStage(j.status, stages));
 
-  // Trier par date (plus proche en premier, sans date à la fin)
   const sorted = [...interviewJobs].sort((a, b) => {
     const da = (a as any).interview_at;
     const db = (b as any).interview_at;
@@ -56,16 +55,15 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {sorted.map(job => {
-        const stage        = stages.find(s => s.id === job.status);
-        const date         = (job as any).interview_at;
-        const timeStart    = (job as any).interview_time;
-        const timeEnd      = (job as any).interview_time_end;
-        const iType        = (job as any).interview_type as string | null;
-        const contactName  = (job as any).interview_contact_name as string | null;
-        const typeInfo     = iType ? TYPE_LABELS[iType] : null;
+        const subStatusId   = (job as any).sub_status || job.status;
+        const detailStage   = stages.find(s => s.id === subStatusId);
+        const date          = (job as any).interview_at as string | null;
+        const timeStart     = (job as any).interview_time as string | null;
+        const timeEnd       = (job as any).interview_time_end as string | null;
+        const iType         = (job as any).interview_type as string | null;
+        const contactName   = (job as any).interview_contact_name as string | null;
+        const typeInfo      = iType ? TYPE_LABELS[iType] : null;
 
-        // Bloc horaire : "sam. 28 mars · 13:00–14:00" ou "Date à fixer"
-        const dateLabel = date ? fmtDate(date) : null;
         const timeLabel = timeStart
           ? (timeEnd ? `${fmtTime(timeStart)} – ${fmtTime(timeEnd)}` : fmtTime(timeStart))
           : null;
@@ -80,41 +78,52 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
               padding: '0.75rem 1rem',
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
+              gap: 10,
               boxShadow: '2px 2px 0 #111',
               flexWrap: 'wrap',
             }}
           >
-            {/* 1 — Date + heure */}
-            <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8, padding: '6px 10px', textAlign: 'center', minWidth: 100, flexShrink: 0 }}>
-              {dateLabel
-                ? <div style={{ fontSize: 11, fontWeight: 800, color: '#111', lineHeight: 1.4 }}>{dateLabel}</div>
+            {/* 1 — Bloc DATE */}
+            <div style={{
+              background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8,
+              padding: '5px 10px', textAlign: 'center', minWidth: 90, flexShrink: 0,
+            }}>
+              {date
+                ? <div style={{ fontSize: 11, fontWeight: 800, color: '#111' }}>{fmtDate(date)}</div>
                 : <div style={{ fontSize: 10, fontWeight: 700, color: '#B8900A' }}>Date à fixer</div>
               }
-              {timeLabel && (
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#B8900A', marginTop: 1 }}>🕐 {timeLabel}</div>
-              )}
             </div>
 
-            {/* 2 — Titre + entreprise */}
-            <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+            {/* 2 — Bloc HORAIRE (séparé) */}
+            {timeLabel && (
+              <div style={{
+                background: '#FFF8EC', border: '1.5px solid #FFD97A', borderRadius: 8,
+                padding: '5px 10px', textAlign: 'center', flexShrink: 0,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#B8900A' }}>🕐 {timeLabel}</div>
+              </div>
+            )}
+
+            {/* 3 — Titre + entreprise */}
+            <div style={{ flex: '1 1 140px', minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{job.title}</div>
               <div style={{ fontSize: 11, color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {job.company}{job.location ? ' · ' + job.location : ''}
               </div>
             </div>
 
-            {/* 3 — Étape du parcours */}
-            {stage && (
+            {/* 4 — Étape détaillée (sub_status) */}
+            {detailStage && (
               <span style={{
                 fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
-                background: stage.color + '22', color: stage.color, border: `1.5px solid ${stage.color}55`,
+                background: detailStage.color + '22', color: detailStage.color,
+                border: `1.5px solid ${detailStage.color}55`,
               }}>
-                {stage.label}
+                {detailStage.label}
               </span>
             )}
 
-            {/* 4 — Type */}
+            {/* 5 — Type */}
             {typeInfo && (
               <span style={{
                 fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
@@ -124,7 +133,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
               </span>
             )}
 
-            {/* 5 — Contact */}
+            {/* 6 — Contact */}
             {contactName && (
               <span style={{
                 fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
@@ -134,20 +143,12 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
               </span>
             )}
 
-            {/* 6 — Boutons */}
+            {/* 7 — Boutons */}
             <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto' }} onClick={e => e.stopPropagation()}>
-              <button
-                className="btn-main"
-                style={{ fontSize: 11, padding: '6px 12px' }}
-                onClick={() => onJobClick(job)}
-              >
+              <button className="btn-main" style={{ fontSize: 11, padding: '6px 12px' }} onClick={() => onJobClick(job)}>
                 RDV
               </button>
-              <button
-                className="btn-ghost"
-                style={{ fontSize: 11, padding: '5px 12px' }}
-                onClick={() => router.push(`/dashboard/job/${job.id}`)}
-              >
+              <button className="btn-ghost" style={{ fontSize: 11, padding: '5px 12px' }} onClick={() => router.push(`/dashboard/job/${job.id}`)}>
                 Offre
               </button>
             </div>
