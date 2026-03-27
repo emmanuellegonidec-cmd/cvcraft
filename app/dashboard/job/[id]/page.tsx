@@ -281,7 +281,7 @@ function DraggableActionCard({
 }: {
   action: StepActionRow
   dragId: string
-  onDelete: (id: string) => void
+  onDelete: (id: string, title: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId })
 
@@ -314,7 +314,7 @@ function DraggableActionCard({
           {action.is_custom && (
             <button
               onPointerDown={e => e.stopPropagation()}
-              onClick={e => { e.stopPropagation(); onDelete(action.id) }}
+              onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
               style={{ background: 'none', border: 'none', color: '#ccc', fontSize: 12, cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               title="Supprimer cette action"
             >×</button>
@@ -370,6 +370,8 @@ export default function JobDetailPage() {
   const [newActionTitle, setNewActionTitle] = useState('')
   const [newActionSub, setNewActionSub] = useState('')
   const [newActionIcon, setNewActionIcon] = useState('⭐')
+  const [newActionPosition, setNewActionPosition] = useState<number>(-1)
+  const [actionToDelete, setActionToDelete] = useState<{ id: string; title: string } | null>(null)
 
   const loadJob = useCallback(async () => {
     const supabase = createClient()
@@ -512,7 +514,22 @@ export default function JobDetailPage() {
   const handleAddAction = async () => {
     if (!newActionTitle.trim() || !userId) return
     const supabase = createClient()
-    const maxPos = stepActions.length > 0 ? Math.max(...stepActions.map(a => a.position)) : 0
+    const sorted = [...stepActions].sort((a, b) => a.position - b.position)
+    // Calculer la position selon le choix de l'utilisateur
+    let insertPosition: number
+    if (newActionPosition === -1 || newActionPosition >= sorted.length) {
+      // En dernier
+      insertPosition = sorted.length > 0 ? Math.max(...sorted.map(a => a.position)) + 1000 : 1000
+    } else {
+      // Après l'index choisi
+      const afterCard = sorted[newActionPosition]
+      const nextCard = sorted[newActionPosition + 1]
+      if (nextCard) {
+        insertPosition = Math.round((afterCard.position + nextCard.position) / 2)
+      } else {
+        insertPosition = afterCard.position + 1000
+      }
+    }
     const { data } = await supabase.from('job_step_actions').insert({
       user_id: userId,
       job_id: jobId,
@@ -520,21 +537,23 @@ export default function JobDetailPage() {
       title: newActionTitle.trim(),
       icon: newActionIcon,
       sub: newActionSub.trim(),
-      position: maxPos + 1000,
+      position: insertPosition,
       is_custom: true,
       type: 'action',
     }).select().single()
     if (data) {
       setStepActions(prev => [...prev, { id: data.id, title: data.title, icon: data.icon, sub: data.sub, position: data.position, is_custom: true, type: 'action' }])
     }
-    setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setShowAddAction(false)
+    setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setNewActionPosition(-1); setShowAddAction(false)
   }
 
   // ── Supprimer une carte d'action custom ────────────────────────────────────
-  const handleDeleteAction = async (actionId: string) => {
+  const confirmDeleteAction = async () => {
+    if (!actionToDelete) return
     const supabase = createClient()
-    await supabase.from('job_step_actions').delete().eq('id', actionId)
-    setStepActions(prev => prev.filter(a => a.id !== actionId))
+    await supabase.from('job_step_actions').delete().eq('id', actionToDelete.id)
+    setStepActions(prev => prev.filter(a => a.id !== actionToDelete.id))
+    setActionToDelete(null)
   }
 
   // ── DnD pour les étapes ────────────────────────────────────────────────────
@@ -869,23 +888,22 @@ export default function JobDetailPage() {
             <p style={{ fontSize: 12, color: '#bbb', fontWeight: 600, fontFamily: FONT }}>Chargement des actions…</p>
           ) : (
             <DndContext sensors={actionSensors} onDragStart={handleActionDragStart} onDragOver={handleActionDragOver} onDragEnd={handleActionDragEnd}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 0 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
                 {sortedStepActions.map((action, i) => (
-                  <div key={action.id} style={{ display: 'contents' }}>
+                  <div key={action.id} style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
                     <ActionDropZone
                       id={`action-before-${action.id}`}
                       isOver={overActionZone === `action-before-${action.id}`}
                     />
-                    <div style={{ margin: '0 0 8px 0', paddingRight: i % 2 === 0 ? 4 : 0 }}>
+                    <div style={{ width: 148 }}>
                       <DraggableActionCard
                         action={action}
                         dragId={action.id}
-                        onDelete={handleDeleteAction}
+                        onDelete={(id, title) => setActionToDelete({ id, title })}
                       />
                     </div>
                   </div>
                 ))}
-                {/* Zone de dépôt en fin de liste */}
                 <ActionDropZone
                   id={`action-after-${sortedStepActions[sortedStepActions.length - 1]?.id ?? 'end'}`}
                   isOver={overActionZone === `action-after-${sortedStepActions[sortedStepActions.length - 1]?.id ?? 'end'}`}
@@ -935,8 +953,28 @@ export default function JobDetailPage() {
                     onBlur={e => { e.target.style.borderColor = '#eee' }} />
                 </div>
               </div>
+              {/* Position */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ ...sectionLabel, marginBottom: 6 }}>Position</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {sortedStepActions.map((a, idx) => {
+                    const isSelected = newActionPosition === idx
+                    return (
+                      <button key={a.id} onClick={() => setNewActionPosition(idx)}
+                        style={{ background: isSelected ? '#111' : '#F9F9F7', color: isSelected ? '#F5C400' : '#555', border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 13 }}>{a.icon}</span>
+                        Après <strong style={{ color: isSelected ? '#F5C400' : '#111' }}>{a.title}</strong>
+                      </button>
+                    )
+                  })}
+                  <button onClick={() => setNewActionPosition(-1)}
+                    style={{ background: newActionPosition === -1 ? '#111' : '#F9F9F7', color: newActionPosition === -1 ? '#F5C400' : '#555', border: `1.5px solid ${newActionPosition === -1 ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left' }}>
+                    En dernier
+                  </button>
+                </div>
+              </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={() => { setShowAddAction(false); setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐') }}
+                <button onClick={() => { setShowAddAction(false); setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setNewActionPosition(-1) }}
                   style={{ background: '#F9F9F7', color: '#555', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
                   Annuler
                 </button>
@@ -1080,6 +1118,23 @@ export default function JobDetailPage() {
         </div>
 
       </div>
+
+      {/* MODALE SUPPRESSION ACTION */}
+      {actionToDelete && (
+        <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 400, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
+            <div style={{ fontSize: 26, marginBottom: 12, textAlign: 'center' }}>🗑️</div>
+            <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', marginBottom: 8, textAlign: 'center', fontFamily: FONT }}>Supprimer cette action ?</h3>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 6, textAlign: 'center', lineHeight: 1.5, fontFamily: FONT }}>Vous êtes sur le point de supprimer</p>
+            <p style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>"{actionToDelete.title}"</p>
+            <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>Cette action est définitive.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setActionToDelete(null)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
+              <button onClick={confirmDeleteAction} style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODALE SUPPRESSION ÉTAPE */}
       {stepToDelete && (
