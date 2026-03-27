@@ -343,6 +343,12 @@ export default function JobDetailPage() {
     Promise.all([loadJob(), loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
   }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
 
+  // Recharger le job toutes les 30s pour capter les changements faits depuis le panneau RDV
+  useEffect(() => {
+    const interval = setInterval(() => { loadJob() }, 30000)
+    return () => clearInterval(interval)
+  }, [loadJob])
+
   // Recharger les contacts si le userId arrive après le montage
   useEffect(() => {
     if (userId) loadContacts()
@@ -759,21 +765,27 @@ export default function JobDetailPage() {
               <div>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Date</label>
                 <input type="date" className="interview-inp"
-                  defaultValue={job.interview_at ? job.interview_at.slice(0, 10) : ''}
+                  key={job.interview_at || 'no-date'}
+                  value={job.interview_at ? job.interview_at.slice(0, 10) : ''}
+                  onChange={e => setJob(prev => prev ? { ...prev, interview_at: e.target.value || null } : prev)}
                   onBlur={e => patchJob('interview_at', e.target.value || null)}
                 />
               </div>
               <div>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Début</label>
                 <input type="time" className="interview-inp"
-                  defaultValue={job.interview_time || ''}
+                  key={job.interview_time || 'no-time'}
+                  value={job.interview_time || ''}
+                  onChange={e => setJob(prev => prev ? { ...prev, interview_time: e.target.value || null } : prev)}
                   onBlur={e => patchJob('interview_time', e.target.value || null)}
                 />
               </div>
               <div>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fin</label>
                 <input type="time" className="interview-inp"
-                  defaultValue={job.interview_time_end || ''}
+                  key={job.interview_time_end || 'no-end'}
+                  value={job.interview_time_end || ''}
+                  onChange={e => setJob(prev => prev ? { ...prev, interview_time_end: e.target.value || null } : prev)}
                   onBlur={e => patchJob('interview_time_end', e.target.value || null)}
                 />
               </div>
@@ -799,7 +811,9 @@ export default function JobDetailPage() {
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>📞 Numéro de téléphone</label>
                 <input type="tel" className="interview-inp" placeholder="Ex : +33 6 12 34 56 78"
-                  defaultValue={job.interview_phone || ''}
+                  key={job.interview_phone || 'no-phone'}
+                  value={job.interview_phone || ''}
+                  onChange={e => setJob(prev => prev ? { ...prev, interview_phone: e.target.value || null } : prev)}
                   onBlur={e => patchJob('interview_phone', e.target.value || null)}
                 />
               </div>
@@ -809,7 +823,9 @@ export default function JobDetailPage() {
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>💻 Lien de la visio</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input type="url" className="interview-inp" placeholder="https://meet.google.com/..."
-                    defaultValue={job.interview_link || ''}
+                    key={job.interview_link || 'no-link'}
+                    value={job.interview_link || ''}
+                    onChange={e => setJob(prev => prev ? { ...prev, interview_link: e.target.value || null } : prev)}
                     onBlur={e => patchJob('interview_link', e.target.value || null)}
                   />
                   {job.interview_link && (
@@ -826,7 +842,9 @@ export default function JobDetailPage() {
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Adresse</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input type="text" className="interview-inp" placeholder="Ex : 12 rue de la Paix, 75001 Paris"
-                    defaultValue={job.interview_location || ''}
+                    key={job.interview_location || 'no-loc'}
+                    value={job.interview_location || ''}
+                    onChange={e => setJob(prev => prev ? { ...prev, interview_location: e.target.value || null } : prev)}
                     onBlur={e => patchJob('interview_location', e.target.value || null)}
                   />
                   {job.interview_location && (
