@@ -27,8 +27,8 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 const INTERVIEW_TYPES = [
-  { id: 'telephone', label: '📞 Téléphone' },
-  { id: 'visio',     label: '💻 Visio' },
+  { id: 'telephone',  label: '📞 Téléphone' },
+  { id: 'visio',      label: '💻 Visio' },
   { id: 'presentiel', label: '🏢 Présentiel' },
 ];
 
@@ -40,7 +40,6 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
   const [uploadingLm, setUploadingLm] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
 
-  // Charger les contacts pour le dropdown
   useEffect(() => {
     if (!isInterviewStage(job.status, stages)) return;
     fetch('/api/contacts', { headers: getAuthHeaders() })
@@ -64,9 +63,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
   async function handleDetailStageChange(subStatusId: string) {
     const globalStatus = getGlobalStatus(subStatusId, customStages);
     await onFieldUpdate(job.id, 'sub_status', subStatusId);
-    if (globalStatus !== job.status) {
-      onStatusChange(job.id, globalStatus);
-    }
+    if (globalStatus !== job.status) onStatusChange(job.id, globalStatus);
   }
 
   async function uploadDocument(file: File, type: 'cv' | 'lm') {
@@ -83,9 +80,9 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
     onFieldUpdate(job.id, checkField, true);
   }
 
-  const interviewType = (job as any).interview_type || '';
+  const interviewType      = (job as any).interview_type       || '';
   const interviewContactId = (job as any).interview_contact_id || '';
-  const selectedContact = contacts.find(c => c.id === interviewContactId);
+  const selectedContact    = contacts.find(c => c.id === interviewContactId);
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,12,0.5)', zIndex: 200 }} onClick={onClose}>
@@ -120,29 +117,19 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
           <div style={{ display: 'flex', gap: 0, overflowX: 'auto', paddingBottom: 4 }}>
             {detailStages.map((s, i) => {
               const isActive = currentSubStatus === s.id;
-              const isPast = detailStages.findIndex(d => d.id === currentSubStatus) > i;
+              const isPast   = detailStages.findIndex(d => d.id === currentSubStatus) > i;
               return (
-                <button
-                  key={s.id}
-                  onClick={() => handleDetailStageChange(s.id)}
-                  style={{
-                    flex: '0 0 auto',
-                    background: isActive ? s.color : isPast ? s.color + '33' : '#F4F4F4',
-                    color: isActive ? '#fff' : isPast ? s.color : '#888',
-                    border: `2px solid ${isActive ? s.color : isPast ? s.color + '66' : '#E0E0E0'}`,
-                    borderRadius: i === 0 ? '8px 0 0 8px' : i === detailStages.length - 1 ? '0 8px 8px 0' : '0',
-                    marginLeft: i === 0 ? 0 : -2,
-                    padding: '5px 10px',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontFamily: 'Montserrat,sans-serif',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s',
-                    zIndex: isActive ? 2 : 1,
-                    position: 'relative',
-                  }}
-                >
+                <button key={s.id} onClick={() => handleDetailStageChange(s.id)} style={{
+                  flex: '0 0 auto',
+                  background: isActive ? s.color : isPast ? s.color + '33' : '#F4F4F4',
+                  color: isActive ? '#fff' : isPast ? s.color : '#888',
+                  border: `2px solid ${isActive ? s.color : isPast ? s.color + '66' : '#E0E0E0'}`,
+                  borderRadius: i === 0 ? '8px 0 0 8px' : i === detailStages.length - 1 ? '0 8px 8px 0' : '0',
+                  marginLeft: i === 0 ? 0 : -2,
+                  padding: '5px 10px', fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'Montserrat,sans-serif', whiteSpace: 'nowrap', transition: 'all 0.15s',
+                  zIndex: isActive ? 2 : 1, position: 'relative',
+                }}>
                   {s.label}
                 </button>
               );
@@ -153,32 +140,33 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
         {/* ── SECTION ENTRETIEN ── */}
         {isInterviewStage(job.status, stages) && (
           <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#B8900A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                📅 Entretien
-              </div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#B8900A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>📅 Entretien</div>
               <button
                 onClick={() => router.push(`/dashboard/job/${job.id}`)}
                 style={{ fontSize: 10, fontWeight: 700, color: '#B8900A', background: 'none', border: '1.5px solid #F5C400', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif' }}
               >
-                Voir la page complète →
+                Voir l&apos;offre →
               </button>
             </div>
 
-            {/* Date + Heure */}
+            {/* Date */}
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Date</label>
+              <input
+                type="date"
+                defaultValue={(job as any).interview_at ? (job as any).interview_at.slice(0, 10) : ''}
+                className="fi"
+                style={{ fontSize: 12, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }}
+                onBlur={e => onFieldUpdate(job.id, 'interview_at', e.target.value || null)}
+              />
+            </div>
+
+            {/* Heure début + fin */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
               <div>
-                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Date</label>
-                <input
-                  type="date"
-                  defaultValue={(job as any).interview_at ? (job as any).interview_at.slice(0, 10) : ''}
-                  className="fi"
-                  style={{ fontSize: 12, padding: '6px 8px' }}
-                  onBlur={e => onFieldUpdate(job.id, 'interview_at', e.target.value || null)}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Heure</label>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Début</label>
                 <input
                   type="time"
                   defaultValue={(job as any).interview_time || ''}
@@ -187,28 +175,31 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
                   onBlur={e => onFieldUpdate(job.id, 'interview_time', e.target.value || null)}
                 />
               </div>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Fin</label>
+                <input
+                  type="time"
+                  defaultValue={(job as any).interview_time_end || ''}
+                  className="fi"
+                  style={{ fontSize: 12, padding: '6px 8px' }}
+                  onBlur={e => onFieldUpdate(job.id, 'interview_time_end', e.target.value || null)}
+                />
+              </div>
             </div>
 
-            {/* Type d'entretien */}
+            {/* Type */}
             <div style={{ marginBottom: 10 }}>
               <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 6 }}>Type</label>
               <div style={{ display: 'flex', gap: 6 }}>
                 {INTERVIEW_TYPES.map(t => (
-                  <button
-                    key={t.id}
+                  <button key={t.id}
                     onClick={() => onFieldUpdate(job.id, 'interview_type', interviewType === t.id ? null : t.id)}
                     style={{
-                      flex: 1,
-                      padding: '6px 4px',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      borderRadius: 7,
+                      flex: 1, padding: '6px 4px', fontSize: 10, fontWeight: 700, borderRadius: 7,
                       border: `2px solid ${interviewType === t.id ? '#F5C400' : '#E0E0E0'}`,
                       background: interviewType === t.id ? '#F5C400' : '#fff',
                       color: interviewType === t.id ? '#111' : '#888',
-                      cursor: 'pointer',
-                      fontFamily: 'Montserrat,sans-serif',
-                      transition: 'all 0.15s',
+                      cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', transition: 'all 0.15s',
                     }}
                   >
                     {t.label}
@@ -219,7 +210,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
 
             {/* Contact */}
             <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Contact pour l'entretien</label>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Contact pour l&apos;entretien</label>
               <select
                 value={interviewContactId}
                 onChange={e => onFieldUpdate(job.id, 'interview_contact_id', e.target.value || null)}

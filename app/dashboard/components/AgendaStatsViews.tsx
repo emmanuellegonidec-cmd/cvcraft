@@ -12,27 +12,28 @@ type AgendaProps = {
   onBackToKanban: () => void;
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  telephone: '📞 Téléphone',
-  visio: '💻 Visio',
-  presentiel: '🏢 Présentiel',
+const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  telephone:  { label: '📞 Téléphone',  color: '#1A6FA8', bg: '#E8F4FD' },
+  visio:      { label: '💻 Visio',      color: '#6B35B5', bg: '#F0EBFB' },
+  presentiel: { label: '🏢 Présentiel', color: '#1A7A4A', bg: '#E8F5EE' },
 };
 
-function formatInterviewDate(dateStr: string | null | undefined): string {
+function fmtDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-function formatInterviewTime(timeStr: string | null | undefined): string {
-  if (!timeStr) return '';
-  return timeStr.slice(0, 5); // HH:MM
+function fmtTime(t: string | null | undefined): string {
+  if (!t) return '';
+  return t.slice(0, 5);
 }
 
 export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaProps) {
   const router = useRouter();
+
   const interviewJobs = jobs.filter(j => isInterviewStage(j.status, stages));
 
-  // Trier par date d'entretien (les plus proches en premier, sans date à la fin)
+  // Trier par date (plus proche en premier, sans date à la fin)
   const sorted = [...interviewJobs].sort((a, b) => {
     const da = (a as any).interview_at;
     const db = (b as any).interview_at;
@@ -53,78 +54,101 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {sorted.map(job => {
-        const stage = stages.find(s => s.id === job.status);
-        const interviewDate = (job as any).interview_at;
-        const interviewTime = (job as any).interview_time;
-        const interviewType = (job as any).interview_type;
-        const contactName = (job as any).interview_contact_name; // jointure optionnelle
-        const hasDateInfo = interviewDate || interviewTime;
+        const stage        = stages.find(s => s.id === job.status);
+        const date         = (job as any).interview_at;
+        const timeStart    = (job as any).interview_time;
+        const timeEnd      = (job as any).interview_time_end;
+        const iType        = (job as any).interview_type as string | null;
+        const contactName  = (job as any).interview_contact_name as string | null;
+        const typeInfo     = iType ? TYPE_LABELS[iType] : null;
+
+        // Bloc horaire : "sam. 28 mars · 13:00–14:00" ou "Date à fixer"
+        const dateLabel = date ? fmtDate(date) : null;
+        const timeLabel = timeStart
+          ? (timeEnd ? `${fmtTime(timeStart)} – ${fmtTime(timeEnd)}` : fmtTime(timeStart))
+          : null;
 
         return (
           <div
             key={job.id}
-            style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '2px 2px 0 #111', cursor: 'pointer' }}
-            onClick={() => onJobClick(job)}
+            style={{
+              background: '#fff',
+              border: '2px solid #111',
+              borderRadius: 10,
+              padding: '0.75rem 1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              boxShadow: '2px 2px 0 #111',
+              flexWrap: 'wrap',
+            }}
           >
-            {/* Bloc date/type */}
-            <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8, padding: '8px 12px', textAlign: 'center', minWidth: 90, flexShrink: 0 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, color: '#B8900A', textTransform: 'uppercase', marginBottom: 2 }}>
-                {stage?.label || 'Entretien'}
-              </div>
-              {interviewDate ? (
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#111', lineHeight: 1.3 }}>
-                  {formatInterviewDate(interviewDate)}
-                </div>
-              ) : (
-                <div style={{ fontSize: 10, color: '#B8900A', fontWeight: 600 }}>Date à fixer</div>
-              )}
-              {interviewTime && (
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#B8900A', marginTop: 2 }}>
-                  🕐 {formatInterviewTime(interviewTime)}
-                </div>
+            {/* 1 — Date + heure */}
+            <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8, padding: '6px 10px', textAlign: 'center', minWidth: 100, flexShrink: 0 }}>
+              {dateLabel
+                ? <div style={{ fontSize: 11, fontWeight: 800, color: '#111', lineHeight: 1.4 }}>{dateLabel}</div>
+                : <div style={{ fontSize: 10, fontWeight: 700, color: '#B8900A' }}>Date à fixer</div>
+              }
+              {timeLabel && (
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#B8900A', marginTop: 1 }}>🕐 {timeLabel}</div>
               )}
             </div>
 
-            {/* Infos job */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>{job.title}</div>
-              <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>
-                {job.company}{job.location && ' · ' + job.location}
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {interviewType && (
-                  <span style={{ fontSize: 10, fontWeight: 700, background: '#F0F0F0', border: '1px solid #E0E0E0', borderRadius: 5, padding: '2px 7px', color: '#555' }}>
-                    {TYPE_LABELS[interviewType] || interviewType}
-                  </span>
-                )}
-                {contactName && (
-                  <span style={{ fontSize: 10, fontWeight: 700, background: '#FDEAEA', border: '1px solid #FFBABA', borderRadius: 5, padding: '2px 7px', color: '#E8151B' }}>
-                    👤 {contactName}
-                  </span>
-                )}
-                {!hasDateInfo && !interviewType && (
-                  <span style={{ fontSize: 10, color: '#BBB', fontWeight: 600 }}>Détails à compléter</span>
-                )}
+            {/* 2 — Titre + entreprise */}
+            <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{job.title}</div>
+              <div style={{ fontSize: 11, color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {job.company}{job.location ? ' · ' + job.location : ''}
               </div>
             </div>
 
-            {/* Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+            {/* 3 — Étape du parcours */}
+            {stage && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
+                background: stage.color + '22', color: stage.color, border: `1.5px solid ${stage.color}55`,
+              }}>
+                {stage.label}
+              </span>
+            )}
+
+            {/* 4 — Type */}
+            {typeInfo && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
+                background: typeInfo.bg, color: typeInfo.color, border: `1.5px solid ${typeInfo.color}44`,
+              }}>
+                {typeInfo.label}
+              </span>
+            )}
+
+            {/* 5 — Contact */}
+            {contactName && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
+                background: '#FDEAEA', color: '#E8151B', border: '1.5px solid #FFBABA',
+              }}>
+                👤 {contactName}
+              </span>
+            )}
+
+            {/* 6 — Boutons */}
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto' }} onClick={e => e.stopPropagation()}>
               <button
                 className="btn-main"
                 style={{ fontSize: 11, padding: '6px 12px' }}
                 onClick={() => onJobClick(job)}
               >
-                Détails
+                RDV
               </button>
               <button
                 className="btn-ghost"
                 style={{ fontSize: 11, padding: '5px 12px' }}
                 onClick={() => router.push(`/dashboard/job/${job.id}`)}
               >
-                Page →
+                Offre
               </button>
             </div>
           </div>
@@ -144,9 +168,11 @@ type StatsProps = {
 
 export function StatsView({ jobs, stages, contactCount }: StatsProps) {
   const jobsByStatus = (s: string) => jobs.filter(j => j.status === s);
-  const interviews = jobs.filter(j => isInterviewStage(j.status, stages)).length;
-  const offers = jobs.filter(j => j.status === 'offer').length;
-  const responseRate = jobs.length ? Math.round((jobs.filter(j => isInterviewStage(j.status, stages) || j.status === 'offer').length / jobs.length) * 100) : 0;
+  const interviews   = jobs.filter(j => isInterviewStage(j.status, stages)).length;
+  const offers       = jobs.filter(j => j.status === 'offer').length;
+  const responseRate = jobs.length
+    ? Math.round((jobs.filter(j => isInterviewStage(j.status, stages) || j.status === 'offer').length / jobs.length) * 100)
+    : 0;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -154,7 +180,7 @@ export function StatsView({ jobs, stages, contactCount }: StatsProps) {
         <div style={{ fontSize: 12, fontWeight: 800, marginBottom: '1rem', textTransform: 'uppercase' }}>Répartition par statut</div>
         {stages.filter(s => s.id !== 'archived').map(col => {
           const count = jobsByStatus(col.id).length;
-          const pct = jobs.length ? Math.round((count / jobs.length) * 100) : 0;
+          const pct   = jobs.length ? Math.round((count / jobs.length) * 100) : 0;
           return (
             <div key={col.id} style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
