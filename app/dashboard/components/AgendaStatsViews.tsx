@@ -41,7 +41,6 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
   const router = useRouter();
   const [contactsMap, setContactsMap] = useState<Record<string, ContactMin>>({});
 
-  // Charger tous les contacts pour résoudre interview_contact_id → nom + fonction
   useEffect(() => {
     fetch('/api/contacts', { headers: getAuthHeaders() })
       .then(r => r.json())
@@ -78,21 +77,21 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {sorted.map(job => {
-        const subStatusId  = (job as any).sub_status || job.status;
-        const detailStage  = stages.find(s => s.id === subStatusId);
-        const date         = (job as any).interview_at as string | null;
-        const timeStart    = (job as any).interview_time as string | null;
-        const timeEnd      = (job as any).interview_time_end as string | null;
-        const iType        = (job as any).interview_type as string | null;
-        const contactId    = (job as any).interview_contact_id as string | null;
-        const contact      = contactId ? contactsMap[contactId] : null;
-        const typeInfo     = iType ? TYPE_LABELS[iType] : null;
+        const subStatusId = (job as any).sub_status || job.status;
+        const detailStage = stages.find(s => s.id === subStatusId);
+        const date        = (job as any).interview_at as string | null;
+        const timeStart   = (job as any).interview_time as string | null;
+        const timeEnd     = (job as any).interview_time_end as string | null;
+        const iType       = (job as any).interview_type as string | null;
+        const contactId   = (job as any).interview_contact_id as string | null;
+        const contact     = contactId ? contactsMap[contactId] : null;
+        const typeInfo    = iType ? TYPE_LABELS[iType] : null;
 
         const timeLabel = timeStart
           ? (timeEnd ? `${fmtTime(timeStart)} – ${fmtTime(timeEnd)}` : fmtTime(timeStart))
           : null;
 
-        // Affichage contact : "Prénom Nom - Fonction"
+        // "Prénom Nom – Fonction"
         const contactLabel = contact
           ? contact.name + (contact.role ? ` – ${contact.role}` : '')
           : null;
@@ -112,7 +111,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
               flexWrap: 'wrap',
             }}
           >
-            {/* 1 — Bloc DATE */}
+            {/* 1 — DATE */}
             <div style={{
               background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8,
               padding: '5px 10px', textAlign: 'center', minWidth: 90, flexShrink: 0,
@@ -123,7 +122,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
               }
             </div>
 
-            {/* 2 — Bloc HORAIRE (séparé) */}
+            {/* 2 — HORAIRE */}
             {timeLabel && (
               <div style={{
                 background: '#FFF8EC', border: '1.5px solid #FFD97A', borderRadius: 8,
@@ -133,15 +132,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
               </div>
             )}
 
-            {/* 3 — Titre + entreprise */}
-            <div style={{ flex: '1 1 140px', minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{job.title}</div>
-              <div style={{ fontSize: 11, color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {job.company}{job.location ? ' · ' + job.location : ''}
-              </div>
-            </div>
-
-            {/* 4 — Étape détaillée (sub_status) */}
+            {/* 3 — ÉTAPE (sub_status) */}
             {detailStage && (
               <span style={{
                 fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
@@ -152,7 +143,22 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
               </span>
             )}
 
-            {/* 5 — Type */}
+            {/* 4 — TITRE + entreprise + contact */}
+            <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {job.title}
+                {job.company && (
+                  <span style={{ fontWeight: 600, color: '#888', fontSize: 12 }}> · {job.company}</span>
+                )}
+              </div>
+              {contactLabel && (
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#E8151B', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  👤 {contactLabel}
+                </div>
+              )}
+            </div>
+
+            {/* 5 — TYPE */}
             {typeInfo && (
               <span style={{
                 fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
@@ -162,17 +168,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
               </span>
             )}
 
-            {/* 6 — Contact : Prénom Nom – Fonction */}
-            {contactLabel && (
-              <span style={{
-                fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
-                background: '#FDEAEA', color: '#E8151B', border: '1.5px solid #FFBABA',
-              }}>
-                👤 {contactLabel}
-              </span>
-            )}
-
-            {/* 7 — Boutons */}
+            {/* 6 — BOUTONS */}
             <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto' }} onClick={e => e.stopPropagation()}>
               <button className="btn-main" style={{ fontSize: 11, padding: '6px 12px' }} onClick={() => onJobClick(job)}>
                 RDV
