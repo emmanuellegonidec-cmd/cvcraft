@@ -4,8 +4,6 @@ import { Job } from '@/lib/jobs';
 import { Stage, isInterviewStage } from './types';
 import { useRouter } from 'next/navigation';
 
-// ── AGENDA VIEW ───────────────────────────────────────────────────
-
 type AgendaProps = {
   jobs: Job[];
   stages: Stage[];
@@ -91,7 +89,6 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
           ? (timeEnd ? `${fmtTime(timeStart)} – ${fmtTime(timeEnd)}` : fmtTime(timeStart))
           : null;
 
-        // "Prénom Nom – Fonction"
         const contactLabel = contact
           ? contact.name + (contact.role ? ` – ${contact.role}` : '')
           : null;
@@ -126,13 +123,13 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
             {timeLabel && (
               <div style={{
                 background: '#FFF8EC', border: '1.5px solid #FFD97A', borderRadius: 8,
-                padding: '5px 10px', textAlign: 'center', flexShrink: 0,
+                padding: '5px 10px', flexShrink: 0,
               }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#B8900A' }}>🕐 {timeLabel}</div>
               </div>
             )}
 
-            {/* 3 — ÉTAPE (sub_status) */}
+            {/* 3 — ÉTAPE */}
             {detailStage && (
               <span style={{
                 fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
@@ -143,18 +140,19 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
               </span>
             )}
 
-            {/* 4 — TITRE + entreprise + contact */}
-            <div style={{ flex: '1 1 140px', minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {job.title}
-                {job.company && (
-                  <span style={{ fontWeight: 600, color: '#888', fontSize: 12 }}> · {job.company}</span>
-                )}
-              </div>
+            {/* 4 — TITRE · Entreprise · 👤 Contact (tout sur une ligne) */}
+            <div style={{ flex: '1 1 140px', minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap' }}>{job.title}</span>
+              {job.company && (
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#888', whiteSpace: 'nowrap' }}>· {job.company}</span>
+              )}
               {contactLabel && (
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#E8151B', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '2px 8px', flexShrink: 0,
+                  background: '#FDEAEA', color: '#E8151B', border: '1.5px solid #FFBABA', whiteSpace: 'nowrap',
+                }}>
                   👤 {contactLabel}
-                </div>
+                </span>
               )}
             </div>
 
