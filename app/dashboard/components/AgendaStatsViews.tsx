@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { Job } from '@/lib/jobs';
 import { Stage, isInterviewStage } from './types';
 import { useRouter } from 'next/navigation';
@@ -12,11 +13,19 @@ type AgendaProps = {
   onBackToKanban: () => void;
 };
 
+type ContactMin = { id: string; name: string; role?: string | null };
+
 const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   telephone:  { label: '📞 Téléphone',  color: '#1A6FA8', bg: '#E8F4FD' },
   visio:      { label: '💻 Visio',      color: '#6B35B5', bg: '#F0EBFB' },
   presentiel: { label: '🏢 Présentiel', color: '#1A7A4A', bg: '#E8F5EE' },
 };
+
+function getAuthHeaders(): Record<string, string> {
+  const token = (typeof window !== 'undefined') ? (window as any).__jfmj_token : null;
+  if (!token) return { 'Content-Type': 'application/json' };
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+}
 
 function fmtDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '';
@@ -30,6 +39,20 @@ function fmtTime(t: string | null | undefined): string {
 
 export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaProps) {
   const router = useRouter();
+  const [contactsMap, setContactsMap] = useState<Record<string, ContactMin>>({});
+
+  // Charger tous les contacts pour résoudre interview_contact_id → nom + fonction
+  useEffect(() => {
+    fetch('/api/contacts', { headers: getAuthHeaders() })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.contacts) return;
+        const map: Record<string, ContactMin> = {};
+        data.contacts.forEach((c: ContactMin) => { map[c.id] = c; });
+        setContactsMap(map);
+      })
+      .catch(() => {});
+  }, []);
 
   const interviewJobs = jobs.filter(j => isInterviewStage(j.status, stages));
 
@@ -55,17 +78,23 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {sorted.map(job => {
-        const subStatusId   = (job as any).sub_status || job.status;
-        const detailStage   = stages.find(s => s.id === subStatusId);
-        const date          = (job as any).interview_at as string | null;
-        const timeStart     = (job as any).interview_time as string | null;
-        const timeEnd       = (job as any).interview_time_end as string | null;
-        const iType         = (job as any).interview_type as string | null;
-        const contactName   = (job as any).interview_contact_name as string | null;
-        const typeInfo      = iType ? TYPE_LABELS[iType] : null;
+        const subStatusId  = (job as any).sub_status || job.status;
+        const detailStage  = stages.find(s => s.id === subStatusId);
+        const date         = (job as any).interview_at as string | null;
+        const timeStart    = (job as any).interview_time as string | null;
+        const timeEnd      = (job as any).interview_time_end as string | null;
+        const iType        = (job as any).interview_type as string | null;
+        const contactId    = (job as any).interview_contact_id as string | null;
+        const contact      = contactId ? contactsMap[contactId] : null;
+        const typeInfo     = iType ? TYPE_LABELS[iType] : null;
 
         const timeLabel = timeStart
           ? (timeEnd ? `${fmtTime(timeStart)} – ${fmtTime(timeEnd)}` : fmtTime(timeStart))
+          : null;
+
+        // Affichage contact : "Prénom Nom - Fonction"
+        const contactLabel = contact
+          ? contact.name + (contact.role ? ` – ${contact.role}` : '')
           : null;
 
         return (
@@ -133,13 +162,13 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
               </span>
             )}
 
-            {/* 6 — Contact */}
-            {contactName && (
+            {/* 6 — Contact : Prénom Nom – Fonction */}
+            {contactLabel && (
               <span style={{
                 fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
                 background: '#FDEAEA', color: '#E8151B', border: '1.5px solid #FFBABA',
               }}>
-                👤 {contactName}
+                👤 {contactLabel}
               </span>
             )}
 
