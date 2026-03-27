@@ -603,119 +603,6 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {/* ── BLOC ENTRETIEN (visible uniquement si étape entretien) ── */}
-        {isInterviewStep && (
-          <div style={{ background: '#FEF9E0', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '2px solid #F5C400', boxShadow: '2px 2px 0 #F5C400' }}>
-            <span style={{ ...sectionLabel, color: '#B8900A' }}>📅 Détails de l'entretien</span>
-
-            {/* Date + Début + Fin */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
-              <div>
-                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Date</label>
-                <input type="date" className="interview-inp"
-                  defaultValue={job.interview_at ? job.interview_at.slice(0, 10) : ''}
-                  onBlur={e => patchJob('interview_at', e.target.value || null)}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Début</label>
-                <input type="time" className="interview-inp"
-                  defaultValue={job.interview_time || ''}
-                  onBlur={e => patchJob('interview_time', e.target.value || null)}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fin</label>
-                <input type="time" className="interview-inp"
-                  defaultValue={job.interview_time_end || ''}
-                  onBlur={e => patchJob('interview_time_end', e.target.value || null)}
-                />
-              </div>
-            </div>
-
-            {/* Type */}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Type d'entretien</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {(['telephone', 'visio', 'presentiel'] as const).map(t => (
-                  <button key={t}
-                    className={`interview-type-btn${job.interview_type === t ? ' active' : ''}`}
-                    onClick={() => patchJob('interview_type', job.interview_type === t ? null : t)}
-                  >
-                    {INTERVIEW_TYPE_LABELS[t]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Champ contextuel selon le type */}
-            {job.interview_type === 'telephone' && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>📞 Numéro de téléphone</label>
-                <input type="tel" className="interview-inp" placeholder="Ex : +33 6 12 34 56 78"
-                  defaultValue={job.interview_phone || ''}
-                  onBlur={e => patchJob('interview_phone', e.target.value || null)}
-                />
-              </div>
-            )}
-            {job.interview_type === 'visio' && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>💻 Lien de la visio</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input type="url" className="interview-inp" placeholder="https://meet.google.com/..."
-                    defaultValue={job.interview_link || ''}
-                    onBlur={e => patchJob('interview_link', e.target.value || null)}
-                  />
-                  {job.interview_link && (
-                    <button onClick={() => window.open(job.interview_link!, '_blank')}
-                      style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>
-                      Rejoindre →
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            {job.interview_type === 'presentiel' && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Adresse</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input type="text" className="interview-inp" placeholder="Ex : 12 rue de la Paix, 75001 Paris"
-                    defaultValue={job.interview_location || ''}
-                    onBlur={e => patchJob('interview_location', e.target.value || null)}
-                  />
-                  {job.interview_location && (
-                    <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(job.interview_location!)}`, '_blank')}
-                      style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>
-                      Maps →
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Contact */}
-            <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>👤 Contact pour l'entretien</label>
-              <select className="interview-inp"
-                value={job.interview_contact_id || ''}
-                onChange={e => patchJob('interview_contact_id', e.target.value || null)}
-              >
-                <option value="">— Aucun contact —</option>
-                {contacts.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}{c.role ? ` – ${c.role}` : ''}{c.company ? ` (${c.company})` : ''}
-                  </option>
-                ))}
-              </select>
-              {selectedContact && (
-                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#B8900A' }}>
-                  👤 {selectedContact.name}{selectedContact.role ? ` – ${selectedContact.role}` : ''}{selectedContact.company ? ` · ${selectedContact.company}` : ''}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* PARCOURS */}
         <div style={card}>
           <span style={sectionLabel}>Parcours de candidature</span>
@@ -848,6 +735,119 @@ export default function JobDetailPage() {
             </button>
           )}
         </div>
+
+        {/* ── BLOC ENTRETIEN (visible uniquement si étape entretien) ── */}
+        {isInterviewStep && (
+          <div style={{ background: '#FEF9E0', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '2px solid #F5C400', boxShadow: '2px 2px 0 #F5C400' }}>
+            <span style={{ ...sectionLabel, color: '#B8900A' }}>📅 Détails de l'entretien</span>
+
+            {/* Date + Début + Fin */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Date</label>
+                <input type="date" className="interview-inp"
+                  defaultValue={job.interview_at ? job.interview_at.slice(0, 10) : ''}
+                  onBlur={e => patchJob('interview_at', e.target.value || null)}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Début</label>
+                <input type="time" className="interview-inp"
+                  defaultValue={job.interview_time || ''}
+                  onBlur={e => patchJob('interview_time', e.target.value || null)}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fin</label>
+                <input type="time" className="interview-inp"
+                  defaultValue={job.interview_time_end || ''}
+                  onBlur={e => patchJob('interview_time_end', e.target.value || null)}
+                />
+              </div>
+            </div>
+
+            {/* Type */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Type d'entretien</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['telephone', 'visio', 'presentiel'] as const).map(t => (
+                  <button key={t}
+                    className={`interview-type-btn${job.interview_type === t ? ' active' : ''}`}
+                    onClick={() => patchJob('interview_type', job.interview_type === t ? null : t)}
+                  >
+                    {INTERVIEW_TYPE_LABELS[t]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Champ contextuel selon le type */}
+            {job.interview_type === 'telephone' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>📞 Numéro de téléphone</label>
+                <input type="tel" className="interview-inp" placeholder="Ex : +33 6 12 34 56 78"
+                  defaultValue={job.interview_phone || ''}
+                  onBlur={e => patchJob('interview_phone', e.target.value || null)}
+                />
+              </div>
+            )}
+            {job.interview_type === 'visio' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>💻 Lien de la visio</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input type="url" className="interview-inp" placeholder="https://meet.google.com/..."
+                    defaultValue={job.interview_link || ''}
+                    onBlur={e => patchJob('interview_link', e.target.value || null)}
+                  />
+                  {job.interview_link && (
+                    <button onClick={() => window.open(job.interview_link!, '_blank')}
+                      style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>
+                      Rejoindre →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            {job.interview_type === 'presentiel' && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Adresse</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input type="text" className="interview-inp" placeholder="Ex : 12 rue de la Paix, 75001 Paris"
+                    defaultValue={job.interview_location || ''}
+                    onBlur={e => patchJob('interview_location', e.target.value || null)}
+                  />
+                  {job.interview_location && (
+                    <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(job.interview_location!)}`, '_blank')}
+                      style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>
+                      Maps →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Contact */}
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>👤 Contact pour l'entretien</label>
+              <select className="interview-inp"
+                value={job.interview_contact_id || ''}
+                onChange={e => patchJob('interview_contact_id', e.target.value || null)}
+              >
+                <option value="">— Aucun contact —</option>
+                {contacts.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.role ? ` – ${c.role}` : ''}{c.company ? ` (${c.company})` : ''}
+                  </option>
+                ))}
+              </select>
+              {selectedContact && (
+                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#B8900A' }}>
+                  👤 {selectedContact.name}{selectedContact.role ? ` – ${selectedContact.role}` : ''}{selectedContact.company ? ` · ${selectedContact.company}` : ''}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* SYNTHÈSE ÉCHANGES */}
         <div style={card}>
