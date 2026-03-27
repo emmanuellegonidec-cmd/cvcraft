@@ -327,13 +327,26 @@ export default function JobDetailPage() {
   }, [jobId])
 
   const loadContacts = useCallback(async () => {
-    const res = await fetch('/api/contacts', { headers: authHeaders() })
-    if (res.ok) { const data = await res.json(); if (data.contacts) setContacts(data.contacts) }
+    // Chargement direct Supabase — fiable sans token Bearer
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const { data } = await supabase
+      .from('contacts')
+      .select('id, name, role, company')
+      .eq('user_id', session.user.id)
+      .order('name')
+    if (data) setContacts(data)
   }, [])
 
   useEffect(() => {
     Promise.all([loadJob(), loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
   }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
+
+  // Recharger les contacts si le userId arrive après le montage
+  useEffect(() => {
+    if (userId) loadContacts()
+  }, [userId])
 
   const loadStepActions = useCallback(async (stepId: string, uid: string) => {
     if (!stepId || !uid) return
