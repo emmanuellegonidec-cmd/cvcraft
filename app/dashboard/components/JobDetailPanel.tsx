@@ -1,10 +1,12 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { Job } from '@/lib/jobs';
 import { Stage, DETAIL_STAGES, formatDate, getGlobalStatus, isInterviewStage } from './types';
 import { HeartDisplay } from './HeartComponents';
+
+type Contact = { id: string; name: string; role?: string; company?: string };
 
 type Props = {
   job: Job;
@@ -18,17 +20,37 @@ type Props = {
   onDelete: (id: string) => void;
 };
 
+function getAuthHeaders(): Record<string, string> {
+  const token = (typeof window !== 'undefined') ? (window as any).__jfmj_token : null;
+  if (!token) return { 'Content-Type': 'application/json' };
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+}
+
+const INTERVIEW_TYPES = [
+  { id: 'telephone', label: '📞 Téléphone' },
+  { id: 'visio',     label: '💻 Visio' },
+  { id: 'presentiel', label: '🏢 Présentiel' },
+];
+
 export default function JobDetailPanel({ job, stages, userId, accessToken, onClose, onStatusChange, onFieldUpdate, onEdit, onDelete }: Props) {
   const router = useRouter();
   const cvInputRef = useRef<HTMLInputElement>(null);
   const lmInputRef = useRef<HTMLInputElement>(null);
   const [uploadingCv, setUploadingCv] = useState(false);
   const [uploadingLm, setUploadingLm] = useState(false);
+  const [contacts, setContacts] = useState<Contact[]>([]);
 
-  // Étapes personnalisées (non default) ajoutées par l'utilisateur → rattachées à in_progress
+  // Charger les contacts pour le dropdown
+  useEffect(() => {
+    if (!isInterviewStage(job.status, stages)) return;
+    fetch('/api/contacts', { headers: getAuthHeaders() })
+      .then(r => r.json())
+      .then(data => { if (data.contacts) setContacts(data.contacts); })
+      .catch(() => {});
+  }, [job.status, stages]);
+
   const customStages: Stage[] = stages.filter(s => !s.is_default).map(s => ({ ...s, global_status: 'in_progress' }));
 
-  // Pipeline détaillé complet = étapes fixes + étapes personnalisées insérées avant "offer"
   const detailStages: Stage[] = [
     ...DETAIL_STAGES.filter(s => !['offer', 'archived'].includes(s.id)),
     ...customStages,
@@ -39,8 +61,6 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
   const currentSubStatus = (job as any).sub_status || job.status;
   const currentDetailStage = detailStages.find(s => s.id === currentSubStatus);
 
-  // Quand on change l'étape dans le pipeline détaillé :
-  // → met à jour sub_status ET recalcule le status global
   async function handleDetailStageChange(subStatusId: string) {
     const globalStatus = getGlobalStatus(subStatusId, customStages);
     await onFieldUpdate(job.id, 'sub_status', subStatusId);
@@ -62,6 +82,10 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
     onFieldUpdate(job.id, field, signedData?.signedUrl ?? '');
     onFieldUpdate(job.id, checkField, true);
   }
+
+  const interviewType = (job as any).interview_type || '';
+  const interviewContactId = (job as any).interview_contact_id || '';
+  const selectedContact = contacts.find(c => c.id === interviewContactId);
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,12,0.5)', zIndex: 200 }} onClick={onClose}>
@@ -125,6 +149,98 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
             })}
           </div>
         </div>
+
+        {/* ── SECTION ENTRETIEN ── */}
+        {isInterviewStage(job.status, stages) && (
+          <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#B8900A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                📅 Entretien
+              </div>
+              <button
+                onClick={() => router.push(`/dashboard/job/${job.id}`)}
+                style={{ fontSize: 10, fontWeight: 700, color: '#B8900A', background: 'none', border: '1.5px solid #F5C400', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif' }}
+              >
+                Voir la page complète →
+              </button>
+            </div>
+
+            {/* Date + Heure */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Date</label>
+                <input
+                  type="date"
+                  defaultValue={(job as any).interview_at ? (job as any).interview_at.slice(0, 10) : ''}
+                  className="fi"
+                  style={{ fontSize: 12, padding: '6px 8px' }}
+                  onBlur={e => onFieldUpdate(job.id, 'interview_at', e.target.value || null)}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Heure</label>
+                <input
+                  type="time"
+                  defaultValue={(job as any).interview_time || ''}
+                  className="fi"
+                  style={{ fontSize: 12, padding: '6px 8px' }}
+                  onBlur={e => onFieldUpdate(job.id, 'interview_time', e.target.value || null)}
+                />
+              </div>
+            </div>
+
+            {/* Type d'entretien */}
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 6 }}>Type</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {INTERVIEW_TYPES.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => onFieldUpdate(job.id, 'interview_type', interviewType === t.id ? null : t.id)}
+                    style={{
+                      flex: 1,
+                      padding: '6px 4px',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      borderRadius: 7,
+                      border: `2px solid ${interviewType === t.id ? '#F5C400' : '#E0E0E0'}`,
+                      background: interviewType === t.id ? '#F5C400' : '#fff',
+                      color: interviewType === t.id ? '#111' : '#888',
+                      cursor: 'pointer',
+                      fontFamily: 'Montserrat,sans-serif',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Contact pour l'entretien</label>
+              <select
+                value={interviewContactId}
+                onChange={e => onFieldUpdate(job.id, 'interview_contact_id', e.target.value || null)}
+                className="fi"
+                style={{ fontSize: 12, padding: '6px 8px' }}
+              >
+                <option value="">— Aucun contact —</option>
+                {contacts.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.role ? ` · ${c.role}` : ''}{c.company ? ` (${c.company})` : ''}
+                  </option>
+                ))}
+              </select>
+              {selectedContact && (
+                <div style={{ fontSize: 11, color: '#B8900A', fontWeight: 600, marginTop: 4 }}>
+                  👤 {selectedContact.name}{selectedContact.role ? ` · ${selectedContact.role}` : ''}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Documents */}
         {job.status !== 'to_apply' && (
