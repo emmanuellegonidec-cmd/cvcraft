@@ -20,7 +20,6 @@ import {
   capitalize, cleanJobTitle, cleanLocation, detectSource, isInterviewStage,
 } from './components/types';
 
-// Correspondance status kanban → sub_status par défaut quand on dépose dans une colonne
 const STATUS_TO_SUB: Record<string, string> = {
   to_apply:    'to_apply',
   applied:     'applied',
@@ -28,6 +27,306 @@ const STATUS_TO_SUB: Record<string, string> = {
   offer:       'offer',
   archived:    'archived',
 };
+
+// ─── Calendrier ───────────────────────────────────────────────────────────────
+
+const CAL_DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const CAL_MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+
+type CalEvent = {
+  date: Date;
+  title: string;
+  type: 'envie' | 'postule' | 'entretien' | 'offre';
+  time?: string;
+};
+
+function sameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+}
+
+function jobsToEvents(jobs: Job[]): CalEvent[] {
+  const events: CalEvent[] = [];
+  for (const job of jobs) {
+    if (!job.created_at) continue;
+    const created = new Date(job.created_at);
+
+    // Date de création → type selon statut
+    const typeMap: Record<string, CalEvent['type']> = {
+      to_apply:    'envie',
+      applied:     'postule',
+      in_progress: 'entretien',
+      offer:       'offre',
+      archived:    'envie',
+    };
+    const evType: CalEvent['type'] = typeMap[job.status] ?? 'envie';
+    const label = [job.title, job.company].filter(Boolean).join(' – ');
+
+    events.push({ date: created, title: label, type: evType });
+
+    // Si des dates d'entretien existent dans les champs (interview_date, next_step_date)
+    const iDate = (job as any).interview_date || (job as any).next_step_date;
+    if (iDate) {
+      const d = new Date(iDate);
+      const timeStr = d.getHours() > 0
+        ? `${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}`
+        : undefined;
+      events.push({ date: d, title: label, type: 'entretien', time: timeStr });
+    }
+  }
+  return events;
+}
+
+function getWeekStart(base: Date, off: number): Date {
+  const d = new Date(base);
+  const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day + off * 7);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+const EV_STYLE: Record<CalEvent['type'], React.CSSProperties> = {
+  envie:     { background: '#111', color: '#F5C400' },
+  postule:   { background: '#DBEAFE', color: '#1E40AF' },
+  entretien: { background: '#FEE2E2', color: '#991B1B', borderLeft: '3px solid #E8151B' },
+  offre:     { background: '#FEF9C3', color: '#92400E', borderLeft: '3px solid #F5C400' },
+};
+
+const EV_LABEL: Record<CalEvent['type'], string> = {
+  envie:     'Envie de postuler',
+  postule:   'Postulé',
+  entretien: 'Entretien',
+  offre:     'Offre reçue',
+};
+
+function DashboardCalendar({ jobs }: { jobs: Job[] }) {
+  const [calView, setCalView] = useState<'week' | 'month'>('week');
+  const [offset, setOffset] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  const today = new Date();
+  const events = jobsToEvents(jobs);
+
+  // ── Vue semaine ──────────────────────────────────────────────────────────────
+  function WeekView() {
+    const ws = getWeekStart(today, offset);
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(ws); d.setDate(d.getDate() + i); return d;
+    });
+    const we = days[6];
+    const periodLabel = `${days[0].getDate()} – ${we.getDate()} ${CAL_MONTHS[we.getMonth()]} ${we.getFullYear()}`;
+
+    const colWidth = 'minmax(0,1fr)';
+    const timeColW = 44;
+
+    return (
+      <div>
+        {/* Header nav */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['week', 'month'] as const).map(v => (
+              <button key={v} onClick={() => setCalView(v)} style={{
+                padding: '4px 14px', fontSize: 12, fontWeight: 700, fontFamily: 'Montserrat,sans-serif',
+                border: '2px solid #111', borderRadius: 6, cursor: 'pointer',
+                background: calView === v ? '#111' : '#fff', color: calView === v ? '#F5C400' : '#111',
+              }}>{v === 'week' ? 'Semaine' : 'Mois'}</button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={() => setOffset(o => o - 1)} style={navBtnStyle}>‹</button>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#555', minWidth: 160, textAlign: 'center' }}>{periodLabel}</span>
+            <button onClick={() => setOffset(o => o + 1)} style={navBtnStyle}>›</button>
+            <button onClick={() => setOffset(0)} style={{ ...navBtnStyle, fontSize: 11, padding: '3px 8px', width: 'auto' }}>Auj.</button>
+          </div>
+        </div>
+
+        {/* Grille */}
+        <div style={{ display: 'grid', gridTemplateColumns: `${timeColW}px repeat(7, ${colWidth})`, border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
+          {/* En-têtes */}
+          <div style={weekHeaderCell} />
+          {days.map((d, i) => {
+            const isTod = sameDay(d, today);
+            return (
+              <div key={i} style={{ ...weekHeaderCell, borderRight: i === 6 ? 'none' : '1px solid #E5E5E5', textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>{CAL_DAYS[i]}</div>
+                <div style={{
+                  fontSize: 16, fontWeight: 900, color: isTod ? '#fff' : '#111',
+                  background: isTod ? '#111' : 'transparent',
+                  borderRadius: '50%', width: 28, height: 28,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '2px auto 0',
+                }}>{d.getDate()}</div>
+              </div>
+            );
+          })}
+
+          {/* Lignes horaires */}
+          {HOURS.map(h => (
+            <>
+              <div key={`t${h}`} style={{ background: '#FAFAFA', borderRight: '1px solid #E5E5E5', borderBottom: '1px solid #F0F0F0', height: 52, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', padding: '4px 6px 0', fontSize: 10, color: '#AAA', fontWeight: 600 }}>{h}h</div>
+              {days.map((d, di) => {
+                const isTod = sameDay(d, today);
+                const cellEvs = events.filter(e => sameDay(e.date, d) && (!e.time || parseInt(e.time) === h));
+                return (
+                  <div key={`${h}-${di}`} style={{
+                    height: 52, borderRight: di === 6 ? 'none' : '1px solid #F0F0F0',
+                    borderBottom: '1px solid #F0F0F0',
+                    background: isTod ? 'rgba(245,196,0,0.04)' : 'transparent',
+                    position: 'relative', padding: '2px',
+                  }}>
+                    {/* Événements sans heure affichés sur la première ligne (8h) */}
+                    {h === 8 && events.filter(e => sameDay(e.date, d) && !e.time).map((ev, ei) => (
+                      <div key={ei} title={ev.title} style={{
+                        ...EV_STYLE[ev.type],
+                        borderRadius: 4, padding: '2px 4px', fontSize: 9, fontWeight: 700,
+                        marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        fontFamily: 'Montserrat,sans-serif',
+                      }}>{ev.title}</div>
+                    ))}
+                    {/* Événements avec heure */}
+                    {cellEvs.filter(e => !!e.time).map((ev, ei) => (
+                      <div key={ei} title={ev.title} style={{
+                        ...EV_STYLE[ev.type],
+                        borderRadius: 4, padding: '2px 4px', fontSize: 9, fontWeight: 700,
+                        marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        fontFamily: 'Montserrat,sans-serif',
+                      }}><span style={{ opacity: .7 }}>{ev.time} </span>{ev.title}</div>
+                    ))}
+                  </div>
+                );
+              })}
+            </>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Vue mois ─────────────────────────────────────────────────────────────────
+  function MonthView() {
+    const base = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+    const periodLabel = `${CAL_MONTHS[base.getMonth()]} ${base.getFullYear()}`;
+    const firstDay = (base.getDay() + 6) % 7;
+    const gridStart = new Date(base); gridStart.setDate(1 - firstDay);
+    const cells = Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(gridStart); d.setDate(d.getDate() + i); return d;
+    });
+
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['week', 'month'] as const).map(v => (
+              <button key={v} onClick={() => setCalView(v)} style={{
+                padding: '4px 14px', fontSize: 12, fontWeight: 700, fontFamily: 'Montserrat,sans-serif',
+                border: '2px solid #111', borderRadius: 6, cursor: 'pointer',
+                background: calView === v ? '#111' : '#fff', color: calView === v ? '#F5C400' : '#111',
+              }}>{v === 'week' ? 'Semaine' : 'Mois'}</button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={() => setOffset(o => o - 1)} style={navBtnStyle}>‹</button>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#555', minWidth: 140, textAlign: 'center' }}>{periodLabel}</span>
+            <button onClick={() => setOffset(o => o + 1)} style={navBtnStyle}>›</button>
+            <button onClick={() => setOffset(0)} style={{ ...navBtnStyle, fontSize: 11, padding: '3px 8px', width: 'auto' }}>Auj.</button>
+          </div>
+        </div>
+
+        <div style={{ border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
+          {/* Jours de la semaine */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', background: '#111' }}>
+            {CAL_DAYS.map((d, i) => (
+              <div key={i} style={{ padding: '7px 4px', textAlign: 'center', fontSize: 10, fontWeight: 800, color: '#F5C400', textTransform: 'uppercase', letterSpacing: '.06em', borderRight: i < 6 ? '1px solid #333' : 'none' }}>{d}</div>
+            ))}
+          </div>
+          {/* Cellules */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
+            {cells.map((d, idx) => {
+              const isOther = d.getMonth() !== base.getMonth();
+              const isTod = sameDay(d, today);
+              const dayEvs = events.filter(e => sameDay(e.date, d));
+              return (
+                <div key={idx} style={{
+                  minHeight: 80, borderRight: (idx % 7) < 6 ? '1px solid #E5E5E5' : 'none',
+                  borderBottom: idx < 35 ? '1px solid #E5E5E5' : 'none',
+                  padding: '5px 4px 3px', background: isTod ? 'rgba(245,196,0,0.07)' : 'transparent',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: isOther ? '#CCC' : '#111', marginBottom: 3 }}>
+                    {isTod
+                      ? <span style={{ background: '#111', color: '#F5C400', borderRadius: '50%', width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>{d.getDate()}</span>
+                      : d.getDate()}
+                  </div>
+                  {dayEvs.slice(0, 3).map((ev, ei) => (
+                    <div key={ei} title={ev.title} style={{
+                      ...EV_STYLE[ev.type],
+                      borderRadius: 3, padding: '1px 4px', fontSize: 9, fontWeight: 700,
+                      marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      fontFamily: 'Montserrat,sans-serif',
+                    }}>{ev.title}</div>
+                  ))}
+                  {dayEvs.length > 3 && (
+                    <div style={{ fontSize: 9, color: '#AAA', fontWeight: 700, padding: '1px 3px' }}>+{dayEvs.length - 3} autres</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
+      {/* Barre titre */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: visible ? '2px solid #111' : 'none', background: '#FAFAFA' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 900, color: '#111', fontFamily: 'Montserrat,sans-serif', textTransform: 'uppercase', letterSpacing: '.04em' }}>📅 Calendrier</span>
+          {/* Légende */}
+          {visible && (
+            <div style={{ display: 'flex', gap: 10, marginLeft: 8 }}>
+              {(Object.keys(EV_LABEL) as CalEvent['type'][]).map(t => (
+                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#666', fontWeight: 600 }}>
+                  <div style={{ width: 9, height: 9, borderRadius: 2, ...EV_STYLE[t] }} />
+                  {EV_LABEL[t]}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <button onClick={() => setVisible(v => !v)} style={{
+          fontSize: 11, fontWeight: 800, fontFamily: 'Montserrat,sans-serif',
+          background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6,
+          padding: '3px 10px', cursor: 'pointer', color: '#555',
+        }}>{visible ? 'Masquer' : 'Afficher'}</button>
+      </div>
+
+      {/* Contenu calendrier */}
+      {visible && (
+        <div style={{ padding: '14px 16px' }}>
+          {calView === 'week' ? <WeekView /> : <MonthView />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const navBtnStyle: React.CSSProperties = {
+  background: '#fff', border: '1.5px solid #CCC', borderRadius: 6,
+  width: 28, height: 28, cursor: 'pointer', color: '#555',
+  fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  fontFamily: 'Montserrat,sans-serif',
+};
+
+const weekHeaderCell: React.CSSProperties = {
+  background: '#FAFAFA', padding: '8px 4px',
+  borderBottom: '2px solid #111',
+};
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -74,7 +373,6 @@ export default function DashboardPage() {
     });
   }
 
-  // ✅ fetchJobs séparé et mémoïsé — utilisé aussi pour le refresh du kanban
   const fetchJobs = useCallback(async (token: string) => {
     const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
     const jr = await fetch('/api/jobs', { headers: h });
@@ -82,7 +380,6 @@ export default function DashboardPage() {
     setJobs(jd.jobs || []);
   }, []);
 
-  // ✅ onRefresh appelé par KanbanView au retour sur la page
   const handleRefresh = useCallback(() => {
     if (accessToken) fetchJobs(accessToken);
   }, [accessToken, fetchJobs]);
@@ -198,9 +495,7 @@ export default function DashboardPage() {
     }
   }
 
-  // ✅ Mise à jour status (kanban drag & drop) — PATCH + optimiste
   async function updateJobStatus(id: string, newStatus: string) {
-    // Mise à jour optimiste immédiate
     const subStatus = STATUS_TO_SUB[newStatus] ?? newStatus;
     setJobs(prev => prev.map(j =>
       j.id === id ? { ...j, status: newStatus as JobStatus, sub_status: subStatus } as any : j
@@ -208,13 +503,11 @@ export default function DashboardPage() {
     if (selectedJob?.id === id) {
       setSelectedJob(prev => prev ? { ...prev, status: newStatus as JobStatus } : prev);
     }
-    // Persistance en BDD via PATCH
     const res = await authFetch(`/api/jobs?id=${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ status: newStatus, sub_status: subStatus }),
     });
     const data = await res.json();
-    // On resynchronise avec la vraie valeur BDD
     if (data.job) {
       setJobs(prev => prev.map(j => j.id === id ? data.job : j));
       if (selectedJob?.id === id) setSelectedJob(data.job);
@@ -339,6 +632,11 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          )}
+
+          {/* ── Calendrier (kanban + list uniquement) ── */}
+          {['kanban', 'list'].includes(view) && (
+            <DashboardCalendar jobs={jobs} />
           )}
 
           {view === 'kanban' && (
