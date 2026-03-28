@@ -59,11 +59,9 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
     DETAIL_STAGES.find(s => s.id === 'archived')!,
   ];
 
-  const currentSubStatus   = (job as any).sub_status || job.status;
-  const currentStageIndex  = detailStages.findIndex(s => s.id === currentSubStatus);
-
-  // Étapes déjà franchies (toutes celles avant l'étape courante, incluse)
-  const completedStages = detailStages.slice(0, currentStageIndex + 1);
+  const currentSubStatus  = (job as any).sub_status || job.status;
+  const currentStageIndex = detailStages.findIndex(s => s.id === currentSubStatus);
+  const completedStages   = detailStages.slice(0, currentStageIndex + 1);
 
   async function uploadDocument(file: File, type: 'cv' | 'lm') {
     if (!userId || !accessToken) return;
@@ -73,7 +71,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
     const { error } = await supabase.storage.from('job-documents').upload(path, file, { upsert: true });
     if (error) { alert('Erreur upload : ' + error.message); return; }
     const { data: signedData } = await supabase.storage.from('job-documents').createSignedUrl(path, 60 * 60 * 24 * 365);
-    const field     = type === 'cv' ? 'cv_url' : 'cover_letter_url';
+    const field      = type === 'cv' ? 'cv_url' : 'cover_letter_url';
     const checkField = type === 'cv' ? 'cv_sent' : 'cover_letter_sent';
     onFieldUpdate(job.id, field, signedData?.signedUrl ?? '');
     onFieldUpdate(job.id, checkField, true);
@@ -85,15 +83,35 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,12,0.5)', zIndex: 200 }} onClick={onClose}>
-      <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 480, background: '#fff', borderLeft: '2px solid #111', padding: '1.5rem', overflowY: 'auto', boxShadow: '-4px 0 0 #111' }} onClick={e => e.stopPropagation()}>
+      <div
+        style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 480, background: '#fff', borderLeft: '2px solid #111', padding: '1.5rem', overflowY: 'auto', boxShadow: '-4px 0 0 #111' }}
+        onClick={e => e.stopPropagation()}
+      >
 
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-          <div>
+        {/* ── Header ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+          <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
             <div style={{ fontSize: 11, color: '#888', marginBottom: 3, fontWeight: 600 }}>{job.company}</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>{job.title}</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: 6 }}>{job.title}</div>
+            {/* ── Bouton Voir l'offre complète — visible pour tous les statuts ── */}
+            <button
+              onClick={() => router.push(`/dashboard/job/${job.id}`)}
+              style={{
+                fontSize: 11, fontWeight: 700, color: '#111',
+                background: '#F5C400', border: '2px solid #111',
+                borderRadius: 6, padding: '4px 12px', cursor: 'pointer',
+                fontFamily: 'Montserrat,sans-serif',
+                boxShadow: '2px 2px 0 #111',
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+              }}
+            >
+              Voir l&apos;offre complète →
+            </button>
           </div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
+          <button
+            onClick={onClose}
+            style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800, flexShrink: 0 }}
+          >✕</button>
         </div>
 
         {/* Pills localisation + salaire */}
@@ -105,7 +123,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
         {(job as any).favorite > 0 && <div style={{ marginBottom: '0.75rem' }}><HeartDisplay value={(job as any).favorite} /></div>}
         <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: '1rem' }}>📅 Créé le {formatDate(job.created_at)}</div>
 
-        {/* ── PARCOURS : étapes franchies ── */}
+        {/* ── PARCOURS ── */}
         <div style={{ marginBottom: '1rem' }}>
           <label className="fl">Parcours</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -113,7 +131,6 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
               const isLast = i === completedStages.length - 1;
               return (
                 <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {/* Ligne de connexion */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 16, flexShrink: 0 }}>
                     <div style={{
                       width: 12, height: 12, borderRadius: '50%',
@@ -146,23 +163,14 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
         {/* ── SECTION ENTRETIEN ── */}
         {isInterview && (
           <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#B8900A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>📅 Entretien</div>
-              <button
-                onClick={() => router.push(`/dashboard/job/${job.id}`)}
-                style={{ fontSize: 10, fontWeight: 700, color: '#B8900A', background: 'none', border: '1.5px solid #F5C400', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif' }}
-              >
-                Voir l&apos;offre →
-              </button>
-            </div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#B8900A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>📅 Entretien</div>
 
             {/* Date */}
             <div style={{ marginBottom: 8 }}>
               <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Date</label>
               <input
                 type="date"
-                defaultValue={(job as any).interview_at ? (job as any).interview_at.slice(0, 10) : ''}
+                defaultValue={job.interview_at ? job.interview_at.slice(0, 10) : ''}
                 className="fi"
                 style={{ fontSize: 12, padding: '6px 8px', width: '100%', boxSizing: 'border-box' }}
                 onBlur={e => onFieldUpdate(job.id, 'interview_at', e.target.value || null)}

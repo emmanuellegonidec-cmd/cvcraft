@@ -38,10 +38,10 @@ const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 type CalEvent = {
   jobId: string;
   date: Date;
-  dateField: 'interview_date' | 'next_step_date' | 'applied_at' | 'created_at';
+  dateField: 'interview_at' | 'applied_at' | 'created_at';
   title: string;
   company: string;
-  type: 'envie' | 'postule' | 'entretien' | 'offre';
+  type: 'envie' | 'postule' | 'entretien' | 'offre' | 'archive';
   time?: string;
 };
 
@@ -51,14 +51,15 @@ function sameDay(a: Date, b: Date) {
     a.getDate() === b.getDate();
 }
 
+// Une carte par offre — date la plus pertinente selon le statut
 function jobsToEvents(jobs: Job[]): CalEvent[] {
   return jobs.map(job => {
     const typeMap: Record<string, CalEvent['type']> = {
-      to_apply:    'envie',
-      applied:     'postule',
-      in_progress: 'entretien',
-      offer:       'offre',
-      archived:    'envie',
+      to_apply:  'envie',
+      applied:   'postule',
+      interview: 'entretien',
+      offer:     'offre',
+      archived:  'archive',
     };
     const evType: CalEvent['type'] = typeMap[job.status] ?? 'envie';
 
@@ -66,20 +67,17 @@ function jobsToEvents(jobs: Job[]): CalEvent[] {
     let dateField: CalEvent['dateField'] = 'created_at';
     let time: string | undefined;
 
-    if ((job as any).interview_date) {
-      date = new Date((job as any).interview_date);
-      dateField = 'interview_date';
+    if (job.status === 'interview' && job.interview_at) {
+      date = new Date(job.interview_at);
+      dateField = 'interview_at';
       if (date.getHours() > 0) {
         time = `${String(date.getHours()).padStart(2, '0')}h${String(date.getMinutes()).padStart(2, '0')}`;
       }
-    } else if ((job as any).next_step_date) {
-      date = new Date((job as any).next_step_date);
-      dateField = 'next_step_date';
-    } else if ((job as any).applied_at) {
-      date = new Date((job as any).applied_at);
+    } else if (job.status === 'applied' && job.applied_at) {
+      date = new Date(job.applied_at);
       dateField = 'applied_at';
     } else {
-      date = new Date(job.created_at!);
+      date = new Date(job.created_at);
       dateField = 'created_at';
     }
 
@@ -108,6 +106,7 @@ const EV_STYLE: Record<CalEvent['type'], React.CSSProperties> = {
   postule:   { background: '#DBEAFE', color: '#1E40AF' },
   entretien: { background: '#FEE2E2', color: '#991B1B', borderLeft: '3px solid #E8151B' },
   offre:     { background: '#FEF9C3', color: '#92400E', borderLeft: '3px solid #F5C400' },
+  archive:   { background: '#F0F0F0', color: '#999', borderLeft: '3px solid #CCC' },
 };
 
 const EV_LABEL: Record<CalEvent['type'], string> = {
@@ -115,6 +114,7 @@ const EV_LABEL: Record<CalEvent['type'], string> = {
   postule:   'Postulé',
   entretien: 'Entretien',
   offre:     'Offre reçue',
+  archive:   'Archivé',
 };
 
 const navBtnStyle: React.CSSProperties = {
@@ -128,19 +128,19 @@ const weekTh: React.CSSProperties = {
   background: '#FAFAFA', padding: '8px 4px', borderBottom: '2px solid #111',
 };
 
+// ── Carte événement ──────────────────────────────────────────────────────────
 function EventCard({
-  ev,
-  onJobClick,
-  onDragStart,
+  ev, onJobClick, onDragStart,
 }: {
   ev: CalEvent;
   onJobClick: (jobId: string) => void;
   onDragStart: (e: React.DragEvent, ev: CalEvent) => void;
 }) {
+  const isArchived = ev.type === 'archive';
   return (
     <div
-      draggable
-      onDragStart={e => onDragStart(e, ev)}
+      draggable={!isArchived}
+      onDragStart={e => !isArchived && onDragStart(e, ev)}
       onClick={e => { e.stopPropagation(); onJobClick(ev.jobId); }}
       title={`${ev.title} — ${ev.company}`}
       style={{
@@ -148,20 +148,30 @@ function EventCard({
         borderRadius: 4,
         padding: '3px 5px',
         marginBottom: 2,
-        cursor: 'grab',
+        cursor: isArchived ? 'pointer' : 'grab',
         fontFamily: 'Montserrat,sans-serif',
         overflow: 'hidden',
         userSelect: 'none',
+        opacity: isArchived ? 0.65 : 1,
       }}
     >
       {ev.time && (
         <div style={{ fontSize: 9, opacity: .75, fontWeight: 600, lineHeight: 1.2 }}>{ev.time}</div>
       )}
-      <div style={{ fontSize: 10, fontWeight: 800, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{
+        fontSize: 10, fontWeight: 800, lineHeight: 1.3,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        textDecoration: isArchived ? 'line-through' : 'none',
+      }}>
         {ev.title}
       </div>
       {ev.company && (
-        <div style={{ fontSize: 9, fontWeight: 600, opacity: .75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+        <div style={{
+          fontSize: 9, fontWeight: 600, opacity: .75,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          lineHeight: 1.2,
+          textDecoration: isArchived ? 'line-through' : 'none',
+        }}>
           {ev.company}
         </div>
       )}
@@ -169,22 +179,21 @@ function EventCard({
   );
 }
 
+// ── Composant calendrier ─────────────────────────────────────────────────────
 function DashboardCalendar({
-  jobs,
-  onJobClick,
-  onDateChange,
+  jobs, onJobClick, onDateChange,
 }: {
   jobs: Job[];
   onJobClick: (jobId: string) => void;
   onDateChange: (jobId: string, field: string, newDate: Date) => void;
 }) {
-  const [calView, setCalView] = useState<'week' | 'month'>('week');
-  const [offset, setOffset] = useState(0);
-  const [visible, setVisible] = useState(true);
+  const [calView, setCalView]   = useState<'week' | 'month'>('week');
+  const [offset, setOffset]     = useState(0);
+  const [visible, setVisible]   = useState(true);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const dragEvRef = useRef<CalEvent | null>(null);
 
-  const today = new Date();
+  const today  = new Date();
   const events = jobsToEvents(jobs);
 
   function handleDragStart(e: React.DragEvent, ev: CalEvent) {
@@ -250,11 +259,7 @@ function DashboardCalendar({
     return (
       <>
         <NavBar periodLabel={periodLabel} />
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: `44px repeat(7, minmax(0, 1fr))`,
-          border: '2px solid #111', borderRadius: 10, overflow: 'hidden',
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `44px repeat(7, minmax(0, 1fr))`, border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
           <div style={weekTh} />
           {days.map((d, i) => {
             const isTod = sameDay(d, today);
@@ -340,9 +345,9 @@ function DashboardCalendar({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
             {cells.map((d, idx) => {
               const isOther = d.getMonth() !== base.getMonth();
-              const isTod = sameDay(d, today);
-              const dayEvs = events.filter(e => sameDay(e.date, d));
-              const key = cellKey(d);
+              const isTod   = sameDay(d, today);
+              const dayEvs  = events.filter(e => sameDay(e.date, d));
+              const key     = cellKey(d);
               return (
                 <div
                   key={idx}
@@ -380,6 +385,7 @@ function DashboardCalendar({
 
   return (
     <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
+      {/* Barre titre */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '10px 16px', borderBottom: visible ? '2px solid #111' : 'none',
@@ -393,7 +399,7 @@ function DashboardCalendar({
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {(Object.keys(EV_LABEL) as CalEvent['type'][]).map(t => (
                 <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#666', fontWeight: 600 }}>
-                  <div style={{ width: 9, height: 9, borderRadius: 2, ...EV_STYLE[t] }} />
+                  <div style={{ width: 9, height: 9, borderRadius: 2, ...EV_STYLE[t], borderLeft: 'none' }} />
                   {EV_LABEL[t]}
                 </div>
               ))}
@@ -421,26 +427,26 @@ function DashboardCalendar({
 export default function DashboardPage() {
   const router = useRouter();
 
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [stages, setStages] = useState<Stage[]>(DEFAULT_STAGES);
-  const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<View>('kanban');
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [showAddJob, setShowAddJob] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [accessToken, setAccessToken]     = useState<string | null>(null);
+  const [userId, setUserId]               = useState<string | null>(null);
+  const [userEmail, setUserEmail]         = useState('');
+  const [firstName, setFirstName]         = useState('');
+  const [jobs, setJobs]                   = useState<Job[]>([]);
+  const [contacts, setContacts]           = useState<Contact[]>([]);
+  const [stages, setStages]               = useState<Stage[]>(DEFAULT_STAGES);
+  const [loading, setLoading]             = useState(true);
+  const [view, setView]                   = useState<View>('kanban');
+  const [selectedJob, setSelectedJob]     = useState<Job | null>(null);
+  const [showAddJob, setShowAddJob]       = useState(false);
+  const [showSettings, setShowSettings]   = useState(false);
   const [triggerAddContact, setTriggerAddContact] = useState(0);
-  const [newJob, setNewJob] = useState<NewJobState>({ ...EMPTY_JOB });
-  const [editingJobId, setEditingJobId] = useState<string | null>(null);
-  const [addJobMode, setAddJobMode] = useState<null | 'url' | 'manual' | 'spontaneous'>(null);
-  const [importUrl, setImportUrl] = useState('');
-  const [importError, setImportError] = useState(false);
+  const [newJob, setNewJob]               = useState<NewJobState>({ ...EMPTY_JOB });
+  const [editingJobId, setEditingJobId]   = useState<string | null>(null);
+  const [addJobMode, setAddJobMode]       = useState<null | 'url' | 'manual' | 'spontaneous'>(null);
+  const [importUrl, setImportUrl]         = useState('');
+  const [importError, setImportError]     = useState(false);
   const [importLoading, setImportLoading] = useState(false);
-  const [newStageName, setNewStageName] = useState('');
+  const [newStageName, setNewStageName]   = useState('');
   const [newStageColor, setNewStageColor] = useState('#E8151B');
   const [newStagePosition, setNewStagePosition] = useState(3);
 
@@ -506,19 +512,13 @@ export default function DashboardPage() {
       setContacts(cd.contacts || []);
 
       const { data: customStages } = await supabase
-        .from('pipeline_stages')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .is('job_id', null)
-        .order('position');
+        .from('pipeline_stages').select('*')
+        .eq('user_id', session.user.id).is('job_id', null).order('position');
 
       if (customStages && customStages.length > 0) {
         const all = [
           ...DEFAULT_STAGES,
-          ...customStages.map((s: any) => ({
-            id: s.id, label: s.label, color: s.color,
-            position: s.position, is_default: false,
-          })),
+          ...customStages.map((s: any) => ({ id: s.id, label: s.label, color: s.color, position: s.position, is_default: false })),
         ].sort((a, b) => a.position - b.position);
         setStages(all);
       }
@@ -563,40 +563,29 @@ export default function DashboardPage() {
       location: newJob.location || '', description: newJob.description || '',
       job_type: newJob.job_type || 'CDI', status: newJob.status || 'to_apply',
       notes: newJob.notes || '',
-      ...(newJob.salary ? { salary_text: newJob.salary } : {}),
-      ...(newJob.source ? { source_platform: newJob.source } : {}),
-      ...(newJob.url ? { source_url: newJob.url } : {}),
+      ...(newJob.salary   ? { salary_text: newJob.salary }           : {}),
+      ...(newJob.source   ? { source_platform: newJob.source }       : {}),
+      ...(newJob.url      ? { source_url: newJob.url }               : {}),
       ...(newJob.favorite !== undefined ? { favorite: newJob.favorite } : {}),
     };
     if (editingJobId) {
       const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: editingJobId, ...payload }) });
       const data = await res.json();
-      if (data.job) {
-        setJobs(prev => prev.map(j => j.id === editingJobId ? data.job : j));
-        setShowAddJob(false); setEditingJobId(null);
-      } else alert('Erreur : ' + (data.error || 'inconnue'));
+      if (data.job) { setJobs(prev => prev.map(j => j.id === editingJobId ? data.job : j)); setShowAddJob(false); setEditingJobId(null); }
+      else alert('Erreur : ' + (data.error || 'inconnue'));
     } else {
       const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify(payload) });
       const data = await res.json();
-      if (data.job) {
-        setJobs(prev => [data.job, ...prev]);
-        setShowAddJob(false); setNewJob({ ...EMPTY_JOB });
-      } else alert('Erreur : ' + (data.error || 'inconnue'));
+      if (data.job) { setJobs(prev => [data.job, ...prev]); setShowAddJob(false); setNewJob({ ...EMPTY_JOB }); }
+      else alert('Erreur : ' + (data.error || 'inconnue'));
     }
   }
 
   async function updateJobStatus(id: string, newStatus: string) {
     const subStatus = STATUS_TO_SUB[newStatus] ?? newStatus;
-    setJobs(prev => prev.map(j =>
-      j.id === id ? { ...j, status: newStatus as JobStatus, sub_status: subStatus } as any : j
-    ));
-    if (selectedJob?.id === id) {
-      setSelectedJob(prev => prev ? { ...prev, status: newStatus as JobStatus } : prev);
-    }
-    const res = await authFetch(`/api/jobs?id=${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status: newStatus, sub_status: subStatus }),
-    });
+    setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus as JobStatus, sub_status: subStatus } as any : j));
+    if (selectedJob?.id === id) setSelectedJob(prev => prev ? { ...prev, status: newStatus as JobStatus } : prev);
+    const res = await authFetch(`/api/jobs?id=${id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus, sub_status: subStatus }) });
     const data = await res.json();
     if (data.job) {
       setJobs(prev => prev.map(j => j.id === id ? data.job : j));
@@ -617,10 +606,7 @@ export default function DashboardPage() {
     const iso = newDate.toISOString();
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, [field]: iso } as any : j));
     if (selectedJob?.id === jobId) setSelectedJob(prev => prev ? { ...prev, [field]: iso } as any : prev);
-    const res = await authFetch(`/api/jobs?id=${jobId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ [field]: iso }),
-    });
+    const res = await authFetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', body: JSON.stringify({ [field]: iso }) });
     const data = await res.json();
     if (data.job) {
       setJobs(prev => prev.map(j => j.id === jobId ? data.job : j));
@@ -670,16 +656,12 @@ export default function DashboardPage() {
     if (!newStageName.trim() || !userId) return;
     const supabase = createClient();
     const { data } = await supabase.from('pipeline_stages').insert({
-      user_id: userId, label: newStageName.trim(),
-      color: newStageColor, position: newStagePosition,
+      user_id: userId, label: newStageName.trim(), color: newStageColor, position: newStagePosition,
     }).select().single();
     if (data) {
-      const updated = [
-        ...stages,
-        { id: data.id, label: data.label, color: data.color, position: data.position, is_default: false },
-      ].sort((a, b) => a.position - b.position);
-      setStages(updated);
-      setNewStageName('');
+      const updated = [...stages, { id: data.id, label: data.label, color: data.color, position: data.position, is_default: false }]
+        .sort((a, b) => a.position - b.position);
+      setStages(updated); setNewStageName('');
     }
   }
 
@@ -727,11 +709,11 @@ export default function DashboardPage() {
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: '1.25rem' }}>
               {[
-                { l: 'Total', v: stats.total, c: '#111' },
-                { l: 'Taux réponse', v: stats.responseRate + '%', c: '#E8151B' },
-                { l: 'Entretiens', v: stats.interviews, c: '#1A7A4A' },
-                { l: 'Offres', v: stats.offers, c: '#B8900A' },
-                { l: 'Contacts', v: contacts.length, c: '#888' },
+                { l: 'Total',         v: stats.total,               c: '#111' },
+                { l: 'Taux réponse',  v: stats.responseRate + '%',  c: '#E8151B' },
+                { l: 'Entretiens',    v: stats.interviews,           c: '#1A7A4A' },
+                { l: 'Offres',        v: stats.offers,               c: '#B8900A' },
+                { l: 'Contacts',      v: contacts.length,            c: '#888' },
               ].map(s => (
                 <div key={s.l} className="stat-card">
                   <div style={{ fontSize: 9, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
@@ -761,10 +743,7 @@ export default function DashboardPage() {
             <ListView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onDeleteJob={deleteJob} onAddJob={openAddJobModal} />
           )}
           {view === 'contacts' && (
-            <ContactsView
-              contacts={contacts} onAddContact={triggerAddContact}
-              onDeleteContact={deleteContact} onRefresh={fetchContacts}
-            />
+            <ContactsView contacts={contacts} onAddContact={triggerAddContact} onDeleteContact={deleteContact} onRefresh={fetchContacts} />
           )}
           {view === 'agenda' && (
             <AgendaView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onBackToKanban={() => setView('kanban')} />
