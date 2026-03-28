@@ -328,7 +328,7 @@ export default function DashboardPage() {
                 { l: 'Contacts',     v: contacts.length,           c: '#888' },
               ].map(s => (
                 <div key={s.l} className="stat-card">
-                  <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
                   <div style={{ fontSize: '1.75rem', fontWeight: 900, color: s.c }}>{s.v}</div>
                 </div>
               ))}
@@ -344,18 +344,23 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* ── Titre section Candidatures ── */}
+          {/* ── Titre section Candidatures dans un bloc ── */}
           {view === 'kanban' && (
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              marginBottom: '0.75rem', marginTop: '1rem',
-              paddingBottom: '0.5rem', borderBottom: '2px solid #111',
+              marginBottom: '0.75rem', marginTop: '0.25rem',
+              background: '#fff', border: '2px solid #111', borderRadius: 12,
+              boxShadow: '3px 3px 0 #111', overflow: 'hidden',
             }}>
-              <div style={{ fontSize: 14, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Candidatures
-              </div>
-              <div style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>
-                {jobs.length} offre{jobs.length > 1 ? 's' : ''}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 16px', background: '#FAFAFA',
+              }}>
+                <span style={{ fontSize: 14, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
+                  Candidatures
+                </span>
+                <span style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>
+                  {jobs.length} offre{jobs.length > 1 ? 's' : ''}
+                </span>
               </div>
             </div>
           )}
