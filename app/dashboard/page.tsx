@@ -319,19 +319,26 @@ export default function DashboardPage() {
 
           {/* ── Stats ── */}
           {['kanban', 'list', 'stats'].includes(view) && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: '1.25rem' }}>
-              {[
-                { l: 'Total',        v: stats.total,              c: '#111' },
-                { l: 'Taux réponse', v: stats.responseRate + '%', c: '#E8151B' },
-                { l: 'Entretiens',   v: stats.interviews,          c: '#1A7A4A' },
-                { l: 'Offres',       v: stats.offers,              c: '#B8900A' },
-                { l: 'Contacts',     v: contacts.length,           c: '#888' },
-              ].map(s => (
-                <div key={s.l} className="stat-card">
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
-                  <div style={{ fontSize: '1.75rem', fontWeight: 900, color: s.c }}>{s.v}</div>
-                </div>
-              ))}
+            <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
+              <div style={{ padding: '10px 16px', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
+                <span style={{ fontSize: 14, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
+                  📊 Statistiques
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)' }}>
+                {[
+                  { l: "Nombre d'offres", v: stats.total,              c: '#111' },
+                  { l: 'Taux de réponse', v: stats.responseRate + '%', c: '#E8151B' },
+                  { l: 'Entretiens',      v: stats.interviews,          c: '#1A7A4A' },
+                  { l: 'Proposition',     v: stats.offers,              c: '#B8900A' },
+                  { l: 'Contacts',        v: contacts.length,           c: '#888' },
+                ].map((s, i, arr) => (
+                  <div key={s.l} style={{ padding: '14px 16px', borderRight: i < arr.length - 1 ? '1px solid #E0E0E0' : 'none' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: s.c }}>{s.v}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -355,8 +362,8 @@ export default function DashboardPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '10px 16px', background: '#FAFAFA',
               }}>
-                <span style={{ fontSize: 14, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
-                  Candidatures
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
+                  📋 Candidatures
                 </span>
                 <span style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>
                   {jobs.length} offre{jobs.length > 1 ? 's' : ''}
