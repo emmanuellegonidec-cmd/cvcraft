@@ -12,7 +12,8 @@ import { Stage, formatRelative, getSubStatusLabel } from './types';
 import { HeartDisplay } from './HeartComponents';
 
 // ─── Config cartouches SOURCE ──────────────────────────────────────────────────
-// Fond coloré plein + pill très arrondi → identifiable au premier coup d'œil
+// Fond coloré plein + pill très arrondi
+// Les sources inconnues (texte libre) affichent un badge gris avec le texte brut
 const SOURCE_MAP: Record<string, { bg: string; color: string; label: string }> = {
   'linkedin':              { bg: '#0A66C2', color: '#fff',    label: 'LinkedIn' },
   'indeed':                { bg: '#003A9B', color: '#fff',    label: 'Indeed' },
@@ -25,14 +26,25 @@ const SOURCE_MAP: Record<string, { bg: string; color: string; label: string }> =
   'réseau':                { bg: '#7C3AED', color: '#fff',    label: '🤝 Réseau' },
   'reseau':                { bg: '#7C3AED', color: '#fff',    label: '🤝 Réseau' },
   'hellowork':             { bg: '#FF6B35', color: '#fff',    label: 'HelloWork' },
+  'chasseur de tête':      { bg: '#0D9488', color: '#fff',    label: '🎯 Chasseur de tête' },
+  'chasseur de tete':      { bg: '#0D9488', color: '#fff',    label: '🎯 Chasseur de tête' },
+  'cabinet recrutement':   { bg: '#0D9488', color: '#fff',    label: '🎯 Cabinet recrutement' },
+  'cooptation':            { bg: '#7C3AED', color: '#fff',    label: '🤝 Cooptation' },
   'spontaneous':           { bg: '#F5C400', color: '#92400E', label: '📨 Spontanée' },
   'autre':                 { bg: '#888',    color: '#fff',    label: 'Autre' },
 };
 
+// 'file' n'est PAS dans SOURCE_MAP — ce n'est pas une source, c'est un mode d'import
+// Toute source non reconnue (texte libre) → badge gris avec le texte brut
+
 function getSourceBadge(source?: string) {
-  if (!source) return null;
+  if (!source || source === 'file') return null; // 'file' = pas de badge
   const key = source.toLowerCase().trim();
-  return SOURCE_MAP[key] ?? { bg: '#888', color: '#fff', label: source };
+  // Source connue → badge coloré
+  if (SOURCE_MAP[key]) return SOURCE_MAP[key];
+  // Source inconnue (texte libre, ex: "Cabinet Michael Page") → badge gris avec texte brut
+  const label = source.length > 18 ? source.slice(0, 16) + '…' : source;
+  return { bg: '#666', color: '#fff', label };
 }
 
 // ─── Carte draggable ───────────────────────────────────────────────────────────
@@ -43,11 +55,11 @@ function DraggableCard({ job, colId, stages, onClick }: {
     id: job.id, data: { job, fromColId: colId },
   });
 
-  // Cartouche ÉTAPE : fond blanc, bordure dorée, coins carrés (4px)
+  // Cartouche ÉTAPE : fond blanc crème, bordure dorée, coins carrés
   const subLabel = colId === 'in_progress'
     ? getSubStatusLabel((job as any).sub_status, stages) : null;
 
-  // Cartouche SOURCE : fond coloré plein, pill arrondi (20px)
+  // Cartouche SOURCE : fond coloré plein, pill très arrondi
   const sourceBadge = getSourceBadge((job as any).source_platform);
 
   return (
@@ -64,33 +76,25 @@ function DraggableCard({ job, colId, stages, onClick }: {
       <div style={{ fontSize: 9, color: '#888', fontWeight: 600, marginBottom: 2 }}>{job.company}</div>
       <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 5 }}>{job.title}</div>
 
-      {/* Cartouches SOURCE et ÉTAPE sur la même ligne, styles opposés */}
+      {/* SOURCE (pill coloré) + ÉTAPE (bordure seule) — styles opposés, impossible de confondre */}
       {(sourceBadge || subLabel) && (
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 4, alignItems: 'center' }}>
-
-          {/* SOURCE — pill coloré plein */}
           {sourceBadge && (
             <span style={{
-              background: sourceBadge.bg,
-              color: sourceBadge.color,
+              background: sourceBadge.bg, color: sourceBadge.color,
               fontSize: 9, fontWeight: 800,
-              padding: '2px 8px',
-              borderRadius: 20,
+              padding: '2px 8px', borderRadius: 20,
               lineHeight: 1.4, whiteSpace: 'nowrap',
             }}>
               {sourceBadge.label}
             </span>
           )}
-
-          {/* ÉTAPE RECRUTEMENT — fond blanc, bordure seule, coins carrés */}
           {subLabel && (
             <span style={{
-              background: '#FFFBF0',
-              color: '#B8900A',
+              background: '#FFFBF0', color: '#B8900A',
               border: '1.5px solid #B8900A',
               fontSize: 9, fontWeight: 700,
-              padding: '1px 6px',
-              borderRadius: 4,
+              padding: '1px 6px', borderRadius: 4,
               lineHeight: 1.4, whiteSpace: 'nowrap',
             }}>
               {subLabel}
@@ -99,7 +103,6 @@ function DraggableCard({ job, colId, stages, onClick }: {
         </div>
       )}
 
-      {/* Localisation + salaire */}
       {(job.location || (job as any).salary_text) && (
         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 2 }}>
           {job.location && (

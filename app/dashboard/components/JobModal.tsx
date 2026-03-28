@@ -1,8 +1,10 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Job, JobStatus, JobType } from '@/lib/jobs';
 import { Stage, NewJobState, EMPTY_JOB } from './types';
 import { HeartRating } from './HeartComponents';
+
+type ContactOption = { id: string; name: string; role?: string; company?: string };
 
 type Props = {
   editingJobId: string | null;
@@ -21,9 +23,57 @@ type Props = {
   onClose: () => void;
 };
 
-// Sources pour lesquelles le champ "Transmis par" est pertinent
-const SOURCES_WITH_CONTACT = ['réseau', 'reseau', 'Réseau', 'file', 'autre', 'Autre', 'Site entreprise', 'site entreprise'];
+// ─── Sources fixes de la liste déroulante ─────────────────────────────────────
+const FIXED_SOURCES = [
+  'LinkedIn', 'Indeed', 'Welcome to the Jungle', 'Apec', 'Pôle Emploi',
+  'Site entreprise', 'Réseau', 'Chasseur de tête', 'Cabinet recrutement',
+  'Cooptation', 'HelloWork', 'Autre',
+];
 
+// Sources pour lesquelles "Transmis par" est pertinent
+const SOURCES_WITH_CONTACT = new Set([
+  'réseau', 'reseau', 'chasseur de tête', 'chasseur de tete',
+  'cabinet recrutement', 'cooptation', 'autre', 'site entreprise',
+]);
+
+function showTransmittedByFor(source: string) {
+  return SOURCES_WITH_CONTACT.has((source || '').toLowerCase().trim());
+}
+
+// ─── Composant ContactPicker ──────────────────────────────────────────────────
+function ContactPicker({ contacts, contactId, setContactId, freeText, setFreeText, placeholder }: {
+  contacts: ContactOption[];
+  contactId: string; setContactId: (v: string) => void;
+  freeText: string; setFreeText: (v: string) => void;
+  placeholder: string;
+}) {
+  const selected = contacts.find(c => c.id === contactId);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <select className="fi" value={contactId} onChange={e => setContactId(e.target.value)} style={{ marginBottom: 0 }}>
+        <option value="">— Choisir dans mes contacts —</option>
+        {contacts.map(c => (
+          <option key={c.id} value={c.id}>
+            {c.name}{c.role ? ` · ${c.role}` : ''}{c.company ? ` (${c.company})` : ''}
+          </option>
+        ))}
+        <option value="__new__">✏️ Saisir un nouveau nom...</option>
+      </select>
+      {(contactId === '__new__' || (!contactId && freeText)) && (
+        <input className="fi" value={freeText} onChange={e => setFreeText(e.target.value)}
+          placeholder={placeholder} style={{ marginBottom: 0 }} />
+      )}
+      {selected && (
+        <div style={{ fontSize: 11, color: '#7C3AED', fontWeight: 600, padding: '2px 4px' }}>
+          👤 {selected.name}{selected.role ? ` · ${selected.role}` : ''}
+          {selected.company ? ` (${selected.company})` : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Composant principal ──────────────────────────────────────────────────────
 export default function JobModal({
   editingJobId, newJob, setNewJob, stages,
   importUrl, setImportUrl, addJobMode, setAddJobMode,
@@ -32,39 +82,70 @@ export default function JobModal({
 }: Props) {
 
   // ── Candidature spontanée ──────────────────────────────────────────────────
-  const [spontCompany, setSpontCompany]       = useState('');
-  const [spontTitle, setSpontTitle]           = useState('');
-  const [spontLocation, setSpontLocation]     = useState('');
-  const [spontWebsite, setSpontWebsite]       = useState('');
-  const [spontMotivation, setSpontMotivation] = useState('');
-  const [spontNotes, setSpontNotes]           = useState('');
-  const [spontFavorite, setSpontFavorite]     = useState(0);
-  const [spontError, setSpontError]           = useState<string | null>(null);
-  const [spontContact, setSpontContact]       = useState('');
+  const [spontCompany, setSpontCompany]         = useState('');
+  const [spontTitle, setSpontTitle]             = useState('');
+  const [spontLocation, setSpontLocation]       = useState('');
+  const [spontWebsite, setSpontWebsite]         = useState('');
+  const [spontMotivation, setSpontMotivation]   = useState('');
+  const [spontNotes, setSpontNotes]             = useState('');
+  const [spontFavorite, setSpontFavorite]       = useState(0);
+  const [spontError, setSpontError]             = useState<string | null>(null);
+  const [spontContactId, setSpontContactId]     = useState('');
+  const [spontContactFree, setSpontContactFree] = useState('');
 
   // ── Import fichier ─────────────────────────────────────────────────────────
-  const fileInputRef                          = useRef<HTMLInputElement>(null);
-  const [fileAnalyzing, setFileAnalyzing]     = useState(false);
-  const [fileError, setFileError]             = useState<string | null>(null);
-  const [fileName, setFileName]               = useState<string | null>(null);
-  const [dragOver, setDragOver]               = useState(false);
+  const fileInputRef                            = useRef<HTMLInputElement>(null);
+  const [fileAnalyzing, setFileAnalyzing]       = useState(false);
+  const [fileError, setFileError]               = useState<string | null>(null);
+  const [fileName, setFileName]                 = useState<string | null>(null);
+  const [dragOver, setDragOver]                 = useState(false);
 
-  // ── Champ "Transmis par" dans le formulaire manuel ─────────────────────────
-  const [transmittedBy, setTransmittedBy]     = useState('');
+  // ── Formulaire manuel ─────────────────────────────────────────────────────
+  const [transmittedById, setTransmittedById]   = useState('');
+  const [transmittedByFree, setTransmittedByFree] = useState('');
+  const [customSource, setCustomSource]         = useState('');
+
+  // ── Contacts depuis l'API ─────────────────────────────────────────────────
+  const [contacts, setContacts]                 = useState<ContactOption[]>([]);
+
+  useEffect(() => {
+    const token = (window as unknown as { __jfmj_token?: string }).__jfmj_token;
+    fetch('/api/contacts', {
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.contacts) setContacts(d.contacts); })
+      .catch(() => {});
+  }, []);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function resolveContact(contactId: string, freeText: string): string {
+    if (contactId && contactId !== '__new__') {
+      const c = contacts.find(c => c.id === contactId);
+      if (c) return [c.name, c.role, c.company].filter(Boolean).join(' — ');
+    }
+    return freeText.trim();
+  }
+
+  function resolveSource(): string {
+    if (['Autre', 'Chasseur de tête', 'Cabinet recrutement'].includes(newJob.source || '')) {
+      return customSource.trim() || newJob.source || '';
+    }
+    return newJob.source || '';
+  }
 
   function handleSpontClose() {
     setSpontCompany(''); setSpontTitle(''); setSpontLocation('');
     setSpontWebsite(''); setSpontMotivation(''); setSpontNotes('');
-    setSpontFavorite(0); setSpontError(null); setSpontContact('');
+    setSpontFavorite(0); setSpontError(null);
+    setSpontContactId(''); setSpontContactFree('');
     onClose();
   }
 
   function handleSpontSave() {
     if (!spontCompany.trim()) { setSpontError("Le nom de l'entreprise est obligatoire."); return; }
-    const notesWithContact = [
-      spontNotes.trim(),
-      spontContact.trim() ? `Contact : ${spontContact.trim()}` : '',
-    ].filter(Boolean).join('\n');
+    const contact = resolveContact(spontContactId, spontContactFree);
+    const notesWithContact = [spontNotes.trim(), contact ? `Contact : ${contact}` : ''].filter(Boolean).join('\n');
     setNewJob(() => ({
       title: spontTitle.trim() || 'Candidature spontanée',
       company: spontCompany.trim(),
@@ -83,14 +164,10 @@ export default function JobModal({
 
   // ── Traitement du fichier ─────────────────────────────────────────────────
   async function processFile(file: File) {
-    setFileError(null);
-    setFileAnalyzing(true);
-    setFileName(file.name);
-
+    setFileError(null); setFileAnalyzing(true); setFileName(file.name);
     const token = (window as unknown as { __jfmj_token?: string }).__jfmj_token;
     const form = new FormData();
     form.append('file', file);
-
     try {
       const res = await fetch('/api/jobs/import-file', {
         method: 'POST',
@@ -98,44 +175,23 @@ export default function JobModal({
         body: form,
       });
       const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setFileError(data.error || "Impossible d'analyser ce fichier.");
-        setFileAnalyzing(false);
-        return;
-      }
-
+      if (!res.ok || !data.success) { setFileError(data.error || "Impossible d'analyser ce fichier."); return; }
       const d = data.data;
-
-      // Pré-remplir le champ "Transmis par" si extrait
-      if (d.transmitted_by) setTransmittedBy(d.transmitted_by);
-
-      // Description = missions + profil requis
+      if (d.transmitted_by) setTransmittedByFree(d.transmitted_by);
       const descParts = [d.description, d.requirements].filter(Boolean);
       const description = descParts.length > 1
         ? `${descParts[0]}\n\n--- Profil requis ---\n\n${descParts[1]}`
         : descParts[0] || '';
-
       setNewJob(() => ({
-        title:       d.title       || '',
-        company:     d.company     || '',
-        location:    d.location    || '',
-        job_type:    (d.job_type as JobType) || 'CDI',
-        status:      'to_apply' as JobStatus,
-        description,
-        notes:       '',
-        salary:      d.salary_text || '',
-        source:      'file',
-        url:         d.company_website || '',
-        favorite:    0,
+        title: d.title || '', company: d.company || '', location: d.location || '',
+        job_type: (d.job_type as JobType) || 'CDI', status: 'to_apply' as JobStatus,
+        description, notes: '', salary: d.salary_text || '',
+        source: '',  // vide → l'utilisateur choisit la vraie source
+        url: d.company_website || '', favorite: 0,
       }));
-
       setAddJobMode('manual');
-    } catch {
-      setFileError("Erreur réseau. Vérifiez votre connexion.");
-    } finally {
-      setFileAnalyzing(false);
-    }
+    } catch { setFileError("Erreur réseau. Vérifiez votre connexion."); }
+    finally { setFileAnalyzing(false); }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -145,25 +201,27 @@ export default function JobModal({
   }
 
   function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setDragOver(false);
+    e.preventDefault(); setDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file) processFile(file);
   }
 
-  // Doit-on afficher le champ "Transmis par" ?
-  const showTransmittedBy = SOURCES_WITH_CONTACT.includes(newJob.source || '') || transmittedBy;
-
-  // Sauvegarde enrichie avec "Transmis par" dans les notes
-  function handleSaveWithContact() {
-    if (transmittedBy.trim()) {
-      setNewJob(prev => ({
-        ...prev,
-        notes: [prev.notes, `Transmis par : ${transmittedBy.trim()}`].filter(Boolean).join('\n'),
-      }));
-    }
+  function handleSave() {
+    const transmitted = resolveContact(transmittedById, transmittedByFree);
+    const resolvedSource = resolveSource();
+    setNewJob(prev => ({
+      ...prev,
+      source: resolvedSource,
+      notes: transmitted
+        ? [prev.notes, `Transmis par : ${transmitted}`].filter(Boolean).join('\n')
+        : prev.notes,
+    }));
     setTimeout(() => { onSave(); }, 50);
   }
+
+  const showTransmitted = showTransmittedByFor(newJob.source || '') || !!transmittedById || !!transmittedByFree;
+  const showCustomSource = ['Autre', 'Chasseur de tête', 'Cabinet recrutement'].includes(newJob.source || '');
+  const isFileImport = !newJob.source && !!transmittedByFree;
 
   return (
     <div className="modal-bg" onClick={onClose}>
@@ -271,13 +329,16 @@ export default function JobModal({
 
             <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt" style={{ display: 'none' }} onChange={handleFileChange} />
 
-            {/* Champ "Transmis par" dès l'écran fichier */}
             {!fileAnalyzing && !fileError && (
               <>
                 <div style={{ marginBottom: 14 }}>
                   <label className="fl">👤 Transmis par (optionnel)</label>
-                  <input className="fi" value={transmittedBy} onChange={e => setTransmittedBy(e.target.value)}
-                    placeholder="Prénom Nom — contact qui vous a envoyé ce document" />
+                  <ContactPicker
+                    contacts={contacts}
+                    contactId={transmittedById} setContactId={setTransmittedById}
+                    freeText={transmittedByFree} setFreeText={setTransmittedByFree}
+                    placeholder="Prénom Nom — personne qui vous a envoyé ce document"
+                  />
                 </div>
                 <div style={{ fontSize: 12, color: '#888', textAlign: 'center', fontWeight: 500 }}>
                   L&apos;IA analysera votre document et pré-remplira la fiche offre.<br />
@@ -304,8 +365,7 @@ export default function JobModal({
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
             )}
 
-            {/* Badge IA si pré-rempli via fichier */}
-            {newJob.source === 'file' && (
+            {isFileImport && (
               <div style={{ background: '#F0FFF4', border: '2px solid #1A7A4A', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 18 }}>✅</span>
                 <div>
@@ -342,13 +402,36 @@ export default function JobModal({
                   <label className="fl">Entreprise *</label>
                   <input className="fi" value={newJob.company} onChange={e => setNewJob(prev => ({ ...prev, company: e.target.value }))} placeholder="Decathlon" />
                 </div>
-                <div style={{ marginBottom: 14 }}>
+
+                {/* SOURCE : liste fixe */}
+                <div style={{ marginBottom: showCustomSource ? 8 : 14 }}>
                   <label className="fl">Source</label>
-                  <select className="fi" value={newJob.source} onChange={e => setNewJob(prev => ({ ...prev, source: e.target.value }))}>
+                  <select className="fi" value={newJob.source} onChange={e => {
+                    setNewJob(prev => ({ ...prev, source: e.target.value }));
+                    setCustomSource('');
+                  }}>
                     <option value="">Choisir...</option>
-                    {['LinkedIn', 'Indeed', 'Welcome to the Jungle', 'Apec', 'Pôle Emploi', 'Site entreprise', 'Réseau', 'HelloWork', 'Autre'].map(s => <option key={s}>{s}</option>)}
+                    {FIXED_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
+
+                {/* Champ libre si Autre / Chasseur de tête / Cabinet recrutement */}
+                {showCustomSource && (
+                  <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}>
+                    <label className="fl" style={{ fontSize: 11, color: '#888' }}>
+                      {newJob.source === 'Chasseur de tête' ? 'Nom du cabinet / chasseur (optionnel)'
+                        : newJob.source === 'Cabinet recrutement' ? 'Nom du cabinet (optionnel)'
+                        : 'Précisez (optionnel)'}
+                    </label>
+                    <input className="fi" value={customSource} onChange={e => setCustomSource(e.target.value)}
+                      placeholder={
+                        newJob.source === 'Chasseur de tête' ? 'Ex : Michael Page, Heidrick & Struggles...'
+                        : newJob.source === 'Cabinet recrutement' ? 'Ex : Robert Half, Hays, Fed Finance...'
+                        : 'Ex : Forum emploi, événement réseau...'
+                      } />
+                  </div>
+                )}
+
                 <div style={{ marginBottom: 14 }}>
                   <label className="fl">Lieu</label>
                   <input className="fi" value={newJob.location} onChange={e => setNewJob(prev => ({ ...prev, location: e.target.value }))} placeholder="Paris · Hybride" />
@@ -358,13 +441,16 @@ export default function JobModal({
                   <input className="fi" value={newJob.salary} onChange={e => setNewJob(prev => ({ ...prev, salary: e.target.value }))} placeholder="45-55k€ / an" />
                 </div>
 
-                {/* Champ "Transmis par" — affiché si source = réseau/fichier/autre OU si déjà renseigné */}
-                {showTransmittedBy && (
+                {/* TRANSMIS PAR — contacts + texte libre */}
+                {showTransmitted && (
                   <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}>
                     <label className="fl">👤 Transmis par</label>
-                    <input className="fi" value={transmittedBy}
-                      onChange={e => setTransmittedBy(e.target.value)}
-                      placeholder="Prénom Nom — personne qui vous a transmis cette offre" />
+                    <ContactPicker
+                      contacts={contacts}
+                      contactId={transmittedById} setContactId={setTransmittedById}
+                      freeText={transmittedByFree} setFreeText={setTransmittedByFree}
+                      placeholder="Prénom Nom — personne qui vous a transmis cette offre"
+                    />
                   </div>
                 )}
 
@@ -386,8 +472,7 @@ export default function JobModal({
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
               <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={onClose}>Annuler</button>
               <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }}
-                onClick={transmittedBy.trim() ? handleSaveWithContact : onSave}
-                disabled={!newJob.title || !newJob.company}>
+                onClick={handleSave} disabled={!newJob.title || !newJob.company}>
                 {editingJobId ? 'Enregistrer' : "Ajouter l'offre"}
               </button>
             </div>
@@ -441,8 +526,12 @@ export default function JobModal({
 
               <div style={{ marginBottom: 14 }}>
                 <label className="fl">👤 Contact dans l&apos;entreprise</label>
-                <input className="fi" value={spontContact} onChange={e => setSpontContact(e.target.value)}
-                  placeholder="Prénom Nom — DRH, manager, relation réseau..." />
+                <ContactPicker
+                  contacts={contacts}
+                  contactId={spontContactId} setContactId={setSpontContactId}
+                  freeText={spontContactFree} setFreeText={setSpontContactFree}
+                  placeholder="Prénom Nom — DRH, manager, relation réseau..."
+                />
               </div>
 
               <div style={{ marginBottom: 14 }}>
