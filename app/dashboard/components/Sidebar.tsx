@@ -1,90 +1,192 @@
 'use client';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
-import { View } from './types';
 
-const LogoSVG = () => (
-  <svg viewBox="0 0 60 52" width="28" height="24" xmlns="http://www.w3.org/2000/svg">
-    <polygon points="30,1 37,10 46,3 43,13 54,9 49,19 58,20 51,27 57,35 47,32 51,41 41,37 43,47 34,40 30,47 26,40 17,47 19,37 9,41 13,32 3,35 9,27 2,20 11,19 6,9 17,13 14,3 23,10" fill="#111" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5"/>
-    <polygon points="30,4 36,12 44,6 41,15 51,11 47,20 55,22 49,28 54,35 45,33 49,41 40,37 42,46 33,40 30,46 27,40 18,46 20,37 11,41 15,33 6,35 11,28 5,22 13,20 9,11 19,15 16,6 24,12" fill="#E8151B"/>
-    <text x="30" y="25" textAnchor="middle" fontFamily="Impact,sans-serif" fontSize="13" fontWeight="900" fill="#F5C400" stroke="#111" strokeWidth="0.8" paintOrder="stroke">Jean</text>
-    <rect x="9" y="28" width="42" height="11" rx="2" fill="#111"/>
-    <text x="30" y="37" textAnchor="middle" fontFamily="Impact,sans-serif" fontSize="6" fontWeight="900" fill="#fff">find my job</text>
-  </svg>
-);
+interface SidebarProps {
+  activeView: string;
+  onViewChange: (view: string) => void;
+}
 
-type Props = {
-  view: View;
-  setView: (v: View) => void;
-  firstName: string;
-  userEmail: string;
-  jobCount: number;
-  contactCount: number;
-  interviewCount: number;
-  onSettings: () => void;
-};
+const NAV_ITEMS = [
+  { id: 'kanban', label: 'Kanban', icon: '⬛' },
+  { id: 'list', label: 'Candidatures', icon: '📋' },
+  { id: 'contacts', label: 'Contacts', icon: '👥' },
+  { id: 'agenda', label: 'Agenda', icon: '📅' },
+  { id: 'stats', label: 'Statistiques', icon: '📊' },
+];
 
-export default function Sidebar({ view, setView, firstName, userEmail, jobCount, contactCount, interviewCount, onSettings }: Props) {
+export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
-  async function handleLogout() {
-    const s = createClient();
-    await s.auth.signOut();
-    router.push('/');
-  }
+  const [firstName, setFirstName] = useState('');
+  const [initials, setInitials] = useState('?');
 
-  const initials = (n: string) => n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2);
+  // Charger le profil pour afficher le nom/initiales
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      try {
+        const res = await fetch('/api/profile', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const data = await res.json();
+        if (data.profile) {
+          const fn = data.profile.first_name ?? '';
+          const ln = data.profile.last_name ?? '';
+          setFirstName(fn || data.email?.split('@')[0] || 'Moi');
+          const ini = [fn?.[0], ln?.[0]].filter(Boolean).join('').toUpperCase();
+          setInitials(ini || (data.email?.[0] ?? '?').toUpperCase());
+        } else if (data.email) {
+          setFirstName(data.email.split('@')[0]);
+          setInitials(data.email[0].toUpperCase());
+        }
+      } catch (_) {
+        // silencieux
+      }
+    });
+  }, []);
 
-  const navItems: [View, string, string, number | null][] = [
-    ['kanban', '📊', 'Tableau de bord', jobCount],
-    ['list', '📋', 'Candidatures', null],
-    ['contacts', '👥', 'Contacts', contactCount],
-    ['agenda', '📅', 'Entretiens', interviewCount],
-    ['stats', '📈', 'Statistiques', null],
-  ];
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/auth/login');
+  };
 
   return (
-    <aside style={{ width: 210, background: '#111', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-      <div style={{ padding: '0.875rem 1rem', borderBottom: '2px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <LogoSVG />
-        <Link href="/" style={{ fontFamily: 'Montserrat,sans-serif', fontSize: '0.8rem', fontWeight: 900, color: '#fff', textDecoration: 'none' }}>
-          Jean <span style={{ color: '#E8151B' }}>Find My Job</span>
-        </Link>
+    <aside
+      style={{
+        width: 220,
+        minWidth: 220,
+        background: '#111',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        borderRight: '3px solid #F5C400',
+        fontFamily: 'Montserrat, sans-serif',
+      }}
+    >
+      {/* Logo */}
+      <div
+        style={{ padding: '20px 16px 16px', borderBottom: '2px solid #222', cursor: 'pointer' }}
+        onClick={() => router.push('/')}
+      >
+        <div style={{ fontWeight: 900, fontSize: 20, color: '#F5C400', letterSpacing: -0.5, lineHeight: 1 }}>
+          JEAN
+        </div>
+        <div style={{ fontWeight: 700, fontSize: 10, color: '#fff', letterSpacing: 1.5, marginTop: 2 }}>
+          FIND MY JOB
+        </div>
       </div>
 
-      <div style={{ padding: '0.5rem 0.5rem 0.2rem', fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Recherche</div>
+      {/* Navigation */}
+      <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {NAV_ITEMS.map((item) => {
+          const isActive = activeView === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onViewChange(item.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 12px',
+                border: isActive ? '2px solid #F5C400' : '2px solid transparent',
+                borderRadius: 8,
+                background: isActive ? '#F5C400' : 'transparent',
+                color: isActive ? '#111' : '#ccc',
+                fontFamily: 'Montserrat, sans-serif',
+                fontWeight: isActive ? 800 : 600,
+                fontSize: 13,
+                cursor: 'pointer',
+                textAlign: 'left',
+                boxShadow: isActive ? '2px 2px 0 #F5C40033' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >
+              <span style={{ fontSize: 15 }}>{item.icon}</span>
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      {navItems.map(([v, icon, label, badge]) => (
-        <button key={v} className={'nav-btn' + (view === v ? ' active' : '')} onClick={() => setView(v)}>
-          <span style={{ fontSize: 13 }}>{icon}</span>
-          <span style={{ flex: 1 }}>{label}</span>
-          {badge !== null && badge > 0 && (
-            <span style={{ background: '#E8151B', color: '#F5C400', borderRadius: 10, padding: '1px 6px', fontSize: 9, fontWeight: 800 }}>{badge}</span>
-          )}
-        </button>
-      ))}
-
-      <div style={{ padding: '0.5rem 0.5rem 0.2rem', marginTop: '0.5rem', fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Outils</div>
-      <button className="nav-btn" onClick={() => router.push('/dashboard/editor')}>
-        <span style={{ fontSize: 13 }}>✦</span> CV Creator
-      </button>
-
-      <div style={{ marginTop: 'auto', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-        <button className="nav-btn" onClick={onSettings} style={{ margin: '4px 6px' }}>
-          <span style={{ fontSize: 13 }}>⚙️</span> Paramètres
-        </button>
-        <div style={{ padding: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={handleLogout}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#E8151B', border: '2px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#F5C400' }}>
-              {firstName ? firstName.charAt(0).toUpperCase() : initials(userEmail.split('@')[0])}
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: '#fff', fontWeight: 700 }}>{firstName || userEmail.split('@')[0]}</div>
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>Déconnexion</div>
-            </div>
+      {/* Avatar profil — lien vers /dashboard/profile */}
+      <div style={{ borderTop: '2px solid #222', padding: '12px 8px' }}>
+        <button
+          onClick={() => router.push('/dashboard/profile')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            width: '100%',
+            padding: '10px 12px',
+            border: pathname === '/dashboard/profile' ? '2px solid #F5C400' : '2px solid #333',
+            borderRadius: 8,
+            background: pathname === '/dashboard/profile' ? '#1a1a1a' : 'transparent',
+            cursor: 'pointer',
+            fontFamily: 'Montserrat, sans-serif',
+            transition: 'all 0.15s',
+          }}
+        >
+          {/* Avatar cercle avec initiales */}
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: '#F5C400',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 900,
+              fontSize: 13,
+              color: '#111',
+              border: '2px solid #555',
+              flexShrink: 0,
+            }}
+          >
+            {initials}
           </div>
-        </div>
+          <div style={{ textAlign: 'left', overflow: 'hidden' }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {firstName}
+            </div>
+            <div style={{ fontWeight: 500, fontSize: 11, color: '#888' }}>Mon profil</div>
+          </div>
+        </button>
+
+        {/* Déconnexion */}
+        <button
+          onClick={handleLogout}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            width: '100%',
+            padding: '8px 12px',
+            marginTop: 4,
+            border: '2px solid transparent',
+            borderRadius: 8,
+            background: 'transparent',
+            color: '#666',
+            fontFamily: 'Montserrat, sans-serif',
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: 'pointer',
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#E8151B')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#666')}
+        >
+          <span>⎋</span> Déconnexion
+        </button>
       </div>
     </aside>
   );
