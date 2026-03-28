@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { Job, Contact, JobStatus } from '@/lib/jobs';
@@ -36,8 +36,11 @@ const CAL_MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 
 type CalEvent = {
+  jobId: string;
   date: Date;
+  dateField: 'interview_date' | 'next_step_date' | 'applied_at' | 'created_at';
   title: string;
+  company: string;
   type: 'envie' | 'postule' | 'entretien' | 'offre';
   time?: string;
 };
@@ -49,12 +52,7 @@ function sameDay(a: Date, b: Date) {
 }
 
 function jobsToEvents(jobs: Job[]): CalEvent[] {
-  const events: CalEvent[] = [];
-  for (const job of jobs) {
-    if (!job.created_at) continue;
-    const created = new Date(job.created_at);
-
-    // Date de création → type selon statut
+  return jobs.map(job => {
     const typeMap: Record<string, CalEvent['type']> = {
       to_apply:    'envie',
       applied:     'postule',
@@ -63,21 +61,38 @@ function jobsToEvents(jobs: Job[]): CalEvent[] {
       archived:    'envie',
     };
     const evType: CalEvent['type'] = typeMap[job.status] ?? 'envie';
-    const label = [job.title, job.company].filter(Boolean).join(' – ');
 
-    events.push({ date: created, title: label, type: evType });
+    let date: Date;
+    let dateField: CalEvent['dateField'] = 'created_at';
+    let time: string | undefined;
 
-    // Si des dates d'entretien existent dans les champs (interview_date, next_step_date)
-    const iDate = (job as any).interview_date || (job as any).next_step_date;
-    if (iDate) {
-      const d = new Date(iDate);
-      const timeStr = d.getHours() > 0
-        ? `${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}`
-        : undefined;
-      events.push({ date: d, title: label, type: 'entretien', time: timeStr });
+    if ((job as any).interview_date) {
+      date = new Date((job as any).interview_date);
+      dateField = 'interview_date';
+      if (date.getHours() > 0) {
+        time = `${String(date.getHours()).padStart(2, '0')}h${String(date.getMinutes()).padStart(2, '0')}`;
+      }
+    } else if ((job as any).next_step_date) {
+      date = new Date((job as any).next_step_date);
+      dateField = 'next_step_date';
+    } else if ((job as any).applied_at) {
+      date = new Date((job as any).applied_at);
+      dateField = 'applied_at';
+    } else {
+      date = new Date(job.created_at!);
+      dateField = 'created_at';
     }
-  }
-  return events;
+
+    return {
+      jobId: job.id,
+      date,
+      dateField,
+      title: job.title || 'Sans titre',
+      company: job.company || '',
+      type: evType,
+      time,
+    };
+  }).filter(e => !isNaN(e.date.getTime()));
 }
 
 function getWeekStart(base: Date, off: number): Date {
@@ -102,60 +117,154 @@ const EV_LABEL: Record<CalEvent['type'], string> = {
   offre:     'Offre reçue',
 };
 
-function DashboardCalendar({ jobs }: { jobs: Job[] }) {
+const navBtnStyle: React.CSSProperties = {
+  background: '#fff', border: '1.5px solid #CCC', borderRadius: 6,
+  width: 28, height: 28, cursor: 'pointer', color: '#555',
+  fontSize: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  fontFamily: 'Montserrat,sans-serif', padding: 0,
+};
+
+const weekTh: React.CSSProperties = {
+  background: '#FAFAFA', padding: '8px 4px', borderBottom: '2px solid #111',
+};
+
+function EventCard({
+  ev,
+  onJobClick,
+  onDragStart,
+}: {
+  ev: CalEvent;
+  onJobClick: (jobId: string) => void;
+  onDragStart: (e: React.DragEvent, ev: CalEvent) => void;
+}) {
+  return (
+    <div
+      draggable
+      onDragStart={e => onDragStart(e, ev)}
+      onClick={e => { e.stopPropagation(); onJobClick(ev.jobId); }}
+      title={`${ev.title} — ${ev.company}`}
+      style={{
+        ...EV_STYLE[ev.type],
+        borderRadius: 4,
+        padding: '3px 5px',
+        marginBottom: 2,
+        cursor: 'grab',
+        fontFamily: 'Montserrat,sans-serif',
+        overflow: 'hidden',
+        userSelect: 'none',
+      }}
+    >
+      {ev.time && (
+        <div style={{ fontSize: 9, opacity: .75, fontWeight: 600, lineHeight: 1.2 }}>{ev.time}</div>
+      )}
+      <div style={{ fontSize: 10, fontWeight: 800, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {ev.title}
+      </div>
+      {ev.company && (
+        <div style={{ fontSize: 9, fontWeight: 600, opacity: .75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+          {ev.company}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DashboardCalendar({
+  jobs,
+  onJobClick,
+  onDateChange,
+}: {
+  jobs: Job[];
+  onJobClick: (jobId: string) => void;
+  onDateChange: (jobId: string, field: string, newDate: Date) => void;
+}) {
   const [calView, setCalView] = useState<'week' | 'month'>('week');
   const [offset, setOffset] = useState(0);
   const [visible, setVisible] = useState(true);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+  const dragEvRef = useRef<CalEvent | null>(null);
 
   const today = new Date();
   const events = jobsToEvents(jobs);
 
-  // ── Vue semaine ──────────────────────────────────────────────────────────────
+  function handleDragStart(e: React.DragEvent, ev: CalEvent) {
+    dragEvRef.current = ev;
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDrop(e: React.DragEvent, targetDate: Date) {
+    e.preventDefault();
+    setDragOver(null);
+    if (!dragEvRef.current) return;
+    const ev = dragEvRef.current;
+    dragEvRef.current = null;
+    const newDate = new Date(targetDate);
+    if (ev.time) {
+      const parts = ev.time.replace('h', ':').split(':');
+      newDate.setHours(parseInt(parts[0]), parseInt(parts[1] || '0'), 0, 0);
+    }
+    onDateChange(ev.jobId, ev.dateField, newDate);
+  }
+
+  function cellKey(date: Date, hour?: number) {
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}${hour !== undefined ? `-${hour}` : ''}`;
+  }
+
+  function dropStyle(key: string): React.CSSProperties {
+    return dragOver === key
+      ? { background: 'rgba(245,196,0,0.15)', outline: '2px dashed #F5C400', outlineOffset: -2 }
+      : {};
+  }
+
+  function NavBar({ periodLabel }: { periodLabel: string }) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(['week', 'month'] as const).map(v => (
+            <button key={v} onClick={() => { setCalView(v); setOffset(0); }} style={{
+              padding: '4px 14px', fontSize: 12, fontWeight: 700,
+              fontFamily: 'Montserrat,sans-serif',
+              border: '2px solid #111', borderRadius: 6, cursor: 'pointer',
+              background: calView === v ? '#111' : '#fff',
+              color: calView === v ? '#F5C400' : '#111',
+            }}>{v === 'week' ? 'Semaine' : 'Mois'}</button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => setOffset(o => o - 1)} style={navBtnStyle}>‹</button>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#555', minWidth: 160, textAlign: 'center' }}>{periodLabel}</span>
+          <button onClick={() => setOffset(o => o + 1)} style={navBtnStyle}>›</button>
+          <button onClick={() => setOffset(0)} style={{ ...navBtnStyle, fontSize: 11, padding: '3px 8px', width: 'auto' }}>Auj.</button>
+        </div>
+      </div>
+    );
+  }
+
   function WeekView() {
     const ws = getWeekStart(today, offset);
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(ws); d.setDate(d.getDate() + i); return d;
     });
-    const we = days[6];
-    const periodLabel = `${days[0].getDate()} – ${we.getDate()} ${CAL_MONTHS[we.getMonth()]} ${we.getFullYear()}`;
-
-    const colWidth = 'minmax(0,1fr)';
-    const timeColW = 44;
+    const periodLabel = `${days[0].getDate()} – ${days[6].getDate()} ${CAL_MONTHS[days[6].getMonth()]} ${days[6].getFullYear()}`;
 
     return (
-      <div>
-        {/* Header nav */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['week', 'month'] as const).map(v => (
-              <button key={v} onClick={() => setCalView(v)} style={{
-                padding: '4px 14px', fontSize: 12, fontWeight: 700, fontFamily: 'Montserrat,sans-serif',
-                border: '2px solid #111', borderRadius: 6, cursor: 'pointer',
-                background: calView === v ? '#111' : '#fff', color: calView === v ? '#F5C400' : '#111',
-              }}>{v === 'week' ? 'Semaine' : 'Mois'}</button>
-            ))}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={() => setOffset(o => o - 1)} style={navBtnStyle}>‹</button>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#555', minWidth: 160, textAlign: 'center' }}>{periodLabel}</span>
-            <button onClick={() => setOffset(o => o + 1)} style={navBtnStyle}>›</button>
-            <button onClick={() => setOffset(0)} style={{ ...navBtnStyle, fontSize: 11, padding: '3px 8px', width: 'auto' }}>Auj.</button>
-          </div>
-        </div>
-
-        {/* Grille */}
-        <div style={{ display: 'grid', gridTemplateColumns: `${timeColW}px repeat(7, ${colWidth})`, border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
-          {/* En-têtes */}
-          <div style={weekHeaderCell} />
+      <>
+        <NavBar periodLabel={periodLabel} />
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `44px repeat(7, minmax(0, 1fr))`,
+          border: '2px solid #111', borderRadius: 10, overflow: 'hidden',
+        }}>
+          <div style={weekTh} />
           {days.map((d, i) => {
             const isTod = sameDay(d, today);
             return (
-              <div key={i} style={{ ...weekHeaderCell, borderRight: i === 6 ? 'none' : '1px solid #E5E5E5', textAlign: 'center' }}>
+              <div key={i} style={{ ...weekTh, borderRight: i === 6 ? 'none' : '1px solid #E5E5E5', textAlign: 'center' }}>
                 <div style={{ fontSize: 10, color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>{CAL_DAYS[i]}</div>
                 <div style={{
-                  fontSize: 16, fontWeight: 900, color: isTod ? '#fff' : '#111',
+                  fontSize: 15, fontWeight: 900, color: isTod ? '#fff' : '#111',
                   background: isTod ? '#111' : 'transparent',
-                  borderRadius: '50%', width: 28, height: 28,
+                  borderRadius: '50%', width: 26, height: 26,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   margin: '2px auto 0',
                 }}>{d.getDate()}</div>
@@ -163,37 +272,37 @@ function DashboardCalendar({ jobs }: { jobs: Job[] }) {
             );
           })}
 
-          {/* Lignes horaires */}
           {HOURS.map(h => (
             <>
-              <div key={`t${h}`} style={{ background: '#FAFAFA', borderRight: '1px solid #E5E5E5', borderBottom: '1px solid #F0F0F0', height: 52, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', padding: '4px 6px 0', fontSize: 10, color: '#AAA', fontWeight: 600 }}>{h}h</div>
+              <div key={`t${h}`} style={{
+                background: '#FAFAFA', borderRight: '1px solid #E5E5E5',
+                borderBottom: '1px solid #F0F0F0', height: 52,
+                display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
+                padding: '4px 6px 0', fontSize: 10, color: '#AAA', fontWeight: 600,
+              }}>{h}h</div>
               {days.map((d, di) => {
                 const isTod = sameDay(d, today);
-                const cellEvs = events.filter(e => sameDay(e.date, d) && (!e.time || parseInt(e.time) === h));
+                const key = cellKey(d, h);
+                const cellEvs = events.filter(e =>
+                  sameDay(e.date, d) && (e.time ? parseInt(e.time) === h : h === 8)
+                );
                 return (
-                  <div key={`${h}-${di}`} style={{
-                    height: 52, borderRight: di === 6 ? 'none' : '1px solid #F0F0F0',
-                    borderBottom: '1px solid #F0F0F0',
-                    background: isTod ? 'rgba(245,196,0,0.04)' : 'transparent',
-                    position: 'relative', padding: '2px',
-                  }}>
-                    {/* Événements sans heure affichés sur la première ligne (8h) */}
-                    {h === 8 && events.filter(e => sameDay(e.date, d) && !e.time).map((ev, ei) => (
-                      <div key={ei} title={ev.title} style={{
-                        ...EV_STYLE[ev.type],
-                        borderRadius: 4, padding: '2px 4px', fontSize: 9, fontWeight: 700,
-                        marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        fontFamily: 'Montserrat,sans-serif',
-                      }}>{ev.title}</div>
-                    ))}
-                    {/* Événements avec heure */}
-                    {cellEvs.filter(e => !!e.time).map((ev, ei) => (
-                      <div key={ei} title={ev.title} style={{
-                        ...EV_STYLE[ev.type],
-                        borderRadius: 4, padding: '2px 4px', fontSize: 9, fontWeight: 700,
-                        marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        fontFamily: 'Montserrat,sans-serif',
-                      }}><span style={{ opacity: .7 }}>{ev.time} </span>{ev.title}</div>
+                  <div
+                    key={`${h}-${di}`}
+                    onDragOver={e => { e.preventDefault(); setDragOver(key); }}
+                    onDragLeave={() => setDragOver(null)}
+                    onDrop={e => handleDrop(e, d)}
+                    style={{
+                      height: 52,
+                      borderRight: di === 6 ? 'none' : '1px solid #F0F0F0',
+                      borderBottom: '1px solid #F0F0F0',
+                      background: isTod ? 'rgba(245,196,0,0.04)' : 'transparent',
+                      padding: '2px',
+                      ...dropStyle(key),
+                    }}
+                  >
+                    {cellEvs.map((ev, ei) => (
+                      <EventCard key={ei} ev={ev} onJobClick={onJobClick} onDragStart={handleDragStart} />
                     ))}
                   </div>
                 );
@@ -201,11 +310,10 @@ function DashboardCalendar({ jobs }: { jobs: Job[] }) {
             </>
           ))}
         </div>
-      </div>
+      </>
     );
   }
 
-  // ── Vue mois ─────────────────────────────────────────────────────────────────
   function MonthView() {
     const base = new Date(today.getFullYear(), today.getMonth() + offset, 1);
     const periodLabel = `${CAL_MONTHS[base.getMonth()]} ${base.getFullYear()}`;
@@ -216,56 +324,47 @@ function DashboardCalendar({ jobs }: { jobs: Job[] }) {
     });
 
     return (
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['week', 'month'] as const).map(v => (
-              <button key={v} onClick={() => setCalView(v)} style={{
-                padding: '4px 14px', fontSize: 12, fontWeight: 700, fontFamily: 'Montserrat,sans-serif',
-                border: '2px solid #111', borderRadius: 6, cursor: 'pointer',
-                background: calView === v ? '#111' : '#fff', color: calView === v ? '#F5C400' : '#111',
-              }}>{v === 'week' ? 'Semaine' : 'Mois'}</button>
-            ))}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={() => setOffset(o => o - 1)} style={navBtnStyle}>‹</button>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#555', minWidth: 140, textAlign: 'center' }}>{periodLabel}</span>
-            <button onClick={() => setOffset(o => o + 1)} style={navBtnStyle}>›</button>
-            <button onClick={() => setOffset(0)} style={{ ...navBtnStyle, fontSize: 11, padding: '3px 8px', width: 'auto' }}>Auj.</button>
-          </div>
-        </div>
-
+      <>
+        <NavBar periodLabel={periodLabel} />
         <div style={{ border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
-          {/* Jours de la semaine */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', background: '#111' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', background: '#111' }}>
             {CAL_DAYS.map((d, i) => (
-              <div key={i} style={{ padding: '7px 4px', textAlign: 'center', fontSize: 10, fontWeight: 800, color: '#F5C400', textTransform: 'uppercase', letterSpacing: '.06em', borderRight: i < 6 ? '1px solid #333' : 'none' }}>{d}</div>
+              <div key={i} style={{
+                padding: '7px 4px', textAlign: 'center',
+                fontSize: 10, fontWeight: 800, color: '#F5C400',
+                textTransform: 'uppercase', letterSpacing: '.06em',
+                borderRight: i < 6 ? '1px solid #333' : 'none',
+              }}>{d}</div>
             ))}
           </div>
-          {/* Cellules */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
             {cells.map((d, idx) => {
               const isOther = d.getMonth() !== base.getMonth();
               const isTod = sameDay(d, today);
               const dayEvs = events.filter(e => sameDay(e.date, d));
+              const key = cellKey(d);
               return (
-                <div key={idx} style={{
-                  minHeight: 80, borderRight: (idx % 7) < 6 ? '1px solid #E5E5E5' : 'none',
-                  borderBottom: idx < 35 ? '1px solid #E5E5E5' : 'none',
-                  padding: '5px 4px 3px', background: isTod ? 'rgba(245,196,0,0.07)' : 'transparent',
-                }}>
+                <div
+                  key={idx}
+                  onDragOver={e => { e.preventDefault(); setDragOver(key); }}
+                  onDragLeave={() => setDragOver(null)}
+                  onDrop={e => handleDrop(e, d)}
+                  style={{
+                    minHeight: 80,
+                    borderRight: (idx % 7) < 6 ? '1px solid #E5E5E5' : 'none',
+                    borderBottom: idx < 35 ? '1px solid #E5E5E5' : 'none',
+                    padding: '5px 4px 3px',
+                    background: isTod ? 'rgba(245,196,0,0.07)' : 'transparent',
+                    ...dropStyle(key),
+                  }}
+                >
                   <div style={{ fontSize: 11, fontWeight: 900, color: isOther ? '#CCC' : '#111', marginBottom: 3 }}>
                     {isTod
                       ? <span style={{ background: '#111', color: '#F5C400', borderRadius: '50%', width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>{d.getDate()}</span>
                       : d.getDate()}
                   </div>
                   {dayEvs.slice(0, 3).map((ev, ei) => (
-                    <div key={ei} title={ev.title} style={{
-                      ...EV_STYLE[ev.type],
-                      borderRadius: 3, padding: '1px 4px', fontSize: 9, fontWeight: 700,
-                      marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      fontFamily: 'Montserrat,sans-serif',
-                    }}>{ev.title}</div>
+                    <EventCard key={ei} ev={ev} onJobClick={onJobClick} onDragStart={handleDragStart} />
                   ))}
                   {dayEvs.length > 3 && (
                     <div style={{ fontSize: 9, color: '#AAA', fontWeight: 700, padding: '1px 3px' }}>+{dayEvs.length - 3} autres</div>
@@ -275,19 +374,23 @@ function DashboardCalendar({ jobs }: { jobs: Job[] }) {
             })}
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
     <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
-      {/* Barre titre */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: visible ? '2px solid #111' : 'none', background: '#FAFAFA' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 900, color: '#111', fontFamily: 'Montserrat,sans-serif', textTransform: 'uppercase', letterSpacing: '.04em' }}>📅 Calendrier</span>
-          {/* Légende */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 16px', borderBottom: visible ? '2px solid #111' : 'none',
+        background: '#FAFAFA',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 900, color: '#111', fontFamily: 'Montserrat,sans-serif', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+            📅 Calendrier
+          </span>
           {visible && (
-            <div style={{ display: 'flex', gap: 10, marginLeft: 8 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {(Object.keys(EV_LABEL) as CalEvent['type'][]).map(t => (
                 <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#666', fontWeight: 600 }}>
                   <div style={{ width: 9, height: 9, borderRadius: 2, ...EV_STYLE[t] }} />
@@ -300,11 +403,10 @@ function DashboardCalendar({ jobs }: { jobs: Job[] }) {
         <button onClick={() => setVisible(v => !v)} style={{
           fontSize: 11, fontWeight: 800, fontFamily: 'Montserrat,sans-serif',
           background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6,
-          padding: '3px 10px', cursor: 'pointer', color: '#555',
+          padding: '3px 10px', cursor: 'pointer', color: '#555', whiteSpace: 'nowrap',
         }}>{visible ? 'Masquer' : 'Afficher'}</button>
       </div>
 
-      {/* Contenu calendrier */}
       {visible && (
         <div style={{ padding: '14px 16px' }}>
           {calView === 'week' ? <WeekView /> : <MonthView />}
@@ -313,18 +415,6 @@ function DashboardCalendar({ jobs }: { jobs: Job[] }) {
     </div>
   );
 }
-
-const navBtnStyle: React.CSSProperties = {
-  background: '#fff', border: '1.5px solid #CCC', borderRadius: 6,
-  width: 28, height: 28, cursor: 'pointer', color: '#555',
-  fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontFamily: 'Montserrat,sans-serif',
-};
-
-const weekHeaderCell: React.CSSProperties = {
-  background: '#FAFAFA', padding: '8px 4px',
-  borderBottom: '2px solid #111',
-};
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
@@ -523,6 +613,26 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleCalendarDateChange(jobId: string, field: string, newDate: Date) {
+    const iso = newDate.toISOString();
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, [field]: iso } as any : j));
+    if (selectedJob?.id === jobId) setSelectedJob(prev => prev ? { ...prev, [field]: iso } as any : prev);
+    const res = await authFetch(`/api/jobs?id=${jobId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ [field]: iso }),
+    });
+    const data = await res.json();
+    if (data.job) {
+      setJobs(prev => prev.map(j => j.id === jobId ? data.job : j));
+      if (selectedJob?.id === jobId) setSelectedJob(data.job);
+    }
+  }
+
+  function handleCalendarJobClick(jobId: string) {
+    const job = jobs.find(j => j.id === jobId);
+    if (job) setSelectedJob(job);
+  }
+
   async function deleteJob(id: string) {
     if (!confirm('Supprimer cette offre ?')) return;
     await authFetch('/api/jobs?id=' + id, { method: 'DELETE' });
@@ -600,7 +710,6 @@ export default function DashboardPage() {
       />
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Barre du haut */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', borderBottom: '2px solid #111', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
@@ -613,10 +722,8 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Contenu principal */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
 
-          {/* Stats */}
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: '1.25rem' }}>
               {[
@@ -634,20 +741,20 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ── Calendrier (kanban + list uniquement) ── */}
           {['kanban', 'list'].includes(view) && (
-            <DashboardCalendar jobs={jobs} />
+            <DashboardCalendar
+              jobs={jobs}
+              onJobClick={handleCalendarJobClick}
+              onDateChange={handleCalendarDateChange}
+            />
           )}
 
           {view === 'kanban' && (
             <KanbanView
-              jobs={jobs}
-              stages={stages}
-              onJobClick={setSelectedJob}
-              onAddJob={openAddJobModal}
+              jobs={jobs} stages={stages}
+              onJobClick={setSelectedJob} onAddJob={openAddJobModal}
               onOpenSettings={() => setShowSettings(true)}
-              onRefresh={handleRefresh}
-              onStatusChange={updateJobStatus}
+              onRefresh={handleRefresh} onStatusChange={updateJobStatus}
             />
           )}
           {view === 'list' && (
@@ -655,10 +762,8 @@ export default function DashboardPage() {
           )}
           {view === 'contacts' && (
             <ContactsView
-              contacts={contacts}
-              onAddContact={triggerAddContact}
-              onDeleteContact={deleteContact}
-              onRefresh={fetchContacts}
+              contacts={contacts} onAddContact={triggerAddContact}
+              onDeleteContact={deleteContact} onRefresh={fetchContacts}
             />
           )}
           {view === 'agenda' && (
