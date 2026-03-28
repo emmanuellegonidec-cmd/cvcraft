@@ -5,16 +5,9 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { JobExchange, ExchangeType, EXCHANGE_TYPE_LABELS } from '@/lib/types'
 import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  useDraggable,
-  useDroppable,
+  DndContext, DragEndEvent, DragOverlay, DragStartEvent,
+  PointerSensor, TouchSensor, useSensor, useSensors,
+  useDraggable, useDroppable,
 } from '@dnd-kit/core'
 
 interface Job {
@@ -27,6 +20,12 @@ interface Job {
   interview_at: string | null; interview_time: string | null; interview_time_end: string | null
   interview_type: string | null; interview_contact_id: string | null
   interview_location: string | null; interview_link: string | null; interview_phone: string | null
+  // Infos entreprise
+  company_description: string | null
+  company_website: string | null
+  company_size: string | null
+  department: string | null
+  source_platform: string | null
 }
 
 interface ContactMin { id: string; name: string; role?: string | null; company?: string | null }
@@ -73,9 +72,7 @@ const SUB_STATUS_LABELS: Record<string, string> = {
 }
 
 const INTERVIEW_TYPE_LABELS: Record<string, string> = {
-  telephone: '📞 Téléphone',
-  visio: '💻 Visio',
-  presentiel: '🏢 Présentiel',
+  telephone: '📞 Téléphone', visio: '💻 Visio', presentiel: '🏢 Présentiel',
 }
 
 interface StepAction { icon: string; title: string; sub: string; type: 'included' | 'action' | 'new' }
@@ -149,7 +146,6 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: StepAction[] }> = {
 }
 
 const ICON_CHOICES = ['⭐','📄','✉️','🎯','🔍','📅','🔔','📋','🏢','💬','⚖️','✅','❌','📊','🔧','👤','🧠','💡','🚀','🤝','📞','📝','🗓️','💼','🎤','📌']
-
 const FONT = "'Montserrat', sans-serif"
 
 function formatDate(iso: string) {
@@ -169,7 +165,14 @@ function authHeaders(): HeadersInit {
     : { 'Content-Type': 'application/json' }
 }
 
-// ─── Sidebar ─────────────────────────────────────────────────────────────────
+// ─── Extraire "Transmis par" depuis les notes ─────────────────────────────────
+function extractTransmittedBy(notes: string | null): string | null {
+  if (!notes) return null
+  const match = notes.match(/Transmis par\s*:\s*(.+?)(?:\n|$)/i)
+  return match ? match[1].trim() : null
+}
+
+// ─── JobSidebar ───────────────────────────────────────────────────────────────
 function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect: (id: string) => void }) {
   const [jobs, setJobs] = useState<Job[]>([])
   useEffect(() => {
@@ -193,7 +196,8 @@ function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect
           const stepLabel = job.sub_status ? (SUB_STATUS_LABELS[job.sub_status] ?? STATUS_LABELS[job.status]) : STATUS_LABELS[job.status]
           const dateRef = job.applied_at || job.created_at
           return (
-            <div key={job.id} onClick={() => onSelect(job.id)} style={{ padding: '12px 16px', borderBottom: '1px solid #F5F5F0', cursor: 'pointer', background: isActive ? '#111' : 'transparent', transition: 'background 0.1s' }}
+            <div key={job.id} onClick={() => onSelect(job.id)}
+              style={{ padding: '12px 16px', borderBottom: '1px solid #F5F5F0', cursor: 'pointer', background: isActive ? '#111' : 'transparent', transition: 'background 0.1s' }}
               onMouseOver={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#F9F9F7' }}
               onMouseOut={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
               <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 4, color: isActive ? '#fff' : '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
@@ -210,7 +214,7 @@ function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect
   )
 }
 
-// ─── Bulle d'étape draggable ──────────────────────────────────────────────────
+// ─── DraggableStep ────────────────────────────────────────────────────────────
 function DraggableStep({ step, isActive, isDone, isCustom, onStepClick, onDeleteRequest }: {
   step: { id: string; label: string; num: number }; isActive: boolean; isDone: boolean; isCustom: boolean
   currentStepId: string; onStepClick: (id: string) => void; onDeleteRequest: (id: string, label: string) => void; allStepsLength: number
@@ -218,13 +222,13 @@ function DraggableStep({ step, isActive, isDone, isCustom, onStepClick, onDelete
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: step.id, disabled: !isCustom, data: { stepId: step.id } })
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 72, position: 'relative', opacity: isDragging ? 0.4 : 1, transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined, zIndex: isDragging ? 50 : 1 }}>
-      <div ref={isCustom ? setNodeRef : undefined} {...(isCustom ? { ...listeners, ...attributes } : {})} onClick={() => onStepClick(step.id)} title={isCustom ? 'Glisser pour réordonner' : undefined}
+      <div ref={isCustom ? setNodeRef : undefined} {...(isCustom ? { ...listeners, ...attributes } : {})} onClick={() => onStepClick(step.id)}
         style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1, flexShrink: 0, cursor: isCustom ? (isDragging ? 'grabbing' : 'grab') : 'pointer', background: isActive ? '#111' : isDone ? '#F5C400' : '#fff', border: `2.5px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#DEDEDE'}`, color: isActive ? '#F5C400' : isDone ? '#111' : '#ccc', boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.18)' : 'none', fontFamily: FONT, touchAction: 'none' }}>
         {step.num}
       </div>
       <p onClick={() => onStepClick(step.id)} style={{ fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 6, lineHeight: 1.3, color: isActive ? '#111' : isDone ? '#777' : '#ccc', fontFamily: FONT, cursor: 'pointer', maxWidth: 70 }}>{step.label}</p>
       {isCustom && (
-        <button onClick={e => { e.stopPropagation(); onDeleteRequest(step.id, step.label) }} title="Supprimer cette étape"
+        <button onClick={e => { e.stopPropagation(); onDeleteRequest(step.id, step.label) }}
           style={{ position: 'absolute', top: -5, right: 'calc(50% - 27px)', width: 15, height: 15, borderRadius: '50%', background: '#E8151B', border: 'none', color: '#fff', fontSize: 9, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, lineHeight: 1 }}>×</button>
       )}
     </div>
@@ -248,7 +252,7 @@ function DraggableActionCard({ action, dragId, onDelete }: { action: StepActionR
           <span style={{ fontSize: 9, color: '#ccc', cursor: 'grab', lineHeight: 1, paddingTop: 2 }}>⠿</span>
           {action.is_custom && (
             <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
-              style={{ background: 'none', border: 'none', color: '#ccc', fontSize: 12, cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Supprimer cette action">×</button>
+              style={{ background: 'none', border: 'none', color: '#ccc', fontSize: 12, cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
           )}
         </div>
       </div>
@@ -279,6 +283,7 @@ export default function JobDetailPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [descExpanded, setDescExpanded] = useState(false)
+  const [companyExpanded, setCompanyExpanded] = useState(true)
   const [openExchanges, setOpenExchanges] = useState<Set<string>>(new Set())
   const [notes, setNotes] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -300,8 +305,28 @@ export default function JobDetailPage() {
   const [newActionPosition, setNewActionPosition] = useState<number>(-1)
   const [actionToDelete, setActionToDelete] = useState<{ id: string; title: string } | null>(null)
 
-  // ── Contacts pour l'entretien ───────────────────────────────────────────────
   const [contacts, setContacts] = useState<ContactMin[]>([])
+
+  // ── Modifier offre ─────────────────────────────────────────────────────────
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState({ title: '', company: '', location: '', job_type: 'CDI', salary_text: '', description: '' })
+
+  // ── Supprimer offre ────────────────────────────────────────────────────────
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // ── Créer contact depuis "Transmis par" ────────────────────────────────────
+  const [showCreateContact, setShowCreateContact] = useState(false)
+  const [contactFirstName, setContactFirstName] = useState('')
+  const [contactLastName, setContactLastName] = useState('')
+  const [contactRole, setContactRole] = useState('')
+  const [contactCompany, setContactCompany] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+  const [contactLinkedin, setContactLinkedin] = useState('')
+  const [contactSaving, setContactSaving] = useState(false)
+  const [contactSaved, setContactSaved] = useState(false)
 
   const loadJob = useCallback(async () => {
     const supabase = createClient()
@@ -327,15 +352,10 @@ export default function JobDetailPage() {
   }, [jobId])
 
   const loadContacts = useCallback(async () => {
-    // Chargement direct Supabase — fiable sans token Bearer
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
-    const { data } = await supabase
-      .from('contacts')
-      .select('id, name, role, company')
-      .eq('user_id', session.user.id)
-      .order('name')
+    const { data } = await supabase.from('contacts').select('id, name, role, company').eq('user_id', session.user.id).order('name')
     if (data) setContacts(data)
   }, [])
 
@@ -343,16 +363,12 @@ export default function JobDetailPage() {
     Promise.all([loadJob(), loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
   }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
 
-  // Recharger le job toutes les 30s pour capter les changements faits depuis le panneau RDV
   useEffect(() => {
     const interval = setInterval(() => { loadJob() }, 30000)
     return () => clearInterval(interval)
   }, [loadJob])
 
-  // Recharger les contacts si le userId arrive après le montage
-  useEffect(() => {
-    if (userId) loadContacts()
-  }, [userId])
+  useEffect(() => { if (userId) loadContacts() }, [userId])
 
   const loadStepActions = useCallback(async (stepId: string, uid: string) => {
     if (!stepId || !uid) return
@@ -370,7 +386,6 @@ export default function JobDetailPage() {
     setActionsLoading(false)
   }, [jobId])
 
-  // Patch un champ du job (interview ou autre)
   const patchJob = useCallback(async (field: string, value: any) => {
     setJob(prev => prev ? { ...prev, [field]: value } : prev)
     await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }) })
@@ -384,6 +399,71 @@ export default function JobDetailPage() {
     }, 800)
   }
 
+  // ── Modifier offre ─────────────────────────────────────────────────────────
+  function openEditModal() {
+    if (!job) return
+    setEditForm({ title: job.title || '', company: job.company || '', location: job.location || '', job_type: job.job_type || 'CDI', salary_text: job.salary_text || '', description: job.description || '' })
+    setShowEditModal(true)
+  }
+
+  async function saveEdit() {
+    const res = await fetch('/api/jobs', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ id: jobId, ...editForm }),
+    })
+    const data = await res.json()
+    if (data.job) { setJob(data.job); setShowEditModal(false) }
+  }
+
+  // ── Supprimer offre ────────────────────────────────────────────────────────
+  async function deleteJob() {
+    if (deleteConfirmText !== 'SUPPRIMER') return
+    setDeleteLoading(true)
+    await fetch(`/api/jobs?id=${jobId}`, { method: 'DELETE', headers: authHeaders() })
+    router.push('/dashboard')
+  }
+
+  // ── Créer contact depuis "Transmis par" ────────────────────────────────────
+  function openCreateContact(transmittedBy: string) {
+    // Tenter de séparer prénom et nom
+    const parts = transmittedBy.trim().split(/\s+/)
+    setContactFirstName(parts[0] || '')
+    setContactLastName(parts.slice(1).join(' ') || '')
+    setContactRole('')
+    setContactCompany(job?.company || '')
+    setContactEmail('')
+    setContactPhone('')
+    setContactLinkedin('')
+    setContactSaved(false)
+    setShowCreateContact(true)
+  }
+
+  async function saveContact() {
+    setContactSaving(true)
+    const fullName = [contactFirstName.trim(), contactLastName.trim()].filter(Boolean).join(' ')
+    const token = getToken()
+    const res = await fetch('/api/contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({
+        name: fullName,
+        role: contactRole.trim() || null,
+        company: contactCompany.trim() || null,
+        email: contactEmail.trim() || null,
+        phone: contactPhone.trim() || null,
+        linkedin: contactLinkedin.trim() || null,
+        job_id: jobId,
+      }),
+    })
+    setContactSaving(false)
+    if (res.ok) {
+      setContactSaved(true)
+      await loadContacts()
+      setTimeout(() => setShowCreateContact(false), 1500)
+    }
+  }
+
   const sortedCustom = [...customSteps].sort((a, b) => a.position - b.position)
   const allSteps = [
     ...BASE_STEPS.slice(0, 5),
@@ -393,7 +473,6 @@ export default function JobDetailPage() {
 
   const currentStepId = job?.sub_status || job?.status || 'to_apply'
   const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId)
-
   const isInterviewStep = INTERVIEW_STEP_IDS.includes(currentStepId) || (customSteps.some(cs => cs.id === currentStepId))
 
   const handleStepClick = async (stepId: string) => {
@@ -462,8 +541,7 @@ export default function JobDetailPage() {
   function handleStepDragOver(event: any) { setOverDropZone(event.over?.id ?? null) }
   async function handleStepDragEnd(event: DragEndEvent) {
     setActiveStepId(null); setOverDropZone(null)
-    const { active, over } = event
-    if (!over) return
+    const { active, over } = event; if (!over) return
     const draggedId = active.id as string; const dropZoneId = over.id as string
     const draggedStep = customSteps.find(s => s.id === draggedId); if (!draggedStep) return
     const match = dropZoneId.match(/^(after|before)-(.+)$/); if (!match) return
@@ -540,8 +618,16 @@ export default function JobDetailPage() {
   const activeStep = activeStepId ? allSteps.find(s => s.id === activeStepId) : null
   const activeAction = activeActionId ? stepActions.find(a => a.id === activeActionId) : null
   const sortedStepActions = [...stepActions].sort((a, b) => a.position - b.position)
-
   const selectedContact = contacts.find(c => c.id === job.interview_contact_id)
+
+  // Extraire "Transmis par" des notes
+  const transmittedBy = extractTransmittedBy(job.notes)
+  const transmittedByAlreadyContact = transmittedBy
+    ? contacts.some(c => c.name.toLowerCase().includes(transmittedBy.toLowerCase().split(' ')[0].toLowerCase()))
+    : false
+
+  // Infos entreprise disponibles
+  const hasCompanyInfo = !!(job.company_description || job.company_website || job.company_size || job.department)
 
   return (
     <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, display: 'flex' }}>
@@ -558,6 +644,13 @@ export default function JobDetailPage() {
         .interview-type-btn.active { border-color: #F5C400; background: #FEF9E0; color: #111; }
         .interview-inp { width: 100%; border: 1.5px solid #eee; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: ${FONT}; outline: none; background: #fff; color: #111; box-sizing: border-box; font-weight: 500; }
         .interview-inp:focus { border-color: #F5C400; }
+        .btn-edit { background: #F9F9F7; color: #111; font-size: 12px; font-weight: 800; padding: 8px 16px; border-radius: 8px; border: 1.5px solid #ccc; cursor: pointer; font-family: ${FONT}; white-space: nowrap; transition: all 0.15s; }
+        .btn-edit:hover { background: #fff; border-color: #111; }
+        .btn-delete { background: transparent; color: #E8151B; font-size: 12px; font-weight: 800; padding: 8px 16px; border-radius: 8px; border: 1.5px solid #E8151B; cursor: pointer; font-family: ${FONT}; white-space: nowrap; transition: all 0.15s; }
+        .btn-delete:hover { background: #FEF2F2; }
+        .fi { width: 100%; border: 1.5px solid #E0E0E0; border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: ${FONT}; outline: none; background: #fff; color: #111; box-sizing: border-box; font-weight: 500; margin-bottom: 12px; }
+        .fi:focus { border-color: #111; }
+        .fl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #888; display: block; margin-bottom: 5px; font-family: ${FONT}; }
       `}</style>
 
       <div className="jfmj-sidebar"><JobSidebar currentJobId={jobId} onSelect={(id) => router.push(`/dashboard/job/${id}`)} /></div>
@@ -567,7 +660,7 @@ export default function JobDetailPage() {
           <button onClick={() => router.back()} style={{ background: '#fff', border: '1.5px solid #EBEBEB', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: '#111', cursor: 'pointer', fontFamily: FONT }}>← Mes candidatures</button>
         </div>
 
-        {/* HEADER */}
+        {/* ─── HEADER ─────────────────────────────────────────────────────── */}
         <div style={{ background: '#111', borderRadius: 12, padding: '22px 26px', marginBottom: 14, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, border: '2px solid #111', boxShadow: '3px 3px 0 #E8151B', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontSize: 12, color: '#666', marginBottom: 8, fontFamily: FONT }}>
@@ -591,12 +684,85 @@ export default function JobDetailPage() {
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-            {job.source_url && <button onClick={() => window.open(job.source_url, '_blank')} style={{ background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #fff', whiteSpace: 'nowrap' }}>Voir l'offre ↗</button>}
+            {job.source_url && <button onClick={() => window.open(job.source_url, '_blank')} style={{ background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #fff', whiteSpace: 'nowrap' }}>Voir l&apos;offre ↗</button>}
             <button onClick={() => router.push(`/dashboard/editor?job_id=${jobId}`)} style={{ background: '#F5C400', color: '#111', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #111', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' }}>Générer un CV</button>
+            {/* Boutons Modifier / Supprimer */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn-edit" onClick={openEditModal}>✏️ Modifier</button>
+              <button className="btn-delete" onClick={() => { setDeleteConfirmText(''); setShowDeleteModal(true) }}>🗑️ Supprimer</button>
+            </div>
           </div>
         </div>
 
-        {/* SCORE ATS */}
+        {/* ─── INFOS ENTREPRISE ───────────────────────────────────────────── */}
+        {hasCompanyInfo && (
+          <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '1.5px solid #EBEBEB', overflow: 'hidden' }}>
+            <button
+              onClick={() => setCompanyExpanded(v => !v)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: '#FAFAFA', border: 'none', cursor: 'pointer', fontFamily: FONT }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>🏢</span>
+                <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>À propos de {job.company}</span>
+              </div>
+              <span style={{ fontSize: 12, color: '#aaa', transform: companyExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
+            </button>
+
+            {companyExpanded && (
+              <div style={{ padding: '16px 20px' }}>
+                {job.company_description && (
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={{ fontSize: 13, color: '#444', lineHeight: 1.7, fontWeight: 500, margin: 0 }}>{job.company_description}</p>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                  {job.company_size && (
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Taille</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.company_size}</div>
+                    </div>
+                  )}
+                  {job.department && (
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Département</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.department}</div>
+                    </div>
+                  )}
+                  {job.company_website && (
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Site web</div>
+                      <a href={job.company_website.startsWith('http') ? job.company_website : `https://${job.company_website}`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{ fontSize: 13, fontWeight: 700, color: '#0A66C2', textDecoration: 'none' }}>
+                        {job.company_website} ↗
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── TRANSMIS PAR → Créer contact ──────────────────────────────── */}
+        {transmittedBy && !transmittedByAlreadyContact && (
+          <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 12, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>👤</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#5B21B6' }}>Offre transmise par <strong>{transmittedBy}</strong></div>
+                <div style={{ fontSize: 11, color: '#7C3AED', fontWeight: 500 }}>Ce contact n&apos;est pas encore dans vos contacts.</div>
+              </div>
+            </div>
+            <button
+              onClick={() => openCreateContact(transmittedBy)}
+              style={{ background: '#7C3AED', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap', boxShadow: '2px 2px 0 #111' }}>
+              + Créer la fiche contact
+            </button>
+          </div>
+        )}
+
+        {/* ─── SCORE ATS ──────────────────────────────────────────────────── */}
         {(atsScore !== null || atsKw.present.length > 0 || atsKw.missing.length > 0) && (
           <div style={{ ...card, border: '1.5px solid #F5C400', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
             {atsScore !== null && (
@@ -612,7 +778,7 @@ export default function JobDetailPage() {
               </div>
             )}
             <div style={{ flex: 1, minWidth: 180 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 4, fontFamily: FONT }}>Score ATS — Compatibilité avec l'offre</h3>
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 4, fontFamily: FONT }}>Score ATS — Compatibilité avec l&apos;offre</h3>
               <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, marginBottom: 8, fontFamily: FONT }}>{atsScore !== null && atsScore >= 70 ? 'Bonne compatibilité. Quelques mots-clés à ajouter.' : 'Des mots-clés importants manquent dans votre CV.'}</p>
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                 {atsKw.present.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: '#E8F5E9', color: '#2E7D32', fontFamily: FONT }}>{k} ✓</span>)}
@@ -622,7 +788,7 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {/* PARCOURS */}
+        {/* ─── PARCOURS ───────────────────────────────────────────────────── */}
         <div style={card}>
           <span style={sectionLabel}>Parcours de candidature</span>
           <p style={{ fontSize: 12, color: '#bbb', fontWeight: 600, marginBottom: 14, fontFamily: FONT }}>💡 Cliquez sur une étape pour avancer — glissez les étapes personnalisées pour les réordonner</p>
@@ -661,10 +827,10 @@ export default function JobDetailPage() {
           <div style={{ background: 'rgba(0,0,0,0.45)', borderRadius: 12, padding: '32px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
             <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 440, border: '2px solid #111', boxShadow: '4px 4px 0 #111' }}>
               <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', marginBottom: 5, fontFamily: FONT }}>Ajouter une étape personnalisée</h3>
-              <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.5, fontFamily: FONT }}>Donnez un nom à cette étape et choisissez où l'insérer.</p>
-              <label style={{ ...sectionLabel, marginBottom: 5 }}>Nom de l'étape</label>
+              <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.5, fontFamily: FONT }}>Donnez un nom à cette étape et choisissez où l&apos;insérer.</p>
+              <label style={{ ...sectionLabel, marginBottom: 5 }}>Nom de l&apos;étape</label>
               <input style={inp} placeholder="Ex : Test technique, Entretien DRH..." value={newStepName} onChange={e => setNewStepName(e.target.value)} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} />
-              <label style={{ ...sectionLabel, marginTop: 14, marginBottom: 8 }}>Où l'insérer ?</label>
+              <label style={{ ...sectionLabel, marginTop: 14, marginBottom: 8 }}>Où l&apos;insérer ?</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {allSteps.slice(0, -1).map((step, idx) => {
                   const nextStep = allSteps[idx + 1]; const pos = idx + 1; const isSelected = newStepPos === pos
@@ -678,13 +844,13 @@ export default function JobDetailPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
                 <button onClick={() => setShowModal(false)} style={{ background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '8px 16px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
-                <button onClick={handleAddCustomStep} style={{ background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT }}>Ajouter l'étape</button>
+                <button onClick={handleAddCustomStep} style={{ background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT }}>Ajouter l&apos;étape</button>
               </div>
             </div>
           </div>
         )}
 
-        {/* BLOC ÉTAPE ACTIVE */}
+        {/* ─── BLOC ÉTAPE ACTIVE ───────────────────────────────────────────── */}
         <div style={{ background: '#FFFDE7', borderRadius: 12, padding: '18px 22px', marginBottom: 14, border: '1.5px solid #F5C400' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8, flexWrap: 'wrap' }}>
             <span style={{ background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '3px 11px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONT }}>Étape {currentStepIndex + 1} — En cours</span>
@@ -755,85 +921,44 @@ export default function JobDetailPage() {
           )}
         </div>
 
-        {/* ── BLOC ENTRETIEN (visible uniquement si étape entretien) ── */}
+        {/* ─── BLOC ENTRETIEN ──────────────────────────────────────────────── */}
         {isInterviewStep && (
           <div style={{ background: '#FEF9E0', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '2px solid #F5C400', boxShadow: '2px 2px 0 #F5C400' }}>
-            <span style={{ ...sectionLabel, color: '#B8900A' }}>📅 Détails de l'entretien</span>
-
-            {/* Date + Début + Fin */}
+            <span style={{ ...sectionLabel, color: '#B8900A' }}>📅 Détails de l&apos;entretien</span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
               <div>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Date</label>
-                <input type="date" className="interview-inp"
-                  key={job.interview_at || 'no-date'}
-                  value={job.interview_at ? job.interview_at.slice(0, 10) : ''}
-                  onChange={e => setJob(prev => prev ? { ...prev, interview_at: e.target.value || null } : prev)}
-                  onBlur={e => patchJob('interview_at', e.target.value || null)}
-                />
+                <input type="date" className="interview-inp" key={job.interview_at || 'no-date'} value={job.interview_at ? job.interview_at.slice(0, 10) : ''} onChange={e => setJob(prev => prev ? { ...prev, interview_at: e.target.value || null } : prev)} onBlur={e => patchJob('interview_at', e.target.value || null)} />
               </div>
               <div>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Début</label>
-                <input type="time" className="interview-inp"
-                  key={job.interview_time || 'no-time'}
-                  value={job.interview_time || ''}
-                  onChange={e => setJob(prev => prev ? { ...prev, interview_time: e.target.value || null } : prev)}
-                  onBlur={e => patchJob('interview_time', e.target.value || null)}
-                />
+                <input type="time" className="interview-inp" key={job.interview_time || 'no-time'} value={job.interview_time || ''} onChange={e => setJob(prev => prev ? { ...prev, interview_time: e.target.value || null } : prev)} onBlur={e => patchJob('interview_time', e.target.value || null)} />
               </div>
               <div>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fin</label>
-                <input type="time" className="interview-inp"
-                  key={job.interview_time_end || 'no-end'}
-                  value={job.interview_time_end || ''}
-                  onChange={e => setJob(prev => prev ? { ...prev, interview_time_end: e.target.value || null } : prev)}
-                  onBlur={e => patchJob('interview_time_end', e.target.value || null)}
-                />
+                <input type="time" className="interview-inp" key={job.interview_time_end || 'no-end'} value={job.interview_time_end || ''} onChange={e => setJob(prev => prev ? { ...prev, interview_time_end: e.target.value || null } : prev)} onBlur={e => patchJob('interview_time_end', e.target.value || null)} />
               </div>
             </div>
-
-            {/* Type */}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Type d'entretien</label>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Type d&apos;entretien</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 {(['telephone', 'visio', 'presentiel'] as const).map(t => (
-                  <button key={t}
-                    className={`interview-type-btn${job.interview_type === t ? ' active' : ''}`}
-                    onClick={() => patchJob('interview_type', job.interview_type === t ? null : t)}
-                  >
-                    {INTERVIEW_TYPE_LABELS[t]}
-                  </button>
+                  <button key={t} className={`interview-type-btn${job.interview_type === t ? ' active' : ''}`} onClick={() => patchJob('interview_type', job.interview_type === t ? null : t)}>{INTERVIEW_TYPE_LABELS[t]}</button>
                 ))}
               </div>
             </div>
-
-            {/* Champ contextuel selon le type */}
             {job.interview_type === 'telephone' && (
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>📞 Numéro de téléphone</label>
-                <input type="tel" className="interview-inp" placeholder="Ex : +33 6 12 34 56 78"
-                  key={job.interview_phone || 'no-phone'}
-                  value={job.interview_phone || ''}
-                  onChange={e => setJob(prev => prev ? { ...prev, interview_phone: e.target.value || null } : prev)}
-                  onBlur={e => patchJob('interview_phone', e.target.value || null)}
-                />
+                <input type="tel" className="interview-inp" placeholder="Ex : +33 6 12 34 56 78" key={job.interview_phone || 'no-phone'} value={job.interview_phone || ''} onChange={e => setJob(prev => prev ? { ...prev, interview_phone: e.target.value || null } : prev)} onBlur={e => patchJob('interview_phone', e.target.value || null)} />
               </div>
             )}
             {job.interview_type === 'visio' && (
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>💻 Lien de la visio</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input type="url" className="interview-inp" placeholder="https://meet.google.com/..."
-                    key={job.interview_link || 'no-link'}
-                    value={job.interview_link || ''}
-                    onChange={e => setJob(prev => prev ? { ...prev, interview_link: e.target.value || null } : prev)}
-                    onBlur={e => patchJob('interview_link', e.target.value || null)}
-                  />
-                  {job.interview_link && (
-                    <button onClick={() => window.open(job.interview_link!, '_blank')}
-                      style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>
-                      Rejoindre →
-                    </button>
-                  )}
+                  <input type="url" className="interview-inp" placeholder="https://meet.google.com/..." key={job.interview_link || 'no-link'} value={job.interview_link || ''} onChange={e => setJob(prev => prev ? { ...prev, interview_link: e.target.value || null } : prev)} onBlur={e => patchJob('interview_link', e.target.value || null)} />
+                  {job.interview_link && <button onClick={() => window.open(job.interview_link!, '_blank')} style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>Rejoindre →</button>}
                 </div>
               </div>
             )}
@@ -841,34 +966,17 @@ export default function JobDetailPage() {
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Adresse</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input type="text" className="interview-inp" placeholder="Ex : 12 rue de la Paix, 75001 Paris"
-                    key={job.interview_location || 'no-loc'}
-                    value={job.interview_location || ''}
-                    onChange={e => setJob(prev => prev ? { ...prev, interview_location: e.target.value || null } : prev)}
-                    onBlur={e => patchJob('interview_location', e.target.value || null)}
-                  />
-                  {job.interview_location && (
-                    <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(job.interview_location!)}`, '_blank')}
-                      style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>
-                      Maps →
-                    </button>
-                  )}
+                  <input type="text" className="interview-inp" placeholder="Ex : 12 rue de la Paix, 75001 Paris" key={job.interview_location || 'no-loc'} value={job.interview_location || ''} onChange={e => setJob(prev => prev ? { ...prev, interview_location: e.target.value || null } : prev)} onBlur={e => patchJob('interview_location', e.target.value || null)} />
+                  {job.interview_location && <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(job.interview_location!)}`, '_blank')} style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>Maps →</button>}
                 </div>
               </div>
             )}
-
-            {/* Contact */}
             <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>👤 Contact pour l'entretien</label>
-              <select className="interview-inp"
-                value={job.interview_contact_id || ''}
-                onChange={e => patchJob('interview_contact_id', e.target.value || null)}
-              >
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>👤 Contact pour l&apos;entretien</label>
+              <select className="interview-inp" value={job.interview_contact_id || ''} onChange={e => patchJob('interview_contact_id', e.target.value || null)}>
                 <option value="">— Aucun contact —</option>
                 {contacts.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}{c.role ? ` – ${c.role}` : ''}{c.company ? ` (${c.company})` : ''}
-                  </option>
+                  <option key={c.id} value={c.id}>{c.name}{c.role ? ` – ${c.role}` : ''}{c.company ? ` (${c.company})` : ''}</option>
                 ))}
               </select>
               {selectedContact && (
@@ -880,7 +988,7 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {/* SYNTHÈSE ÉCHANGES */}
+        {/* ─── SYNTHÈSE ÉCHANGES ───────────────────────────────────────────── */}
         <div style={card}>
           <span style={sectionLabel}>Synthèse des échanges</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -985,13 +1093,172 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      {/* MODALE SUPPRESSION ACTION */}
+      {/* ════════ MODALES ════════════════════════════════════════════════════ */}
+
+      {/* ── Modale Modifier offre ─────────────────────────────────────────── */}
+      {showEditModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 540, border: '2px solid #111', boxShadow: '4px 4px 0 #111', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: 0, fontFamily: FONT }}>✏️ Modifier l&apos;offre</h3>
+              <button onClick={() => setShowEditModal(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+              <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
+                <label className="fl">Intitulé du poste</label>
+                <input className="fi" value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label className="fl">Entreprise</label>
+                <input className="fi" value={editForm.company} onChange={e => setEditForm(p => ({ ...p, company: e.target.value }))} />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label className="fl">Lieu</label>
+                <input className="fi" value={editForm.location} onChange={e => setEditForm(p => ({ ...p, location: e.target.value }))} placeholder="Paris · Hybride" />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label className="fl">Type de contrat</label>
+                <select className="fi" value={editForm.job_type} onChange={e => setEditForm(p => ({ ...p, job_type: e.target.value }))}>
+                  {['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance'].map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label className="fl">Salaire</label>
+                <input className="fi" value={editForm.salary_text} onChange={e => setEditForm(p => ({ ...p, salary_text: e.target.value }))} placeholder="45-55k€ / an" />
+              </div>
+              <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
+                <label className="fl">Description</label>
+                <textarea className="fi" value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={5} style={{ resize: 'vertical', minHeight: 120, marginBottom: 0 }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <button onClick={() => setShowEditModal(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
+              <button onClick={saveEdit} style={{ flex: 2, background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #E8151B' }}>Enregistrer →</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modale Supprimer offre ────────────────────────────────────────── */}
+      {showDeleteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 30, width: '100%', maxWidth: 420, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B' }}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+              <h3 style={{ fontSize: 18, fontWeight: 900, color: '#E8151B', margin: '0 0 8px', fontFamily: FONT }}>Suppression définitive</h3>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>
+                Cette action est <strong>irréversible</strong>.<br />
+                Toutes les données seront supprimées : échanges, documents, étapes.
+              </p>
+            </div>
+            <div style={{ background: '#FEF2F2', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#111', margin: '0 0 4px', fontFamily: FONT }}>{job.title}</p>
+              <p style={{ fontSize: 12, color: '#888', margin: 0, fontFamily: FONT }}>{job.company}</p>
+            </div>
+            <p style={{ fontSize: 12, color: '#555', marginBottom: 8, fontFamily: FONT }}>
+              Pour confirmer, tapez exactement : <strong style={{ color: '#E8151B' }}>SUPPRIMER</strong>
+            </p>
+            <input
+              className="fi"
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              placeholder="SUPPRIMER"
+              style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em', borderColor: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#E0E0E0' }}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={() => setShowDeleteModal(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
+              <button
+                onClick={deleteJob}
+                disabled={deleteConfirmText !== 'SUPPRIMER' || deleteLoading}
+                style={{ flex: 1, background: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#eee', color: deleteConfirmText === 'SUPPRIMER' ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: deleteConfirmText === 'SUPPRIMER' ? 'pointer' : 'not-allowed', fontFamily: FONT, transition: 'all 0.15s' }}>
+                {deleteLoading ? '…' : 'Supprimer définitivement'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modale Créer contact ──────────────────────────────────────────── */}
+      {showCreateContact && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 480, border: '2px solid #111', boxShadow: '4px 4px 0 #7C3AED', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: 0, fontFamily: FONT }}>👤 Créer une fiche contact</h3>
+              <button onClick={() => setShowCreateContact(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
+            </div>
+
+            {/* Badge offre liée */}
+            <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 12, fontWeight: 700, color: '#5B21B6', fontFamily: FONT }}>
+              🔗 Ce contact sera lié à : <strong>{job.title}</strong> — {job.company}
+            </div>
+
+            {contactSaved ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>✅</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#1A7A4A', fontFamily: FONT }}>Contact créé avec succès !</div>
+              </div>
+            ) : (
+              <>
+                {/* Prénom + Nom séparés */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                  <div style={{ marginBottom: 14 }}>
+                    <label className="fl">Prénom *</label>
+                    <input className="fi" value={contactFirstName} onChange={e => setContactFirstName(e.target.value)} placeholder="Philippe" autoFocus />
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label className="fl">Nom *</label>
+                    <input className="fi" value={contactLastName} onChange={e => setContactLastName(e.target.value)} placeholder="Martin" />
+                  </div>
+                </div>
+
+                {/* Fonction */}
+                <div style={{ marginBottom: 14 }}>
+                  <label className="fl">Fonction / Poste</label>
+                  <input className="fi" value={contactRole} onChange={e => setContactRole(e.target.value)} placeholder="Ex : DRH, Directeur Marketing, Chasseur de tête..." />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                  <div style={{ marginBottom: 14 }}>
+                    <label className="fl">Entreprise</label>
+                    <input className="fi" value={contactCompany} onChange={e => setContactCompany(e.target.value)} placeholder="Lenôtre, Michael Page..." />
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label className="fl">Email</label>
+                    <input className="fi" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="p.martin@..." />
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label className="fl">Téléphone</label>
+                    <input className="fi" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+33 6..." />
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label className="fl">LinkedIn</label>
+                    <input className="fi" value={contactLinkedin} onChange={e => setContactLinkedin(e.target.value)} placeholder="linkedin.com/in/..." />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                  <button onClick={() => setShowCreateContact(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
+                  <button
+                    onClick={saveContact}
+                    disabled={!contactFirstName.trim() || contactSaving}
+                    style={{ flex: 2, background: (!contactFirstName.trim() || contactSaving) ? '#eee' : '#7C3AED', color: (!contactFirstName.trim() || contactSaving) ? '#aaa' : '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: contactFirstName.trim() ? 'pointer' : 'not-allowed', fontFamily: FONT, boxShadow: contactFirstName.trim() ? '2px 2px 0 #111' : 'none' }}>
+                    {contactSaving ? '…' : 'Créer le contact →'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Modale Suppression action ─────────────────────────────────────── */}
       {actionToDelete && (
         <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 400, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
             <div style={{ fontSize: 26, marginBottom: 12, textAlign: 'center' }}>🗑️</div>
             <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', marginBottom: 8, textAlign: 'center', fontFamily: FONT }}>Supprimer cette action ?</h3>
-            <p style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>"{actionToDelete.title}"</p>
+            <p style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>&ldquo;{actionToDelete.title}&rdquo;</p>
             <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>Cette action est définitive.</p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setActionToDelete(null)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
@@ -1001,13 +1268,13 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* MODALE SUPPRESSION ÉTAPE */}
+      {/* ── Modale Suppression étape ──────────────────────────────────────── */}
       {stepToDelete && (
         <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 400, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
             <div style={{ fontSize: 26, marginBottom: 12, textAlign: 'center' }}>🗑️</div>
             <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', marginBottom: 8, textAlign: 'center', fontFamily: FONT }}>Supprimer cette étape ?</h3>
-            <p style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>"{stepToDelete.label}"</p>
+            <p style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>&ldquo;{stepToDelete.label}&rdquo;</p>
             <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>Cette action est définitive.</p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setStepToDelete(null)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
