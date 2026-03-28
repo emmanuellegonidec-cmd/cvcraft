@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
 
     const rawText = response.content
       .filter((b: any) => b.type === 'text')
-      .map(b => b.text)
+      .map((b: any) => b.text)
       .join('');
 
     const cleanJson = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
