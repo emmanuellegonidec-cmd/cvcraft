@@ -4,6 +4,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 
+// ─── Import Montserrat ────────────────────────────────────────────────────────
+import { Montserrat } from 'next/font/google';
+const montserrat = Montserrat({ subsets: ['latin'], weight: ['500', '600', '700', '800', '900'] });
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UserProfile {
   first_name?: string;
@@ -50,6 +54,21 @@ const AVAILABILITY_OPTIONS = [
 
 const CONTRACT_OPTIONS = ['CDI', 'CDD', 'Freelance / Mission', 'Alternance', 'Stage', 'Intérim'];
 
+// ─── Styles partagés ──────────────────────────────────────────────────────────
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 12px',
+  border: '2px solid #111',
+  borderRadius: 6,
+  fontFamily: 'Montserrat, sans-serif',
+  fontSize: 14,
+  fontWeight: 500,
+  background: '#fff',
+  color: '#111',
+  boxSizing: 'border-box',
+  outline: 'none',
+};
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function ProfilePage() {
   const router = useRouter();
@@ -91,7 +110,24 @@ export default function ProfilePage() {
         });
         const data = await res.json();
         if (data.profile) {
-          setProfile(data.profile);
+          // ✅ Chaque champ initialisé explicitement — pas de contamination par email
+          setProfile({
+            first_name: data.profile.first_name ?? '',
+            last_name: data.profile.last_name ?? '',
+            current_title: data.profile.current_title ?? '',
+            target_title: data.profile.target_title ?? '',
+            sector: data.profile.sector ?? '',
+            experience_level: data.profile.experience_level ?? '',
+            city: data.profile.city ?? '',
+            region: data.profile.region ?? '',
+            mobility: data.profile.mobility ?? '',
+            summary: data.profile.summary ?? '',
+            key_skills: data.profile.key_skills ?? [],
+            languages: data.profile.languages ?? [],
+            availability: data.profile.availability ?? '',
+            contract_types: data.profile.contract_types ?? [],
+            salary_expectation: data.profile.salary_expectation ?? '',  // ✅ jamais l'email
+          });
           setSkillsText((data.profile.key_skills ?? []).join(', '));
           setLanguagesText((data.profile.languages ?? []).join(', '));
         }
@@ -130,7 +166,7 @@ export default function ProfilePage() {
     }
   }, [profile, skillsText, languagesText, token]);
 
-  // ── Changement de mot de passe (côté client Supabase) ───────────────────
+  // ── Changement mot de passe ──────────────────────────────────────────────
   const handleChangePassword = useCallback(async () => {
     setPwdError(''); setPwdSuccess(false);
     if (newPassword.length < 8) { setPwdError('Le mot de passe doit contenir au moins 8 caractères.'); return; }
@@ -189,31 +225,48 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat, sans-serif', background: '#fafafa' }}>
+      <div className={montserrat.className} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa' }}>
         <div style={{ fontSize: 16, color: '#111', fontWeight: 600 }}>Chargement…</div>
       </div>
     );
   }
 
-  const initials = [profile.first_name?.[0], profile.last_name?.[0]].filter(Boolean).join('').toUpperCase() || '?';
+  const initials = [profile.first_name?.[0], profile.last_name?.[0]].filter(Boolean).join('').toUpperCase() || email?.[0]?.toUpperCase() || '?';
+  const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || email?.split('@')[0] || 'Mon profil';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fafafa', fontFamily: 'Montserrat, sans-serif' }}>
+    <div className={montserrat.className} style={{ minHeight: '100vh', background: '#fafafa' }}>
 
-      {/* Header */}
-      <div style={{ background: '#111', color: '#fff', padding: '0 32px', display: 'flex', alignItems: 'center', gap: 16, height: 64, borderBottom: '3px solid #F5C400' }}>
-        <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: '2px solid #444', color: '#fff', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13 }}>
+      {/* ── Header noir bande jaune ── */}
+      <div style={{
+        background: '#111',
+        color: '#fff',
+        padding: '0 32px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        height: 64,
+        borderBottom: '3px solid #F5C400',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+      }}>
+        <button
+          onClick={() => router.push('/dashboard')}
+          style={{ background: 'none', border: '2px solid #444', color: '#fff', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13 }}
+        >
           ← Retour
         </button>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#F5C400', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 16, color: '#111', border: '2px solid #fff' }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 16, color: '#fff', border: '2px solid #333', flexShrink: 0 }}>
           {initials}
         </div>
         <div>
-          <div style={{ fontWeight: 900, fontSize: 18, color: '#F5C400', letterSpacing: -0.5 }}>Mon profil</div>
-          <div style={{ fontSize: 12, color: '#aaa', fontWeight: 500 }}>{email}</div>
+          <div style={{ fontWeight: 900, fontSize: 18, color: '#F5C400', letterSpacing: -0.5 }}>{displayName}</div>
+          <div style={{ fontSize: 12, color: '#888', fontWeight: 500 }}>{email}</div>
         </div>
       </div>
 
+      {/* ── Contenu ── */}
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '40px 24px 80px' }}>
 
         {error && (
@@ -226,7 +279,9 @@ export default function ProfilePage() {
             <Field label="Prénom"><Input value={profile.first_name ?? ''} onChange={(v) => setProfile((p) => ({ ...p, first_name: v }))} placeholder="Emmanuelle" /></Field>
             <Field label="Nom"><Input value={profile.last_name ?? ''} onChange={(v) => setProfile((p) => ({ ...p, last_name: v }))} placeholder="Dupont" /></Field>
           </Row>
-          <Field label="Email" hint="Non modifiable ici — géré par votre compte"><Input value={email} onChange={() => {}} disabled /></Field>
+          <Field label="Email" hint="Non modifiable ici — géré par votre compte">
+            <input type="text" value={email} disabled style={{ ...inputStyle, background: '#f5f5f5', color: '#888' }} />
+          </Field>
         </Section>
 
         {/* 2 — Situation pro */}
@@ -235,7 +290,11 @@ export default function ProfilePage() {
           <Field label="Poste recherché"><Input value={profile.target_title ?? ''} onChange={(v) => setProfile((p) => ({ ...p, target_title: v }))} placeholder="CMO / Head of Marketing" /></Field>
           <Row>
             <Field label="Secteur d'activité"><Input value={profile.sector ?? ''} onChange={(v) => setProfile((p) => ({ ...p, sector: v }))} placeholder="Tech, Retail, Santé…" /></Field>
-            <Field label="Niveau d'expérience"><Select value={profile.experience_level ?? ''} onChange={(v) => setProfile((p) => ({ ...p, experience_level: v }))} options={EXPERIENCE_LEVELS} /></Field>
+            <Field label="Niveau d'expérience">
+              <select value={profile.experience_level ?? ''} onChange={(e) => setProfile((p) => ({ ...p, experience_level: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                {EXPERIENCE_LEVELS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </Field>
           </Row>
         </Section>
 
@@ -245,7 +304,11 @@ export default function ProfilePage() {
             <Field label="Ville"><Input value={profile.city ?? ''} onChange={(v) => setProfile((p) => ({ ...p, city: v }))} placeholder="Paris" /></Field>
             <Field label="Région"><Input value={profile.region ?? ''} onChange={(v) => setProfile((p) => ({ ...p, region: v }))} placeholder="Île-de-France" /></Field>
           </Row>
-          <Field label="Mobilité géographique"><Select value={profile.mobility ?? ''} onChange={(v) => setProfile((p) => ({ ...p, mobility: v }))} options={MOBILITY_OPTIONS} /></Field>
+          <Field label="Mobilité géographique">
+            <select value={profile.mobility ?? ''} onChange={(e) => setProfile((p) => ({ ...p, mobility: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+              {MOBILITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Field>
         </Section>
 
         {/* 4 — Infos CV */}
@@ -253,15 +316,26 @@ export default function ProfilePage() {
           <Field label="Résumé / pitch personnel" hint="Quelques lignes qui vous définissent">
             <textarea value={profile.summary ?? ''} onChange={(e) => setProfile((p) => ({ ...p, summary: e.target.value }))} placeholder="Ex : Directrice marketing avec 20 ans d'expérience dans le digital et le retail…" rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
           </Field>
-          <Field label="Compétences clés" hint="Séparées par des virgules"><Input value={skillsText} onChange={setSkillsText} placeholder="Marketing digital, SEO, Management d'équipe, CRM, Data Analytics" /></Field>
-          <Field label="Langues parlées" hint="Séparées par des virgules"><Input value={languagesText} onChange={setLanguagesText} placeholder="Français (natif), Anglais (courant), Espagnol (notions)" /></Field>
+          <Field label="Compétences clés" hint="Séparées par des virgules">
+            <Input value={skillsText} onChange={setSkillsText} placeholder="Marketing digital, SEO, Management d'équipe, CRM, Data Analytics" />
+          </Field>
+          <Field label="Langues parlées" hint="Séparées par des virgules">
+            <Input value={languagesText} onChange={setLanguagesText} placeholder="Français (natif), Anglais (courant), Espagnol (notions)" />
+          </Field>
         </Section>
 
         {/* 5 — Disponibilité */}
         <Section title="🗓️ Disponibilité & contrat">
           <Row>
-            <Field label="Disponibilité"><Select value={profile.availability ?? ''} onChange={(v) => setProfile((p) => ({ ...p, availability: v }))} options={AVAILABILITY_OPTIONS} /></Field>
-            <Field label="Prétentions salariales"><Input value={profile.salary_expectation ?? ''} onChange={(v) => setProfile((p) => ({ ...p, salary_expectation: v }))} placeholder="55 000 – 65 000 € brut / an" /></Field>
+            <Field label="Disponibilité">
+              <select value={profile.availability ?? ''} onChange={(e) => setProfile((p) => ({ ...p, availability: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                {AVAILABILITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Prétentions salariales">
+              {/* ✅ Champ salary_expectation isolé — jamais l'email */}
+              <Input value={profile.salary_expectation ?? ''} onChange={(v) => setProfile((p) => ({ ...p, salary_expectation: v }))} placeholder="55 000 – 65 000 € brut / an" />
+            </Field>
           </Row>
           <Field label="Types de contrat recherchés">
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
@@ -277,7 +351,7 @@ export default function ProfilePage() {
           </Field>
         </Section>
 
-        {/* Bouton enregistrer profil */}
+        {/* Bouton enregistrer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 32 }}>
           <button onClick={handleSave} disabled={saving} style={{ background: saved ? '#1A7A4A' : '#F5C400', color: saved ? '#fff' : '#111', border: '2px solid #111', borderRadius: 8, padding: '12px 32px', fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 15, cursor: saving ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #111', transition: 'all 0.15s' }}>
             {saving ? '⏳ Enregistrement…' : saved ? '✅ Enregistré !' : '💾 Enregistrer le profil'}
@@ -289,19 +363,10 @@ export default function ProfilePage() {
           <p style={{ fontSize: 13, color: '#666', margin: '0 0 4px', lineHeight: 1.6 }}>
             Choisissez un mot de passe fort d'au moins 8 caractères. La mise à jour est immédiate dans Supabase.
           </p>
-
           <Field label="Nouveau mot de passe">
             <div style={{ position: 'relative' }}>
-              <input
-                type={showNewPwd ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => { setNewPassword(e.target.value); setPwdError(''); setPwdSuccess(false); }}
-                placeholder="••••••••••••"
-                style={{ ...inputStyle, paddingRight: 44 }}
-              />
-              <button onClick={() => setShowNewPwd((v) => !v)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#888', padding: 0 }}>
-                {showNewPwd ? '🙈' : '👁️'}
-              </button>
+              <input type={showNewPwd ? 'text' : 'password'} value={newPassword} onChange={(e) => { setNewPassword(e.target.value); setPwdError(''); setPwdSuccess(false); }} placeholder="••••••••••••" style={{ ...inputStyle, paddingRight: 44 }} />
+              <button onClick={() => setShowNewPwd((v) => !v)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#888', padding: 0 }}>{showNewPwd ? '🙈' : '👁️'}</button>
             </div>
             {newPassword && pwdStrength && (
               <div style={{ marginTop: 8 }}>
@@ -312,33 +377,18 @@ export default function ProfilePage() {
               </div>
             )}
           </Field>
-
           <Field label="Confirmer le nouveau mot de passe">
             <div style={{ position: 'relative' }}>
-              <input
-                type={showConfirmPwd ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => { setConfirmPassword(e.target.value); setPwdError(''); }}
-                placeholder="••••••••••••"
-                style={{ ...inputStyle, paddingRight: 44, borderColor: confirmPassword && confirmPassword !== newPassword ? '#E8151B' : confirmPassword && confirmPassword === newPassword ? '#1A7A4A' : '#111' }}
-              />
-              <button onClick={() => setShowConfirmPwd((v) => !v)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#888', padding: 0 }}>
-                {showConfirmPwd ? '🙈' : '👁️'}
-              </button>
+              <input type={showConfirmPwd ? 'text' : 'password'} value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setPwdError(''); }} placeholder="••••••••••••" style={{ ...inputStyle, paddingRight: 44, borderColor: confirmPassword && confirmPassword !== newPassword ? '#E8151B' : confirmPassword && confirmPassword === newPassword ? '#1A7A4A' : '#111' }} />
+              <button onClick={() => setShowConfirmPwd((v) => !v)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#888', padding: 0 }}>{showConfirmPwd ? '🙈' : '👁️'}</button>
             </div>
             {confirmPassword && confirmPassword !== newPassword && <div style={{ fontSize: 12, color: '#E8151B', fontWeight: 600, marginTop: 4 }}>✗ Les mots de passe ne correspondent pas</div>}
             {confirmPassword && confirmPassword === newPassword && <div style={{ fontSize: 12, color: '#1A7A4A', fontWeight: 600, marginTop: 4 }}>✓ Les mots de passe correspondent</div>}
           </Field>
-
           {pwdError && <div style={{ background: '#FEE', border: '2px solid #E8151B', borderRadius: 6, padding: '10px 14px', fontSize: 13, color: '#E8151B', fontWeight: 600 }}>{pwdError}</div>}
           {pwdSuccess && <div style={{ background: '#EFF9F3', border: '2px solid #1A7A4A', borderRadius: 6, padding: '10px 14px', fontSize: 13, color: '#1A7A4A', fontWeight: 700 }}>✅ Mot de passe mis à jour avec succès !</div>}
-
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              onClick={handleChangePassword}
-              disabled={pwdSaving || !newPassword || !confirmPassword}
-              style={{ background: '#111', color: '#fff', border: '2px solid #111', borderRadius: 8, padding: '11px 28px', fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 14, cursor: pwdSaving || !newPassword || !confirmPassword ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #555', opacity: !newPassword || !confirmPassword ? 0.5 : 1, transition: 'all 0.15s' }}
-            >
+            <button onClick={handleChangePassword} disabled={pwdSaving || !newPassword || !confirmPassword} style={{ background: '#111', color: '#fff', border: '2px solid #111', borderRadius: 8, padding: '11px 28px', fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 14, cursor: pwdSaving || !newPassword || !confirmPassword ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #555', opacity: !newPassword || !confirmPassword ? 0.5 : 1, transition: 'all 0.15s' }}>
               {pwdSaving ? '⏳ Mise à jour…' : '🔒 Mettre à jour le mot de passe'}
             </button>
           </div>
@@ -358,7 +408,7 @@ export default function ProfilePage() {
 
       {/* Modale suppression */}
       {showDeleteModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 24 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 24 }}>
           <div style={{ background: '#fff', border: '3px solid #E8151B', borderRadius: 12, boxShadow: '5px 5px 0 #E8151B', maxWidth: 480, width: '100%', padding: 32, fontFamily: 'Montserrat, sans-serif' }}>
             <div style={{ fontSize: 20, fontWeight: 900, color: '#E8151B', marginBottom: 12 }}>⚠️ Suppression définitive</div>
             <p style={{ fontSize: 14, color: '#333', lineHeight: 1.7, marginBottom: 20 }}>
@@ -381,16 +431,11 @@ export default function ProfilePage() {
 }
 
 // ─── Sous-composants ──────────────────────────────────────────────────────────
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 12px', border: '2px solid #111', borderRadius: 6,
-  fontFamily: 'Montserrat, sans-serif', fontSize: 14, fontWeight: 500,
-  background: '#fff', color: '#111', boxSizing: 'border-box', outline: 'none',
-};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, boxShadow: '3px 3px 0 #111', padding: '24px 28px', marginBottom: 24 }}>
-      <div style={{ fontWeight: 900, fontSize: 16, color: '#111', marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid #eee' }}>{title}</div>
+      <div style={{ fontWeight: 900, fontSize: 15, color: '#111', marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid #eee' }}>{title}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>{children}</div>
     </div>
   );
@@ -403,26 +448,18 @@ function Row({ children }: { children: React.ReactNode }) {
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ display: 'block', fontWeight: 700, fontSize: 13, color: '#111', marginBottom: 6 }}>
+      <label style={{ display: 'block', fontWeight: 700, fontSize: 12, color: '#111', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
         {label}
-        {hint && <span style={{ fontWeight: 500, color: '#888', marginLeft: 8, fontSize: 12 }}>{hint}</span>}
+        {hint && <span style={{ fontWeight: 500, color: '#999', marginLeft: 8, fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>{hint}</span>}
       </label>
       {children}
     </div>
   );
 }
 
-function Input({ value, onChange, placeholder, disabled }: { value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean }) {
+function Input({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
-    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
-      style={{ ...inputStyle, background: disabled ? '#f5f5f5' : '#fff', color: disabled ? '#888' : '#111' }} />
-  );
-}
-
-function Select({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
-  return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
+    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+      style={inputStyle} />
   );
 }
