@@ -1,15 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 
+type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats';
+
 interface SidebarProps {
-  activeView: string;
-  onViewChange: (view: string) => void;
+  view: View;
+  setView: React.Dispatch<React.SetStateAction<View>>;
+  firstName: string;
+  userEmail: string;
+  jobCount: number;
+  contactCount: number;
+  interviewCount: number;
+  onSettings: () => void;
 }
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { id: View; label: string; icon: string }[] = [
   { id: 'kanban', label: 'Kanban', icon: '⬛' },
   { id: 'list', label: 'Candidatures', icon: '📋' },
   { id: 'contacts', label: 'Contacts', icon: '👥' },
@@ -17,44 +24,35 @@ const NAV_ITEMS = [
   { id: 'stats', label: 'Statistiques', icon: '📊' },
 ];
 
-export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
+export default function Sidebar({
+  view,
+  setView,
+  firstName,
+  userEmail,
+  jobCount,
+  contactCount,
+  interviewCount,
+  onSettings,
+}: SidebarProps) {
   const router = useRouter();
-  const pathname = usePathname();
-
-  const [firstName, setFirstName] = useState('');
-  const [initials, setInitials] = useState('?');
-
-  // Charger le profil pour afficher le nom/initiales
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
-      try {
-        const res = await fetch('/api/profile', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        const data = await res.json();
-        if (data.profile) {
-          const fn = data.profile.first_name ?? '';
-          const ln = data.profile.last_name ?? '';
-          setFirstName(fn || data.email?.split('@')[0] || 'Moi');
-          const ini = [fn?.[0], ln?.[0]].filter(Boolean).join('').toUpperCase();
-          setInitials(ini || (data.email?.[0] ?? '?').toUpperCase());
-        } else if (data.email) {
-          setFirstName(data.email.split('@')[0]);
-          setInitials(data.email[0].toUpperCase());
-        }
-      } catch (_) {
-        // silencieux
-      }
-    });
-  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/auth/login');
   };
+
+  // Initiales depuis firstName + userEmail
+  const initials = (() => {
+    if (firstName) {
+      const parts = firstName.trim().split(' ');
+      if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+      return parts[0][0].toUpperCase();
+    }
+    return userEmail?.[0]?.toUpperCase() ?? '?';
+  })();
+
+  const displayName = firstName || userEmail?.split('@')[0] || 'Moi';
 
   return (
     <aside
@@ -84,14 +82,21 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
         </div>
       </div>
 
+      {/* Stats rapides */}
+      <div style={{ padding: '10px 16px', borderBottom: '2px solid #222', display: 'flex', gap: 8 }}>
+        <StatBadge label="offres" value={jobCount} />
+        <StatBadge label="contacts" value={contactCount} />
+        <StatBadge label="entretiens" value={interviewCount} />
+      </div>
+
       {/* Navigation */}
       <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
         {NAV_ITEMS.map((item) => {
-          const isActive = activeView === item.id;
+          const isActive = view === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => onViewChange(item.id)}
+              onClick={() => setView(item.id)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -106,6 +111,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
                 fontSize: 13,
                 cursor: 'pointer',
                 textAlign: 'left',
+                width: '100%',
                 boxShadow: isActive ? '2px 2px 0 #F5C40033' : 'none',
                 transition: 'all 0.15s',
               }}
@@ -115,10 +121,39 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
             </button>
           );
         })}
+
+        {/* Paramètres */}
+        <button
+          onClick={onSettings}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 12px',
+            border: '2px solid transparent',
+            borderRadius: 8,
+            background: 'transparent',
+            color: '#666',
+            fontFamily: 'Montserrat, sans-serif',
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: 'pointer',
+            textAlign: 'left',
+            width: '100%',
+            marginTop: 4,
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#666')}
+        >
+          <span style={{ fontSize: 15 }}>⚙️</span>
+          Paramètres
+        </button>
       </nav>
 
-      {/* Avatar profil — lien vers /dashboard/profile */}
+      {/* Avatar profil + déconnexion */}
       <div style={{ borderTop: '2px solid #222', padding: '12px 8px' }}>
+        {/* Lien vers /dashboard/profile */}
         <button
           onClick={() => router.push('/dashboard/profile')}
           style={{
@@ -127,15 +162,17 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
             gap: 10,
             width: '100%',
             padding: '10px 12px',
-            border: pathname === '/dashboard/profile' ? '2px solid #F5C400' : '2px solid #333',
+            border: '2px solid #333',
             borderRadius: 8,
-            background: pathname === '/dashboard/profile' ? '#1a1a1a' : 'transparent',
+            background: 'transparent',
             cursor: 'pointer',
             fontFamily: 'Montserrat, sans-serif',
-            transition: 'all 0.15s',
+            transition: 'border-color 0.15s',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#F5C400')}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#333')}
         >
-          {/* Avatar cercle avec initiales */}
+          {/* Cercle initiales */}
           <div
             style={{
               width: 32,
@@ -156,7 +193,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
           </div>
           <div style={{ textAlign: 'left', overflow: 'hidden' }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {firstName}
+              {displayName}
             </div>
             <div style={{ fontWeight: 500, fontSize: 11, color: '#888' }}>Mon profil</div>
           </div>
@@ -189,5 +226,15 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
         </button>
       </div>
     </aside>
+  );
+}
+
+// ─── Sous-composant badge stat ────────────────────────────────────────────────
+function StatBadge({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{ flex: 1, textAlign: 'center' }}>
+      <div style={{ fontWeight: 900, fontSize: 16, color: '#F5C400', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontWeight: 500, fontSize: 9, color: '#666', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
+    </div>
   );
 }
