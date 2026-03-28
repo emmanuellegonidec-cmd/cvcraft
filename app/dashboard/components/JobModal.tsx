@@ -21,6 +21,7 @@ type Props = {
   onImport: (url: string) => void;
   onSave: () => void;
   onClose: () => void;
+  onSetExtra?: (data: Record<string, string>) => void;
 };
 
 const FIXED_SOURCES = [
@@ -74,7 +75,7 @@ export default function JobModal({
   editingJobId, newJob, setNewJob, stages,
   importUrl, setImportUrl, addJobMode, setAddJobMode,
   importError, setImportError, importLoading,
-  onImport, onSave, onClose,
+  onImport, onSave, onClose, onSetExtra,
 }: Props) {
 
   const [spontCompany, setSpontCompany]         = useState('');
@@ -215,17 +216,21 @@ export default function JobModal({
   function handleSave() {
     const transmitted = resolveContact(transmittedById, transmittedByFree);
     const resolvedSource = resolveSource();
+    // Envoyer les infos entreprise via onSetExtra AVANT setNewJob (synchrone)
+    if (onSetExtra && (companyDescription || companyWebsite || companySize)) {
+      onSetExtra({
+        ...(companyDescription ? { company_description: companyDescription } : {}),
+        ...(companyWebsite     ? { company_website: companyWebsite }         : {}),
+        ...(companySize        ? { company_size: companySize }               : {}),
+      });
+    }
     setNewJob(prev => ({
       ...prev,
       source: resolvedSource,
       notes: transmitted
         ? [prev.notes, `Transmis par : ${transmitted}`].filter(Boolean).join('\n')
         : prev.notes,
-      // Conserver les infos entreprise
-      ...(companyDescription ? { company_description: companyDescription } : {}),
-      ...(companyWebsite     ? { company_website: companyWebsite }         : {}),
-      ...(companySize        ? { company_size: companySize }               : {}),
-    } as any));
+    }));
     setTimeout(() => { onSave(); }, 50);
   }
 
