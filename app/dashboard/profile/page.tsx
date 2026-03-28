@@ -3,12 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
-
-// ─── Import Montserrat ────────────────────────────────────────────────────────
 import { Montserrat } from 'next/font/google';
 const montserrat = Montserrat({ subsets: ['latin'], weight: ['500', '600', '700', '800', '900'] });
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface UserProfile {
   first_name?: string;
   last_name?: string;
@@ -54,7 +51,6 @@ const AVAILABILITY_OPTIONS = [
 
 const CONTRACT_OPTIONS = ['CDI', 'CDD', 'Freelance / Mission', 'Alternance', 'Stage', 'Intérim'];
 
-// ─── Styles partagés ──────────────────────────────────────────────────────────
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 12px',
@@ -69,7 +65,6 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 };
 
-// ─── Composant principal ──────────────────────────────────────────────────────
 export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile>({});
@@ -79,11 +74,9 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [token, setToken] = useState('');
-
   const [skillsText, setSkillsText] = useState('');
   const [languagesText, setLanguagesText] = useState('');
 
-  // Mot de passe
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPwd, setShowNewPwd] = useState(false);
@@ -92,12 +85,10 @@ export default function ProfilePage() {
   const [pwdSuccess, setPwdSuccess] = useState(false);
   const [pwdError, setPwdError] = useState('');
 
-  // Modale suppression
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  // ── Auth & chargement ────────────────────────────────────────────────────
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -110,7 +101,6 @@ export default function ProfilePage() {
         });
         const data = await res.json();
         if (data.profile) {
-          // ✅ Chaque champ initialisé explicitement — pas de contamination par email
           setProfile({
             first_name: data.profile.first_name ?? '',
             last_name: data.profile.last_name ?? '',
@@ -126,7 +116,7 @@ export default function ProfilePage() {
             languages: data.profile.languages ?? [],
             availability: data.profile.availability ?? '',
             contract_types: data.profile.contract_types ?? [],
-            salary_expectation: data.profile.salary_expectation ?? '',  // ✅ jamais l'email
+            salary_expectation: data.profile.salary_expectation ?? '',
           });
           setSkillsText((data.profile.key_skills ?? []).join(', '));
           setLanguagesText((data.profile.languages ?? []).join(', '));
@@ -140,7 +130,6 @@ export default function ProfilePage() {
     });
   }, [router]);
 
-  // ── Sauvegarde profil ────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     setSaving(true); setError('');
     try {
@@ -166,7 +155,6 @@ export default function ProfilePage() {
     }
   }, [profile, skillsText, languagesText, token]);
 
-  // ── Changement mot de passe ──────────────────────────────────────────────
   const handleChangePassword = useCallback(async () => {
     setPwdError(''); setPwdSuccess(false);
     if (newPassword.length < 8) { setPwdError('Le mot de passe doit contenir au moins 8 caractères.'); return; }
@@ -187,7 +175,6 @@ export default function ProfilePage() {
     }
   }, [newPassword, confirmPassword]);
 
-  // ── Suppression compte ───────────────────────────────────────────────────
   const handleDeleteAccount = useCallback(async () => {
     setDeleting(true);
     try {
@@ -201,7 +188,6 @@ export default function ProfilePage() {
     }
   }, [token, router]);
 
-  // ── Toggle contrat ───────────────────────────────────────────────────────
   const toggleContract = (ct: string) => {
     setProfile((prev) => {
       const current = prev.contract_types ?? [];
@@ -209,7 +195,6 @@ export default function ProfilePage() {
     });
   };
 
-  // ── Jauge force mot de passe ─────────────────────────────────────────────
   const pwdStrength = (() => {
     if (!newPassword) return null;
     let score = 0;
@@ -237,24 +222,9 @@ export default function ProfilePage() {
   return (
     <div className={montserrat.className} style={{ minHeight: '100vh', background: '#fafafa' }}>
 
-      {/* ── Header noir bande jaune ── */}
-      <div style={{
-        background: '#111',
-        color: '#fff',
-        padding: '0 32px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16,
-        height: 64,
-        borderBottom: '3px solid #F5C400',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-      }}>
-        <button
-          onClick={() => router.push('/dashboard')}
-          style={{ background: 'none', border: '2px solid #444', color: '#fff', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13 }}
-        >
+      {/* Header */}
+      <div style={{ background: '#111', color: '#fff', padding: '0 32px', display: 'flex', alignItems: 'center', gap: 16, height: 64, borderBottom: '3px solid #F5C400', position: 'sticky', top: 0, zIndex: 100 }}>
+        <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: '2px solid #444', color: '#fff', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13 }}>
           ← Retour
         </button>
         <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 16, color: '#fff', border: '2px solid #333', flexShrink: 0 }}>
@@ -266,7 +236,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ── Contenu ── */}
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '40px 24px 80px' }}>
 
         {error && (
@@ -279,7 +248,7 @@ export default function ProfilePage() {
             <Field label="Prénom"><Input value={profile.first_name ?? ''} onChange={(v) => setProfile((p) => ({ ...p, first_name: v }))} placeholder="Emmanuelle" /></Field>
             <Field label="Nom"><Input value={profile.last_name ?? ''} onChange={(v) => setProfile((p) => ({ ...p, last_name: v }))} placeholder="Dupont" /></Field>
           </Row>
-          <Field label="Email" hint="Non modifiable ici — géré par votre compte">
+          <Field label="Email" hint="Non modifiable ici">
             <input type="text" value={email} disabled style={{ ...inputStyle, background: '#f5f5f5', color: '#888' }} />
           </Field>
         </Section>
@@ -313,7 +282,7 @@ export default function ProfilePage() {
 
         {/* 4 — Infos CV */}
         <Section title="📄 Informations CV">
-          <Field label="Résumé / pitch personnel" hint="Quelques lignes qui vous définissent">
+          <Field label="Résumé / pitch personnel">
             <textarea value={profile.summary ?? ''} onChange={(e) => setProfile((p) => ({ ...p, summary: e.target.value }))} placeholder="Ex : Directrice marketing avec 20 ans d'expérience dans le digital et le retail…" rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
           </Field>
           <Field label="Compétences clés" hint="Séparées par des virgules">
@@ -333,7 +302,6 @@ export default function ProfilePage() {
               </select>
             </Field>
             <Field label="Prétentions salariales">
-              {/* ✅ Champ salary_expectation isolé — jamais l'email */}
               <Input value={profile.salary_expectation ?? ''} onChange={(v) => setProfile((p) => ({ ...p, salary_expectation: v }))} placeholder="55 000 – 65 000 € brut / an" />
             </Field>
           </Row>
@@ -360,9 +328,6 @@ export default function ProfilePage() {
 
         {/* 6 — Mot de passe */}
         <Section title="🔒 Modifier le mot de passe">
-          <p style={{ fontSize: 13, color: '#666', margin: '0 0 4px', lineHeight: 1.6 }}>
-            Choisissez un mot de passe fort d'au moins 8 caractères. La mise à jour est immédiate dans Supabase.
-          </p>
           <Field label="Nouveau mot de passe">
             <div style={{ position: 'relative' }}>
               <input type={showNewPwd ? 'text' : 'password'} value={newPassword} onChange={(e) => { setNewPassword(e.target.value); setPwdError(''); setPwdSuccess(false); }} placeholder="••••••••••••" style={{ ...inputStyle, paddingRight: 44 }} />
@@ -430,8 +395,6 @@ export default function ProfilePage() {
   );
 }
 
-// ─── Sous-composants ──────────────────────────────────────────────────────────
-
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, boxShadow: '3px 3px 0 #111', padding: '24px 28px', marginBottom: 24 }}>
@@ -459,7 +422,6 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 function Input({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
-    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-      style={inputStyle} />
+    <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
   );
 }
