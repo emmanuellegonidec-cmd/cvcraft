@@ -64,8 +64,8 @@ function DraggableCard({ job, colId, stages, onClick }: {
         touchAction: 'none',
       }}
     >
-      <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 3 }}>{job.company}</div>
-      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{job.title}</div>
+      <div style={{ fontSize: 12, color: '#888', fontWeight: 600, marginBottom: 3 }}>{job.company}</div>
+      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{job.title}</div>
 
       {(sourceBadge || subLabel) && (
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5, alignItems: 'center' }}>
@@ -128,10 +128,10 @@ function DroppableColumn({ col, jobs, stages, onCardClick, onAddJob, isDragOver 
       transition: 'background .15s, border .15s',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.3 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.3 }}>
           {col.label}
         </div>
-        <div style={{ width: 20, height: 20, borderRadius: '50%', background: col.color + '22', color: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
+        <div style={{ width: 20, height: 20, borderRadius: '50%', background: col.color + '22', color: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
           {jobs.length}
         </div>
       </div>
