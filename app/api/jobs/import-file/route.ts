@@ -3,7 +3,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-// ─── Auth (même pattern que toutes les routes) ────────────────────────────────
+// ─── Auth ─────────────────────────────────────────────────────────────────────
 function createAuthedClient(token: string) {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,7 +25,7 @@ async function getAuth(req: NextRequest) {
   return { userId: user?.id ?? null, supabase };
 }
 
-// ─── Prompt d'extraction ──────────────────────────────────────────────────────
+// ─── Prompt d'extraction enrichi ─────────────────────────────────────────────
 const EXTRACTION_PROMPT = `Tu es un assistant spécialisé dans l'analyse d'offres d'emploi.
 Analyse ce document et extrais les informations suivantes.
 Réponds UNIQUEMENT avec un objet JSON valide, sans backticks, sans texte autour, sans commentaires.
@@ -33,62 +33,55 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans backticks, sans texte autour
 {
   "title": "intitulé exact du poste",
   "company": "nom de l'entreprise",
+  "company_description": "description de l'entreprise si mentionnée dans le doc, sinon null",
+  "company_website": "site web de l'entreprise si mentionné, sinon null",
+  "company_size": "taille de l'entreprise si mentionnée (ex: 500 salariés, PME...), sinon null",
   "location": "ville ou région",
   "job_type": "CDI ou CDD ou Stage ou Alternance ou Freelance",
   "description": "toutes les missions listées, en texte",
   "requirements": "profil recherché, diplômes, compétences techniques et soft skills",
   "salary_text": "salaire si mentionné, sinon null",
   "department": "département ou service si mentionné, sinon null",
-  "benefits": "avantages mentionnés, sinon null"
+  "benefits": "avantages mentionnés (télétravail, RTT, etc.), sinon null",
+  "transmitted_by": "si une personne est mentionnée comme contact ou expéditeur (ex: nom dans la signature, 'envoyé par', 'contact : ...'), mettre son nom complet, sinon null"
 }
 
 Règles :
 - Si une info n'est pas clairement présente dans le document, mets null
-- Pour "description" : inclus toutes les missions, même celles sous forme de liste
-- Pour "requirements" : inclus le niveau de diplôme, les années d'expérience, les compétences
-- Pour "job_type" : utilise uniquement l'une des valeurs listées ci-dessus
-- Ne jamais inventer d'information qui n'est pas dans le document`;
+- Pour "description" : inclus toutes les missions, même en liste à puces
+- Pour "requirements" : diplôme, années d'expérience, compétences tech et soft skills
+- Pour "job_type" : uniquement l'une des valeurs listées ci-dessus
+- Pour "transmitted_by" : cherche une signature, un expéditeur, un "De :", un nom en bas du document
+- Ne jamais inventer d'information absente du document`;
 
 // ─── POST ─────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const { userId } = await getAuth(req);
-  if (!userId) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  }
+  if (!userId) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
 
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 
-    if (!file) {
-      return NextResponse.json({ error: 'Aucun fichier fourni' }, { status: 400 });
-    }
+    if (!file) return NextResponse.json({ error: 'Aucun fichier fourni' }, { status: 400 });
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024)
       return NextResponse.json({ error: 'Fichier trop volumineux (max 10 MB)' }, { status: 400 });
-    }
 
     const mimeType = file.type;
     const allowedTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword',
-      'image/jpeg',
-      'image/png',
-      'image/webp',
+      'image/jpeg', 'image/png', 'image/webp',
       'text/plain',
     ];
 
-    if (!allowedTypes.includes(mimeType)) {
-      return NextResponse.json(
-        { error: 'Format non supporté. Utilisez PDF, Word (.docx), image JPG/PNG ou texte.' },
-        { status: 400 }
-      );
-    }
+    if (!allowedTypes.includes(mimeType))
+      return NextResponse.json({ error: 'Format non supporté. Utilisez PDF, Word (.docx), image JPG/PNG ou texte.' }, { status: 400 });
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,10 +90,7 @@ export async function POST(req: NextRequest) {
     if (mimeType === 'application/pdf') {
       const base64Data = buffer.toString('base64');
       messageContent = [
-        {
-          type: 'document',
-          source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-        } as any,
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Data } } as any,
         { type: 'text', text: EXTRACTION_PROMPT },
       ];
 
@@ -111,9 +101,8 @@ export async function POST(req: NextRequest) {
       const mammoth = await import('mammoth');
       const result = await mammoth.extractRawText({ buffer });
       const textContent = result.value;
-      if (!textContent.trim()) {
+      if (!textContent.trim())
         return NextResponse.json({ error: 'Impossible de lire ce fichier Word. Essayez en PDF.' }, { status: 422 });
-      }
       messageContent = [
         { type: 'text', text: `Voici le contenu d'un document Word :\n\n${textContent}\n\n${EXTRACTION_PROMPT}` },
       ];
@@ -128,10 +117,7 @@ export async function POST(req: NextRequest) {
       const base64Data = buffer.toString('base64');
       const imageMediaType = mimeType as 'image/jpeg' | 'image/png' | 'image/webp';
       messageContent = [
-        {
-          type: 'image',
-          source: { type: 'base64', media_type: imageMediaType, data: base64Data },
-        } as any,
+        { type: 'image', source: { type: 'base64', media_type: imageMediaType, data: base64Data } } as any,
         { type: 'text', text: EXTRACTION_PROMPT },
       ];
     }

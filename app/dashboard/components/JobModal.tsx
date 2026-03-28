@@ -21,6 +21,9 @@ type Props = {
   onClose: () => void;
 };
 
+// Sources pour lesquelles le champ "Transmis par" est pertinent
+const SOURCES_WITH_CONTACT = ['réseau', 'reseau', 'Réseau', 'file', 'autre', 'Autre', 'Site entreprise', 'site entreprise'];
+
 export default function JobModal({
   editingJobId, newJob, setNewJob, stages,
   importUrl, setImportUrl, addJobMode, setAddJobMode,
@@ -37,23 +40,31 @@ export default function JobModal({
   const [spontNotes, setSpontNotes]           = useState('');
   const [spontFavorite, setSpontFavorite]     = useState(0);
   const [spontError, setSpontError]           = useState<string | null>(null);
+  const [spontContact, setSpontContact]       = useState('');
 
   // ── Import fichier ─────────────────────────────────────────────────────────
-  const fileInputRef           = useRef<HTMLInputElement>(null);
+  const fileInputRef                          = useRef<HTMLInputElement>(null);
   const [fileAnalyzing, setFileAnalyzing]     = useState(false);
   const [fileError, setFileError]             = useState<string | null>(null);
   const [fileName, setFileName]               = useState<string | null>(null);
   const [dragOver, setDragOver]               = useState(false);
 
+  // ── Champ "Transmis par" dans le formulaire manuel ─────────────────────────
+  const [transmittedBy, setTransmittedBy]     = useState('');
+
   function handleSpontClose() {
     setSpontCompany(''); setSpontTitle(''); setSpontLocation('');
     setSpontWebsite(''); setSpontMotivation(''); setSpontNotes('');
-    setSpontFavorite(0); setSpontError(null);
+    setSpontFavorite(0); setSpontError(null); setSpontContact('');
     onClose();
   }
 
   function handleSpontSave() {
     if (!spontCompany.trim()) { setSpontError("Le nom de l'entreprise est obligatoire."); return; }
+    const notesWithContact = [
+      spontNotes.trim(),
+      spontContact.trim() ? `Contact : ${spontContact.trim()}` : '',
+    ].filter(Boolean).join('\n');
     setNewJob(() => ({
       title: spontTitle.trim() || 'Candidature spontanée',
       company: spontCompany.trim(),
@@ -61,7 +72,7 @@ export default function JobModal({
       job_type: 'CDI' as JobType,
       status: 'to_apply' as JobStatus,
       description: spontMotivation.trim(),
-      notes: spontNotes.trim(),
+      notes: notesWithContact,
       url: spontWebsite.trim(),
       source: 'spontaneous',
       salary: '',
@@ -94,19 +105,28 @@ export default function JobModal({
         return;
       }
 
-      // Pré-remplir le formulaire manuel avec les données extraites
       const d = data.data;
+
+      // Pré-remplir le champ "Transmis par" si extrait
+      if (d.transmitted_by) setTransmittedBy(d.transmitted_by);
+
+      // Description = missions + profil requis
+      const descParts = [d.description, d.requirements].filter(Boolean);
+      const description = descParts.length > 1
+        ? `${descParts[0]}\n\n--- Profil requis ---\n\n${descParts[1]}`
+        : descParts[0] || '';
+
       setNewJob(() => ({
         title:       d.title       || '',
         company:     d.company     || '',
         location:    d.location    || '',
         job_type:    (d.job_type as JobType) || 'CDI',
         status:      'to_apply' as JobStatus,
-        description: [d.description, d.requirements].filter(Boolean).join('\n\n--- Profil requis ---\n\n') || '',
+        description,
         notes:       '',
         salary:      d.salary_text || '',
         source:      'file',
-        url:         '',
+        url:         d.company_website || '',
         favorite:    0,
       }));
 
@@ -121,7 +141,6 @@ export default function JobModal({
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) processFile(file);
-    // Reset input pour pouvoir re-sélectionner le même fichier
     e.target.value = '';
   }
 
@@ -132,21 +151,31 @@ export default function JobModal({
     if (file) processFile(file);
   }
 
+  // Doit-on afficher le champ "Transmis par" ?
+  const showTransmittedBy = SOURCES_WITH_CONTACT.includes(newJob.source || '') || transmittedBy;
+
+  // Sauvegarde enrichie avec "Transmis par" dans les notes
+  function handleSaveWithContact() {
+    if (transmittedBy.trim()) {
+      setNewJob(prev => ({
+        ...prev,
+        notes: [prev.notes, `Transmis par : ${transmittedBy.trim()}`].filter(Boolean).join('\n'),
+      }));
+    }
+    setTimeout(() => { onSave(); }, 50);
+  }
+
   return (
     <div className="modal-bg" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: 0 }}>
-            {editingJobId
-              ? "Modifier l'offre"
-              : addJobMode === 'spontaneous'
-                ? '📨 Candidature spontanée'
-                : addJobMode === 'file'
-                  ? '📄 Importer un fichier'
-                  : 'Ajouter une offre'}
+            {editingJobId ? "Modifier l'offre"
+              : addJobMode === 'spontaneous' ? '📨 Candidature spontanée'
+              : addJobMode === 'file' ? '📄 Importer un fichier'
+              : 'Ajouter une offre'}
           </h2>
-          <button
-            onClick={addJobMode === 'spontaneous' ? handleSpontClose : onClose}
+          <button onClick={addJobMode === 'spontaneous' ? handleSpontClose : onClose}
             style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
         </div>
 
@@ -154,13 +183,12 @@ export default function JobModal({
         {!addJobMode && !editingJobId && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { mode: 'url',         icon: '🔗', title: 'Importer depuis une URL',    sub: 'Importer automatiquement depuis un jobboard' },
-              { mode: 'manual',      icon: '✏️', title: 'Remplir manuellement',       sub: 'Créer une offre à partir de zéro' },
-              { mode: 'file',        icon: '📄', title: 'Importer un fichier',        sub: 'PDF, Word, image — analysé automatiquement par IA' },
-              { mode: 'spontaneous', icon: '📨', title: 'Candidature spontanée',      sub: 'Contacter une entreprise sans offre publiée' },
+              { mode: 'url',         icon: '🔗', title: 'Importer depuis une URL',   sub: 'Importer automatiquement depuis un jobboard' },
+              { mode: 'manual',      icon: '✏️', title: 'Remplir manuellement',      sub: 'Créer une offre à partir de zéro' },
+              { mode: 'file',        icon: '📄', title: 'Importer un fichier',       sub: 'PDF, Word, image — analysé automatiquement par IA' },
+              { mode: 'spontaneous', icon: '📨', title: 'Candidature spontanée',     sub: 'Contacter une entreprise sans offre publiée' },
             ].map(opt => (
-              <button
-                key={opt.mode}
+              <button key={opt.mode}
                 onClick={() => setAddJobMode(opt.mode as 'url' | 'manual' | 'file' | 'spontaneous')}
                 style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', textAlign: 'left', boxShadow: '2px 2px 0 #111', width: '100%' }}
                 onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'translate(-1px,-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '3px 3px 0 #E8151B'; }}
@@ -208,7 +236,6 @@ export default function JobModal({
             <button onClick={() => { setAddJobMode(null); setFileError(null); setFileName(null); }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
 
-            {/* Zone de dépôt */}
             <div
               onDragOver={e => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
@@ -216,86 +243,68 @@ export default function JobModal({
               onClick={() => !fileAnalyzing && fileInputRef.current?.click()}
               style={{
                 border: `2px dashed ${dragOver ? '#E8151B' : '#CCC'}`,
-                borderRadius: 12,
-                padding: '36px 20px',
-                textAlign: 'center',
+                borderRadius: 12, padding: '36px 20px', textAlign: 'center',
                 cursor: fileAnalyzing ? 'not-allowed' : 'pointer',
                 background: dragOver ? '#FFF5F5' : '#FAFAFA',
-                transition: 'all 0.15s',
-                marginBottom: 16,
+                transition: 'all 0.15s', marginBottom: 16,
               }}
             >
               {fileAnalyzing ? (
                 <div>
                   <div style={{ fontSize: 32, marginBottom: 10 }}>⏳</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 4 }}>
-                    Analyse en cours…
-                  </div>
-                  <div style={{ fontSize: 12, color: '#888', fontWeight: 500 }}>
-                    {fileName && `"${fileName}"`} — Claude lit votre offre
-                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 4 }}>Analyse en cours…</div>
+                  <div style={{ fontSize: 12, color: '#888', fontWeight: 500 }}>{fileName && `"${fileName}"`} — Claude lit votre offre</div>
                 </div>
               ) : (
                 <div>
                   <div style={{ fontSize: 36, marginBottom: 10 }}>📄</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 6 }}>
-                    Déposez votre fichier ici
-                  </div>
-                  <div style={{ fontSize: 12, color: '#888', fontWeight: 500, marginBottom: 14 }}>
-                    ou cliquez pour sélectionner
-                  </div>
-                  <div style={{
-                    display: 'inline-flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 700,
-                  }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 6 }}>Déposez votre fichier ici</div>
+                  <div style={{ fontSize: 12, color: '#888', fontWeight: 500, marginBottom: 14 }}>ou cliquez pour sélectionner</div>
+                  <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
                     {['PDF', 'Word .docx', 'Image JPG/PNG'].map(fmt => (
-                      <span key={fmt} style={{
-                        background: '#fff', border: '1.5px solid #E0E0E0',
-                        borderRadius: 6, padding: '3px 10px', color: '#555',
-                      }}>{fmt}</span>
+                      <span key={fmt} style={{ background: '#fff', border: '1.5px solid #E0E0E0', borderRadius: 6, padding: '3px 10px', color: '#555' }}>{fmt}</span>
                     ))}
                   </div>
                 </div>
               )}
             </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt"
-              style={{ display: 'none' }}
-              onChange={handleFileChange}
-            />
+            <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt" style={{ display: 'none' }} onChange={handleFileChange} />
+
+            {/* Champ "Transmis par" dès l'écran fichier */}
+            {!fileAnalyzing && !fileError && (
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <label className="fl">👤 Transmis par (optionnel)</label>
+                  <input className="fi" value={transmittedBy} onChange={e => setTransmittedBy(e.target.value)}
+                    placeholder="Prénom Nom — contact qui vous a envoyé ce document" />
+                </div>
+                <div style={{ fontSize: 12, color: '#888', textAlign: 'center', fontWeight: 500 }}>
+                  L&apos;IA analysera votre document et pré-remplira la fiche offre.<br />
+                  Vous pourrez vérifier et compléter avant de sauvegarder.
+                </div>
+              </>
+            )}
 
             {fileError && (
               <div style={{ background: '#FEF2F2', border: '2px solid #E8151B', borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#E8151B', marginBottom: 4 }}>Erreur d&apos;analyse</div>
                 <div style={{ fontSize: 12, color: '#555' }}>{fileError}</div>
-                <button className="btn-ghost" style={{ marginTop: 10, fontSize: 12 }} onClick={() => { setFileError(null); setFileName(null); }}>
-                  ← Réessayer
-                </button>
-              </div>
-            )}
-
-            {!fileAnalyzing && !fileError && (
-              <div style={{ fontSize: 12, color: '#888', textAlign: 'center', fontWeight: 500 }}>
-                L&apos;IA analysera votre document et pré-remplira la fiche offre.<br />
-                Vous pourrez vérifier et compléter avant de sauvegarder.
+                <button className="btn-ghost" style={{ marginTop: 10, fontSize: 12 }} onClick={() => { setFileError(null); setFileName(null); }}>← Réessayer</button>
               </div>
             )}
           </div>
         )}
 
-        {/* ── Mode manuel (y compris après import fichier) ── */}
+        {/* ── Mode manuel ── */}
         {addJobMode === 'manual' && (
           <div>
             {!editingJobId && (
-              <button
-                onClick={() => setAddJobMode(null)}
+              <button onClick={() => setAddJobMode(null)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
             )}
 
-            {/* Badge si pré-rempli via fichier */}
+            {/* Badge IA si pré-rempli via fichier */}
             {newJob.source === 'file' && (
               <div style={{ background: '#F0FFF4', border: '2px solid #1A7A4A', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 18 }}>✅</span>
@@ -337,7 +346,6 @@ export default function JobModal({
                   <label className="fl">Source</label>
                   <select className="fi" value={newJob.source} onChange={e => setNewJob(prev => ({ ...prev, source: e.target.value }))}>
                     <option value="">Choisir...</option>
-                    <option value="file">📄 Fichier importé</option>
                     {['LinkedIn', 'Indeed', 'Welcome to the Jungle', 'Apec', 'Pôle Emploi', 'Site entreprise', 'Réseau', 'HelloWork', 'Autre'].map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
@@ -349,6 +357,17 @@ export default function JobModal({
                   <label className="fl">Salaire</label>
                   <input className="fi" value={newJob.salary} onChange={e => setNewJob(prev => ({ ...prev, salary: e.target.value }))} placeholder="45-55k€ / an" />
                 </div>
+
+                {/* Champ "Transmis par" — affiché si source = réseau/fichier/autre OU si déjà renseigné */}
+                {showTransmittedBy && (
+                  <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}>
+                    <label className="fl">👤 Transmis par</label>
+                    <input className="fi" value={transmittedBy}
+                      onChange={e => setTransmittedBy(e.target.value)}
+                      placeholder="Prénom Nom — personne qui vous a transmis cette offre" />
+                  </div>
+                )}
+
                 <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}>
                   <label className="fl">Lien de l&apos;offre</label>
                   <input className="fi" value={newJob.url} onChange={e => setNewJob(prev => ({ ...prev, url: e.target.value }))} placeholder="https://..." />
@@ -366,7 +385,9 @@ export default function JobModal({
 
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
               <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={onClose}>Annuler</button>
-              <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }} onClick={onSave} disabled={!newJob.title || !newJob.company}>
+              <button className="btn-main" style={{ flex: 2, justifyContent: 'center' }}
+                onClick={transmittedBy.trim() ? handleSaveWithContact : onSave}
+                disabled={!newJob.title || !newJob.company}>
                 {editingJobId ? 'Enregistrer' : "Ajouter l'offre"}
               </button>
             </div>
@@ -395,14 +416,11 @@ export default function JobModal({
             <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: 4 }}>
               <div style={{ marginBottom: 16 }}>
                 <label className="fl" style={{ fontSize: 13, fontWeight: 900 }}>🏢 Entreprise cible *</label>
-                <input
-                  className="fi"
-                  value={spontCompany}
+                <input className="fi" value={spontCompany}
                   onChange={e => { setSpontCompany(e.target.value); setSpontError(null); }}
                   placeholder="Ex : L'Oréal, Decathlon, BNP Paribas..."
                   style={{ fontSize: 15, fontWeight: 700, border: spontError ? '2px solid #E8151B' : '2px solid #111', boxShadow: '2px 2px 0 #111' }}
-                  autoFocus
-                />
+                  autoFocus />
                 {spontError && <div style={{ fontSize: 12, color: '#E8151B', marginTop: 4, fontWeight: 600 }}>{spontError}</div>}
               </div>
 
@@ -422,6 +440,12 @@ export default function JobModal({
               </div>
 
               <div style={{ marginBottom: 14 }}>
+                <label className="fl">👤 Contact dans l&apos;entreprise</label>
+                <input className="fi" value={spontContact} onChange={e => setSpontContact(e.target.value)}
+                  placeholder="Prénom Nom — DRH, manager, relation réseau..." />
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
                 <label className="fl">💡 Pourquoi cette entreprise ?</label>
                 <textarea className="fi" value={spontMotivation} onChange={e => setSpontMotivation(e.target.value)}
                   placeholder="Leader dans son secteur, culture d'innovation..." rows={4} style={{ resize: 'vertical', minHeight: 100 }} />
@@ -430,7 +454,7 @@ export default function JobModal({
               <div style={{ marginBottom: 14 }}>
                 <label className="fl">📝 Notes personnelles</label>
                 <textarea className="fi" value={spontNotes} onChange={e => setSpontNotes(e.target.value)}
-                  placeholder="Contact identifié, prochaine étape..." rows={3} style={{ resize: 'vertical' }} />
+                  placeholder="Prochaine étape, infos utiles..." rows={3} style={{ resize: 'vertical' }} />
               </div>
             </div>
 
@@ -442,9 +466,7 @@ export default function JobModal({
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
 }
- 
