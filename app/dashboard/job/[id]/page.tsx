@@ -7,8 +7,12 @@ import { JobExchange, ExchangeType, EXCHANGE_TYPE_LABELS } from '@/lib/types'
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, TouchSensor, useSensor, useSensors,
-  useDraggable, useDroppable,
 } from '@dnd-kit/core'
+
+import JobSidebar from '../../../components/JobSidebar'
+import { DraggableStep, DropZone, DraggableActionCard, ActionDropZone, StepActionRow } from '../../../components/JobStepComponents'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Job {
   id: string; title: string; company: string; location: string; job_type: string
@@ -20,7 +24,6 @@ interface Job {
   interview_at: string | null; interview_time: string | null; interview_time_end: string | null
   interview_type: string | null; interview_contact_id: string | null
   interview_location: string | null; interview_link: string | null; interview_phone: string | null
-  // Infos entreprise
   company_description: string | null
   company_website: string | null
   company_size: string | null
@@ -30,10 +33,7 @@ interface Job {
 
 interface ContactMin { id: string; name: string; role?: string | null; company?: string | null }
 
-interface StepActionRow {
-  id: string; title: string; icon: string; sub: string; position: number
-  is_custom: boolean; type: 'included' | 'action' | 'new'
-}
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const BASE_STEPS = [
   { id: 'to_apply',          label: 'Envie de postuler',      num: 1 },
@@ -52,28 +52,12 @@ const STATUS_MAP: Record<string, string> = {
   manager_interview: 'in_progress', offer: 'offer',
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  to_apply: 'Envie de postuler', applied: 'Postulé',
-  in_progress: 'En cours', offer: 'Offre reçue', archived: 'Archivé',
-}
-
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  to_apply:    { bg: '#F5F5F0', color: '#888' },
-  applied:     { bg: '#E8F0FE', color: '#1A6FDB' },
-  in_progress: { bg: '#FFF8E1', color: '#B8900A' },
-  offer:       { bg: '#E8F5E9', color: '#1A7A4A' },
-  archived:    { bg: '#F5F5F5', color: '#aaa' },
-}
-
-const SUB_STATUS_LABELS: Record<string, string> = {
-  to_apply: 'Envie de postuler', applied: 'Postulé',
-  phone_interview: 'Entretien tél.', hr_interview: 'Entretien RH',
-  manager_interview: 'Entretien manager', offer: 'Offre reçue',
-}
-
 const INTERVIEW_TYPE_LABELS: Record<string, string> = {
   telephone: '📞 Téléphone', visio: '💻 Visio', presentiel: '🏢 Présentiel',
 }
+
+const ICON_CHOICES = ['⭐','📄','✉️','🎯','🔍','📅','🔔','📋','🏢','💬','⚖️','✅','❌','📊','🔧','👤','🧠','💡','🚀','🤝','📞','📝','🗓️','💼','🎤','📌']
+const FONT = "'Montserrat', sans-serif"
 
 interface StepAction { icon: string; title: string; sub: string; type: 'included' | 'action' | 'new' }
 
@@ -145,19 +129,17 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: StepAction[] }> = {
   },
 }
 
-const ICON_CHOICES = ['⭐','📄','✉️','🎯','🔍','📅','🔔','📋','🏢','💬','⚖️','✅','❌','📊','🔧','👤','🧠','💡','🚀','🤝','📞','📝','🗓️','💼','🎤','📌']
-const FONT = "'Montserrat', sans-serif"
+// ─── Utilitaires ──────────────────────────────────────────────────────────────
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
-function formatDateShort(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-}
+
 function getToken(): string | null {
   if (typeof window !== 'undefined') return (window as any).__jfmj_token ?? null
   return null
 }
+
 function authHeaders(): HeadersInit {
   const token = getToken()
   return token
@@ -165,113 +147,14 @@ function authHeaders(): HeadersInit {
     : { 'Content-Type': 'application/json' }
 }
 
-// ─── Extraire "Transmis par" depuis les notes ─────────────────────────────────
 function extractTransmittedBy(notes: string | null): string | null {
   if (!notes) return null
   const match = notes.match(/Transmis par\s*:\s*(.+?)(?:\n|$)/i)
   return match ? match[1].trim() : null
 }
 
-// ─── JobSidebar ───────────────────────────────────────────────────────────────
-function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect: (id: string) => void }) {
-  const [jobs, setJobs] = useState<Job[]>([])
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.from('jobs').select('*').order('created_at', { ascending: false }).then(({ data }) => {
-      if (data) setJobs(data)
-    })
-  }, [])
-  return (
-    <div style={{ width: 280, flexShrink: 0, position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', overflowX: 'hidden', background: '#fff', borderRight: '1.5px solid #EBEBEB', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
-      <div style={{ padding: '18px 16px 14px', borderBottom: '1.5px solid #EBEBEB', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: '#111', letterSpacing: '-0.2px' }}>Mes candidatures</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#888', background: '#F5F5F0', padding: '2px 8px', borderRadius: 20 }}>{jobs.length}</span>
-        </div>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {jobs.map(job => {
-          const isActive = job.id === currentJobId
-          const statusColor = STATUS_COLORS[job.status] ?? STATUS_COLORS['to_apply']
-          const stepLabel = job.sub_status ? (SUB_STATUS_LABELS[job.sub_status] ?? STATUS_LABELS[job.status]) : STATUS_LABELS[job.status]
-          const dateRef = job.applied_at || job.created_at
-          return (
-            <div key={job.id} onClick={() => onSelect(job.id)}
-              style={{ padding: '12px 16px', borderBottom: '1px solid #F5F5F0', cursor: 'pointer', background: isActive ? '#111' : 'transparent', transition: 'background 0.1s' }}
-              onMouseOver={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#F9F9F7' }}
-              onMouseOut={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 4, color: isActive ? '#fff' : '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
-              <div style={{ fontSize: 12, color: isActive ? '#aaa' : '#666', marginBottom: 7, fontWeight: 500 }}>{job.company}{job.location ? ` · ${job.location}` : ''}</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: isActive ? '#222' : statusColor.bg, color: isActive ? '#F5C400' : statusColor.color }}>{stepLabel}</span>
-                <span style={{ fontSize: 10, color: isActive ? '#666' : '#bbb', fontWeight: 600, flexShrink: 0 }}>{formatDateShort(dateRef)}</span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ─── DraggableStep ────────────────────────────────────────────────────────────
-function DraggableStep({ step, isActive, isDone, isCustom, onStepClick, onDeleteRequest }: {
-  step: { id: string; label: string; num: number }; isActive: boolean; isDone: boolean; isCustom: boolean
-  currentStepId: string; onStepClick: (id: string) => void; onDeleteRequest: (id: string, label: string) => void; allStepsLength: number
-}) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: step.id, disabled: !isCustom, data: { stepId: step.id } })
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 72, position: 'relative', opacity: isDragging ? 0.4 : 1, transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined, zIndex: isDragging ? 50 : 1 }}>
-      <div ref={isCustom ? setNodeRef : undefined} {...(isCustom ? { ...listeners, ...attributes } : {})} onClick={() => onStepClick(step.id)}
-        style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1, flexShrink: 0, cursor: isCustom ? (isDragging ? 'grabbing' : 'grab') : 'pointer', background: isActive ? '#111' : isDone ? '#F5C400' : '#fff', border: `2.5px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#DEDEDE'}`, color: isActive ? '#F5C400' : isDone ? '#111' : '#ccc', boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.18)' : 'none', fontFamily: FONT, touchAction: 'none' }}>
-        {step.num}
-      </div>
-      <p onClick={() => onStepClick(step.id)} style={{ fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 6, lineHeight: 1.3, color: isActive ? '#111' : isDone ? '#777' : '#ccc', fontFamily: FONT, cursor: 'pointer', maxWidth: 70 }}>{step.label}</p>
-      {isCustom && (
-        <button onClick={e => { e.stopPropagation(); onDeleteRequest(step.id, step.label) }}
-          style={{ position: 'absolute', top: -5, right: 'calc(50% - 27px)', width: 15, height: 15, borderRadius: '50%', background: '#E8151B', border: 'none', color: '#fff', fontSize: 9, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, lineHeight: 1 }}>×</button>
-      )}
-    </div>
-  )
-}
-
-function DropZone({ id, isOver }: { id: string; isOver: boolean }) {
-  const { setNodeRef } = useDroppable({ id })
-  return <div ref={setNodeRef} style={{ width: isOver ? 28 : 12, height: 34, borderRadius: 6, background: isOver ? '#F5C400' : 'transparent', border: isOver ? '2px dashed #111' : '2px dashed transparent', flexShrink: 0, transition: 'all .15s', alignSelf: 'center', marginBottom: 20 }} />
-}
-
-function DraggableActionCard({ action, dragId, onDelete }: { action: StepActionRow; dragId: string; onDelete: (id: string, title: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId })
-  const borderColor = action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#EBEBEB'
-  const bgColor = action.type === 'included' ? '#F1F8E9' : '#fff'
-  return (
-    <div ref={setNodeRef} style={{ background: bgColor, border: `1.5px solid ${isDragging ? '#F5C400' : borderColor}`, borderRadius: 10, padding: '12px 14px', cursor: isDragging ? 'grabbing' : 'grab', opacity: isDragging ? 0.5 : 1, transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined, zIndex: isDragging ? 50 : 1, position: 'relative', touchAction: 'none', userSelect: 'none' }} {...listeners} {...attributes}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
-        <span style={{ fontSize: 15, display: 'block', marginBottom: 5 }}>{action.icon}</span>
-        <div style={{ display: 'flex', gap: 4, marginTop: -2 }}>
-          <span style={{ fontSize: 9, color: '#ccc', cursor: 'grab', lineHeight: 1, paddingTop: 2 }}>⠿</span>
-          {action.is_custom && (
-            <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
-              style={{ background: 'none', border: 'none', color: '#ccc', fontSize: 12, cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
-          )}
-        </div>
-      </div>
-      <span style={{ fontSize: 12, fontWeight: 800, color: action.type === 'included' ? '#2E7D32' : '#111', display: 'block', fontFamily: FONT }}>
-        {action.title}
-        {action.type === 'included' && <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>✓</span>}
-        {action.type === 'new' && <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>Nouveau</span>}
-      </span>
-      <span style={{ fontSize: 11, color: '#888', marginTop: 3, display: 'block', fontFamily: FONT }}>{action.sub}</span>
-    </div>
-  )
-}
-
-function ActionDropZone({ id, isOver }: { id: string; isOver: boolean }) {
-  const { setNodeRef } = useDroppable({ id })
-  return <div ref={setNodeRef} style={{ height: isOver ? 44 : 6, borderRadius: 8, background: isOver ? '#FFFDE7' : 'transparent', border: isOver ? '2px dashed #F5C400' : '2px dashed transparent', transition: 'all .15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gridColumn: isOver ? '1 / -1' : undefined }} />
-}
-
 // ─── Page principale ──────────────────────────────────────────────────────────
+
 export default function JobDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -307,16 +190,13 @@ export default function JobDetailPage() {
 
   const [contacts, setContacts] = useState<ContactMin[]>([])
 
-  // ── Modifier offre ─────────────────────────────────────────────────────────
   const [showEditModal, setShowEditModal] = useState(false)
   const [editForm, setEditForm] = useState({ title: '', company: '', location: '', job_type: 'CDI', salary_text: '', description: '' })
 
-  // ── Supprimer offre ────────────────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  // ── Créer contact depuis "Transmis par" ────────────────────────────────────
   const [showCreateContact, setShowCreateContact] = useState(false)
   const [contactFirstName, setContactFirstName] = useState('')
   const [contactLastName, setContactLastName] = useState('')
@@ -327,6 +207,8 @@ export default function JobDetailPage() {
   const [contactLinkedin, setContactLinkedin] = useState('')
   const [contactSaving, setContactSaving] = useState(false)
   const [contactSaved, setContactSaved] = useState(false)
+
+  // ─── Chargement ───────────────────────────────────────────────────────────
 
   const loadJob = useCallback(async () => {
     const supabase = createClient()
@@ -386,6 +268,8 @@ export default function JobDetailPage() {
     setActionsLoading(false)
   }, [jobId])
 
+  // ─── Mutations ────────────────────────────────────────────────────────────
+
   const patchJob = useCallback(async (field: string, value: any) => {
     setJob(prev => prev ? { ...prev, [field]: value } : prev)
     await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }) })
@@ -399,7 +283,6 @@ export default function JobDetailPage() {
     }, 800)
   }
 
-  // ── Modifier offre ─────────────────────────────────────────────────────────
   function openEditModal() {
     if (!job) return
     setEditForm({ title: job.title || '', company: job.company || '', location: job.location || '', job_type: job.job_type || 'CDI', salary_text: job.salary_text || '', description: job.description || '' })
@@ -407,16 +290,11 @@ export default function JobDetailPage() {
   }
 
   async function saveEdit() {
-    const res = await fetch('/api/jobs', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ id: jobId, ...editForm }),
-    })
+    const res = await fetch('/api/jobs', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: jobId, ...editForm }) })
     const data = await res.json()
     if (data.job) { setJob(data.job); setShowEditModal(false) }
   }
 
-  // ── Supprimer offre ────────────────────────────────────────────────────────
   async function deleteJob() {
     if (deleteConfirmText !== 'SUPPRIMER') return
     setDeleteLoading(true)
@@ -424,19 +302,13 @@ export default function JobDetailPage() {
     router.push('/dashboard')
   }
 
-  // ── Créer contact depuis "Transmis par" ────────────────────────────────────
   function openCreateContact(transmittedBy: string) {
-    // Tenter de séparer prénom et nom
     const parts = transmittedBy.trim().split(/\s+/)
     setContactFirstName(parts[0] || '')
     setContactLastName(parts.slice(1).join(' ') || '')
-    setContactRole('')
-    setContactCompany(job?.company || '')
-    setContactEmail('')
-    setContactPhone('')
-    setContactLinkedin('')
-    setContactSaved(false)
-    setShowCreateContact(true)
+    setContactRole(''); setContactCompany(job?.company || '')
+    setContactEmail(''); setContactPhone(''); setContactLinkedin('')
+    setContactSaved(false); setShowCreateContact(true)
   }
 
   async function saveContact() {
@@ -446,23 +318,13 @@ export default function JobDetailPage() {
     const res = await fetch('/api/contacts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({
-        name: fullName,
-        role: contactRole.trim() || null,
-        company: contactCompany.trim() || null,
-        email: contactEmail.trim() || null,
-        phone: contactPhone.trim() || null,
-        linkedin: contactLinkedin.trim() || null,
-        job_id: jobId,
-      }),
+      body: JSON.stringify({ name: fullName, role: contactRole.trim() || null, company: contactCompany.trim() || null, email: contactEmail.trim() || null, phone: contactPhone.trim() || null, linkedin: contactLinkedin.trim() || null, job_id: jobId }),
     })
     setContactSaving(false)
-    if (res.ok) {
-      setContactSaved(true)
-      await loadContacts()
-      setTimeout(() => setShowCreateContact(false), 1500)
-    }
+    if (res.ok) { setContactSaved(true); await loadContacts(); setTimeout(() => setShowCreateContact(false), 1500) }
   }
+
+  // ─── Calculs dérivés ──────────────────────────────────────────────────────
 
   const sortedCustom = [...customSteps].sort((a, b) => a.position - b.position)
   const allSteps = [
@@ -474,6 +336,8 @@ export default function JobDetailPage() {
   const currentStepId = job?.sub_status || job?.status || 'to_apply'
   const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId)
   const isInterviewStep = INTERVIEW_STEP_IDS.includes(currentStepId) || (customSteps.some(cs => cs.id === currentStepId))
+
+  // ─── Handlers étapes ──────────────────────────────────────────────────────
 
   const handleStepClick = async (stepId: string) => {
     if (!job) return
@@ -509,6 +373,8 @@ export default function JobDetailPage() {
     }
   }
 
+  // ─── Handlers actions ─────────────────────────────────────────────────────
+
   const handleAddAction = async () => {
     if (!newActionTitle.trim() || !userId) return
     const supabase = createClient()
@@ -533,6 +399,8 @@ export default function JobDetailPage() {
     setStepActions(prev => prev.filter(a => a.id !== actionToDelete.id))
     setActionToDelete(null)
   }
+
+  // ─── Handlers DnD ─────────────────────────────────────────────────────────
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }))
   const actionSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }))
@@ -577,6 +445,8 @@ export default function JobDetailPage() {
     await Promise.all(updated.map(a => supabase.from('job_step_actions').update({ position: a.position }).eq('id', a.id)))
   }
 
+  // ─── Handlers échanges ────────────────────────────────────────────────────
+
   const toggleExchange = (id: string) => {
     setOpenExchanges(prev => { const next = new Set(Array.from(prev)); next.has(id) ? next.delete(id) : next.add(id); return next })
   }
@@ -602,6 +472,8 @@ export default function JobDetailPage() {
     setExchanges(prev => prev.filter(e => e.id !== id))
   }
 
+  // ─── Styles ───────────────────────────────────────────────────────────────
+
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#999', fontWeight: 700, fontSize: 15 }}>Chargement…</p></div>
   if (!job) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#E8151B', fontWeight: 700, fontSize: 15 }}>Offre introuvable.</p></div>
 
@@ -619,14 +491,10 @@ export default function JobDetailPage() {
   const activeAction = activeActionId ? stepActions.find(a => a.id === activeActionId) : null
   const sortedStepActions = [...stepActions].sort((a, b) => a.position - b.position)
   const selectedContact = contacts.find(c => c.id === job.interview_contact_id)
-
-  // Extraire "Transmis par" des notes
   const transmittedBy = extractTransmittedBy(job.notes)
   const transmittedByAlreadyContact = transmittedBy
     ? contacts.some(c => c.name.toLowerCase().includes(transmittedBy.toLowerCase().split(' ')[0].toLowerCase()))
     : false
-
-  // Infos entreprise disponibles
   const hasCompanyInfo = !!(job.company_description || job.company_website || job.company_size || job.department)
 
   return (
@@ -653,7 +521,9 @@ export default function JobDetailPage() {
         .fl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #888; display: block; margin-bottom: 5px; font-family: ${FONT}; }
       `}</style>
 
-      <div className="jfmj-sidebar"><JobSidebar currentJobId={jobId} onSelect={(id) => router.push(`/dashboard/job/${id}`)} /></div>
+      <div className="jfmj-sidebar">
+        <JobSidebar currentJobId={jobId} onSelect={(id) => router.push(`/dashboard/job/${id}`)} />
+      </div>
 
       <div className="jfmj-main">
         <div className="jfmj-back-mobile" style={{ display: 'none', marginBottom: 14 }}>
@@ -686,7 +556,6 @@ export default function JobDetailPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
             {job.source_url && <button onClick={() => window.open(job.source_url, '_blank')} style={{ background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #fff', whiteSpace: 'nowrap' }}>Voir l&apos;offre ↗</button>}
             <button onClick={() => router.push(`/dashboard/editor?job_id=${jobId}`)} style={{ background: '#F5C400', color: '#111', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #111', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' }}>Générer un CV</button>
-            {/* Boutons Modifier / Supprimer */}
             <div style={{ display: 'flex', gap: 6 }}>
               <button className="btn-edit" onClick={openEditModal}>✏️ Modifier</button>
               <button className="btn-delete" onClick={() => { setDeleteConfirmText(''); setShowDeleteModal(true) }}>🗑️ Supprimer</button>
@@ -697,54 +566,27 @@ export default function JobDetailPage() {
         {/* ─── INFOS ENTREPRISE ───────────────────────────────────────────── */}
         {hasCompanyInfo && (
           <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '1.5px solid #EBEBEB', overflow: 'hidden' }}>
-            <button
-              onClick={() => setCompanyExpanded(v => !v)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: '#FAFAFA', border: 'none', cursor: 'pointer', fontFamily: FONT }}
-            >
+            <button onClick={() => setCompanyExpanded(v => !v)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: '#FAFAFA', border: 'none', cursor: 'pointer', fontFamily: FONT }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 16 }}>🏢</span>
                 <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>À propos de {job.company}</span>
               </div>
               <span style={{ fontSize: 12, color: '#aaa', transform: companyExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
             </button>
-
             {companyExpanded && (
               <div style={{ padding: '16px 20px' }}>
-                {job.company_description && (
-                  <div style={{ marginBottom: 14 }}>
-                    <p style={{ fontSize: 13, color: '#444', lineHeight: 1.7, fontWeight: 500, margin: 0 }}>{job.company_description}</p>
-                  </div>
-                )}
+                {job.company_description && <div style={{ marginBottom: 14 }}><p style={{ fontSize: 13, color: '#444', lineHeight: 1.7, fontWeight: 500, margin: 0 }}>{job.company_description}</p></div>}
                 <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                  {job.company_size && (
-                    <div>
-                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Taille</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.company_size}</div>
-                    </div>
-                  )}
-                  {job.department && (
-                    <div>
-                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Département</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.department}</div>
-                    </div>
-                  )}
-                  {job.company_website && (
-                    <div>
-                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Site web</div>
-                      <a href={job.company_website.startsWith('http') ? job.company_website : `https://${job.company_website}`}
-                        target="_blank" rel="noopener noreferrer"
-                        style={{ fontSize: 13, fontWeight: 700, color: '#0A66C2', textDecoration: 'none' }}>
-                        {job.company_website} ↗
-                      </a>
-                    </div>
-                  )}
+                  {job.company_size && <div><div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Taille</div><div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.company_size}</div></div>}
+                  {job.department && <div><div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Département</div><div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.department}</div></div>}
+                  {job.company_website && <div><div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Site web</div><a href={job.company_website.startsWith('http') ? job.company_website : `https://${job.company_website}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 700, color: '#0A66C2', textDecoration: 'none' }}>{job.company_website} ↗</a></div>}
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* ─── TRANSMIS PAR → Créer contact ──────────────────────────────── */}
+        {/* ─── TRANSMIS PAR ───────────────────────────────────────────────── */}
         {transmittedBy && !transmittedByAlreadyContact && (
           <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 12, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -754,11 +596,7 @@ export default function JobDetailPage() {
                 <div style={{ fontSize: 11, color: '#7C3AED', fontWeight: 500 }}>Ce contact n&apos;est pas encore dans vos contacts.</div>
               </div>
             </div>
-            <button
-              onClick={() => openCreateContact(transmittedBy)}
-              style={{ background: '#7C3AED', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap', boxShadow: '2px 2px 0 #111' }}>
-              + Créer la fiche contact
-            </button>
+            <button onClick={() => openCreateContact(transmittedBy)} style={{ background: '#7C3AED', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap', boxShadow: '2px 2px 0 #111' }}>+ Créer la fiche contact</button>
           </div>
         )}
 
@@ -988,7 +826,7 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {/* ─── SYNTHÈSE ÉCHANGES ───────────────────────────────────────────── */}
+        {/* ─── ÉCHANGES ────────────────────────────────────────────────────── */}
         <div style={card}>
           <span style={sectionLabel}>Synthèse des échanges</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1001,7 +839,7 @@ export default function JobDetailPage() {
                       <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#111', color: '#F5C400', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: FONT }}>{idx + 1}</div>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 800, color: '#111', margin: 0, fontFamily: FONT }}>{ex.title}</p>
-                        <p style={{ fontSize: 11, color: '#888', margin: 0, fontFamily: FONT, fontWeight: 500 }}>{ex.step_label && `${ex.step_label} · `}{formatDate(ex.exchange_date)}</p>
+                        <p style={{ fontSize: 11, color: '#888', margin: 0, fontFamily: FONT, fontWeight: 500 }}>{ex.step_label && `${ex.step_label} · `}{new Date(ex.exchange_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -1055,7 +893,7 @@ export default function JobDetailPage() {
           </button>
         </div>
 
-        {/* DOCUMENTS + NOTES */}
+        {/* ─── DOCUMENTS + NOTES ───────────────────────────────────────────── */}
         <div className="jfmj-docs-grid">
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={sectionLabel}>Documents</span>
@@ -1080,7 +918,7 @@ export default function JobDetailPage() {
           </div>
         </div>
 
-        {/* DESCRIPTION */}
+        {/* ─── DESCRIPTION ─────────────────────────────────────────────────── */}
         <div style={card}>
           <span style={sectionLabel}>Description du poste</span>
           <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden', position: 'relative', fontFamily: FONT, fontWeight: 500 }}>
@@ -1095,7 +933,6 @@ export default function JobDetailPage() {
 
       {/* ════════ MODALES ════════════════════════════════════════════════════ */}
 
-      {/* ── Modale Modifier offre ─────────────────────────────────────────── */}
       {showEditModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 540, border: '2px solid #111', boxShadow: '4px 4px 0 #111', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1104,32 +941,12 @@ export default function JobDetailPage() {
               <button onClick={() => setShowEditModal(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-              <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
-                <label className="fl">Intitulé du poste</label>
-                <input className="fi" value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} />
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <label className="fl">Entreprise</label>
-                <input className="fi" value={editForm.company} onChange={e => setEditForm(p => ({ ...p, company: e.target.value }))} />
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <label className="fl">Lieu</label>
-                <input className="fi" value={editForm.location} onChange={e => setEditForm(p => ({ ...p, location: e.target.value }))} placeholder="Paris · Hybride" />
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <label className="fl">Type de contrat</label>
-                <select className="fi" value={editForm.job_type} onChange={e => setEditForm(p => ({ ...p, job_type: e.target.value }))}>
-                  {['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance'].map(t => <option key={t}>{t}</option>)}
-                </select>
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <label className="fl">Salaire</label>
-                <input className="fi" value={editForm.salary_text} onChange={e => setEditForm(p => ({ ...p, salary_text: e.target.value }))} placeholder="45-55k€ / an" />
-              </div>
-              <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
-                <label className="fl">Description</label>
-                <textarea className="fi" value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={5} style={{ resize: 'vertical', minHeight: 120, marginBottom: 0 }} />
-              </div>
+              <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}><label className="fl">Intitulé du poste</label><input className="fi" value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} /></div>
+              <div style={{ marginBottom: 14 }}><label className="fl">Entreprise</label><input className="fi" value={editForm.company} onChange={e => setEditForm(p => ({ ...p, company: e.target.value }))} /></div>
+              <div style={{ marginBottom: 14 }}><label className="fl">Lieu</label><input className="fi" value={editForm.location} onChange={e => setEditForm(p => ({ ...p, location: e.target.value }))} placeholder="Paris · Hybride" /></div>
+              <div style={{ marginBottom: 14 }}><label className="fl">Type de contrat</label><select className="fi" value={editForm.job_type} onChange={e => setEditForm(p => ({ ...p, job_type: e.target.value }))}>{['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance'].map(t => <option key={t}>{t}</option>)}</select></div>
+              <div style={{ marginBottom: 14 }}><label className="fl">Salaire</label><input className="fi" value={editForm.salary_text} onChange={e => setEditForm(p => ({ ...p, salary_text: e.target.value }))} placeholder="45-55k€ / an" /></div>
+              <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}><label className="fl">Description</label><textarea className="fi" value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={5} style={{ resize: 'vertical', minHeight: 120, marginBottom: 0 }} /></div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
               <button onClick={() => setShowEditModal(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
@@ -1139,39 +956,23 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* ── Modale Supprimer offre ────────────────────────────────────────── */}
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 30, width: '100%', maxWidth: 420, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B' }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
               <h3 style={{ fontSize: 18, fontWeight: 900, color: '#E8151B', margin: '0 0 8px', fontFamily: FONT }}>Suppression définitive</h3>
-              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>
-                Cette action est <strong>irréversible</strong>.<br />
-                Toutes les données seront supprimées : échanges, documents, étapes.
-              </p>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>Cette action est <strong>irréversible</strong>.<br />Toutes les données seront supprimées : échanges, documents, étapes.</p>
             </div>
             <div style={{ background: '#FEF2F2', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: '#111', margin: '0 0 4px', fontFamily: FONT }}>{job.title}</p>
               <p style={{ fontSize: 12, color: '#888', margin: 0, fontFamily: FONT }}>{job.company}</p>
             </div>
-            <p style={{ fontSize: 12, color: '#555', marginBottom: 8, fontFamily: FONT }}>
-              Pour confirmer, tapez exactement : <strong style={{ color: '#E8151B' }}>SUPPRIMER</strong>
-            </p>
-            <input
-              className="fi"
-              value={deleteConfirmText}
-              onChange={e => setDeleteConfirmText(e.target.value)}
-              placeholder="SUPPRIMER"
-              style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em', borderColor: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#E0E0E0' }}
-              autoFocus
-            />
+            <p style={{ fontSize: 12, color: '#555', marginBottom: 8, fontFamily: FONT }}>Pour confirmer, tapez exactement : <strong style={{ color: '#E8151B' }}>SUPPRIMER</strong></p>
+            <input className="fi" value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder="SUPPRIMER" style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em', borderColor: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#E0E0E0' }} autoFocus />
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <button onClick={() => setShowDeleteModal(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
-              <button
-                onClick={deleteJob}
-                disabled={deleteConfirmText !== 'SUPPRIMER' || deleteLoading}
-                style={{ flex: 1, background: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#eee', color: deleteConfirmText === 'SUPPRIMER' ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: deleteConfirmText === 'SUPPRIMER' ? 'pointer' : 'not-allowed', fontFamily: FONT, transition: 'all 0.15s' }}>
+              <button onClick={deleteJob} disabled={deleteConfirmText !== 'SUPPRIMER' || deleteLoading} style={{ flex: 1, background: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#eee', color: deleteConfirmText === 'SUPPRIMER' ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: deleteConfirmText === 'SUPPRIMER' ? 'pointer' : 'not-allowed', fontFamily: FONT, transition: 'all 0.15s' }}>
                 {deleteLoading ? '…' : 'Supprimer définitivement'}
               </button>
             </div>
@@ -1179,7 +980,6 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* ── Modale Créer contact ──────────────────────────────────────────── */}
       {showCreateContact && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 480, border: '2px solid #111', boxShadow: '4px 4px 0 #7C3AED', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1187,12 +987,9 @@ export default function JobDetailPage() {
               <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: 0, fontFamily: FONT }}>👤 Créer une fiche contact</h3>
               <button onClick={() => setShowCreateContact(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
             </div>
-
-            {/* Badge offre liée */}
             <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 12, fontWeight: 700, color: '#5B21B6', fontFamily: FONT }}>
               🔗 Ce contact sera lié à : <strong>{job.title}</strong> — {job.company}
             </div>
-
             {contactSaved ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{ fontSize: 36, marginBottom: 10 }}>✅</div>
@@ -1200,49 +997,20 @@ export default function JobDetailPage() {
               </div>
             ) : (
               <>
-                {/* Prénom + Nom séparés */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">Prénom *</label>
-                    <input className="fi" value={contactFirstName} onChange={e => setContactFirstName(e.target.value)} placeholder="Philippe" autoFocus />
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">Nom *</label>
-                    <input className="fi" value={contactLastName} onChange={e => setContactLastName(e.target.value)} placeholder="Martin" />
-                  </div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Prénom *</label><input className="fi" value={contactFirstName} onChange={e => setContactFirstName(e.target.value)} placeholder="Philippe" autoFocus /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Nom *</label><input className="fi" value={contactLastName} onChange={e => setContactLastName(e.target.value)} placeholder="Martin" /></div>
                 </div>
-
-                {/* Fonction */}
-                <div style={{ marginBottom: 14 }}>
-                  <label className="fl">Fonction / Poste</label>
-                  <input className="fi" value={contactRole} onChange={e => setContactRole(e.target.value)} placeholder="Ex : DRH, Directeur Marketing, Chasseur de tête..." />
-                </div>
-
+                <div style={{ marginBottom: 14 }}><label className="fl">Fonction / Poste</label><input className="fi" value={contactRole} onChange={e => setContactRole(e.target.value)} placeholder="Ex : DRH, Directeur Marketing..." /></div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">Entreprise</label>
-                    <input className="fi" value={contactCompany} onChange={e => setContactCompany(e.target.value)} placeholder="Lenôtre, Michael Page..." />
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">Email</label>
-                    <input className="fi" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="p.martin@..." />
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">Téléphone</label>
-                    <input className="fi" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+33 6..." />
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">LinkedIn</label>
-                    <input className="fi" value={contactLinkedin} onChange={e => setContactLinkedin(e.target.value)} placeholder="linkedin.com/in/..." />
-                  </div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Entreprise</label><input className="fi" value={contactCompany} onChange={e => setContactCompany(e.target.value)} /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Email</label><input className="fi" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Téléphone</label><input className="fi" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">LinkedIn</label><input className="fi" value={contactLinkedin} onChange={e => setContactLinkedin(e.target.value)} placeholder="linkedin.com/in/..." /></div>
                 </div>
-
                 <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                   <button onClick={() => setShowCreateContact(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
-                  <button
-                    onClick={saveContact}
-                    disabled={!contactFirstName.trim() || contactSaving}
-                    style={{ flex: 2, background: (!contactFirstName.trim() || contactSaving) ? '#eee' : '#7C3AED', color: (!contactFirstName.trim() || contactSaving) ? '#aaa' : '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: contactFirstName.trim() ? 'pointer' : 'not-allowed', fontFamily: FONT, boxShadow: contactFirstName.trim() ? '2px 2px 0 #111' : 'none' }}>
+                  <button onClick={saveContact} disabled={!contactFirstName.trim() || contactSaving} style={{ flex: 2, background: (!contactFirstName.trim() || contactSaving) ? '#eee' : '#7C3AED', color: (!contactFirstName.trim() || contactSaving) ? '#aaa' : '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: contactFirstName.trim() ? 'pointer' : 'not-allowed', fontFamily: FONT, boxShadow: contactFirstName.trim() ? '2px 2px 0 #111' : 'none' }}>
                     {contactSaving ? '…' : 'Créer le contact →'}
                   </button>
                 </div>
@@ -1252,7 +1020,6 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* ── Modale Suppression action ─────────────────────────────────────── */}
       {actionToDelete && (
         <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 400, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
@@ -1268,7 +1035,6 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* ── Modale Suppression étape ──────────────────────────────────────── */}
       {stepToDelete && (
         <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 400, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
