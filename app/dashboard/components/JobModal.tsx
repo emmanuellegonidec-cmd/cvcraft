@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Job, JobStatus, JobType } from '@/lib/jobs';
 import { Stage, NewJobState, EMPTY_JOB } from './types';
 import { HeartRating } from './HeartComponents';
@@ -11,8 +11,8 @@ type Props = {
   stages: Stage[];
   importUrl: string;
   setImportUrl: (v: string) => void;
-  addJobMode: null | 'url' | 'manual' | 'spontaneous';
-  setAddJobMode: (v: null | 'url' | 'manual' | 'spontaneous') => void;
+  addJobMode: null | 'url' | 'manual' | 'file' | 'spontaneous';
+  setAddJobMode: (v: null | 'url' | 'manual' | 'file' | 'spontaneous') => void;
   importError: boolean;
   setImportError: (v: boolean) => void;
   importLoading: boolean;
@@ -28,15 +28,22 @@ export default function JobModal({
   onImport, onSave, onClose,
 }: Props) {
 
-  // ── Champs spécifiques candidature spontanée ──
-  const [spontCompany, setSpontCompany]         = useState('');
-  const [spontTitle, setSpontTitle]             = useState('');
-  const [spontLocation, setSpontLocation]       = useState('');
-  const [spontWebsite, setSpontWebsite]         = useState('');
-  const [spontMotivation, setSpontMotivation]   = useState('');
-  const [spontNotes, setSpontNotes]             = useState('');
-  const [spontFavorite, setSpontFavorite]       = useState(0);
-  const [spontError, setSpontError]             = useState<string | null>(null);
+  // ── Candidature spontanée ──────────────────────────────────────────────────
+  const [spontCompany, setSpontCompany]       = useState('');
+  const [spontTitle, setSpontTitle]           = useState('');
+  const [spontLocation, setSpontLocation]     = useState('');
+  const [spontWebsite, setSpontWebsite]       = useState('');
+  const [spontMotivation, setSpontMotivation] = useState('');
+  const [spontNotes, setSpontNotes]           = useState('');
+  const [spontFavorite, setSpontFavorite]     = useState(0);
+  const [spontError, setSpontError]           = useState<string | null>(null);
+
+  // ── Import fichier ─────────────────────────────────────────────────────────
+  const fileInputRef           = useRef<HTMLInputElement>(null);
+  const [fileAnalyzing, setFileAnalyzing]     = useState(false);
+  const [fileError, setFileError]             = useState<string | null>(null);
+  const [fileName, setFileName]               = useState<string | null>(null);
+  const [dragOver, setDragOver]               = useState(false);
 
   function handleSpontClose() {
     setSpontCompany(''); setSpontTitle(''); setSpontLocation('');
@@ -47,7 +54,6 @@ export default function JobModal({
 
   function handleSpontSave() {
     if (!spontCompany.trim()) { setSpontError("Le nom de l'entreprise est obligatoire."); return; }
-    // On injecte les données dans newJob puis on appelle onSave
     setNewJob(() => ({
       title: spontTitle.trim() || 'Candidature spontanée',
       company: spontCompany.trim(),
@@ -61,10 +67,69 @@ export default function JobModal({
       salary: '',
       favorite: spontFavorite,
     }));
-    // Petit délai pour que setNewJob soit pris en compte avant onSave
-    setTimeout(() => {
-      onSave();
-    }, 50);
+    setTimeout(() => { onSave(); }, 50);
+  }
+
+  // ── Traitement du fichier ─────────────────────────────────────────────────
+  async function processFile(file: File) {
+    setFileError(null);
+    setFileAnalyzing(true);
+    setFileName(file.name);
+
+    const token = (window as unknown as { __jfmj_token?: string }).__jfmj_token;
+    const form = new FormData();
+    form.append('file', file);
+
+    try {
+      const res = await fetch('/api/jobs/import-file', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setFileError(data.error || "Impossible d'analyser ce fichier.");
+        setFileAnalyzing(false);
+        return;
+      }
+
+      // Pré-remplir le formulaire manuel avec les données extraites
+      const d = data.data;
+      setNewJob(() => ({
+        title:       d.title       || '',
+        company:     d.company     || '',
+        location:    d.location    || '',
+        job_type:    (d.job_type as JobType) || 'CDI',
+        status:      'to_apply' as JobStatus,
+        description: [d.description, d.requirements].filter(Boolean).join('\n\n--- Profil requis ---\n\n') || '',
+        notes:       '',
+        salary:      d.salary_text || '',
+        source:      'file',
+        url:         '',
+        favorite:    0,
+      }));
+
+      setAddJobMode('manual');
+    } catch {
+      setFileError("Erreur réseau. Vérifiez votre connexion.");
+    } finally {
+      setFileAnalyzing(false);
+    }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+    // Reset input pour pouvoir re-sélectionner le même fichier
+    e.target.value = '';
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
   }
 
   return (
@@ -72,9 +137,17 @@ export default function JobModal({
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: 0 }}>
-            {editingJobId ? "Modifier l'offre" : addJobMode === 'spontaneous' ? '📨 Candidature spontanée' : 'Ajouter une offre'}
+            {editingJobId
+              ? "Modifier l'offre"
+              : addJobMode === 'spontaneous'
+                ? '📨 Candidature spontanée'
+                : addJobMode === 'file'
+                  ? '📄 Importer un fichier'
+                  : 'Ajouter une offre'}
           </h2>
-          <button onClick={addJobMode === 'spontaneous' ? handleSpontClose : onClose} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
+          <button
+            onClick={addJobMode === 'spontaneous' ? handleSpontClose : onClose}
+            style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
         </div>
 
         {/* ── Écran de choix ── */}
@@ -82,10 +155,13 @@ export default function JobModal({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
               { mode: 'url',         icon: '🔗', title: 'Importer depuis une URL',    sub: 'Importer automatiquement depuis un jobboard' },
-              { mode: 'manual',      icon: '✏️', title: 'Remplir manuellement',        sub: 'Créer une offre à partir de zéro' },
-              { mode: 'spontaneous', icon: '📨', title: 'Candidature spontanée',       sub: 'Contacter une entreprise sans offre publiée' },
+              { mode: 'manual',      icon: '✏️', title: 'Remplir manuellement',       sub: 'Créer une offre à partir de zéro' },
+              { mode: 'file',        icon: '📄', title: 'Importer un fichier',        sub: 'PDF, Word, image — analysé automatiquement par IA' },
+              { mode: 'spontaneous', icon: '📨', title: 'Candidature spontanée',      sub: 'Contacter une entreprise sans offre publiée' },
             ].map(opt => (
-              <button key={opt.mode} onClick={() => setAddJobMode(opt.mode as 'url' | 'manual' | 'spontaneous')}
+              <button
+                key={opt.mode}
+                onClick={() => setAddJobMode(opt.mode as 'url' | 'manual' | 'file' | 'spontaneous')}
                 style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', textAlign: 'left', boxShadow: '2px 2px 0 #111', width: '100%' }}
                 onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'translate(-1px,-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '3px 3px 0 #E8151B'; }}
                 onMouseOut={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '2px 2px 0 #111'; }}>
@@ -126,11 +202,108 @@ export default function JobModal({
           </div>
         )}
 
-        {/* ── Mode manuel ── */}
+        {/* ── Mode fichier ── */}
+        {addJobMode === 'file' && (
+          <div>
+            <button onClick={() => { setAddJobMode(null); setFileError(null); setFileName(null); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
+
+            {/* Zone de dépôt */}
+            <div
+              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => !fileAnalyzing && fileInputRef.current?.click()}
+              style={{
+                border: `2px dashed ${dragOver ? '#E8151B' : '#CCC'}`,
+                borderRadius: 12,
+                padding: '36px 20px',
+                textAlign: 'center',
+                cursor: fileAnalyzing ? 'not-allowed' : 'pointer',
+                background: dragOver ? '#FFF5F5' : '#FAFAFA',
+                transition: 'all 0.15s',
+                marginBottom: 16,
+              }}
+            >
+              {fileAnalyzing ? (
+                <div>
+                  <div style={{ fontSize: 32, marginBottom: 10 }}>⏳</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 4 }}>
+                    Analyse en cours…
+                  </div>
+                  <div style={{ fontSize: 12, color: '#888', fontWeight: 500 }}>
+                    {fileName && `"${fileName}"`} — Claude lit votre offre
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>📄</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 6 }}>
+                    Déposez votre fichier ici
+                  </div>
+                  <div style={{ fontSize: 12, color: '#888', fontWeight: 500, marginBottom: 14 }}>
+                    ou cliquez pour sélectionner
+                  </div>
+                  <div style={{
+                    display: 'inline-flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700,
+                  }}>
+                    {['PDF', 'Word .docx', 'Image JPG/PNG'].map(fmt => (
+                      <span key={fmt} style={{
+                        background: '#fff', border: '1.5px solid #E0E0E0',
+                        borderRadius: 6, padding: '3px 10px', color: '#555',
+                      }}>{fmt}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+
+            {fileError && (
+              <div style={{ background: '#FEF2F2', border: '2px solid #E8151B', borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#E8151B', marginBottom: 4 }}>Erreur d&apos;analyse</div>
+                <div style={{ fontSize: 12, color: '#555' }}>{fileError}</div>
+                <button className="btn-ghost" style={{ marginTop: 10, fontSize: 12 }} onClick={() => { setFileError(null); setFileName(null); }}>
+                  ← Réessayer
+                </button>
+              </div>
+            )}
+
+            {!fileAnalyzing && !fileError && (
+              <div style={{ fontSize: 12, color: '#888', textAlign: 'center', fontWeight: 500 }}>
+                L&apos;IA analysera votre document et pré-remplira la fiche offre.<br />
+                Vous pourrez vérifier et compléter avant de sauvegarder.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Mode manuel (y compris après import fichier) ── */}
         {addJobMode === 'manual' && (
           <div>
             {!editingJobId && (
-              <button onClick={() => setAddJobMode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
+              <button
+                onClick={() => setAddJobMode(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
+            )}
+
+            {/* Badge si pré-rempli via fichier */}
+            {newJob.source === 'file' && (
+              <div style={{ background: '#F0FFF4', border: '2px solid #1A7A4A', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>✅</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#1A7A4A' }}>Offre analysée par IA</div>
+                  <div style={{ fontSize: 11, color: '#555', fontWeight: 500 }}>Vérifiez et complétez les champs avant de sauvegarder.</div>
+                </div>
+              </div>
             )}
 
             <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -164,6 +337,7 @@ export default function JobModal({
                   <label className="fl">Source</label>
                   <select className="fi" value={newJob.source} onChange={e => setNewJob(prev => ({ ...prev, source: e.target.value }))}>
                     <option value="">Choisir...</option>
+                    <option value="file">📄 Fichier importé</option>
                     {['LinkedIn', 'Indeed', 'Welcome to the Jungle', 'Apec', 'Pôle Emploi', 'Site entreprise', 'Réseau', 'HelloWork', 'Autre'].map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
@@ -205,7 +379,6 @@ export default function JobModal({
             <button onClick={() => { setAddJobMode(null); setSpontError(null); }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
 
-            {/* Badge "Candidature spontanée" */}
             <div style={{ background: '#FFF8E0', border: '2px solid #F5C400', borderRadius: 10, padding: '10px 14px', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 20 }}>📨</span>
               <div>
@@ -214,15 +387,12 @@ export default function JobModal({
               </div>
             </div>
 
-            {/* Coup de cœur */}
             <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coup de cœur ?</div>
               <HeartRating value={spontFavorite} onChange={v => setSpontFavorite(v)} />
             </div>
 
             <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: 4 }}>
-
-              {/* Entreprise — champ mis en avant */}
               <div style={{ marginBottom: 16 }}>
                 <label className="fl" style={{ fontSize: 13, fontWeight: 900 }}>🏢 Entreprise cible *</label>
                 <input
@@ -253,26 +423,14 @@ export default function JobModal({
 
               <div style={{ marginBottom: 14 }}>
                 <label className="fl">💡 Pourquoi cette entreprise ?</label>
-                <textarea
-                  className="fi"
-                  value={spontMotivation}
-                  onChange={e => setSpontMotivation(e.target.value)}
-                  placeholder="Ex : Leader dans son secteur, culture d'innovation, valeurs RSE alignées avec les miennes, fort développement à l'international..."
-                  rows={4}
-                  style={{ resize: 'vertical', minHeight: 100 }}
-                />
+                <textarea className="fi" value={spontMotivation} onChange={e => setSpontMotivation(e.target.value)}
+                  placeholder="Leader dans son secteur, culture d'innovation..." rows={4} style={{ resize: 'vertical', minHeight: 100 }} />
               </div>
 
               <div style={{ marginBottom: 14 }}>
                 <label className="fl">📝 Notes personnelles</label>
-                <textarea
-                  className="fi"
-                  value={spontNotes}
-                  onChange={e => setSpontNotes(e.target.value)}
-                  placeholder="Contact identifié, prochaine étape, infos utiles..."
-                  rows={3}
-                  style={{ resize: 'vertical' }}
-                />
+                <textarea className="fi" value={spontNotes} onChange={e => setSpontNotes(e.target.value)}
+                  placeholder="Contact identifié, prochaine étape..." rows={3} style={{ resize: 'vertical' }} />
               </div>
             </div>
 

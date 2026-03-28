@@ -40,6 +40,9 @@ function DraggableCard({
       ? getSubStatusLabel((job as any).sub_status, stages)
       : null;
 
+  // Badge spontanée
+  const isSpontaneous = (job as any).source_platform === 'spontaneous';
+
   return (
     <div
       ref={setNodeRef}
@@ -61,8 +64,9 @@ function DraggableCard({
       </div>
       <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{job.title}</div>
 
-      {subLabel && (
-        <div style={{ marginBottom: 4 }}>
+      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: subLabel || isSpontaneous ? 4 : 0 }}>
+        {/* Badge sous-statut (En cours) */}
+        {subLabel && (
           <span
             className="pill"
             style={{
@@ -74,8 +78,23 @@ function DraggableCard({
           >
             {subLabel}
           </span>
-        </div>
-      )}
+        )}
+        {/* Badge Spontanée */}
+        {isSpontaneous && (
+          <span
+            className="pill"
+            style={{
+              background: '#FFF8E0',
+              color: '#92400E',
+              border: '1px solid #F5C400',
+              fontSize: 9,
+              fontWeight: 800,
+            }}
+          >
+            📨 Spontanée
+          </span>
+        )}
+      </div>
 
       <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 2 }}>
         {job.location && (
@@ -132,7 +151,6 @@ function DroppableColumn({
         transition: 'background .15s, border .15s',
       }}
     >
-      {/* En-tête */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ fontSize: 10, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.3 }}>
           {col.label}
@@ -142,7 +160,6 @@ function DroppableColumn({
         </div>
       </div>
 
-      {/* Cartes */}
       {jobs.map(job => (
         <DraggableCard
           key={job.id}
@@ -185,8 +202,8 @@ type Props = {
   onJobClick: (job: Job) => void;
   onAddJob: (stageId: string) => void;
   onOpenSettings: () => void;
-  onRefresh: () => void;       // ✅ refetch depuis page.tsx
-  onStatusChange: (id: string, newStatus: string) => void; // ✅ mise à jour optimiste
+  onRefresh: () => void;
+  onStatusChange: (id: string, newStatus: string) => void;
 };
 
 export default function KanbanView({
@@ -201,7 +218,6 @@ export default function KanbanView({
   const [activeJob, setActiveJob] = useState<Job | null>(null);
   const [overColId, setOverColId] = useState<string | null>(null);
 
-  // Refetch quand on revient sur l'onglet (retour depuis dossier offre)
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') onRefresh();
@@ -239,7 +255,6 @@ export default function KanbanView({
 
     if (!job || fromColId === toColId) return;
 
-    // Mise à jour optimiste immédiate côté UI
     onStatusChange(job.id, toColId);
   }
 

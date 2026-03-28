@@ -41,6 +41,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
   const [contacts, setContacts] = useState<Contact[]>([]);
 
   const isInterview = isInterviewStage(job.status, stages);
+  const isSpontaneous = (job as any).source_platform === 'spontaneous';
 
   useEffect(() => {
     if (!isInterview) return;
@@ -93,7 +94,20 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
           <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
             <div style={{ fontSize: 11, color: '#888', marginBottom: 3, fontWeight: 600 }}>{job.company}</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: 6 }}>{job.title}</div>
-            {/* ── Bouton Voir l'offre complète — visible pour tous les statuts ── */}
+
+            {/* ── Badge Candidature spontanée ── */}
+            {isSpontaneous && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: '#FFF8E0', border: '2px solid #F5C400',
+                borderRadius: 8, padding: '4px 10px', marginBottom: 8,
+              }}>
+                <span style={{ fontSize: 14 }}>📨</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#92400E' }}>Candidature spontanée</span>
+              </div>
+            )}
+
+            {/* ── Bouton Voir l'offre complète ── */}
             <button
               onClick={() => router.push(`/dashboard/job/${job.id}`)}
               style={{
@@ -165,7 +179,6 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
           <div style={{ background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
             <div style={{ fontSize: 10, fontWeight: 800, color: '#B8900A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>📅 Entretien</div>
 
-            {/* Date */}
             <div style={{ marginBottom: 8 }}>
               <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Date</label>
               <input
@@ -177,7 +190,6 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
               />
             </div>
 
-            {/* Début + Fin */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
               <div>
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Début</label>
@@ -201,7 +213,6 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
               </div>
             </div>
 
-            {/* Type */}
             <div style={{ marginBottom: 10 }}>
               <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 6 }}>Type</label>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -222,7 +233,6 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
               </div>
             </div>
 
-            {/* Contact */}
             <div>
               <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 4 }}>Contact pour l&apos;entretien</label>
               <select
