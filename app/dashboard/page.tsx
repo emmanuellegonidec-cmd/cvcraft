@@ -42,7 +42,8 @@ type CalEvent = {
   title: string;
   company: string;
   type: 'envie' | 'postule' | 'entretien' | 'offre' | 'archive';
-  time?: string;
+  hour?: number;   // heure extraite (0-23), undefined = pas d'heure
+  minutes?: number;
 };
 
 function sameDay(a: Date, b: Date) {
@@ -51,7 +52,10 @@ function sameDay(a: Date, b: Date) {
     a.getDate() === b.getDate();
 }
 
-// Une carte par offre — date la plus pertinente selon le statut
+function formatTime(h: number, m: number) {
+  return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
+}
+
 function jobsToEvents(jobs: Job[]): CalEvent[] {
   return jobs.map(job => {
     const typeMap: Record<string, CalEvent['type']> = {
@@ -65,32 +69,43 @@ function jobsToEvents(jobs: Job[]): CalEvent[] {
 
     let date: Date;
     let dateField: CalEvent['dateField'] = 'created_at';
-    let time: string | undefined;
+    let hour: number | undefined;
+    let minutes: number | undefined;
 
     if (job.status === 'interview' && job.interview_at) {
       date = new Date(job.interview_at);
       dateField = 'interview_at';
-      if (date.getHours() > 0) {
-        time = `${String(date.getHours()).padStart(2, '0')}h${String(date.getMinutes()).padStart(2, '0')}`;
+      if (date.getHours() > 0 || date.getMinutes() > 0) {
+        hour = date.getHours();
+        minutes = date.getMinutes();
       }
     } else if (job.status === 'applied' && job.applied_at) {
       date = new Date(job.applied_at);
       dateField = 'applied_at';
+      if (date.getHours() > 0 || date.getMinutes() > 0) {
+        hour = date.getHours();
+        minutes = date.getMinutes();
+      }
     } else {
       date = new Date(job.created_at);
       dateField = 'created_at';
+      if (date.getHours() > 0 || date.getMinutes() > 0) {
+        hour = date.getHours();
+        minutes = date.getMinutes();
+      }
     }
 
-    return {
-      jobId: job.id,
-      date,
-      dateField,
-      title: job.title || 'Sans titre',
-      company: job.company || '',
-      type: evType,
-      time,
-    };
+    return { jobId: job.id, date, dateField, title: job.title || 'Sans titre', company: job.company || '', type: evType, hour, minutes };
   }).filter(e => !isNaN(e.date.getTime()));
+}
+
+// Trie les événements d'un jour : par heure croissante, sans heure à la fin
+function sortEvents(evs: CalEvent[]): CalEvent[] {
+  return [...evs].sort((a, b) => {
+    const ah = a.hour !== undefined ? a.hour * 60 + (a.minutes || 0) : 99999;
+    const bh = b.hour !== undefined ? b.hour * 60 + (b.minutes || 0) : 99999;
+    return ah - bh;
+  });
 }
 
 function getWeekStart(base: Date, off: number): Date {
@@ -128,7 +143,6 @@ const weekTh: React.CSSProperties = {
   background: '#FAFAFA', padding: '8px 4px', borderBottom: '2px solid #111',
 };
 
-// ── Carte événement ──────────────────────────────────────────────────────────
 function EventCard({
   ev, onJobClick, onDragStart,
 }: {
@@ -137,49 +151,41 @@ function EventCard({
   onDragStart: (e: React.DragEvent, ev: CalEvent) => void;
 }) {
   const isArchived = ev.type === 'archive';
+  const timeLabel = ev.hour !== undefined ? formatTime(ev.hour, ev.minutes || 0) : undefined;
+
   return (
     <div
       draggable={!isArchived}
       onDragStart={e => !isArchived && onDragStart(e, ev)}
       onClick={e => { e.stopPropagation(); onJobClick(ev.jobId); }}
-      title={`${ev.title} — ${ev.company}`}
+      title={`${ev.title} — ${ev.company}${timeLabel ? ' · ' + timeLabel : ''}`}
       style={{
         ...EV_STYLE[ev.type],
-        borderRadius: 4,
-        padding: '3px 5px',
-        marginBottom: 2,
+        borderRadius: 4, padding: '3px 5px', marginBottom: 2,
         cursor: isArchived ? 'pointer' : 'grab',
-        fontFamily: 'Montserrat,sans-serif',
-        overflow: 'hidden',
-        userSelect: 'none',
-        opacity: isArchived ? 0.65 : 1,
+        fontFamily: 'Montserrat,sans-serif', overflow: 'hidden',
+        userSelect: 'none', opacity: isArchived ? 0.65 : 1,
       }}
     >
-      {ev.time && (
-        <div style={{ fontSize: 9, opacity: .75, fontWeight: 600, lineHeight: 1.2 }}>{ev.time}</div>
+      {timeLabel && (
+        <div style={{ fontSize: 9, opacity: .8, fontWeight: 700, lineHeight: 1.2 }}>{timeLabel}</div>
       )}
       <div style={{
         fontSize: 10, fontWeight: 800, lineHeight: 1.3,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         textDecoration: isArchived ? 'line-through' : 'none',
-      }}>
-        {ev.title}
-      </div>
+      }}>{ev.title}</div>
       {ev.company && (
         <div style={{
           fontSize: 9, fontWeight: 600, opacity: .75,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          lineHeight: 1.2,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2,
           textDecoration: isArchived ? 'line-through' : 'none',
-        }}>
-          {ev.company}
-        </div>
+        }}>{ev.company}</div>
       )}
     </div>
   );
 }
 
-// ── Composant calendrier ─────────────────────────────────────────────────────
 function DashboardCalendar({
   jobs, onJobClick, onDateChange,
 }: {
@@ -201,17 +207,29 @@ function DashboardCalendar({
     e.dataTransfer.effectAllowed = 'move';
   }
 
-  function handleDrop(e: React.DragEvent, targetDate: Date) {
+  // En vue semaine : targetDate = jour, targetHour = heure de la cellule (enregistre l'heure)
+  // En vue mois : targetDate = jour, targetHour = undefined (conserve l'heure existante)
+  function handleDrop(e: React.DragEvent, targetDate: Date, targetHour?: number) {
     e.preventDefault();
     setDragOver(null);
     if (!dragEvRef.current) return;
     const ev = dragEvRef.current;
     dragEvRef.current = null;
+
     const newDate = new Date(targetDate);
-    if (ev.time) {
-      const parts = ev.time.replace('h', ':').split(':');
-      newDate.setHours(parseInt(parts[0]), parseInt(parts[1] || '0'), 0, 0);
+
+    if (targetHour !== undefined) {
+      // Vue semaine : on place à l'heure exacte de la cellule
+      newDate.setHours(targetHour, 0, 0, 0);
+    } else {
+      // Vue mois : on conserve l'heure existante
+      if (ev.hour !== undefined) {
+        newDate.setHours(ev.hour, ev.minutes || 0, 0, 0);
+      } else {
+        newDate.setHours(0, 0, 0, 0);
+      }
     }
+
     onDateChange(ev.jobId, ev.dateField, newDate);
   }
 
@@ -260,6 +278,7 @@ function DashboardCalendar({
       <>
         <NavBar periodLabel={periodLabel} />
         <div style={{ display: 'grid', gridTemplateColumns: `44px repeat(7, minmax(0, 1fr))`, border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
+          {/* En-têtes jours */}
           <div style={weekTh} />
           {days.map((d, i) => {
             const isTod = sameDay(d, today);
@@ -277,28 +296,33 @@ function DashboardCalendar({
             );
           })}
 
+          {/* Lignes horaires — drop inclut l'heure */}
           {HOURS.map(h => (
             <>
               <div key={`t${h}`} style={{
                 background: '#FAFAFA', borderRight: '1px solid #E5E5E5',
-                borderBottom: '1px solid #F0F0F0', height: 52,
+                borderBottom: '1px solid #F0F0F0', height: 54,
                 display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
                 padding: '4px 6px 0', fontSize: 10, color: '#AAA', fontWeight: 600,
               }}>{h}h</div>
               {days.map((d, di) => {
                 const isTod = sameDay(d, today);
                 const key = cellKey(d, h);
+                // Affiche les événements dont l'heure correspond à cette cellule,
+                // ou les événements sans heure dans la cellule 8h
                 const cellEvs = events.filter(e =>
-                  sameDay(e.date, d) && (e.time ? parseInt(e.time) === h : h === 8)
+                  sameDay(e.date, d) && (
+                    e.hour !== undefined ? e.hour === h : h === 8
+                  )
                 );
                 return (
                   <div
                     key={`${h}-${di}`}
                     onDragOver={e => { e.preventDefault(); setDragOver(key); }}
                     onDragLeave={() => setDragOver(null)}
-                    onDrop={e => handleDrop(e, d)}
+                    onDrop={e => handleDrop(e, d, h)}  // ← passe l'heure
                     style={{
-                      height: 52,
+                      height: 54,
                       borderRight: di === 6 ? 'none' : '1px solid #F0F0F0',
                       borderBottom: '1px solid #F0F0F0',
                       background: isTod ? 'rgba(245,196,0,0.04)' : 'transparent',
@@ -346,14 +370,15 @@ function DashboardCalendar({
             {cells.map((d, idx) => {
               const isOther = d.getMonth() !== base.getMonth();
               const isTod   = sameDay(d, today);
-              const dayEvs  = events.filter(e => sameDay(e.date, d));
+              // Triés par heure croissante, sans heure à la fin
+              const dayEvs  = sortEvents(events.filter(e => sameDay(e.date, d)));
               const key     = cellKey(d);
               return (
                 <div
                   key={idx}
                   onDragOver={e => { e.preventDefault(); setDragOver(key); }}
                   onDragLeave={() => setDragOver(null)}
-                  onDrop={e => handleDrop(e, d)}
+                  onDrop={e => handleDrop(e, d)}  // pas d'heure en vue mois
                   style={{
                     minHeight: 80,
                     borderRight: (idx % 7) < 6 ? '1px solid #E5E5E5' : 'none',
@@ -385,7 +410,6 @@ function DashboardCalendar({
 
   return (
     <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
-      {/* Barre titre */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '10px 16px', borderBottom: visible ? '2px solid #111' : 'none',
@@ -399,7 +423,7 @@ function DashboardCalendar({
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {(Object.keys(EV_LABEL) as CalEvent['type'][]).map(t => (
                 <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#666', fontWeight: 600 }}>
-                  <div style={{ width: 9, height: 9, borderRadius: 2, ...EV_STYLE[t], borderLeft: 'none' }} />
+                  <div style={{ width: 9, height: 9, borderRadius: 2, background: (EV_STYLE[t] as any).background }} />
                   {EV_LABEL[t]}
                 </div>
               ))}
@@ -563,9 +587,9 @@ export default function DashboardPage() {
       location: newJob.location || '', description: newJob.description || '',
       job_type: newJob.job_type || 'CDI', status: newJob.status || 'to_apply',
       notes: newJob.notes || '',
-      ...(newJob.salary   ? { salary_text: newJob.salary }           : {}),
-      ...(newJob.source   ? { source_platform: newJob.source }       : {}),
-      ...(newJob.url      ? { source_url: newJob.url }               : {}),
+      ...(newJob.salary   ? { salary_text: newJob.salary }             : {}),
+      ...(newJob.source   ? { source_platform: newJob.source }         : {}),
+      ...(newJob.url      ? { source_url: newJob.url }                 : {}),
       ...(newJob.favorite !== undefined ? { favorite: newJob.favorite } : {}),
     };
     if (editingJobId) {
@@ -604,6 +628,7 @@ export default function DashboardPage() {
 
   async function handleCalendarDateChange(jobId: string, field: string, newDate: Date) {
     const iso = newDate.toISOString();
+    // Mise à jour optimiste immédiate
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, [field]: iso } as any : j));
     if (selectedJob?.id === jobId) setSelectedJob(prev => prev ? { ...prev, [field]: iso } as any : prev);
     const res = await authFetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', body: JSON.stringify({ [field]: iso }) });
@@ -709,11 +734,11 @@ export default function DashboardPage() {
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: '1.25rem' }}>
               {[
-                { l: 'Total',         v: stats.total,               c: '#111' },
-                { l: 'Taux réponse',  v: stats.responseRate + '%',  c: '#E8151B' },
-                { l: 'Entretiens',    v: stats.interviews,           c: '#1A7A4A' },
-                { l: 'Offres',        v: stats.offers,               c: '#B8900A' },
-                { l: 'Contacts',      v: contacts.length,            c: '#888' },
+                { l: 'Total',        v: stats.total,              c: '#111' },
+                { l: 'Taux réponse', v: stats.responseRate + '%', c: '#E8151B' },
+                { l: 'Entretiens',   v: stats.interviews,          c: '#1A7A4A' },
+                { l: 'Offres',       v: stats.offers,              c: '#B8900A' },
+                { l: 'Contacts',     v: contacts.length,           c: '#888' },
               ].map(s => (
                 <div key={s.l} className="stat-card">
                   <div style={{ fontSize: 9, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
