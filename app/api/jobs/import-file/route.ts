@@ -91,7 +91,8 @@ export async function POST(req: NextRequest) {
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-    let messageContent: Anthropic.MessageParam['content'];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let messageContent: any[];
 
     if (mimeType === 'application/pdf') {
       const base64Data = buffer.toString('base64');
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
         {
           type: 'document',
           source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-        } as Anthropic.DocumentBlockParam,
+        } as any,
         { type: 'text', text: EXTRACTION_PROMPT },
       ];
 
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest) {
         {
           type: 'image',
           source: { type: 'base64', media_type: imageMediaType, data: base64Data },
-        } as Anthropic.ImageBlockParam,
+        } as any,
         { type: 'text', text: EXTRACTION_PROMPT },
       ];
     }
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest) {
     });
 
     const rawText = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+      .filter((b: any) => b.type === 'text')
       .map(b => b.text)
       .join('');
 
