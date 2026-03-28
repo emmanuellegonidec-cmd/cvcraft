@@ -582,6 +582,9 @@ export default function DashboardPage() {
       ...(newJob.source   ? { source_platform: newJob.source }         : {}),
       ...(newJob.url      ? { source_url: newJob.url }                 : {}),
       ...(newJob.favorite !== undefined ? { favorite: newJob.favorite } : {}),
+      ...((newJob as any).company_description ? { company_description: (newJob as any).company_description } : {}),
+      ...((newJob as any).company_website     ? { company_website: (newJob as any).company_website }         : {}),
+      ...((newJob as any).company_size        ? { company_size: (newJob as any).company_size }               : {}),
     };
     if (editingJobId) {
       const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: editingJobId, ...payload }) });
@@ -800,3 +803,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

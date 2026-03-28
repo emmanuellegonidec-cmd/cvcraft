@@ -23,14 +23,12 @@ type Props = {
   onClose: () => void;
 };
 
-// ─── Sources fixes de la liste déroulante ─────────────────────────────────────
 const FIXED_SOURCES = [
   'LinkedIn', 'Indeed', 'Welcome to the Jungle', 'Apec', 'Pôle Emploi',
   'Site entreprise', 'Réseau', 'Chasseur de tête', 'Cabinet recrutement',
   'Cooptation', 'HelloWork', 'Autre',
 ];
 
-// Sources pour lesquelles "Transmis par" est pertinent
 const SOURCES_WITH_CONTACT = new Set([
   'réseau', 'reseau', 'chasseur de tête', 'chasseur de tete',
   'cabinet recrutement', 'cooptation', 'autre', 'site entreprise',
@@ -40,7 +38,6 @@ function showTransmittedByFor(source: string) {
   return SOURCES_WITH_CONTACT.has((source || '').toLowerCase().trim());
 }
 
-// ─── Composant ContactPicker ──────────────────────────────────────────────────
 function ContactPicker({ contacts, contactId, setContactId, freeText, setFreeText, placeholder }: {
   contacts: ContactOption[];
   contactId: string; setContactId: (v: string) => void;
@@ -73,7 +70,6 @@ function ContactPicker({ contacts, contactId, setContactId, freeText, setFreeTex
   );
 }
 
-// ─── Composant principal ──────────────────────────────────────────────────────
 export default function JobModal({
   editingJobId, newJob, setNewJob, stages,
   importUrl, setImportUrl, addJobMode, setAddJobMode,
@@ -81,7 +77,6 @@ export default function JobModal({
   onImport, onSave, onClose,
 }: Props) {
 
-  // ── Candidature spontanée ──────────────────────────────────────────────────
   const [spontCompany, setSpontCompany]         = useState('');
   const [spontTitle, setSpontTitle]             = useState('');
   const [spontLocation, setSpontLocation]       = useState('');
@@ -93,19 +88,21 @@ export default function JobModal({
   const [spontContactId, setSpontContactId]     = useState('');
   const [spontContactFree, setSpontContactFree] = useState('');
 
-  // ── Import fichier ─────────────────────────────────────────────────────────
   const fileInputRef                            = useRef<HTMLInputElement>(null);
   const [fileAnalyzing, setFileAnalyzing]       = useState(false);
   const [fileError, setFileError]               = useState<string | null>(null);
   const [fileName, setFileName]                 = useState<string | null>(null);
   const [dragOver, setDragOver]                 = useState(false);
 
-  // ── Formulaire manuel ─────────────────────────────────────────────────────
   const [transmittedById, setTransmittedById]   = useState('');
   const [transmittedByFree, setTransmittedByFree] = useState('');
   const [customSource, setCustomSource]         = useState('');
 
-  // ── Contacts depuis l'API ─────────────────────────────────────────────────
+  // Infos entreprise extraites par l'IA (stockées séparément pour les passer à saveJob)
+  const [companyDescription, setCompanyDescription] = useState('');
+  const [companyWebsite, setCompanyWebsite]     = useState('');
+  const [companySize, setCompanySize]           = useState('');
+
   const [contacts, setContacts]                 = useState<ContactOption[]>([]);
 
   useEffect(() => {
@@ -118,7 +115,6 @@ export default function JobModal({
       .catch(() => {});
   }, []);
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   function resolveContact(contactId: string, freeText: string): string {
     if (contactId && contactId !== '__new__') {
       const c = contacts.find(c => c.id === contactId);
@@ -162,7 +158,6 @@ export default function JobModal({
     setTimeout(() => { onSave(); }, 50);
   }
 
-  // ── Traitement du fichier ─────────────────────────────────────────────────
   async function processFile(file: File) {
     setFileError(null); setFileAnalyzing(true); setFileName(file.name);
     const token = (window as unknown as { __jfmj_token?: string }).__jfmj_token;
@@ -177,18 +172,29 @@ export default function JobModal({
       const data = await res.json();
       if (!res.ok || !data.success) { setFileError(data.error || "Impossible d'analyser ce fichier."); return; }
       const d = data.data;
+
+      // Stocker les infos entreprise dans les états locaux
       if (d.transmitted_by) setTransmittedByFree(d.transmitted_by);
+      if (d.company_description) setCompanyDescription(d.company_description);
+      if (d.company_website) setCompanyWebsite(d.company_website);
+      if (d.company_size) setCompanySize(d.company_size);
+
       const descParts = [d.description, d.requirements].filter(Boolean);
       const description = descParts.length > 1
         ? `${descParts[0]}\n\n--- Profil requis ---\n\n${descParts[1]}`
         : descParts[0] || '';
+
       setNewJob(() => ({
         title: d.title || '', company: d.company || '', location: d.location || '',
         job_type: (d.job_type as JobType) || 'CDI', status: 'to_apply' as JobStatus,
         description, notes: '', salary: d.salary_text || '',
-        source: '',  // vide → l'utilisateur choisit la vraie source
+        source: '',
         url: d.company_website || '', favorite: 0,
-      }));
+        // Stocker les infos entreprise dans des champs étendus
+        ...(d.company_description ? { company_description: d.company_description } : {}),
+        ...(d.company_website     ? { company_website: d.company_website }         : {}),
+        ...(d.company_size        ? { company_size: d.company_size }               : {}),
+      } as any));
       setAddJobMode('manual');
     } catch { setFileError("Erreur réseau. Vérifiez votre connexion."); }
     finally { setFileAnalyzing(false); }
@@ -215,13 +221,20 @@ export default function JobModal({
       notes: transmitted
         ? [prev.notes, `Transmis par : ${transmitted}`].filter(Boolean).join('\n')
         : prev.notes,
-    }));
+      // Conserver les infos entreprise
+      ...(companyDescription ? { company_description: companyDescription } : {}),
+      ...(companyWebsite     ? { company_website: companyWebsite }         : {}),
+      ...(companySize        ? { company_size: companySize }               : {}),
+    } as any));
     setTimeout(() => { onSave(); }, 50);
   }
 
+  // Détection import fichier : source vide ET (transmis par extrait OU description longue)
+  const isFileImport = (!(newJob as any).source || (newJob as any).source === '') &&
+    ((companyDescription !== '') || (transmittedByFree !== '') || ((newJob.description || '').length > 200));
+
   const showTransmitted = showTransmittedByFor(newJob.source || '') || !!transmittedById || !!transmittedByFree;
   const showCustomSource = ['Autre', 'Chasseur de tête', 'Cabinet recrutement'].includes(newJob.source || '');
-  const isFileImport = !newJob.source && !!transmittedByFree;
 
   return (
     <div className="modal-bg" onClick={onClose}>
@@ -375,6 +388,18 @@ export default function JobModal({
               </div>
             )}
 
+            {/* Infos entreprise extraites — aperçu lecture seule */}
+            {(companyDescription || companyWebsite || companySize) && (
+              <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#5B21B6', marginBottom: 8 }}>🏢 Infos entreprise extraites</div>
+                {companyDescription && <p style={{ fontSize: 12, color: '#444', lineHeight: 1.5, margin: '0 0 6px', fontFamily: 'Montserrat,sans-serif' }}>{companyDescription.slice(0, 200)}{companyDescription.length > 200 ? '…' : ''}</p>}
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  {companySize && <span style={{ fontSize: 11, fontWeight: 700, color: '#5B21B6' }}>👥 {companySize}</span>}
+                  {companyWebsite && <span style={{ fontSize: 11, fontWeight: 700, color: '#0A66C2' }}>🔗 {companyWebsite}</span>}
+                </div>
+              </div>
+            )}
+
             <div style={{ background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coup de cœur ?</div>
               <HeartRating value={newJob.favorite} onChange={v => setNewJob(prev => ({ ...prev, favorite: v }))} />
@@ -403,7 +428,6 @@ export default function JobModal({
                   <input className="fi" value={newJob.company} onChange={e => setNewJob(prev => ({ ...prev, company: e.target.value }))} placeholder="Decathlon" />
                 </div>
 
-                {/* SOURCE : liste fixe */}
                 <div style={{ marginBottom: showCustomSource ? 8 : 14 }}>
                   <label className="fl">Source</label>
                   <select className="fi" value={newJob.source} onChange={e => {
@@ -415,7 +439,6 @@ export default function JobModal({
                   </select>
                 </div>
 
-                {/* Champ libre si Autre / Chasseur de tête / Cabinet recrutement */}
                 {showCustomSource && (
                   <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}>
                     <label className="fl" style={{ fontSize: 11, color: '#888' }}>
@@ -441,7 +464,6 @@ export default function JobModal({
                   <input className="fi" value={newJob.salary} onChange={e => setNewJob(prev => ({ ...prev, salary: e.target.value }))} placeholder="45-55k€ / an" />
                 </div>
 
-                {/* TRANSMIS PAR — contacts + texte libre */}
                 {showTransmitted && (
                   <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}>
                     <label className="fl">👤 Transmis par</label>
@@ -508,7 +530,6 @@ export default function JobModal({
                   autoFocus />
                 {spontError && <div style={{ fontSize: 12, color: '#E8151B', marginTop: 4, fontWeight: 600 }}>{spontError}</div>}
               </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                 <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}>
                   <label className="fl">💼 Poste visé</label>
@@ -523,7 +544,6 @@ export default function JobModal({
                   <input className="fi" value={spontWebsite} onChange={e => setSpontWebsite(e.target.value)} placeholder="https://loreal.com" />
                 </div>
               </div>
-
               <div style={{ marginBottom: 14 }}>
                 <label className="fl">👤 Contact dans l&apos;entreprise</label>
                 <ContactPicker
@@ -533,13 +553,11 @@ export default function JobModal({
                   placeholder="Prénom Nom — DRH, manager, relation réseau..."
                 />
               </div>
-
               <div style={{ marginBottom: 14 }}>
                 <label className="fl">💡 Pourquoi cette entreprise ?</label>
                 <textarea className="fi" value={spontMotivation} onChange={e => setSpontMotivation(e.target.value)}
                   placeholder="Leader dans son secteur, culture d'innovation..." rows={4} style={{ resize: 'vertical', minHeight: 100 }} />
               </div>
-
               <div style={{ marginBottom: 14 }}>
                 <label className="fl">📝 Notes personnelles</label>
                 <textarea className="fi" value={spontNotes} onChange={e => setSpontNotes(e.target.value)}
