@@ -301,10 +301,12 @@ export default function DashboardPage() {
       />
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+        {/* ── Topbar ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', borderBottom: '2px solid #111', flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#111' }}>
+            <div style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#111' }}>
               Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
             </div>
           </div>
@@ -315,6 +317,7 @@ export default function DashboardPage() {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
 
+          {/* ── Stats ── */}
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: '1.25rem' }}>
               {[
@@ -325,19 +328,36 @@ export default function DashboardPage() {
                 { l: 'Contacts',     v: contacts.length,           c: '#888' },
               ].map(s => (
                 <div key={s.l} className="stat-card">
-                  <div style={{ fontSize: 9, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 900, color: s.c }}>{s.v}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 900, color: s.c }}>{s.v}</div>
                 </div>
               ))}
             </div>
           )}
 
+          {/* ── Calendrier ── */}
           {['kanban', 'list'].includes(view) && (
             <DashboardCalendar
               jobs={jobs}
               onJobClick={handleCalendarJobClick}
               onDateChange={handleCalendarDateChange}
             />
+          )}
+
+          {/* ── Titre section Candidatures ── */}
+          {view === 'kanban' && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              marginBottom: '0.75rem', marginTop: '1rem',
+              paddingBottom: '0.5rem', borderBottom: '2px solid #111',
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Candidatures
+              </div>
+              <div style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>
+                {jobs.length} offre{jobs.length > 1 ? 's' : ''}
+              </div>
+            </div>
           )}
 
           {view === 'kanban' && (
