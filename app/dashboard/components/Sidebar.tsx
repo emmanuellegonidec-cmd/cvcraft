@@ -16,12 +16,12 @@ interface SidebarProps {
   onSettings: () => void;
 }
 
-const RECHERCHE_ITEMS: { id: View; label: string; icon: string }[] = [
-  { id: 'kanban',   label: 'Tableau de bord', icon: '▦' },
-  { id: 'list',     label: 'Candidatures',    icon: '▤' },
-  { id: 'contacts', label: 'Contacts',        icon: '⁋' },
-  { id: 'agenda',   label: 'Entretiens',      icon: '▦' },
-  { id: 'stats',    label: 'Statistiques',    icon: '▨' },
+const RECHERCHE_ITEMS: { id: View; label: string }[] = [
+  { id: 'kanban',   label: 'Tableau de bord' },
+  { id: 'list',     label: 'Candidatures'    },
+  { id: 'contacts', label: 'Contacts'        },
+  { id: 'agenda',   label: 'Entretiens'      },
+  { id: 'stats',    label: 'Statistiques'    },
 ];
 
 export default function Sidebar({
@@ -60,14 +60,15 @@ export default function Sidebar({
       background: '#0f0f0f',
       display: 'flex',
       flexDirection: 'column',
-      height: '100vh',
+      height: '100vh',        // hauteur fixe plein écran
       position: 'sticky',
       top: 0,
       fontFamily: 'Montserrat, sans-serif',
       borderRight: '1px solid #1e1e1e',
+      overflow: 'hidden',     // évite tout débordement global
     }}>
 
-      {/* ── Logo ── */}
+      {/* ── Logo — hauteur fixe ── */}
       <div
         onClick={() => router.push('/')}
         style={{
@@ -77,18 +78,15 @@ export default function Sidebar({
           display: 'flex',
           alignItems: 'center',
           gap: 10,
+          flexShrink: 0,      // ne se compresse jamais
         }}
       >
         <div style={{
-          width: 26,
-          height: 26,
+          width: 26, height: 26,
           background: '#E8151B',
           borderRadius: 5,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          fontSize: 13,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, fontSize: 13,
         }}>
           🎯
         </div>
@@ -98,37 +96,28 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* ── Stats ── */}
+      {/* ── Stats — hauteur fixe ── */}
       <div style={{
         padding: '10px 12px',
         borderBottom: '1px solid #1e1e1e',
         display: 'flex',
-        gap: 0,
+        flexShrink: 0,        // ne se compresse jamais
       }}>
         <StatBadge label="offres"     value={jobCount} />
         <StatBadge label="contacts"   value={contactCount} />
         <StatBadge label="entretiens" value={interviewCount} />
       </div>
 
-      {/* ── Nav principale ── */}
+      {/* ── Nav — flex:1 avec overflow scroll ── */}
       <div style={{
-        flex: 1,
+        flex: 1,              // prend tout l'espace disponible entre stats et profil
+        overflowY: 'auto',   // scroll si le contenu dépasse
         padding: '14px 10px 8px',
         display: 'flex',
         flexDirection: 'column',
         gap: 1,
-        overflowY: 'auto',
       }}>
-
-        {/* Label section */}
-        <div style={{
-          fontSize: 10,
-          fontWeight: 700,
-          color: '#444',
-          letterSpacing: 1.2,
-          textTransform: 'uppercase',
-          padding: '0 8px 8px',
-        }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>
           Recherche
         </div>
 
@@ -141,7 +130,6 @@ export default function Sidebar({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
                 padding: '9px 12px',
                 border: 'none',
                 borderLeft: isActive ? '3px solid #E8151B' : '3px solid transparent',
@@ -155,7 +143,6 @@ export default function Sidebar({
                 textAlign: 'left',
                 width: '100%',
                 transition: 'all 0.12s',
-                position: 'relative',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
@@ -170,35 +157,12 @@ export default function Sidebar({
                 }
               }}
             >
-              <span style={{ flex: 1 }}>{item.label}</span>
-              {/* Badge uniquement sur Tableau de bord */}
-              {item.id === 'kanban' && jobCount > 0 && (
-                <span style={{
-                  background: '#E8151B',
-                  color: '#fff',
-                  borderRadius: 10,
-                  fontSize: 10,
-                  fontWeight: 800,
-                  padding: '1px 6px',
-                  minWidth: 18,
-                  textAlign: 'center',
-                }}>
-                  {jobCount}
-                </span>
-              )}
+              {item.label}
             </button>
           );
         })}
 
-        {/* ── Section OUTILS ── */}
-        <div style={{
-          fontSize: 10,
-          fontWeight: 700,
-          color: '#444',
-          letterSpacing: 1.2,
-          textTransform: 'uppercase',
-          padding: '16px 8px 8px',
-        }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>
           Outils
         </div>
 
@@ -207,7 +171,7 @@ export default function Sidebar({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            gap: 8,
             padding: '9px 12px',
             border: 'none',
             borderLeft: '3px solid transparent',
@@ -225,14 +189,16 @@ export default function Sidebar({
           onMouseEnter={(e) => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#ccc'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
         >
-          <span style={{ color: '#555', marginRight: 2 }}>+</span>
-          CV Creator
+          <span style={{ color: '#555' }}>+</span> CV Creator
         </button>
-
       </div>
 
-      {/* ── Avatar profil + déconnexion ── */}
-      <div style={{ borderTop: '1px solid #1e1e1e', padding: '10px 10px 8px' }}>
+      {/* ── Profil + déconnexion — hauteur fixe, toujours en bas ── */}
+      <div style={{
+        borderTop: '1px solid #1e1e1e',
+        padding: '10px 10px 8px',
+        flexShrink: 0,        // ne se compresse jamais → toujours visible en bas
+      }}>
         <button
           onClick={() => router.push('/dashboard/profile')}
           style={{
@@ -252,16 +218,11 @@ export default function Sidebar({
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#242424'; e.currentTarget.style.background = 'transparent'; }}
         >
           <div style={{
-            width: 30,
-            height: 30,
+            width: 30, height: 30,
             borderRadius: '50%',
             background: '#E8151B',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 900,
-            fontSize: 12,
-            color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 900, fontSize: 12, color: '#fff',
             flexShrink: 0,
           }}>
             {initials}
