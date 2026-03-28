@@ -12,8 +12,6 @@ import { Stage, formatRelative, getSubStatusLabel } from './types';
 import { HeartDisplay } from './HeartComponents';
 
 // ─── Config cartouches SOURCE ──────────────────────────────────────────────────
-// Fond coloré plein + pill très arrondi
-// Les sources inconnues (texte libre) affichent un badge gris avec le texte brut
 const SOURCE_MAP: Record<string, { bg: string; color: string; label: string }> = {
   'linkedin':              { bg: '#0A66C2', color: '#fff',    label: 'LinkedIn' },
   'indeed':                { bg: '#003A9B', color: '#fff',    label: 'Indeed' },
@@ -34,15 +32,10 @@ const SOURCE_MAP: Record<string, { bg: string; color: string; label: string }> =
   'autre':                 { bg: '#888',    color: '#fff',    label: 'Autre' },
 };
 
-// 'file' n'est PAS dans SOURCE_MAP — ce n'est pas une source, c'est un mode d'import
-// Toute source non reconnue (texte libre) → badge gris avec le texte brut
-
 function getSourceBadge(source?: string) {
-  if (!source || source === 'file') return null; // 'file' = pas de badge
+  if (!source || source === 'file') return null;
   const key = source.toLowerCase().trim();
-  // Source connue → badge coloré
   if (SOURCE_MAP[key]) return SOURCE_MAP[key];
-  // Source inconnue (texte libre, ex: "Cabinet Michael Page") → badge gris avec texte brut
   const label = source.length > 18 ? source.slice(0, 16) + '…' : source;
   return { bg: '#666', color: '#fff', label };
 }
@@ -55,11 +48,9 @@ function DraggableCard({ job, colId, stages, onClick }: {
     id: job.id, data: { job, fromColId: colId },
   });
 
-  // Cartouche ÉTAPE : fond blanc crème, bordure dorée, coins carrés
   const subLabel = colId === 'in_progress'
     ? getSubStatusLabel((job as any).sub_status, stages) : null;
 
-  // Cartouche SOURCE : fond coloré plein, pill très arrondi
   const sourceBadge = getSourceBadge((job as any).source_platform);
 
   return (
@@ -73,16 +64,15 @@ function DraggableCard({ job, colId, stages, onClick }: {
         touchAction: 'none',
       }}
     >
-      <div style={{ fontSize: 9, color: '#888', fontWeight: 600, marginBottom: 2 }}>{job.company}</div>
-      <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 5 }}>{job.title}</div>
+      <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 3 }}>{job.company}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{job.title}</div>
 
-      {/* SOURCE (pill coloré) + ÉTAPE (bordure seule) — styles opposés, impossible de confondre */}
       {(sourceBadge || subLabel) && (
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 4, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5, alignItems: 'center' }}>
           {sourceBadge && (
             <span style={{
               background: sourceBadge.bg, color: sourceBadge.color,
-              fontSize: 9, fontWeight: 800,
+              fontSize: 10, fontWeight: 800,
               padding: '2px 8px', borderRadius: 20,
               lineHeight: 1.4, whiteSpace: 'nowrap',
             }}>
@@ -93,7 +83,7 @@ function DraggableCard({ job, colId, stages, onClick }: {
             <span style={{
               background: '#FFFBF0', color: '#B8900A',
               border: '1.5px solid #B8900A',
-              fontSize: 9, fontWeight: 700,
+              fontSize: 10, fontWeight: 700,
               padding: '1px 6px', borderRadius: 4,
               lineHeight: 1.4, whiteSpace: 'nowrap',
             }}>
@@ -104,14 +94,14 @@ function DraggableCard({ job, colId, stages, onClick }: {
       )}
 
       {(job.location || (job as any).salary_text) && (
-        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 2 }}>
+        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 3 }}>
           {job.location && (
-            <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0', fontSize: 9 }}>
+            <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0', fontSize: 10 }}>
               {job.location}
             </span>
           )}
           {(job as any).salary_text && (
-            <span className="pill" style={{ background: '#E8F5EE', color: '#1A7A4A', border: '1px solid #1A7A4A', fontSize: 9 }}>
+            <span className="pill" style={{ background: '#E8F5EE', color: '#1A7A4A', border: '1px solid #1A7A4A', fontSize: 10 }}>
               💰 {(job as any).salary_text}
             </span>
           )}
@@ -138,10 +128,10 @@ function DroppableColumn({ col, jobs, stages, onCardClick, onAddJob, isDragOver 
       transition: 'background .15s, border .15s',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.3 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.3 }}>
           {col.label}
         </div>
-        <div style={{ width: 18, height: 18, borderRadius: '50%', background: col.color + '22', color: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
+        <div style={{ width: 20, height: 20, borderRadius: '50%', background: col.color + '22', color: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
           {jobs.length}
         </div>
       </div>
@@ -157,8 +147,8 @@ function DroppableColumn({ col, jobs, stages, onCardClick, onAddJob, isDragOver 
 function GhostCard({ job }: { job: Job }) {
   return (
     <div className="jcard" style={{ opacity: 0.9, transform: 'rotate(2deg)', boxShadow: '4px 4px 0 #E8151B', cursor: 'grabbing', pointerEvents: 'none', minWidth: 160 }}>
-      <div style={{ fontSize: 9, color: '#888', fontWeight: 600, marginBottom: 2 }}>{job.company}</div>
-      <div style={{ fontSize: 11, fontWeight: 700 }}>{job.title}</div>
+      <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 2 }}>{job.company}</div>
+      <div style={{ fontSize: 13, fontWeight: 700 }}>{job.title}</div>
     </div>
   );
 }

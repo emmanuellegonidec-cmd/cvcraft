@@ -60,15 +60,15 @@ export default function Sidebar({
       background: '#0f0f0f',
       display: 'flex',
       flexDirection: 'column',
-      height: '100vh',        // hauteur fixe plein écran
+      height: '100vh',
       position: 'sticky',
       top: 0,
       fontFamily: 'Montserrat, sans-serif',
       borderRight: '1px solid #1e1e1e',
-      overflow: 'hidden',     // évite tout débordement global
+      overflow: 'hidden',
     }}>
 
-      {/* ── Logo — hauteur fixe ── */}
+      {/* ── Logo ── */}
       <div
         onClick={() => router.push('/')}
         style={{
@@ -78,7 +78,7 @@ export default function Sidebar({
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          flexShrink: 0,      // ne se compresse jamais
+          flexShrink: 0,
         }}
       >
         <div style={{
@@ -96,22 +96,22 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* ── Stats — hauteur fixe ── */}
+      {/* ── Stats ── */}
       <div style={{
         padding: '10px 12px',
         borderBottom: '1px solid #1e1e1e',
         display: 'flex',
-        flexShrink: 0,        // ne se compresse jamais
+        flexShrink: 0,
       }}>
         <StatBadge label="offres"     value={jobCount} />
         <StatBadge label="contacts"   value={contactCount} />
         <StatBadge label="entretiens" value={interviewCount} />
       </div>
 
-      {/* ── Nav — flex:1 avec overflow scroll ── */}
+      {/* ── Nav ── */}
       <div style={{
-        flex: 1,              // prend tout l'espace disponible entre stats et profil
-        overflowY: 'auto',   // scroll si le contenu dépasse
+        flex: 1,
+        overflowY: 'auto',
         padding: '14px 10px 8px',
         display: 'flex',
         flexDirection: 'column',
@@ -138,7 +138,7 @@ export default function Sidebar({
                 color: isActive ? '#fff' : '#888',
                 fontFamily: 'Montserrat, sans-serif',
                 fontWeight: isActive ? 700 : 500,
-                fontSize: 13,
+                fontSize: 14,
                 cursor: 'pointer',
                 textAlign: 'left',
                 width: '100%',
@@ -180,7 +180,7 @@ export default function Sidebar({
             color: '#888',
             fontFamily: 'Montserrat, sans-serif',
             fontWeight: 500,
-            fontSize: 13,
+            fontSize: 14,
             cursor: 'pointer',
             textAlign: 'left',
             width: '100%',
@@ -193,11 +193,11 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* ── Profil + déconnexion — hauteur fixe, toujours en bas ── */}
+      {/* ── Profil + déconnexion ── */}
       <div style={{
         borderTop: '1px solid #1e1e1e',
         padding: '10px 10px 8px',
-        flexShrink: 0,        // ne se compresse jamais → toujours visible en bas
+        flexShrink: 0,
       }}>
         <button
           onClick={() => router.push('/dashboard/profile')}
@@ -222,16 +222,16 @@ export default function Sidebar({
             borderRadius: '50%',
             background: '#E8151B',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 900, fontSize: 12, color: '#fff',
+            fontWeight: 900, fontSize: 13, color: '#fff',
             flexShrink: 0,
           }}>
             {initials}
           </div>
           <div style={{ textAlign: 'left', overflow: 'hidden' }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {displayName}
             </div>
-            <div style={{ fontWeight: 500, fontSize: 10, color: '#555' }}>Mon profil</div>
+            <div style={{ fontWeight: 500, fontSize: 11, color: '#555' }}>Mon profil</div>
           </div>
         </button>
 
@@ -250,7 +250,7 @@ export default function Sidebar({
             color: '#444',
             fontFamily: 'Montserrat, sans-serif',
             fontWeight: 600,
-            fontSize: 11,
+            fontSize: 12,
             cursor: 'pointer',
             transition: 'color 0.12s',
           }}
@@ -267,8 +267,8 @@ export default function Sidebar({
 function StatBadge({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ flex: 1, textAlign: 'center' }}>
-      <div style={{ fontWeight: 900, fontSize: 17, color: '#fff', lineHeight: 1 }}>{value}</div>
-      <div style={{ fontWeight: 600, fontSize: 9, color: '#444', marginTop: 3, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ fontWeight: 900, fontSize: 22, color: '#fff', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontWeight: 600, fontSize: 10, color: '#444', marginTop: 3, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
     </div>
   );
 }
