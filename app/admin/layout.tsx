@@ -1,15 +1,22 @@
 import { redirect } from 'next/navigation'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
 import AdminNav from '@/components/admin/AdminNav'
+
+type CookieToSet = {
+  name: string
+  value: string
+  options?: CookieOptions
+}
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // 1. Vérifie que l'utilisateur est connecté via les cookies
+  // 1. Vérifie que l'utilisateur est connecté
+  // Pattern identique à lib/supabase/server.ts
   const cookieStore = await cookies()
 
   const supabase = createServerClient(
@@ -20,14 +27,12 @@ export default async function AdminLayout({
         getAll() {
           return cookieStore.getAll()
         },
-        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+        setAll(cookiesToSet: CookieToSet[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options as Parameters<typeof cookieStore.set>[2])
-            )
-          } catch {
-            // ignoré côté Server Component
-          }
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options)
+            })
+          } catch {}
         },
       },
     }
