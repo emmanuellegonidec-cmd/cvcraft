@@ -25,14 +25,8 @@ const RECHERCHE_ITEMS: { id: View; label: string }[] = [
 ];
 
 export default function Sidebar({
-  view,
-  setView,
-  firstName,
-  userEmail,
-  jobCount,
-  contactCount,
-  interviewCount,
-  onSettings,
+  view, setView, firstName, userEmail,
+  jobCount, contactCount, interviewCount, onSettings,
 }: SidebarProps) {
   const router = useRouter();
 
@@ -55,14 +49,10 @@ export default function Sidebar({
 
   return (
     <aside style={{
-      width: 200,
-      minWidth: 200,
+      width: 200, minWidth: 200,
       background: '#0f0f0f',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      position: 'sticky',
-      top: 0,
+      display: 'flex', flexDirection: 'column',
+      height: '100vh', position: 'sticky', top: 0,
       fontFamily: 'Montserrat, sans-serif',
       borderRight: '1px solid #1e1e1e',
       overflow: 'hidden',
@@ -72,50 +62,23 @@ export default function Sidebar({
       <div
         onClick={() => router.push('/')}
         style={{
-          padding: '18px 16px 14px',
+          padding: '18px 16px 16px',
           borderBottom: '1px solid #1e1e1e',
           cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
           flexShrink: 0,
         }}
       >
-        <div style={{
-          width: 26, height: 26,
-          background: '#E8151B',
-          borderRadius: 5,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, fontSize: 13,
-        }}>
-          🎯
-        </div>
         <div style={{ lineHeight: 1.2 }}>
-          <span style={{ fontWeight: 700, fontSize: 13, color: '#fff' }}>Jean </span>
-          <span style={{ fontWeight: 700, fontSize: 13, color: '#F5C400' }}>find my job</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: '#F5C400' }}>find my Job</span>
         </div>
-      </div>
-
-      {/* ── Stats ── */}
-      <div style={{
-        padding: '10px 12px',
-        borderBottom: '1px solid #1e1e1e',
-        display: 'flex',
-        flexShrink: 0,
-      }}>
-        <StatBadge label="offres"     value={jobCount} />
-        <StatBadge label="contacts"   value={contactCount} />
-        <StatBadge label="entretiens" value={interviewCount} />
       </div>
 
       {/* ── Nav ── */}
       <div style={{
-        flex: 1,
-        overflowY: 'auto',
+        flex: 1, overflowY: 'auto',
         padding: '14px 10px 8px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1,
+        display: 'flex', flexDirection: 'column', gap: 1,
       }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>
           Recherche
@@ -128,8 +91,7 @@ export default function Sidebar({
               key={item.id}
               onClick={() => setView(item.id)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
+                display: 'flex', alignItems: 'center',
                 padding: '9px 12px',
                 border: 'none',
                 borderLeft: isActive ? '3px solid #E8151B' : '3px solid transparent',
@@ -139,22 +101,14 @@ export default function Sidebar({
                 fontFamily: 'Montserrat, sans-serif',
                 fontWeight: isActive ? 700 : 500,
                 fontSize: 14,
-                cursor: 'pointer',
-                textAlign: 'left',
-                width: '100%',
+                cursor: 'pointer', textAlign: 'left', width: '100%',
                 transition: 'all 0.12s',
               }}
               onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = '#161616';
-                  e.currentTarget.style.color = '#ccc';
-                }
+                if (!isActive) { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#ccc'; }
               }}
               onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#888';
-                }
+                if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }
               }}
             >
               {item.label}
@@ -169,21 +123,12 @@ export default function Sidebar({
         <button
           onClick={() => router.push('/dashboard/editor')}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
+            display: 'flex', alignItems: 'center', gap: 8,
             padding: '9px 12px',
-            border: 'none',
-            borderLeft: '3px solid transparent',
-            borderRadius: 0,
-            background: 'transparent',
-            color: '#888',
-            fontFamily: 'Montserrat, sans-serif',
-            fontWeight: 500,
-            fontSize: 14,
-            cursor: 'pointer',
-            textAlign: 'left',
-            width: '100%',
+            border: 'none', borderLeft: '3px solid transparent', borderRadius: 0,
+            background: 'transparent', color: '#888',
+            fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14,
+            cursor: 'pointer', textAlign: 'left', width: '100%',
             transition: 'all 0.12s',
           }}
           onMouseEnter={(e) => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#ccc'; }}
@@ -194,36 +139,24 @@ export default function Sidebar({
       </div>
 
       {/* ── Profil + déconnexion ── */}
-      <div style={{
-        borderTop: '1px solid #1e1e1e',
-        padding: '10px 10px 8px',
-        flexShrink: 0,
-      }}>
+      <div style={{ borderTop: '1px solid #1e1e1e', padding: '10px 10px 8px', flexShrink: 0 }}>
         <button
           onClick={() => router.push('/dashboard/profile')}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            width: '100%',
-            padding: '9px 12px',
-            border: '1px solid #242424',
-            borderRadius: 8,
-            background: 'transparent',
-            cursor: 'pointer',
-            fontFamily: 'Montserrat, sans-serif',
-            transition: 'all 0.12s',
+            display: 'flex', alignItems: 'center', gap: 10,
+            width: '100%', padding: '9px 12px',
+            border: '1px solid #242424', borderRadius: 8,
+            background: 'transparent', cursor: 'pointer',
+            fontFamily: 'Montserrat, sans-serif', transition: 'all 0.12s',
           }}
           onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#F5C400'; e.currentTarget.style.background = '#161616'; }}
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#242424'; e.currentTarget.style.background = 'transparent'; }}
         >
           <div style={{
-            width: 30, height: 30,
-            borderRadius: '50%',
+            width: 30, height: 30, borderRadius: '50%',
             background: '#E8151B',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 900, fontSize: 13, color: '#fff',
-            flexShrink: 0,
+            fontWeight: 900, fontSize: 13, color: '#fff', flexShrink: 0,
           }}>
             {initials}
           </div>
@@ -238,21 +171,12 @@ export default function Sidebar({
         <button
           onClick={handleLogout}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            width: '100%',
-            padding: '7px 12px',
-            marginTop: 2,
-            border: 'none',
-            borderRadius: 6,
-            background: 'transparent',
-            color: '#444',
-            fontFamily: 'Montserrat, sans-serif',
-            fontWeight: 600,
-            fontSize: 12,
-            cursor: 'pointer',
-            transition: 'color 0.12s',
+            display: 'flex', alignItems: 'center', gap: 8,
+            width: '100%', padding: '7px 12px', marginTop: 2,
+            border: 'none', borderRadius: 6,
+            background: 'transparent', color: '#444',
+            fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 12,
+            cursor: 'pointer', transition: 'color 0.12s',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.color = '#E8151B')}
           onMouseLeave={(e) => (e.currentTarget.style.color = '#444')}
@@ -261,14 +185,5 @@ export default function Sidebar({
         </button>
       </div>
     </aside>
-  );
-}
-
-function StatBadge({ label, value }: { label: string; value: number }) {
-  return (
-    <div style={{ flex: 1, textAlign: 'center' }}>
-      <div style={{ fontWeight: 900, fontSize: 22, color: '#fff', lineHeight: 1 }}>{value}</div>
-      <div style={{ fontWeight: 600, fontSize: 10, color: '#444', marginTop: 3, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-    </div>
   );
 }

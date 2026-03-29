@@ -109,7 +109,7 @@ function DraggableCard({ job, colId, stages, onClick }: {
       )}
 
       {(job as any).favorite > 0 && <HeartDisplay value={(job as any).favorite} />}
-      <div className="date-tag">📅 {formatRelative(job.created_at)}</div>
+      <div className="date-tag" style={{ color: '#555' }}>📅 {formatRelative(job.created_at)}</div>
     </div>
   );
 }

@@ -22,11 +22,11 @@ type CalEvent = {
 };
 
 const EV_STYLE: Record<CalEvent['type'], React.CSSProperties> = {
-  envie:     { background: '#111', color: '#F5C400' },
-  postule:   { background: '#DBEAFE', color: '#1E40AF' },
-  entretien: { background: '#FEE2E2', color: '#991B1B', borderLeft: '3px solid #E8151B' },
-  offre:     { background: '#FEF9C3', color: '#92400E', borderLeft: '3px solid #F5C400' },
-  archive:   { background: '#F0F0F0', color: '#999', borderLeft: '3px solid #CCC' },
+  envie:     { background: '#1C1C1E', color: '#fff' },
+  postule:   { background: '#1A4A8A', color: '#fff' },
+  entretien: { background: '#E8151B', color: '#fff' },
+  offre:     { background: '#1A7A4A', color: '#fff' },
+  archive:   { background: '#999', color: '#fff' },
 };
 
 const EV_LABEL: Record<CalEvent['type'], string> = {
@@ -391,7 +391,7 @@ export default function DashboardCalendar({
           {visible && (
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {(Object.keys(EV_LABEL) as CalEvent['type'][]).map(t => (
-                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#666', fontWeight: 600 }}>
+                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#333', fontWeight: 700 }}>
                   <div style={{ width: 9, height: 9, borderRadius: 2, background: (EV_STYLE[t] as any).background }} />
                   {EV_LABEL[t]}
                 </div>
