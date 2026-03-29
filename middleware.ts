@@ -29,16 +29,20 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Rafraîchit la session uniquement — aucune redirection
-  await supabase.auth.getUser()
+  // Rafraîchit la session
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Si pas connecté et essaie d'accéder à /admin → redirige vers login avec ?next=/admin
+  if (!user && request.nextUrl.pathname.startsWith('/admin')) {
+    const loginUrl = new URL('/auth/login', request.url)
+    loginUrl.searchParams.set('next', request.nextUrl.pathname)
+    return NextResponse.redirect(loginUrl)
+  }
 
   return response
 }
 
 export const config = {
-  // Exclut les routes auth, api, fichiers statiques
-  matcher: [
-    '/dashboard/:path*',
-    '/admin/:path*',
-  ],
+  // Uniquement /dashboard et /admin — jamais /auth
+  matcher: ['/dashboard/:path*', '/admin/:path*'],
 }
