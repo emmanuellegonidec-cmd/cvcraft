@@ -1,101 +1,83 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+'use client'
 
-async function checkAdminAndGetStats() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 
-  if (!user) {
-    redirect('/auth/login')
-  }
-
-  const adminClient = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-
-  // Vérifie que l'email est dans admin_users
-  const { data: adminUser } = await adminClient
-    .from('admin_users')
-    .select('email')
-    .eq('email', user.email!)
-    .single()
-
-  if (!adminUser) {
-    redirect('/dashboard')
-  }
-
-  // Stats
-  const now = new Date()
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-
-  const { count: totalUsers } = await adminClient
-    .from('user_profiles')
-    .select('*', { count: 'exact', head: true })
-
-  const { count: newUsersThisMonth } = await adminClient
-    .from('user_profiles')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', firstDayOfMonth)
-
-  const { count: totalJobs } = await adminClient
-    .from('jobs')
-    .select('*', { count: 'exact', head: true })
-
-  const { count: newJobsThisMonth } = await adminClient
-    .from('jobs')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', firstDayOfMonth)
-
-  const { data: jobsData } = await adminClient
-    .from('jobs')
-    .select('user_id')
-
-  const activeUsers = Array.from(new Set((jobsData ?? []).map((j: { user_id: string }) => j.user_id))).length
-  const activationRate = totalUsers ? Math.round((activeUsers / totalUsers) * 100) : 0
-
-  const { data: recentUsers } = await adminClient
-    .from('user_profiles')
-    .select('user_id, first_name, last_name, created_at')
-    .order('created_at', { ascending: false })
-    .limit(8)
-
-  // Récupère les emails des utilisateurs récents
-  const recentUsersWithEmail = await Promise.all(
-    (recentUsers ?? []).map(async (u: { user_id: string; first_name?: string; last_name?: string; created_at: string }) => {
-      const { data: authUser } = await adminClient.auth.admin.getUserById(u.user_id)
-      return {
-        ...u,
-        email: authUser?.user?.email ?? '—',
-      }
-    })
-  )
-
-  const { count: publishedArticles } = await adminClient
-    .from('articles')
-    .select('*', { count: 'exact', head: true })
-    .eq('published', true)
-
-  return {
-    totalUsers: totalUsers ?? 0,
-    newUsersThisMonth: newUsersThisMonth ?? 0,
-    totalJobs: totalJobs ?? 0,
-    newJobsThisMonth: newJobsThisMonth ?? 0,
-    activationRate,
-    recentUsers: recentUsersWithEmail,
-    publishedArticles: publishedArticles ?? 0,
-  }
+type Stats = {
+  totalUsers: number
+  newUsersThisMonth: number
+  totalJobs: number
+  newJobsThisMonth: number
+  activationRate: number
+  publishedArticles: number
+  recentUsers: { id: string; email: string; first_name?: string; last_name?: string; created_at: string }[]
 }
 
-export default async function AdminDashboard() {
-  const stats = await checkAdminAndGetStats()
+export default function AdminDashboard() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [authorized, setAuthorized] = useState(false)
+  const [stats, setStats] = useState<Stats | null>(null)
+
+  useEffect(() => {
+    const init = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        router.replace('/auth/login')
+        return
+      }
+
+      // Vérifie si admin
+      const { data: adminUser } = await supabase
+        .from('admin_users')
+        .select('email')
+        .eq('email', session.user.email!)
+        .single()
+
+      if (!adminUser) {
+        router.replace('/dashboard')
+        return
+      }
+
+      setAuthorized(true)
+
+      // Charge les stats via l'API
+      try {
+        const res = await fetch('/api/admin/stats', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setStats(data)
+        }
+      } catch (e) {
+        console.error('Erreur chargement stats', e)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    init()
+  }, [router])
+
+  if (loading || !authorized) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-400 font-semibold text-sm">Chargement...</div>
+      </div>
+    )
+  }
 
   const statCards = [
-    { label: 'Inscrits total', value: stats.totalUsers, sub: `+${stats.newUsersThisMonth} ce mois`, color: '#F5C400', icon: '👥' },
-    { label: 'Offres créées', value: stats.totalJobs, sub: `+${stats.newJobsThisMonth} ce mois`, color: '#E8151B', icon: '💼' },
-    { label: "Taux d'activation", value: `${stats.activationRate}%`, sub: 'Inscrits avec ≥1 offre', color: '#22c55e', icon: '🚀' },
-    { label: 'Articles publiés', value: stats.publishedArticles, sub: 'Sur la landing page', color: '#6366f1', icon: '✍️' },
+    { label: 'Inscrits total', value: stats?.totalUsers ?? 0, sub: `+${stats?.newUsersThisMonth ?? 0} ce mois`, color: '#F5C400', icon: '👥' },
+    { label: 'Offres créées', value: stats?.totalJobs ?? 0, sub: `+${stats?.newJobsThisMonth ?? 0} ce mois`, color: '#E8151B', icon: '💼' },
+    { label: "Taux d'activation", value: `${stats?.activationRate ?? 0}%`, sub: 'Inscrits avec ≥1 offre', color: '#22c55e', icon: '🚀' },
+    { label: 'Articles publiés', value: stats?.publishedArticles ?? 0, sub: 'Sur la landing page', color: '#6366f1', icon: '✍️' },
   ]
 
   return (
@@ -132,11 +114,11 @@ export default async function AdminDashboard() {
             </tr>
           </thead>
           <tbody>
-            {stats.recentUsers.length === 0 ? (
+            {!stats?.recentUsers?.length ? (
               <tr><td colSpan={3} className="py-6 text-center text-gray-400">Aucun inscrit pour l'instant</td></tr>
             ) : (
               stats.recentUsers.map((u) => (
-                <tr key={u.user_id} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="py-3 font-medium">
                     {u.first_name || u.last_name ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() : '—'}
                   </td>
