@@ -1,7 +1,49 @@
 import Link from 'next/link';
 import NewsletterForm from './NewsletterForm';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
-export default function LandingPage() {
+type Article = {
+  id: string
+  title: string
+  slug: string
+  excerpt: string | null
+  cover_image_url: string | null
+  category: string
+  published_at: string | null
+  created_at: string
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  'Conseils': '#111',
+  'CV & Lettre': '#E8151B',
+  'Entretien': '#1A6FDB',
+  'Reconversion': '#6366f1',
+  "Marché de l'emploi": '#1A7A4A',
+  'Témoignage': '#B8900A',
+  'Outils': '#555',
+}
+
+async function getPublishedArticles(): Promise<Article[]> {
+  try {
+    const adminClient = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const { data } = await adminClient
+      .from('articles')
+      .select('id, title, slug, excerpt, cover_image_url, category, published_at, created_at')
+      .eq('published', true)
+      .order('published_at', { ascending: false })
+      .limit(3)
+    return data ?? []
+  } catch {
+    return []
+  }
+}
+
+export default async function LandingPage() {
+  const articles = await getPublishedArticles()
+
   return (
     <div style={{ fontFamily: "'Montserrat', sans-serif", background: '#FFFFFF', color: '#111111', lineHeight: '1.6' }}>
       <style>{`
@@ -225,31 +267,22 @@ export default function LandingPage() {
           <div style={{ display:'inline-block',background:'#F5C400',border:'2px solid rgba(255,255,255,0.2)',borderRadius:20,padding:'5px 16px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1rem',textTransform:'uppercase',letterSpacing:'0.05em' }}>Simple comme bonjour</div>
           <h2 style={{ fontSize:'2.5rem',color:'#fff',marginBottom:'0.75rem',fontWeight:900,letterSpacing:'-0.02em' }}>Comment ça marche ?</h2>
           <p style={{ color:'rgba(255,255,255,0.6)',marginBottom:'3.5rem',fontWeight:500 }}>Quatre étapes pour candidater avec méthode</p>
-
-          {/* Rangée des numéros avec ligne de connexion */}
           <div className="steps-numbers">
-            {[
-              { num:'1', ia:false },
-              { num:'2', ia:false },
-              { num:'3', ia:false },
-              { num:'4', ia:true },
-            ].map((s, i, arr) => (
+            {[{ num:'1',ia:false },{ num:'2',ia:false },{ num:'3',ia:false },{ num:'4',ia:true }].map((s,i,arr) => (
               <div key={s.num} className="step-num-wrap">
-                <div className="step-circle" style={{ background: s.ia ? '#E8151B' : '#F5C400', color: s.ia ? '#fff' : '#111' }}>{s.num}</div>
-                {i < arr.length - 1 && <div className="step-line" />}
+                <div className="step-circle" style={{ background:s.ia?'#E8151B':'#F5C400',color:s.ia?'#fff':'#111' }}>{s.num}</div>
+                {i < arr.length-1 && <div className="step-line" />}
               </div>
             ))}
           </div>
-
-          {/* Cartes de même hauteur */}
           <div className="steps-grid">
             {[
-              { num:'1', title:'Vous créez votre profil', desc:"Un compte sécurisé et c'est parti. Jean prépare la base. Prêt à postuler sans repartir de zéro à chaque fois.", ia:false },
-              { num:'2', title:'Vous ajoutez vos candidatures', desc:"Importez une offre ou ajoutez-la manuellement. Chaque candidature a son propre parcours de suivi entièrement personnalisable.", ia:false },
-              { num:'3', title:'Vous suivez sans vous perdre', desc:"Toutes vos candidatures au même endroit. Vous savez où vous en êtes, à chaque instant, sans réfléchir.", ia:false },
-              { num:'4', title:"L'IA vous aide à mieux candidater", desc:"Jean vous donne un coup de main quand vous en avez besoin — améliorer votre CV, comprendre une offre, préparer vos entretiens.", ia:true },
+              { num:'1',title:'Vous créez votre profil',desc:"Un compte sécurisé et c'est parti. Jean prépare la base. Prêt à postuler sans repartir de zéro à chaque fois.",ia:false },
+              { num:'2',title:'Vous ajoutez vos candidatures',desc:"Importez une offre ou ajoutez-la manuellement. Chaque candidature a son propre parcours de suivi entièrement personnalisable.",ia:false },
+              { num:'3',title:'Vous suivez sans vous perdre',desc:"Toutes vos candidatures au même endroit. Vous savez où vous en êtes, à chaque instant, sans réfléchir.",ia:false },
+              { num:'4',title:"L'IA vous aide à mieux candidater",desc:"Jean vous donne un coup de main quand vous en avez besoin — améliorer votre CV, comprendre une offre, préparer vos entretiens.",ia:true },
             ].map(s => (
-              <div key={s.num} className={s.ia ? 'step-card-ia' : 'step-card-normal'}>
+              <div key={s.num} className={s.ia?'step-card-ia':'step-card-normal'}>
                 <div style={{ fontSize:11,fontWeight:800,color:'#F5C400',letterSpacing:'0.08em',marginBottom:10,textTransform:'uppercase' }}>Étape {s.num}</div>
                 <h4 style={{ color:'#fff',fontSize:'1rem',fontWeight:800,marginBottom:10,lineHeight:1.3 }}>{s.title}</h4>
                 <p style={{ color:'rgba(255,255,255,0.6)',fontSize:13,lineHeight:1.7,fontWeight:500 }}>{s.desc}</p>
@@ -317,7 +350,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* BLOG */}
+      {/* BLOG — dynamique depuis Supabase */}
       <section style={{ padding:'5rem 2rem',background:'#FAFAFA',borderBottom:'2.5px solid #111' }}>
         <div style={{ maxWidth:1400,margin:'0 auto' }}>
           <div style={{ textAlign:'center',marginBottom:'3rem' }}>
@@ -325,41 +358,50 @@ export default function LandingPage() {
             <h2 style={{ fontSize:'2.2rem',fontWeight:900,letterSpacing:'-0.02em' }}>Jean a quelque chose à vous dire</h2>
             <p style={{ color:'#888',marginTop:'0.5rem',fontWeight:500 }}>Nos conseils pour booster votre recherche d&apos;emploi</p>
           </div>
-          <div className="blog-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1.5rem' }}>
-            <a href="#" className="blog-card">
-              <div style={{ height:180,background:'linear-gradient(135deg,#111 0%,#333 100%)',display:'flex',alignItems:'center',justifyContent:'center',padding:'1.5rem',position:'relative',overflow:'hidden' }}>
-                <div style={{ position:'absolute',top:12,left:12 }}><span style={{ background:'#F5C400',color:'#111',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.05em' }}>Recrutement</span></div>
-                <div style={{ textAlign:'center' }}><div style={{ fontSize:48 }}>🤖</div><div style={{ fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:8,fontWeight:600 }}>ATS · Intelligence artificielle</div></div>
-              </div>
-              <div style={{ padding:'1.25rem' }}>
-                <h3 style={{ fontSize:16,fontWeight:800,marginBottom:8,letterSpacing:'-0.01em',lineHeight:1.3 }}>C&apos;est quoi un ATS ?</h3>
-                <p style={{ fontSize:13,color:'#555',lineHeight:1.65,marginBottom:12,fontWeight:500 }}>Ces logiciels qui filtrent votre CV avant même qu&apos;un humain le lise. Comment les contourner et mettre toutes les chances de votre côté.</p>
-                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}><div style={{ fontSize:11,color:'#888',fontWeight:600 }}>5 min de lecture</div><div style={{ fontSize:12,fontWeight:800,color:'#E8151B' }}>Lire → </div></div>
-              </div>
-            </a>
-            <a href="#" className="blog-card">
-              <div style={{ height:180,background:'linear-gradient(135deg,#E8151B 0%,#C01116 100%)',display:'flex',alignItems:'center',justifyContent:'center',padding:'1.5rem',position:'relative',overflow:'hidden' }}>
-                <div style={{ position:'absolute',top:12,left:12 }}><span style={{ background:'#F5C400',color:'#111',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.05em' }}>Carrière</span></div>
-                <div style={{ textAlign:'center' }}><div style={{ fontSize:48 }}>💪</div><div style={{ fontSize:11,color:'rgba(255,255,255,0.7)',marginTop:8,fontWeight:600 }}>Senior · Reconversion</div></div>
-              </div>
-              <div style={{ padding:'1.25rem' }}>
-                <h3 style={{ fontSize:16,fontWeight:800,marginBottom:8,letterSpacing:'-0.01em',lineHeight:1.3 }}>Trouver un job après 45 ans, c&apos;est possible !</h3>
-                <p style={{ fontSize:13,color:'#555',lineHeight:1.65,marginBottom:12,fontWeight:500 }}>Stratégies concrètes pour valoriser votre expérience, contourner les biais et décrocher des entretiens après 45 ans.</p>
-                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}><div style={{ fontSize:11,color:'#888',fontWeight:600 }}>7 min de lecture</div><div style={{ fontSize:12,fontWeight:800,color:'#E8151B' }}>Lire → </div></div>
-              </div>
-            </a>
-            <a href="#" className="blog-card">
-              <div style={{ height:180,background:'linear-gradient(135deg,#1A4A8A 0%,#1A6FDB 100%)',display:'flex',alignItems:'center',justifyContent:'center',padding:'1.5rem',position:'relative',overflow:'hidden' }}>
-                <div style={{ position:'absolute',top:12,left:12 }}><span style={{ background:'#F5C400',color:'#111',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.05em' }}>Chiffres</span></div>
-                <div style={{ textAlign:'center' }}><div style={{ fontSize:48 }}>📊</div><div style={{ fontSize:11,color:'rgba(255,255,255,0.7)',marginTop:8,fontWeight:600 }}>Données · Marché de l&apos;emploi</div></div>
-              </div>
-              <div style={{ padding:'1.25rem' }}>
-                <h3 style={{ fontSize:16,fontWeight:800,marginBottom:8,letterSpacing:'-0.01em',lineHeight:1.3 }}>Les vrais chiffres du recrutement 45 ans et +</h3>
-                <p style={{ fontSize:13,color:'#555',lineHeight:1.65,marginBottom:12,fontWeight:500 }}>Taux de réponse, délais moyens, canaux efficaces… Les données réelles pour calibrer votre recherche d&apos;emploi.</p>
-                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}><div style={{ fontSize:11,color:'#888',fontWeight:600 }}>4 min de lecture</div><div style={{ fontSize:12,fontWeight:800,color:'#E8151B' }}>Lire → </div></div>
-              </div>
-            </a>
-          </div>
+
+          {articles.length === 0 ? (
+            <div style={{ textAlign:'center',padding:'3rem',color:'#888',fontWeight:600,fontSize:15,border:'2px dashed #ddd',borderRadius:12 }}>
+              Les articles arrivent bientôt — revenez vite ! 🚀
+            </div>
+          ) : (
+            <div className="blog-grid" style={{ display:'grid',gridTemplateColumns:`repeat(${Math.min(articles.length,3)},1fr)`,gap:'1.5rem' }}>
+              {articles.map((article) => {
+                const catColor = CATEGORY_COLORS[article.category] ?? '#111'
+                const dateStr = article.published_at
+                  ? new Date(article.published_at).toLocaleDateString('fr-FR',{ day:'numeric',month:'long',year:'numeric' })
+                  : ''
+                return (
+                  <Link key={article.id} href={`/blog/${article.slug}`} className="blog-card">
+                    <div style={{ height:180,background:article.cover_image_url?'transparent':`linear-gradient(135deg,${catColor} 0%,${catColor}cc 100%)`,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden' }}>
+                      {article.cover_image_url ? (
+                        <img src={article.cover_image_url} alt={article.title} style={{ width:'100%',height:'100%',objectFit:'cover' }} />
+                      ) : (
+                        <div style={{ textAlign:'center' }}>
+                          <div style={{ fontSize:48 }}>✍️</div>
+                          <div style={{ fontSize:11,color:'rgba(255,255,255,0.7)',marginTop:8,fontWeight:600 }}>{article.category}</div>
+                        </div>
+                      )}
+                      <div style={{ position:'absolute',top:12,left:12 }}>
+                        <span style={{ background:'#F5C400',color:'#111',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.05em' }}>{article.category}</span>
+                      </div>
+                    </div>
+                    <div style={{ padding:'1.25rem' }}>
+                      <h3 style={{ fontSize:16,fontWeight:800,marginBottom:8,letterSpacing:'-0.01em',lineHeight:1.3 }}>{article.title}</h3>
+                      {article.excerpt && (
+                        <p style={{ fontSize:13,color:'#555',lineHeight:1.65,marginBottom:12,fontWeight:500 }}>
+                          {article.excerpt.length > 100 ? article.excerpt.slice(0,100)+'…' : article.excerpt}
+                        </p>
+                      )}
+                      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+                        <div style={{ fontSize:11,color:'#888',fontWeight:600 }}>{dateStr}</div>
+                        <div style={{ fontSize:12,fontWeight:800,color:'#E8151B' }}>Lire →</div>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -411,12 +453,12 @@ export default function LandingPage() {
           <div>
             <h5 style={{ fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Ressources</h5>
             {[['Guide de démarrage','#'],['Blog','#'],['Templates CV','#'],['Conseils entretien','#'],['Chaîne YouTube','https://www.youtube.com/channel/UCDgezWysIr83yW5dUlkKbSg']].map(([label,href]) => (
-              <a key={label} href={href} className="footer-link" target={href.startsWith('http') ? '_blank' : undefined} rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}>{label}</a>
+              <a key={label} href={href} className="footer-link" target={href.startsWith('http')?'_blank':undefined} rel={href.startsWith('http')?'noopener noreferrer':undefined}>{label}</a>
             ))}
           </div>
           <div>
             <h5 style={{ fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Entreprise</h5>
-            {[['À propos','#'],['Tarifs','#'],['Contact','mailto:contact@jeanfindmyjob.fr'],['Confidentialité','#'],['CGU','#']].map(([label,href]) => (
+            {[['À propos','#'],['Tarifs','#'],['Contact','mailto:hello@jeanfindmyjob.fr'],['Confidentialité','#'],['CGU','#']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
           </div>
