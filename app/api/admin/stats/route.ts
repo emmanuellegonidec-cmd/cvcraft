@@ -11,19 +11,15 @@ function getAdminClient() {
 async function checkAdmin(req: NextRequest): Promise<boolean> {
   const authHeader = req.headers.get('authorization')
   if (!authHeader?.startsWith('Bearer ')) return false
-
   const token = authHeader.replace('Bearer ', '').trim()
   const adminClient = getAdminClient()
-
   const { data: { user }, error } = await adminClient.auth.getUser(token)
   if (error || !user?.email) return false
-
   const { data } = await adminClient
     .from('admin_users')
     .select('email')
     .eq('email', user.email)
     .single()
-
   return !!data
 }
 
@@ -35,15 +31,15 @@ export async function GET(req: NextRequest) {
   const now = new Date()
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-  const { count: totalUsers } = await adminClient
-    .from('user_profiles')
-    .select('*', { count: 'exact', head: true })
+  // Inscrits depuis auth.users (source fiable)
+  const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+  const allUsers = authData?.users ?? []
+  const totalUsers = allUsers.length
+  const newUsersThisMonth = allUsers.filter(u =>
+    new Date(u.created_at) >= new Date(firstDayOfMonth)
+  ).length
 
-  const { count: newUsersThisMonth } = await adminClient
-    .from('user_profiles')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', firstDayOfMonth)
-
+  // Offres créées
   const { count: totalJobs } = await adminClient
     .from('jobs')
     .select('*', { count: 'exact', head: true })
@@ -53,28 +49,30 @@ export async function GET(req: NextRequest) {
     .select('*', { count: 'exact', head: true })
     .gte('created_at', firstDayOfMonth)
 
+  // Taux d'activation
   const { data: jobsData } = await adminClient.from('jobs').select('user_id')
   const activeUsers = Array.from(new Set((jobsData ?? []).map((j: { user_id: string }) => j.user_id))).length
   const activationRate = totalUsers ? Math.round((activeUsers / totalUsers) * 100) : 0
 
+  // Articles publiés
   const { count: publishedArticles } = await adminClient
     .from('articles')
     .select('*', { count: 'exact', head: true })
     .eq('published', true)
 
-  const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 8 })
-  const recentUsers = (authData?.users ?? [])
+  // Derniers inscrits
+  const recentUsers = allUsers
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 8)
-    .map((u) => ({
+    .map(u => ({
       id: u.id,
       email: u.email ?? '—',
       created_at: u.created_at,
     }))
 
   return NextResponse.json({
-    totalUsers: totalUsers ?? 0,
-    newUsersThisMonth: newUsersThisMonth ?? 0,
+    totalUsers,
+    newUsersThisMonth,
     totalJobs: totalJobs ?? 0,
     newJobsThisMonth: newJobsThisMonth ?? 0,
     activationRate,
