@@ -139,24 +139,24 @@ function EventCard({
       title={`${ev.title} — ${ev.company}${timeLabel ? ' · ' + timeLabel : ''}`}
       style={{
         ...EV_STYLE[ev.type],
-        borderRadius: 4, padding: '3px 5px', marginBottom: 2,
+        borderRadius: 5, padding: '5px 8px', marginBottom: 3,
         cursor: isArchived ? 'pointer' : 'grab',
         fontFamily: 'Montserrat,sans-serif', overflow: 'hidden',
         userSelect: 'none', opacity: isArchived ? 0.65 : 1,
       }}
     >
       {timeLabel && (
-        <div style={{ fontSize: 9, opacity: .8, fontWeight: 700, lineHeight: 1.2 }}>{timeLabel}</div>
+        <div style={{ fontSize: 11, opacity: .9, fontWeight: 700, lineHeight: 1.3 }}>{timeLabel}</div>
       )}
       <div style={{
-        fontSize: 10, fontWeight: 800, lineHeight: 1.3,
+        fontSize: 12, fontWeight: 800, lineHeight: 1.4,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         textDecoration: isArchived ? 'line-through' : 'none',
       }}>{ev.title}</div>
       {ev.company && (
         <div style={{
-          fontSize: 9, fontWeight: 600, opacity: .75,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2,
+          fontSize: 11, fontWeight: 600, opacity: .85,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3,
           textDecoration: isArchived ? 'line-through' : 'none',
         }}>{ev.company}</div>
       )}
@@ -220,22 +220,32 @@ export default function DashboardCalendar({
   function NavBar({ periodLabel }: { periodLabel: string }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {(['week', 'month'] as const).map(v => (
-            <button key={v} onClick={() => { setCalView(v); setOffset(0); }} style={{
-              padding: '4px 14px', fontSize: 12, fontWeight: 700,
-              fontFamily: 'Montserrat,sans-serif',
-              border: '2px solid #111', borderRadius: 6, cursor: 'pointer',
-              background: calView === v ? '#111' : '#fff',
-              color: calView === v ? '#F5C400' : '#111',
-            }}>{v === 'week' ? 'Semaine' : 'Mois'}</button>
+        {/* Légendes à gauche */}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {(Object.keys(EV_LABEL) as CalEvent['type'][]).map(t => (
+            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#333', fontWeight: 700 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: (EV_STYLE[t] as any).background, flexShrink: 0 }} />
+              {EV_LABEL[t]}
+            </div>
           ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Navigation + Semaine/Mois à droite */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <button onClick={() => setOffset(o => o - 1)} style={navBtnStyle}>‹</button>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#555', minWidth: 160, textAlign: 'center' }}>{periodLabel}</span>
           <button onClick={() => setOffset(o => o + 1)} style={navBtnStyle}>›</button>
           <button onClick={() => setOffset(0)} style={{ ...navBtnStyle, fontSize: 11, padding: '3px 8px', width: 'auto' }}>Auj.</button>
+          <div style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
+            {(['week', 'month'] as const).map(v => (
+              <button key={v} onClick={() => { setCalView(v); setOffset(0); }} style={{
+                padding: '4px 12px', fontSize: 12, fontWeight: 700,
+                fontFamily: 'Montserrat,sans-serif',
+                border: '2px solid #111', borderRadius: 6, cursor: 'pointer',
+                background: calView === v ? '#111' : '#fff',
+                color: calView === v ? '#F5C400' : '#111',
+              }}>{v === 'week' ? 'Semaine' : 'Mois'}</button>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -388,16 +398,6 @@ export default function DashboardCalendar({
           <span style={{ fontSize: 16, fontWeight: 900, color: '#111', fontFamily: 'Montserrat,sans-serif', textTransform: 'uppercase', letterSpacing: '.06em' }}>
             📅 Calendrier
           </span>
-          {visible && (
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {(Object.keys(EV_LABEL) as CalEvent['type'][]).map(t => (
-                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#333', fontWeight: 700 }}>
-                  <div style={{ width: 9, height: 9, borderRadius: 2, background: (EV_STYLE[t] as any).background }} />
-                  {EV_LABEL[t]}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
         <button onClick={() => setVisible(v => !v)} style={{
           fontSize: 11, fontWeight: 800, fontFamily: 'Montserrat,sans-serif',
