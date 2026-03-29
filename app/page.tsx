@@ -12,15 +12,13 @@ export default function LandingPage() {
 
         .btn-black { display:inline-flex;align-items:center;gap:8px;background:#111;color:#F5C400;border:2.5px solid #111;border-radius:8px;padding:13px 28px;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.15s;text-decoration:none;box-shadow:4px 4px 0 #E8151B;letter-spacing:0.02em; }
         .btn-black:hover { transform:translate(-2px,-2px);box-shadow:6px 6px 0 #E8151B; }
-        .btn-red { display:inline-flex;align-items:center;gap:8px;background:#E8151B;color:#fff;border:2.5px solid #111;border-radius:8px;padding:13px 28px;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.15s;text-decoration:none;box-shadow:4px 4px 0 #111;letter-spacing:0.02em; }
-        .btn-red:hover { transform:translate(-2px,-2px);box-shadow:6px 6px 0 #111; }
+        .btn-blue { display:inline-flex;align-items:center;gap:8px;background:#1B4F72;color:#fff;border:2.5px solid #111;border-radius:8px;padding:13px 28px;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.15s;text-decoration:none;box-shadow:4px 4px 0 #111;letter-spacing:0.02em; }
+        .btn-blue:hover { transform:translate(-2px,-2px);box-shadow:6px 6px 0 #111; }
         .btn-outline { display:inline-flex;align-items:center;gap:8px;background:#fff;color:#111;border:2.5px solid #111;border-radius:8px;padding:13px 28px;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s;text-decoration:none;box-shadow:4px 4px 0 #E0E0E0; }
         .btn-outline:hover { background:#F4F4F4;transform:translate(-1px,-1px); }
         .feat-card { background:#fff;border:2px solid #111;border-radius:12px;padding:1.5rem;transition:all 0.2s;box-shadow:3px 3px 0 #111; }
         .feat-card:hover { transform:translate(-2px,-2px);box-shadow:5px 5px 0 #E8151B; }
         .testi-card { background:#fff;border:2px solid #111;border-radius:12px;padding:1.5rem;box-shadow:3px 3px 0 #111; }
-        .step-card { background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.15);border-radius:12px;padding:1.75rem; }
-        .step-card-IA { background:rgba(232,21,27,0.12);border:2px solid rgba(232,21,27,0.35);border-radius:12px;padding:1.75rem; }
         .blog-card { background:#fff;border:2px solid #111;border-radius:12px;overflow:hidden;box-shadow:3px 3px 0 #111;transition:all 0.2s;text-decoration:none;color:#111;display:block; }
         .blog-card:hover { transform:translate(-2px,-2px);box-shadow:5px 5px 0 #E8151B; }
         .social-link { display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;border:2px solid #E0E0E0;background:#fff;color:#555;transition:all 0.15s;text-decoration:none;font-size:16px; }
@@ -36,7 +34,7 @@ export default function LandingPage() {
         @media(max-width:768px){
           .nav-desktop{display:none!important}
           .nav-btns{display:none!important}
-          .hero-grid,.feat-grid,.steps-grid,.testi-grid,.blog-grid{grid-template-columns:1fr!important}
+          .hero-grid,.feat-grid,.testi-grid,.blog-grid{grid-template-columns:1fr!important}
           .feats-grid{grid-template-columns:1fr 1fr!important}
           .footer-grid{grid-template-columns:1fr!important}
           .hero-logo-img{max-width:260px!important;margin:0 auto!important;}
@@ -44,7 +42,8 @@ export default function LandingPage() {
           .hero-title{font-size:2.2rem!important;}
           .hero-grid{padding:2rem 1.25rem!important;gap:1.5rem!important;}
           .hero-logo-wrap{order:-1;}
-          .steps-grid{grid-template-columns:1fr!important}
+          .steps-horizontal{flex-direction:column!important;gap:1.5rem!important;}
+          .step-connector{display:none!important;}
         }
         @media(max-width:480px){
           .nav-btns{display:none!important}
@@ -55,9 +54,8 @@ export default function LandingPage() {
       {/* NAV */}
       <nav style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'1rem 1.5rem',background:'#fff',borderBottom:'2.5px solid #111',position:'sticky',top:0,zIndex:100,flexWrap:'wrap',gap:8 }}>
         <Link href="/" style={{ textDecoration:'none',display:'flex',alignItems:'center',gap:8 }}>
-          <img src="/logo.png" alt="Jean Find My Job" style={{ height:40,width:'auto',objectFit:'contain' }} />
           <span style={{ fontFamily:'Montserrat,sans-serif',fontSize:'0.95rem',fontWeight:900,color:'#111',letterSpacing:'-0.01em' }}>
-            Jean <span style={{ color:'#E8151B' }}>Find My Job</span>
+            Jean <span style={{ color:'#E8151B' }}>find my Job</span>
           </span>
         </Link>
         <div className="nav-desktop" style={{ display:'flex',gap:'2rem',alignItems:'center' }}>
@@ -84,7 +82,7 @@ export default function LandingPage() {
               <span style={{ display:'block',whiteSpace:'nowrap' }}>dans le chaos</span>
             </h1>
             <p className="fade3" style={{ fontSize:'1.05rem',color:'#555',marginBottom:'2rem',lineHeight:1.75,maxWidth:460,fontWeight:500 }}>
-              Jean Find My Job centralise votre recherche d&apos;emploi — tableau de bord, suivi de candidatures, CV personnalisé par IA. Tout au même endroit, enfin.
+              Jean find my Job centralise votre recherche d&apos;emploi — tableau de bord, suivi de candidatures, CV personnalisé par IA. Tout au même endroit, enfin.
             </p>
             <div className="fade4" style={{ display:'flex',gap:12,flexWrap:'wrap',alignItems:'center' }}>
               <Link href="/auth/signup" className="btn-black" style={{ fontSize:15,padding:'14px 32px' }}>Commencer gratuitement →</Link>
@@ -95,23 +93,23 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="hero-logo-wrap" style={{ display:'flex',alignItems:'center',justifyContent:'center',padding:'0' }}>
-            <img src="/logo.png" alt="Jean Find My Job" className="hero-logo-img" style={{ width:'100%',maxWidth:680,height:'auto',objectFit:'contain' }} />
+            <img src="/logo.png" alt="Jean find my Job" className="hero-logo-img" style={{ width:'100%',maxWidth:680,height:'auto',objectFit:'contain' }} />
           </div>
         </div>
       </section>
 
-      {/* BANDEAU NOIR — phrase accroche + stats */}
+      {/* BANDEAU NOIR */}
       <div style={{ background:'#111',borderBottom:'2.5px solid #111',padding:'2rem 3rem' }}>
         <div style={{ maxWidth:1400,margin:'0 auto' }}>
           <p style={{ textAlign:'center',fontStyle:'italic',fontWeight:700,color:'#F5C400',fontSize:'1.05rem',marginBottom:'2rem',paddingBottom:'1.5rem',borderBottom:'1px solid rgba(255,255,255,0.15)' }}>
-            &ldquo;Si vous avez déjà oublié où vous avez postulé, vous êtes au bon endroit.&rdquo;
+            &ldquo;Un outil, toutes vos candidatures. C&apos;est aussi simple que ça.&rdquo;
           </p>
           <div style={{ display:'flex',justifyContent:'center',gap:'6rem',flexWrap:'wrap' }}>
             {[
-              ['Gratuit','candidatures illimitées','IA en option'],
-              ['4,9★','Satisfaction','utilisateurs'],
-              ['1 dossier','par candidature','tout centralisé'],
+              ['Gratuit','candidatures illimitées','version Bêta'],
+              ['1 parcours','par candidature','entièrement personnalisable'],
               ['30s','pour un CV','généré par IA'],
+              ['4,9★','Satisfaction','utilisateurs'],
             ].map(([n,l,s]) => (
               <div key={l} style={{ textAlign:'center' }}>
                 <div style={{ fontSize:'2.2rem',fontWeight:900,color:'#F5C400',letterSpacing:'-0.02em',fontFamily:'Montserrat,sans-serif' }}>{n}</div>
@@ -130,7 +128,7 @@ export default function LandingPage() {
           <div style={{ fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111',fontFamily:'Montserrat,sans-serif' }}>01</div>
           <div style={{ display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>📋 Tableau de bord</div>
           <h3 style={{ fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Votre recherche,<br />enfin organisée</h3>
-          <p style={{ fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Fini les tableurs Excel. Jean Find My Job centralise toutes vos candidatures dans un tableau de bord visuel avec un parcours de candidature détaillé pour chaque offre.</p>
+          <p style={{ fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Fini les tableurs Excel. Jean find my Job centralise toutes vos candidatures dans un tableau de bord visuel avec un parcours de candidature détaillé pour chaque offre.</p>
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
             {[
               'Vue globale : 5 grandes étapes claires',
@@ -206,7 +204,7 @@ export default function LandingPage() {
               </li>
             ))}
           </ul>
-          <Link href="/auth/signup" className="btn-red" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Créer mon CV →</Link>
+          <Link href="/auth/signup" className="btn-blue" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Créer mon CV →</Link>
         </div>
       </section>
 
@@ -215,18 +213,31 @@ export default function LandingPage() {
         <div style={{ maxWidth:1400,margin:'0 auto',textAlign:'center' }}>
           <div style={{ display:'inline-block',background:'#F5C400',border:'2px solid rgba(255,255,255,0.2)',borderRadius:20,padding:'5px 16px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1rem',textTransform:'uppercase',letterSpacing:'0.05em' }}>Simple comme bonjour</div>
           <h2 style={{ fontSize:'2.5rem',color:'#fff',marginBottom:'0.75rem',fontWeight:900,letterSpacing:'-0.02em' }}>Comment ça marche ?</h2>
-          <p style={{ color:'rgba(255,255,255,0.6)',marginBottom:'3rem',fontWeight:500 }}>Quatre étapes pour candidater avec méthode</p>
-          <div className="steps-grid" style={{ display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:'1.5rem',textAlign:'left' }}>
+          <p style={{ color:'rgba(255,255,255,0.6)',marginBottom:'3.5rem',fontWeight:500 }}>Quatre étapes pour candidater avec méthode</p>
+
+          {/* Timeline horizontale */}
+          <div className="steps-horizontal" style={{ display:'flex',alignItems:'flex-start',justifyContent:'center',gap:0,position:'relative' }}>
             {[
-              { num:'01', title:'Vous créez votre profil', desc:"Un compte sécurisé… et c'est parti. Jean prépare la base. Vous êtes prêt à postuler sans repartir de zéro à chaque fois et sans multiplier les tableaux de suivi.", ia: false },
-              { num:'02', title:'Vous ajoutez vos candidatures', desc:"Importez une offre ou ajoutez-la manuellement. Chaque candidature a son propre espace. Vous adaptez votre CV, vos documents et votre préparation à chaque recrutement. Jean vous donne votre score ATS.", ia: false },
-              { num:'03', title:'Vous suivez sans vous perdre', desc:"Toutes vos candidatures, au même endroit. Vous savez où vous en êtes, sans réfléchir. Adaptez votre CV, suivez vos réponses, progressez à chaque candidature.", ia: false },
-              { num:'04', title:"L'IA vous aide à mieux candidater", desc:"Jean vous donne un coup de main quand vous en avez besoin — améliorer votre CV, mieux comprendre une offre, préparer vos candidatures.", ia: true },
-            ].map(s => (
-              <div key={s.num} className={s.ia ? 'step-card-IA' : 'step-card'}>
-                <div style={{ fontSize:11,fontWeight:800,color:'#F5C400',letterSpacing:'0.08em',marginBottom:8,textTransform:'uppercase' }}>ÉTAPE {s.num}</div>
-                <h4 style={{ color:'#fff',fontSize:'1.05rem',fontWeight:800,marginBottom:10 }}>{s.title}</h4>
-                <p style={{ color:'rgba(255,255,255,0.6)',fontSize:13,lineHeight:1.65,fontWeight:500 }}>{s.desc}</p>
+              { num:'1', title:'Vous créez votre profil', desc:"Un compte sécurisé et c'est parti. Prêt à postuler sans repartir de zéro à chaque fois.", ia: false },
+              { num:'2', title:'Vous ajoutez vos candidatures', desc:"Importez une offre ou ajoutez-la manuellement. Chaque candidature a son propre parcours personnalisable.", ia: false },
+              { num:'3', title:'Vous suivez sans vous perdre', desc:"Toutes vos candidatures, au même endroit. Vous savez où vous en êtes, sans réfléchir.", ia: false },
+              { num:'4', title:"L'IA vous aide à mieux candidater", desc:"Jean vous donne un coup de main — améliorer votre CV, mieux comprendre une offre, préparer vos entretiens.", ia: true },
+            ].map((s, i, arr) => (
+              <div key={s.num} style={{ display:'flex',alignItems:'flex-start',flex:1 }}>
+                <div style={{ display:'flex',flexDirection:'column',alignItems:'center',flex:1 }}>
+                  {/* Numéro + ligne */}
+                  <div style={{ display:'flex',alignItems:'center',width:'100%',marginBottom:'1.25rem' }}>
+                    <div style={{ width:52,height:52,borderRadius:'50%',background: s.ia ? '#E8151B' : '#F5C400',border: s.ia ? '3px solid #E8151B' : '3px solid #F5C400',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.2rem',fontWeight:900,color: s.ia ? '#fff' : '#111',flexShrink:0,boxShadow: s.ia ? '3px 3px 0 rgba(232,21,27,0.3)' : '3px 3px 0 rgba(245,196,0,0.3)',zIndex:2,position:'relative' }}>{s.num}</div>
+                    {i < arr.length - 1 && (
+                      <div className="step-connector" style={{ flex:1,height:3,background:'rgba(245,196,0,0.35)',marginLeft:0 }} />
+                    )}
+                  </div>
+                  {/* Contenu */}
+                  <div style={{ background: s.ia ? 'rgba(232,21,27,0.12)' : 'rgba(255,255,255,0.06)',border: s.ia ? '2px solid rgba(232,21,27,0.35)' : '2px solid rgba(255,255,255,0.12)',borderRadius:12,padding:'1.25rem',textAlign:'left',width:'100%',marginRight: i < arr.length - 1 ? '1rem' : 0 }}>
+                    <h4 style={{ color:'#fff',fontSize:'0.95rem',fontWeight:800,marginBottom:8 }}>{s.title}</h4>
+                    <p style={{ color:'rgba(255,255,255,0.6)',fontSize:13,lineHeight:1.65,fontWeight:500 }}>{s.desc}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -244,10 +255,10 @@ export default function LandingPage() {
           <div className="feats-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1.5rem' }}>
             {[
               { icon:'📊',title:'Tableau de bord',desc:"5 grandes étapes pour visualiser toutes vos candidatures d'un coup d'œil." },
-              { icon:'🗂️',title:'Votre dossier par offre',desc:'Un espace dédié pour chaque candidature : parcours de suivi, entretiens, documents, notes.' },
+              { icon:'🗂️',title:'Votre parcours par candidature',desc:'Un parcours de candidature entièrement personnalisable pour chaque offre : étapes, entretiens, documents, contacts, notes. Tout au même endroit.' },
               { icon:'🤖',title:'CV Creator IA',desc:'Claude AI rédige votre CV avec des formulations percutantes, adapté à chaque poste.' },
-              { icon:'📊',title:'Score ATS',desc:'Jean analyse votre CV et vous donne un score de compatibilité avec l\'offre pour maximiser vos chances de passer les filtres automatiques.' },
-              { icon:'🔗',title:'Import LinkedIn',desc:'Exportez votre profil LinkedIn en PDF et Jean Find My Job remplit automatiquement toutes vos informations.' },
+              { icon:'📊',title:'Score ATS',desc:"Jean analyse votre CV et vous donne un score de compatibilité avec l'offre pour maximiser vos chances de passer les filtres automatiques." },
+              { icon:'🔗',title:'Import LinkedIn',desc:'Exportez votre profil LinkedIn en PDF et Jean find my Job remplit automatiquement toutes vos informations.' },
               { icon:'👥',title:'Suivi des contacts',desc:'Gardez une trace de tous les recruteurs et managers. Ne perdez plus aucune relation clé.' },
               { icon:'📅',title:'Gestion des entretiens',desc:'Planifiez et préparez vos entretiens. Stockez les questions, réponses et retours.' },
               { icon:'📈',title:'Statistiques',desc:"Taux de réponse, délais moyens, canaux efficaces. Optimisez votre stratégie avec les données." },
@@ -267,13 +278,13 @@ export default function LandingPage() {
       <section style={{ padding:'5rem 2rem',background:'#fff',borderBottom:'2.5px solid #111' }}>
         <div style={{ maxWidth:1400,margin:'0 auto' }}>
           <div style={{ textAlign:'center',marginBottom:'3rem' }}>
-            <h2 style={{ fontSize:'2.2rem',fontWeight:900,letterSpacing:'-0.02em' }}>Ils ont trouvé leur job avec Jean Find My Job</h2>
+            <h2 style={{ fontSize:'2.2rem',fontWeight:900,letterSpacing:'-0.02em' }}>Ils ont trouvé leur job avec Jean find my Job</h2>
           </div>
           <div className="testi-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1.5rem' }}>
             {[
               { initials:'SL',name:'Sophie L.',role:'Comm → Offre reçue chez LVMH',text:"Le tableau de bord a changé ma façon de chercher. Tout est au même endroit. J'ai eu 3 entretiens en 2 semaines.",color:'#FDEAEA',textColor:'#E8151B' },
               { initials:'MK',name:'Marc K.',role:'Dev backend → Startup Series B',text:"L'IA qui génère le CV est bluffante. En 30 secondes j'avais un CV bien mieux rédigé que ce que j'aurais fait moi-même.",color:'#FEF9E0',textColor:'#B8900A' },
-              { initials:'AC',name:'Amandine C.',role:'Reconversion → Talent Acquisition',text:"Jean Find My Job m'a aidée à valoriser mes compétences transférables. Résultat : CDI en 6 semaines.",color:'#EBF2FD',textColor:'#1A6FDB' },
+              { initials:'AC',name:'Amandine C.',role:'Reconversion → Talent Acquisition',text:"Jean find my Job m'a aidée à valoriser mes compétences transférables. Résultat : CDI en 6 semaines.",color:'#EBF2FD',textColor:'#1A6FDB' },
             ].map(t => (
               <div key={t.name} className="testi-card">
                 <div style={{ color:'#E8151B',fontSize:14,marginBottom:12,fontWeight:900 }}>★★★★★</div>
@@ -365,8 +376,8 @@ export default function LandingPage() {
       <section style={{ background:'#111',borderBottom:'2.5px solid #111',padding:'6rem 2rem',textAlign:'center' }}>
         <div style={{ display:'inline-block',background:'#F5C400',border:'2px solid rgba(255,255,255,0.2)',borderRadius:20,padding:'5px 16px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1.5rem',textTransform:'uppercase',letterSpacing:'0.05em' }}>C&apos;est gratuit !</div>
         <h2 style={{ fontSize:'2.8rem',color:'#fff',marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Prêt à trouver votre prochain poste ?</h2>
-        <p style={{ color:'rgba(255,255,255,0.7)',fontSize:'1.05rem',marginBottom:'2.5rem',fontWeight:500 }}>Rejoignez les candidats qui organisent mieux leur recherche avec Jean Find My Job.</p>
-        <Link href="/auth/signup" className="btn-red" style={{ fontSize:16,padding:'16px 44px',borderRadius:12 }}>
+        <p style={{ color:'rgba(255,255,255,0.7)',fontSize:'1.05rem',marginBottom:'2.5rem',fontWeight:500 }}>Rejoignez les candidats qui organisent mieux leur recherche avec Jean find my Job.</p>
+        <Link href="/auth/signup" className="btn-blue" style={{ fontSize:16,padding:'16px 44px',borderRadius:12 }}>
           Commencer gratuitement — sans carte bancaire
         </Link>
         <p style={{ marginTop:'1.25rem',fontSize:13,color:'rgba(255,255,255,0.4)',fontWeight:600 }}>Résultat en moins de 30 secondes · Données sécurisées</p>
@@ -377,9 +388,8 @@ export default function LandingPage() {
         <div className="footer-grid" style={{ display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:'3rem',maxWidth:1400,margin:'0 auto' }}>
           <div>
             <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:'1rem' }}>
-              <img src="/logo.png" alt="Jean Find My Job" style={{ height:52,width:'auto',objectFit:'contain' }} />
               <span style={{ fontFamily:'Montserrat,sans-serif',fontSize:'1rem',fontWeight:900,color:'#111' }}>
-                Jean <span style={{ color:'#E8151B' }}>Find My Job</span>
+                Jean <span style={{ color:'#E8151B' }}>find my Job</span>
               </span>
             </div>
             <p style={{ fontSize:13,color:'#555',lineHeight:1.7,fontWeight:500,marginBottom:'1.25rem',maxWidth:260 }}>
@@ -403,7 +413,7 @@ export default function LandingPage() {
           </div>
           <div>
             <h5 style={{ fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Produit</h5>
-            {[['Tableau de bord','#fonctionnalites'],['Votre dossier par offre','#fonctionnalites'],['CV Creator','#cv'],['Suivi contacts','#fonctionnalites'],['Statistiques','#fonctionnalites']].map(([label,href]) => (
+            {[['Tableau de bord','#fonctionnalites'],['Votre parcours par candidature','#fonctionnalites'],['CV Creator','#cv'],['Suivi contacts','#fonctionnalites'],['Statistiques','#fonctionnalites']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
           </div>
@@ -421,7 +431,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div style={{ maxWidth:1400,margin:'2rem auto 0',paddingTop:'1.5rem',borderTop:'1.5px solid #E0E0E0',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8 }}>
-          <p style={{ fontSize:12,color:'#888',fontWeight:500 }}>© 2026 Jean Find My Job · Propulsé par Claude AI</p>
+          <p style={{ fontSize:12,color:'#888',fontWeight:500 }}>© 2026 Jean find my Job · Propulsé par Claude AI</p>
           <p style={{ fontSize:12,color:'#888',fontWeight:500 }}>Fait avec ♥ pour les candidats</p>
         </div>
       </footer>
