@@ -9,7 +9,7 @@ export default async function AdminLayout({
   children: React.ReactNode
 }) {
   // 1. Vérifie que l'utilisateur est connecté
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
