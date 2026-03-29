@@ -92,7 +92,7 @@ export default function Sidebar({
         </div>
         <div style={{ lineHeight: 1.2 }}>
           <span style={{ fontWeight: 700, fontSize: 13, color: '#fff' }}>Jean </span>
-          <span style={{ fontWeight: 700, fontSize: 13, color: '#F5C400' }}>Find My Job</span>
+          <span style={{ fontWeight: 700, fontSize: 13, color: '#F5C400' }}>find my job</span>
         </div>
       </div>
 

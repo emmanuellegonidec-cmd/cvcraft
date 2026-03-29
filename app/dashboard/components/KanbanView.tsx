@@ -64,7 +64,7 @@ function DraggableCard({ job, colId, stages, onClick }: {
         touchAction: 'none',
       }}
     >
-      <div style={{ fontSize: 12, color: '#888', fontWeight: 600, marginBottom: 3 }}>{job.company}</div>
+      <div style={{ fontSize: 12, color: '#555', fontWeight: 600, marginBottom: 3 }}>{job.company}</div>
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{job.title}</div>
 
       {(sourceBadge || subLabel) && (
@@ -147,7 +147,7 @@ function DroppableColumn({ col, jobs, stages, onCardClick, onAddJob, isDragOver 
 function GhostCard({ job }: { job: Job }) {
   return (
     <div className="jcard" style={{ opacity: 0.9, transform: 'rotate(2deg)', boxShadow: '4px 4px 0 #E8151B', cursor: 'grabbing', pointerEvents: 'none', minWidth: 160 }}>
-      <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 2 }}>{job.company}</div>
+      <div style={{ fontSize: 11, color: '#555', fontWeight: 600, marginBottom: 2 }}>{job.company}</div>
       <div style={{ fontSize: 13, fontWeight: 700 }}>{job.title}</div>
     </div>
   );
