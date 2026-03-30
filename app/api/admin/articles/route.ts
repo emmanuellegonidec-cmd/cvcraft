@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/server'
 
 function getAdminClient() {
   return createSupabaseClient(
@@ -9,13 +8,17 @@ function getAdminClient() {
   )
 }
 
-// Vérifie que le demandeur est admin
+// Vérifie admin via Bearer token
 async function checkAdmin(req: NextRequest): Promise<boolean> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user?.email) return false
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader?.startsWith('Bearer ')) return false
 
+  const token = authHeader.replace('Bearer ', '').trim()
   const adminClient = getAdminClient()
+
+  const { data: { user }, error } = await adminClient.auth.getUser(token)
+  if (error || !user?.email) return false
+
   const { data } = await adminClient
     .from('admin_users')
     .select('email')
@@ -25,11 +28,8 @@ async function checkAdmin(req: NextRequest): Promise<boolean> {
   return !!data
 }
 
-// GET : récupère un article par ID (pour l'édition)
+// GET : récupère un article par ID
 export async function GET(req: NextRequest) {
-  const isAdmin = await checkAdmin(req)
-  if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
-
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(data)
 }
 
-// POST : crée un nouvel article
+// POST : crée un article
 export async function POST(req: NextRequest) {
   const isAdmin = await checkAdmin(req)
   if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
@@ -76,23 +76,19 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(data)
 }
 
-// PATCH : met à jour un article existant
+// PATCH : met à jour un article
 export async function PATCH(req: NextRequest) {
   const isAdmin = await checkAdmin(req)
   if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
 
   const body = await req.json()
   const { id, ...updates } = body
-
   if (!id) return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
 
   const adminClient = getAdminClient()
   const { data, error } = await adminClient
     .from('articles')
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
+    .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()
@@ -111,11 +107,7 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
 
   const adminClient = getAdminClient()
-  const { error } = await adminClient
-    .from('articles')
-    .delete()
-    .eq('id', id)
-
+  const { error } = await adminClient.from('articles').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { createClient } from '@/lib/supabase'
 
 const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false })
 
@@ -18,6 +19,7 @@ export default function AdminEditArticlePage() {
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
+  const [token, setToken] = useState('')
 
   const [form, setForm] = useState({
     title: '',
@@ -30,7 +32,11 @@ export default function AdminEditArticlePage() {
   })
 
   useEffect(() => {
-    const fetchArticle = async () => {
+    const init = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) setToken(session.access_token)
+
       try {
         const res = await fetch(`/api/admin/articles?id=${articleId}`)
         if (!res.ok) throw new Error('Article introuvable')
@@ -50,7 +56,7 @@ export default function AdminEditArticlePage() {
         setLoading(false)
       }
     }
-    if (articleId) fetchArticle()
+    if (articleId) init()
   }, [articleId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -59,6 +65,7 @@ export default function AdminEditArticlePage() {
 
   const handleSave = async (publish?: boolean) => {
     if (!form.title.trim()) { setError('Le titre est obligatoire.'); return }
+    if (!token) { setError('Session expirée, reconnecte-toi.'); return }
     setSaving(true)
     setError('')
     try {
@@ -70,7 +77,10 @@ export default function AdminEditArticlePage() {
       }
       const res = await fetch('/api/admin/articles', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify(body),
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? 'Erreur') }
@@ -83,9 +93,13 @@ export default function AdminEditArticlePage() {
   }
 
   const handleDelete = async () => {
+    if (!token) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/admin/articles?id=${articleId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/articles?id=${articleId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
       if (!res.ok) throw new Error('Erreur lors de la suppression')
       router.push('/admin/articles')
     } catch (err: unknown) {
@@ -107,7 +121,6 @@ export default function AdminEditArticlePage() {
 
       {error && <div className="mb-6 px-4 py-3 rounded font-semibold text-sm" style={{ backgroundColor: '#fee2e2', color: '#E8151B', border: '1px solid #E8151B' }}>{error}</div>}
 
-      {/* Statut */}
       <div className="flex items-center gap-3 mb-6">
         <span className="text-sm font-bold text-gray-500">Statut :</span>
         <span className="px-3 py-1 rounded text-xs font-black" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: form.published ? '#F5C400' : '#f3f4f6', color: form.published ? '#111' : '#888', border: form.published ? '1px solid #111' : '1px solid #ddd' }}>
@@ -117,13 +130,11 @@ export default function AdminEditArticlePage() {
 
       <div className="bg-white rounded p-6 space-y-5 mb-6" style={{ border: '2px solid #111', boxShadow: '4px 4px 0px #111' }}>
 
-        {/* Titre */}
         <div>
           <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Titre *</label>
           <input type="text" name="title" value={form.title} onChange={handleChange} className="w-full px-4 py-3 rounded text-sm font-medium outline-none" style={{ border: '2px solid #111' }} />
         </div>
 
-        {/* Slug + Catégorie */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Slug (URL)</label>
@@ -137,21 +148,16 @@ export default function AdminEditArticlePage() {
           </div>
         </div>
 
-        {/* Extrait */}
         <div>
           <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Extrait</label>
           <textarea name="excerpt" value={form.excerpt} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded text-sm font-medium outline-none resize-none" style={{ border: '2px solid #111' }} />
         </div>
 
-        {/* Éditeur rich text */}
         <div>
           <label className="block text-sm font-black mb-2" style={{ fontFamily: 'Montserrat, sans-serif' }}>Contenu de l'article</label>
-          {!loading && (
-            <RichEditor content={form.content} onChange={html => setForm(f => ({ ...f, content: html }))} />
-          )}
+          {!loading && <RichEditor content={form.content} onChange={html => setForm(f => ({ ...f, content: html }))} />}
         </div>
 
-        {/* Image */}
         <div>
           <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>URL image de couverture</label>
           <input type="text" name="cover_image_url" value={form.cover_image_url} onChange={handleChange} placeholder="https://..." className="w-full px-4 py-3 rounded text-sm font-medium outline-none" style={{ border: '2px solid #111' }} />
@@ -159,7 +165,6 @@ export default function AdminEditArticlePage() {
         </div>
       </div>
 
-      {/* Boutons */}
       <div className="flex items-center justify-between">
         <div className="flex gap-3">
           <button onClick={() => handleSave()} disabled={saving} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#fff', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: saving ? 0.6 : 1 }}>
@@ -177,7 +182,7 @@ export default function AdminEditArticlePage() {
         </div>
 
         {!showDeleteConfirm ? (
-          <button onClick={() => setShowDeleteConfirm(true)} className="px-4 py-3 font-bold text-sm rounded" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#fee2e2', color: '#E8151B', border: '2px solid #E8151B' }}>
+          <button onClick={() => setShowDeleteConfirm(true)} className="px-4 py-3 font-bold text-sm rounded" style={{ backgroundColor: '#fee2e2', color: '#E8151B', border: '2px solid #E8151B' }}>
             🗑️ Supprimer
           </button>
         ) : (
