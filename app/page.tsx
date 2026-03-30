@@ -73,8 +73,8 @@ export default async function LandingPage() {
         .fade3{animation:fadeUp 0.6s ease 0.3s both}
         .fade4{animation:fadeUp 0.6s ease 0.4s both}
         .steps-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;align-items:stretch; }
-        .step-card-normal { background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.15);border-radius:12px;padding:1.75rem;display:flex;flex-direction:column; }
-        .step-card-ia { background:rgba(232,21,27,0.12);border:2px solid rgba(232,21,27,0.35);border-radius:12px;padding:1.75rem;display:flex;flex-direction:column; }
+        .step-card-normal { background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.15);border-radius:12px;padding:1.75rem;display:flex;flex-direction:column;align-items:center;text-align:center; }
+        .step-card-ia { background:rgba(232,21,27,0.12);border:2px solid rgba(232,21,27,0.35);border-radius:12px;padding:1.75rem;display:flex;flex-direction:column;align-items:center;text-align:center; }
         .steps-numbers { display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;margin-bottom:1.5rem;align-items:center; }
         .step-num-wrap { display:flex;align-items:center; }
         .step-circle { width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:900;flex-shrink:0; }
@@ -355,7 +355,7 @@ export default async function LandingPage() {
         <div style={{ maxWidth:1400,margin:'0 auto' }}>
           <div style={{ textAlign:'center',marginBottom:'3rem' }}>
             <div style={{ display:'inline-block',background:'#F5C400',border:'2px solid #111',borderRadius:20,padding:'5px 16px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>Conseils & actus</div>
-            <h2 style={{ fontSize:'2.2rem',fontWeight:900,letterSpacing:'-0.02em' }}>Jean a quelque chose à vous dire</h2>
+            <h2 style={{ fontSize:'2.2rem',fontWeight:900,letterSpacing:'-0.02em' }}>Jean a quelque chose à partager avec vous</h2>
             <p style={{ color:'#888',marginTop:'0.5rem',fontWeight:500 }}>Nos conseils pour booster votre recherche d&apos;emploi</p>
           </div>
 
@@ -389,7 +389,7 @@ export default async function LandingPage() {
                       <h3 style={{ fontSize:16,fontWeight:800,marginBottom:8,letterSpacing:'-0.01em',lineHeight:1.3 }}>{article.title}</h3>
                       {article.excerpt && (
                         <p style={{ fontSize:13,color:'#555',lineHeight:1.65,marginBottom:12,fontWeight:500 }}>
-                          {article.excerpt.length > 100 ? article.excerpt.slice(0,100)+'…' : article.excerpt}
+                          {article.excerpt.length > 160 ? article.excerpt.slice(0,160)+'…' : article.excerpt}
                         </p>
                       )}
                       <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
