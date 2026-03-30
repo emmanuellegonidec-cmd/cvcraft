@@ -39,9 +39,9 @@ export async function POST(req: NextRequest) {
 
     // Email de confirmation via Resend
     await resend.emails.send({
-      from: 'Jean Find My Job <hello@jeanfindmyjob.fr>',
+      from: 'Jean find my Job <hello@jeanfindmyjob.fr>',
       to: email,
-      subject: '🎉 Bienvenue dans la communauté Jean Find My Job !',
+      subject: '🎉 Bienvenue dans la communauté Jean find my Job !',
       html: `
         <!DOCTYPE html>
         <html>
@@ -53,14 +53,17 @@ export async function POST(req: NextRequest) {
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:40px 20px;">
             <tr>
               <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border:2px solid #111;border-radius:12px;overflow:hidden;box-shadow:4px 4px 0 #111;">
+                <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border:2px solid #111;border-radius:12px;overflow:hidden;box-shadow:4px 4px 0 #111;max-width:600px;">
                   
-                  <!-- Header -->
+                  <!-- Header avec logo -->
                   <tr>
-                    <td style="background:#111;padding:32px;text-align:center;">
-                      <div style="font-size:28px;font-weight:900;color:#F5C400;font-family:'Helvetica Neue',Arial,sans-serif;letter-spacing:-0.02em;">
-                        JEAN <span style="color:#fff;">FIND MY JOB</span>
-                      </div>
+                    <td style="background:#111;padding:28px 32px;text-align:center;">
+                      <img 
+                        src="https://jeanfindmyjob.fr/logo.png" 
+                        alt="Jean find my Job" 
+                        width="120"
+                        style="height:auto;display:block;margin:0 auto;"
+                      />
                     </td>
                   </tr>
 
@@ -70,20 +73,26 @@ export async function POST(req: NextRequest) {
                       <h1 style="font-size:24px;font-weight:900;color:#111;margin:0 0 16px;letter-spacing:-0.02em;">
                         Bienvenue dans la communauté ! 🎉
                       </h1>
-                      <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 20px;">
-                        Merci de vous être inscrit à la newsletter de <strong>Jean Find My Job</strong>. Vous recevrez nos meilleurs conseils pour booster votre recherche d'emploi.
+                      <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px;">
+                        Merci de vous être inscrit à la newsletter de <strong>Jean find my Job</strong>. Vous recevrez nos meilleurs conseils pour booster votre recherche d'emploi.
                       </p>
                       <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 32px;">
                         Au programme : conseils pratiques, tendances du marché, stratégies d'entretien, et bien plus encore.
                       </p>
 
-                      <!-- CTA -->
-                      <table cellpadding="0" cellspacing="0">
+                      <!-- CTA centré -->
+                      <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
-                          <td style="background:#111;border-radius:8px;box-shadow:3px 3px 0 #E8151B;">
-                            <a href="https://jeanfindmyjob.fr" style="display:inline-block;padding:14px 28px;color:#F5C400;font-weight:800;font-size:14px;text-decoration:none;font-family:'Helvetica Neue',Arial,sans-serif;letter-spacing:0.02em;">
-                              Accéder à mon espace →
-                            </a>
+                          <td align="center">
+                            <table cellpadding="0" cellspacing="0">
+                              <tr>
+                                <td style="background:#111;border-radius:8px;box-shadow:3px 3px 0 #E8151B;">
+                                  <a href="https://jeanfindmyjob.fr" style="display:inline-block;padding:14px 32px;color:#F5C400;font-weight:800;font-size:14px;text-decoration:none;font-family:'Helvetica Neue',Arial,sans-serif;letter-spacing:0.02em;white-space:nowrap;">
+                                    Go Jean find my Job ! →
+                                  </a>
+                                </td>
+                              </tr>
+                            </table>
                           </td>
                         </tr>
                       </table>
@@ -94,7 +103,7 @@ export async function POST(req: NextRequest) {
                   <tr>
                     <td style="background:#fafafa;border-top:2px solid #f0f0f0;padding:20px 32px;text-align:center;">
                       <p style="font-size:12px;color:#888;margin:0;">
-                        © 2026 Jean Find My Job · Propulsé par Claude AI<br>
+                        © 2026 Jean find my Job · Propulsé par Claude AI<br>
                         <a href="https://jeanfindmyjob.fr" style="color:#E8151B;text-decoration:none;">jeanfindmyjob.fr</a>
                       </p>
                     </td>
