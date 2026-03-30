@@ -34,6 +34,10 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
   const [showCtaInput, setShowCtaInput] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  // Popup alt SEO après upload
+  const [pendingImageUrl, setPendingImageUrl] = useState('')
+  const [pendingAlt, setPendingAlt] = useState('')
+  const [showAltPopup, setShowAltPopup] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
@@ -43,11 +47,15 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
       Image.configure({
         inline: false,
         allowBase64: false,
-        HTMLAttributes: { style: 'max-width:100%;border-radius:8px;margin:1rem 0;border:2px solid #111;box-shadow:4px 4px 0 #111;' },
+        HTMLAttributes: { style: 'max-width:100%;border-radius:8px;margin:1.5rem auto;border:2px solid #111;box-shadow:4px 4px 0 #111;display:block;' },
       }),
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer', style: 'color:#E8151B;font-weight:600;text-decoration:underline;' },
+        HTMLAttributes: {
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          style: 'color:#1A6FDB;font-weight:600;text-decoration:underline;',
+        },
       }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder: 'Commence à écrire ton article ici...' }),
@@ -88,7 +96,10 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erreur upload')
-      editor.chain().focus().setImage({ src: data.url, alt: data.alt || '' }).run()
+      // Ouvre le popup pour saisir le alt SEO
+      setPendingImageUrl(data.url)
+      setPendingAlt(data.alt || '')
+      setShowAltPopup(true)
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : 'Erreur inconnue')
     } finally {
@@ -96,6 +107,12 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
+
+  const insertImageWithAlt = useCallback(() => {
+    if (!editor || !pendingImageUrl) return
+    editor.chain().focus().setImage({ src: pendingImageUrl, alt: pendingAlt }).run()
+    setPendingImageUrl(''); setPendingAlt(''); setShowAltPopup(false)
+  }, [editor, pendingImageUrl, pendingAlt])
 
   const addCta = useCallback(() => {
     if (!editor || !ctaText || !ctaUrl) return
@@ -127,13 +144,13 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
         <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Numérotée">1. Liste</ToolbarButton>
         <ToolbarButton onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Citation">❝</ToolbarButton>
         <Divider />
-        <ToolbarButton onClick={() => { setShowLinkInput(!showLinkInput); setShowImageInput(false); setShowCtaInput(false) }} active={showLinkInput || editor.isActive('link')} title="Lien">🔗 Lien</ToolbarButton>
-        <ToolbarButton onClick={() => { setShowImageInput(!showImageInput); setShowLinkInput(false); setShowCtaInput(false) }} active={showImageInput} title="Image URL">🌐 URL img</ToolbarButton>
-        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Uploader une image" className="px-2 py-1 rounded text-sm font-bold" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: 'transparent', color: '#444', border: '1px solid transparent' }}>
+        <ToolbarButton onClick={() => { setShowLinkInput(!showLinkInput); setShowImageInput(false); setShowCtaInput(false) }} active={showLinkInput || editor.isActive('link')} title="Lien externe">🔗 Lien</ToolbarButton>
+        <ToolbarButton onClick={() => { setShowImageInput(!showImageInput); setShowLinkInput(false); setShowCtaInput(false) }} active={showImageInput} title="Image par URL">🌐 URL img</ToolbarButton>
+        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Uploader une image (nom SEO généré automatiquement)" className="px-2 py-1 rounded text-sm font-bold" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: 'transparent', color: '#444', border: '1px solid transparent' }}>
           {uploading ? '⏳ Upload...' : '📁 Upload'}
         </button>
         <input ref={fileInputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" onChange={handleFileUpload} style={{ display: 'none' }} />
-        <ToolbarButton onClick={() => { setShowCtaInput(!showCtaInput); setShowLinkInput(false); setShowImageInput(false) }} active={showCtaInput} title="CTA">🎯 CTA</ToolbarButton>
+        <ToolbarButton onClick={() => { setShowCtaInput(!showCtaInput); setShowLinkInput(false); setShowImageInput(false) }} active={showCtaInput} title="Bouton CTA">🎯 CTA</ToolbarButton>
         <Divider />
         <ToolbarButton onClick={() => editor.chain().focus().undo().run()} title="Annuler">↩</ToolbarButton>
         <ToolbarButton onClick={() => editor.chain().focus().redo().run()} title="Refaire">↪</ToolbarButton>
@@ -143,6 +160,28 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
       {uploadError && (
         <div className="px-3 py-2 text-xs font-semibold" style={{ backgroundColor: '#fee2e2', color: '#E8151B', borderBottom: '1px solid #E8151B' }}>
           ❌ {uploadError}
+        </div>
+      )}
+
+      {/* Popup alt SEO après upload */}
+      {showAltPopup && (
+        <div className="px-4 py-3 flex items-center gap-3 flex-wrap" style={{ backgroundColor: '#f0fdf4', borderBottom: '2px solid #16a34a' }}>
+          <span className="text-xs font-black" style={{ color: '#16a34a', fontFamily: 'Montserrat, sans-serif' }}>✅ Image uploadée — Texte alternatif SEO :</span>
+          <input
+            type="text"
+            value={pendingAlt}
+            onChange={e => setPendingAlt(e.target.value)}
+            placeholder="Ex : Robot ATS filtrant des CV automatiquement"
+            className="flex-1 px-3 py-1 rounded text-sm outline-none"
+            style={{ border: '1px solid #16a34a', minWidth: 250 }}
+            onKeyDown={e => e.key === 'Enter' && insertImageWithAlt()}
+          />
+          <button type="button" onClick={insertImageWithAlt} className="px-3 py-1 rounded text-xs font-black" style={{ backgroundColor: '#16a34a', color: '#fff', border: '1px solid #16a34a', fontFamily: 'Montserrat, sans-serif' }}>
+            Insérer
+          </button>
+          <button type="button" onClick={() => { setPendingImageUrl(''); setPendingAlt(''); setShowAltPopup(false) }} className="px-3 py-1 rounded text-xs font-bold" style={{ backgroundColor: '#f3f4f6', color: '#555' }}>
+            Annuler
+          </button>
         </div>
       )}
 
@@ -161,7 +200,7 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
         <div className="flex items-center gap-2 px-3 py-2 flex-wrap" style={{ backgroundColor: '#fffbe6', borderBottom: '1px solid #F5C400' }}>
           <span className="text-xs font-bold" style={{ fontFamily: 'Montserrat, sans-serif' }}>Image :</span>
           <input type="url" value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." className="flex-1 px-3 py-1 rounded text-sm outline-none" style={{ border: '1px solid #ddd', minWidth: 200 }} />
-          <input type="text" value={imageAlt} onChange={e => setImageAlt(e.target.value)} placeholder="Texte alt (SEO)" className="px-3 py-1 rounded text-sm outline-none" style={{ border: '1px solid #ddd', width: 160 }} />
+          <input type="text" value={imageAlt} onChange={e => setImageAlt(e.target.value)} placeholder="Texte alt SEO (important !)" className="px-3 py-1 rounded text-sm outline-none" style={{ border: '1px solid #ddd', width: 200 }} />
           <button type="button" onClick={addImageFromUrl} className="px-3 py-1 rounded text-xs font-black" style={{ backgroundColor: '#F5C400', color: '#111', border: '1px solid #111', fontFamily: 'Montserrat, sans-serif' }}>Insérer</button>
           <button type="button" onClick={() => setShowImageInput(false)} className="px-3 py-1 rounded text-xs font-bold" style={{ backgroundColor: '#f3f4f6', color: '#555' }}>✕</button>
         </div>
@@ -180,7 +219,7 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
 
       {/* Zone d'édition */}
       <style>{`
-        .prose-editor { min-height:500px;padding:24px 28px;font-family:'Montserrat',sans-serif;font-size:15px;line-height:1.7;color:#111;outline:none; }
+        .prose-editor{min-height:500px;padding:24px 28px;font-family:'Montserrat',sans-serif;font-size:15px;line-height:1.7;color:#111;outline:none;}
         .prose-editor h1{font-size:2rem;font-weight:900;margin:1.5rem 0 0.75rem;color:#111;letter-spacing:-0.02em;}
         .prose-editor h2{font-size:1.5rem;font-weight:800;margin:1.25rem 0 0.5rem;color:#111;}
         .prose-editor h3{font-size:1.2rem;font-weight:700;margin:1rem 0 0.5rem;color:#111;}
@@ -190,14 +229,14 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
         .prose-editor ol{padding-left:1.5rem;margin:0.75rem 0;list-style-type:decimal;}
         .prose-editor li{margin:0.25rem 0;}
         .prose-editor blockquote{border-left:4px solid #F5C400;padding:8px 16px;margin:1rem 0;background:#fffbe6;font-style:italic;color:#555;}
-        .prose-editor a{color:#E8151B;font-weight:600;text-decoration:underline;}
+        .prose-editor a{color:#1A6FDB;font-weight:600;text-decoration:underline;}
         .prose-editor img{max-width:100%;border-radius:8px;margin:1rem 0;border:2px solid #111;box-shadow:4px 4px 0 #111;display:block;}
         .prose-editor .ProseMirror-focused{outline:none;}
         .tiptap p.is-editor-empty:first-child::before{color:#aaa;content:attr(data-placeholder);float:left;height:0;pointer-events:none;}
       `}</style>
       <EditorContent editor={editor} />
       <div className="px-4 py-2 text-xs" style={{ backgroundColor: '#fafafa', borderTop: '1px solid #eee', color: '#888' }}>
-        💡 <strong>📁 Upload</strong> : image depuis votre ordinateur (nom SEO auto) · <strong>🌐 URL img</strong> : image externe · Taille recommandée : <strong>1200×630px</strong>
+        💡 <strong>📁 Upload</strong> = image uploadée sur Supabase (nom SEO + alt SEO demandé) · <strong>🌐 URL img</strong> = image externe · Taille recommandée : <strong>1200×630px</strong>
       </div>
     </div>
   )

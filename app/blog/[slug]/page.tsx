@@ -9,6 +9,7 @@ type Article = {
   excerpt: string | null
   content: string | null
   cover_image_url: string | null
+  cover_image_alt: string | null
   category: string
   published_at: string | null
   created_at: string
@@ -19,6 +20,7 @@ type ArticlePreview = {
   title: string
   slug: string
   cover_image_url: string | null
+  cover_image_alt: string | null
   category: string
 }
 
@@ -43,7 +45,7 @@ async function getRelatedArticles(currentSlug: string, category: string): Promis
   )
   const { data } = await adminClient
     .from('articles')
-    .select('id, title, slug, cover_image_url, category')
+    .select('id, title, slug, cover_image_url, cover_image_alt, category')
     .eq('published', true)
     .eq('category', category)
     .neq('slug', currentSlug)
@@ -79,8 +81,8 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         .article-content ol { padding-left: 1.5rem; margin: 1rem 0; list-style-type: decimal; }
         .article-content li { margin: 0.5rem 0; line-height: 1.7; font-size: 15px; font-weight: 500; color: #333; }
         .article-content blockquote { border-left: 4px solid #F5C400; padding: 16px 20px; margin: 1.5rem 0; background: #fffbe6; font-style: italic; color: #555; border-radius: 0 8px 8px 0; font-size: 17px; }
-        .article-content a { color: #E8151B; font-weight: 600; text-decoration: underline; }
-        .article-content a:hover { color: #C01116; }
+        .article-content a { color: #1A6FDB; font-weight: 600; text-decoration: underline; }
+        .article-content a:hover { color: #1557a0; }
         .article-content img { max-width: 100%; border-radius: 8px; margin: 1.5rem auto; border: 2px solid #111; box-shadow: 4px 4px 0 #111; display: block; }
         .blog-card-related { background:#fff;border:2px solid #111;border-radius:12px;overflow:hidden;box-shadow:3px 3px 0 #111;transition:all 0.2s;text-decoration:none;color:#111;display:block; }
         .blog-card-related:hover { transform:translate(-2px,-2px);box-shadow:5px 5px 0 #E8151B; }
@@ -99,14 +101,18 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         </div>
       </nav>
 
-      {/* Image de couverture */}
+      {/* Image de couverture — ratio 16/9 */}
       {article.cover_image_url && (
-        <div style={{ width: '100%', height: 420, overflow: 'hidden', borderBottom: '2.5px solid #111' }}>
-          <img src={article.cover_image_url} alt={article.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div style={{ width: '100%', aspectRatio: '16/9', maxHeight: 520, overflow: 'hidden', borderBottom: '2.5px solid #111' }}>
+          <img
+            src={article.cover_image_url}
+            alt={article.cover_image_alt || article.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
         </div>
       )}
 
-      {/* Contenu — même largeur que la home, colonne centrée pour la lisibilité */}
+      {/* Contenu — largeur 1400px comme la home, texte centré 860px */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '4rem 2rem' }}>
         <article style={{ maxWidth: 860, margin: '0 auto' }}>
 
@@ -154,7 +160,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           </div>
         </article>
 
-        {/* Articles liés — pleine largeur en dessous */}
+        {/* Articles liés */}
         {related.length > 0 && (
           <div style={{ maxWidth: 860, margin: '4rem auto 0' }}>
             <h4 style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 20, borderBottom: '2px solid #111', paddingBottom: 8, fontFamily: 'Montserrat, sans-serif' }}>
@@ -163,8 +169,14 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(related.length, 3)}, 1fr)`, gap: '1.5rem' }}>
               {related.map(rel => (
                 <Link key={rel.id} href={`/blog/${rel.slug}`} className="blog-card-related">
-                  {rel.cover_image_url && (
-                    <img src={rel.cover_image_url} alt={rel.title} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+                  {rel.cover_image_url ? (
+                    <div style={{ aspectRatio: '16/9', overflow: 'hidden' }}>
+                      <img src={rel.cover_image_url} alt={rel.cover_image_alt || rel.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  ) : (
+                    <div style={{ aspectRatio: '16/9', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 32 }}>✍️</span>
+                    </div>
                   )}
                   <div style={{ padding: '1rem' }}>
                     <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
