@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link';
+import { useState } from 'react';
 import NewsletterForm from './NewsletterForm';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
@@ -21,6 +24,99 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Marché de l'emploi": '#1A7A4A',
   'Témoignage': '#B8900A',
   'Outils': '#555',
+}
+
+const FAQ_ITEMS = [
+  {
+    q: "Jean find my Job est-il vraiment gratuit ?",
+    a: "Oui, totalement gratuit pendant la phase bêta. Candidatures illimitées, toutes les fonctionnalités incluses — sans carte bancaire. Profitez-en !"
+  },
+  {
+    q: "Comment fonctionne l'import d'offre d'emploi ?",
+    a: "Il vous suffit de coller l'URL d'une offre (LinkedIn, Welcome to the Jungle, Indeed…) et Jean extrait automatiquement toutes les informations : poste, entreprise, description, compétences requises. En cas d'échec, Claude AI prend le relais pour analyser le contenu."
+  },
+  {
+    q: "Mes données sont-elles sécurisées ?",
+    a: "Absolument. Vos données sont hébergées sur Supabase (infrastructure sécurisée, RGPD) et ne sont jamais partagées avec des tiers. Chaque utilisateur n'a accès qu'à ses propres candidatures."
+  },
+  {
+    q: "Comment fonctionne le CV Creator IA ?",
+    a: "Importez votre profil LinkedIn en PDF, choisissez un template, et Claude AI rédige automatiquement des formulations percutantes pour chaque section de votre CV. Vous pouvez ensuite ajuster et exporter en PDF en un clic."
+  },
+  {
+    q: "Puis-je suivre plusieurs candidatures en même temps ?",
+    a: "Oui, sans limite. Chaque candidature dispose de son propre parcours personnalisable avec des étapes, des contacts associés, des documents et des notes. Vous visualisez tout depuis le tableau de bord global."
+  },
+  {
+    q: "Jean find my Job fonctionne-t-il sur mobile ?",
+    a: "L'interface est responsive et fonctionne sur mobile. Une application mobile dédiée est prévue dans les prochaines versions."
+  },
+]
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{
+      border: '2px solid #111',
+      borderRadius: 12,
+      background: '#fff',
+      boxShadow: open ? '4px 4px 0 #F5C400' : '3px 3px 0 #111',
+      transition: 'box-shadow 0.2s',
+      overflow: 'hidden',
+    }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '1.25rem 1.5rem',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          fontFamily: "'Montserrat', sans-serif",
+          fontSize: 15,
+          fontWeight: 800,
+          color: '#111',
+          textAlign: 'left',
+          gap: 16,
+        }}
+      >
+        <span>{q}</span>
+        <span style={{
+          flexShrink: 0,
+          width: 32,
+          height: 32,
+          borderRadius: '50%',
+          background: open ? '#F5C400' : '#F4F4F4',
+          border: '2px solid #111',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 16,
+          fontWeight: 900,
+          transition: 'all 0.2s',
+          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          color: '#111',
+        }}>
+          ↓
+        </span>
+      </button>
+      {open && (
+        <div style={{
+          padding: '1rem 1.5rem 1.25rem',
+          fontSize: 14,
+          color: '#555',
+          lineHeight: 1.75,
+          fontWeight: 500,
+          borderTop: '1.5px solid #E0E0E0',
+        }}>
+          {a}
+        </div>
+      )}
+    </div>
+  )
 }
 
 async function getPublishedArticles(): Promise<Article[]> {
@@ -112,7 +208,7 @@ export default async function LandingPage() {
           </span>
         </Link>
         <div className="nav-desktop" style={{ display:'flex',gap:'2rem',alignItems:'center' }}>
-          {[['#fonctionnalites','Fonctionnalités'],['#cv','CV Creator'],['#comment','Comment ça marche']].map(([h,l]) => (
+          {[['#fonctionnalites','Fonctionnalités'],['#cv','CV Creator'],['#comment','Comment ça marche'],['#faq','FAQ']].map(([h,l]) => (
             <a key={h} href={h} style={{ fontSize:13,color:'#111',textDecoration:'none',fontWeight:700,letterSpacing:'0.02em',textTransform:'uppercase' }}>{l}</a>
           ))}
         </div>
@@ -350,6 +446,26 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* FAQ */}
+      <section id="faq" style={{ padding:'5rem 2rem',background:'#111',borderBottom:'2.5px solid #111' }}>
+        <div style={{ maxWidth:860,margin:'0 auto' }}>
+          <div style={{ textAlign:'center',marginBottom:'3rem' }}>
+            <div style={{ display:'inline-block',background:'#F5C400',border:'2px solid rgba(255,255,255,0.2)',borderRadius:20,padding:'5px 16px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1rem',textTransform:'uppercase',letterSpacing:'0.05em' }}>Vos questions</div>
+            <h2 style={{ fontSize:'2.2rem',color:'#fff',fontWeight:900,letterSpacing:'-0.02em',marginBottom:'0.5rem' }}>Foire aux questions</h2>
+            <p style={{ color:'rgba(255,255,255,0.5)',fontWeight:500,fontSize:14 }}>Tout ce que vous avez toujours voulu savoir sur Jean</p>
+          </div>
+          <div style={{ display:'flex',flexDirection:'column',gap:'1rem' }}>
+            {FAQ_ITEMS.map((item) => (
+              <FaqItem key={item.q} q={item.q} a={item.a} />
+            ))}
+          </div>
+          <div style={{ textAlign:'center',marginTop:'2.5rem' }}>
+            <p style={{ color:'rgba(255,255,255,0.5)',fontSize:13,fontWeight:500,marginBottom:'1rem' }}>Vous avez une autre question ?</p>
+            <a href="mailto:hello@jeanfindmyjob.fr" className="btn-black" style={{ fontSize:13 }}>Contactez-nous →</a>
+          </div>
+        </div>
+      </section>
+
       {/* BLOG — dynamique depuis Supabase */}
       <section style={{ padding:'5rem 2rem',background:'#FAFAFA',borderBottom:'2.5px solid #111' }}>
         <div style={{ maxWidth:1400,margin:'0 auto' }}>
@@ -452,7 +568,7 @@ export default async function LandingPage() {
           </div>
           <div>
             <h5 style={{ fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Ressources</h5>
-            {[['Guide de démarrage','#'],['Blog','#'],['Templates CV','#'],['Conseils entretien','#'],['Chaîne YouTube','https://www.youtube.com/channel/UCDgezWysIr83yW5dUlkKbSg']].map(([label,href]) => (
+            {[['Guide de démarrage','#'],['Blog','#'],['FAQ','#faq'],['Conseils entretien','#'],['Chaîne YouTube','https://www.youtube.com/channel/UCDgezWysIr83yW5dUlkKbSg']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link" target={href.startsWith('http')?'_blank':undefined} rel={href.startsWith('http')?'noopener noreferrer':undefined}>{label}</a>
             ))}
           </div>
