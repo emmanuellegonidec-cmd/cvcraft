@@ -5,19 +5,19 @@ import { useState } from 'react'
 const FAQ_ITEMS = [
   {
     q: "Jean find my Job est-il vraiment gratuit ?",
-    a: "Oui, totalement gratuit pendant la phase bêta. Candidatures illimitées, toutes les fonctionnalités incluses — sans carte bancaire. Profitez-en !"
+    a: "Oui, totalement gratuit, Jean find my Job est en phase bêta. Candidatures illimitées, toutes les fonctionnalités incluses — sans carte bancaire. Profitez-en !"
   },
   {
     q: "Comment fonctionne l'import d'offre d'emploi ?",
-    a: "Il vous suffit de coller l'URL d'une offre (LinkedIn, Welcome to the Jungle, Indeed…) et Jean extrait automatiquement toutes les informations : poste, entreprise, description, compétences requises. En cas d'échec, Claude AI prend le relais pour analyser le contenu."
+    a: "Il vous suffit de coller l'URL d'une offre et Jean extrait automatiquement toutes les informations : poste, entreprise, description, compétences requises. En cas de non possibilité, un formulaire à compléter s'ouvre et vous pouvez compléter l'offre manuellement."
   },
   {
     q: "Mes données sont-elles sécurisées ?",
-    a: "Absolument. Vos données sont hébergées sur Supabase (infrastructure sécurisée, RGPD) et ne sont jamais partagées avec des tiers. Chaque utilisateur n'a accès qu'à ses propres candidatures."
+    a: "Absolument. Vos données sont hébergées sur un serveur (infrastructure sécurisée, RGPD) et ne sont jamais partagées avec des tiers. Chaque utilisateur n'a accès qu'à ses propres candidatures."
   },
   {
     q: "Comment fonctionne le CV Creator IA ?",
-    a: "Importez votre profil LinkedIn en PDF, choisissez un template, et Claude AI rédige automatiquement des formulations percutantes pour chaque section de votre CV. Vous pouvez ensuite ajuster et exporter en PDF en un clic."
+    a: "En version bêta, importez votre profil LinkedIn en PDF, choisissez un template, et Claude AI rédige automatiquement des formulations percutantes pour chaque section de votre CV. Vous pouvez ensuite ajuster et exporter en PDF en un clic."
   },
   {
     q: "Puis-je suivre plusieurs candidatures en même temps ?",
@@ -25,7 +25,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Jean find my Job fonctionne-t-il sur mobile ?",
-    a: "L'interface est responsive et fonctionne sur mobile. Une application mobile dédiée est prévue dans les prochaines versions."
+    a: "L'interface est responsive et fonctionne sur mobile. La visualisation est néanmoins plus pertinente sur votre ordinateur."
   },
 ]
 
