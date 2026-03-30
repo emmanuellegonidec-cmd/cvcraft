@@ -82,16 +82,12 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         .article-content a { color: #E8151B; font-weight: 600; text-decoration: underline; }
         .article-content a:hover { color: #C01116; }
         .article-content img { max-width: 100%; border-radius: 8px; margin: 1.5rem auto; border: 2px solid #111; box-shadow: 4px 4px 0 #111; display: block; }
-        .blog-card-small { background:#fff;border:2px solid #111;border-radius:10px;overflow:hidden;box-shadow:3px 3px 0 #111;transition:all 0.2s;text-decoration:none;color:#111;display:block; }
-        .blog-card-small:hover { transform:translate(-2px,-2px);box-shadow:5px 5px 0 #E8151B; }
-        @media(max-width:768px){
-          .article-layout { grid-template-columns: 1fr !important; }
-          .article-sidebar { display: none; }
-        }
+        .blog-card-related { background:#fff;border:2px solid #111;border-radius:12px;overflow:hidden;box-shadow:3px 3px 0 #111;transition:all 0.2s;text-decoration:none;color:#111;display:block; }
+        .blog-card-related:hover { transform:translate(-2px,-2px);box-shadow:5px 5px 0 #E8151B; }
       `}</style>
 
       {/* NAV */}
-      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem', background: '#fff', borderBottom: '2.5px solid #111', position: 'sticky', top: 0, zIndex: 100 }}>
+      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: '#fff', borderBottom: '2.5px solid #111', position: 'sticky', top: 0, zIndex: 100 }}>
         <Link href="/" style={{ textDecoration: 'none', fontFamily: 'Montserrat,sans-serif', fontSize: '0.95rem', fontWeight: 900, color: '#111' }}>
           Jean <span style={{ color: '#E8151B' }}>find my Job</span>
         </Link>
@@ -110,89 +106,87 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         </div>
       )}
 
-      {/* Layout principal */}
-      <div className="article-layout" style={{ maxWidth: 1200, margin: '0 auto', padding: '3rem 2rem', display: 'grid', gridTemplateColumns: '1fr 320px', gap: '4rem', alignItems: 'start' }}>
+      {/* Contenu — même largeur que la home, colonne centrée pour la lisibilité */}
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '4rem 2rem' }}>
+        <article style={{ maxWidth: 860, margin: '0 auto' }}>
 
-        {/* Article principal */}
-        <article>
+          {/* Catégorie + date */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem' }}>
-            <span style={{ background: '#F5C400', color: '#111', border: '2px solid #111', borderRadius: 20, padding: '4px 14px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ background: '#F5C400', color: '#111', border: '2px solid #111', borderRadius: 20, padding: '4px 14px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', boxShadow: '2px 2px 0 #111' }}>
               {article.category}
             </span>
             <span style={{ fontSize: 13, color: '#888', fontWeight: 600 }}>{dateStr}</span>
           </div>
 
+          {/* Titre */}
           <h1 style={{ fontSize: '2.8rem', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: '1.25rem', color: '#111' }}>
             {article.title}
           </h1>
 
+          {/* Extrait */}
           {article.excerpt && (
             <p style={{ fontSize: '1.15rem', color: '#555', lineHeight: 1.7, fontWeight: 600, marginBottom: '2.5rem', paddingBottom: '2rem', borderBottom: '2px solid #f0f0f0' }}>
               {article.excerpt}
             </p>
           )}
 
+          {/* Contenu rich text */}
           {article.content && (
             <div className="article-content" dangerouslySetInnerHTML={{ __html: article.content }} />
           )}
 
-          {/* CTA bas d'article */}
-          <div style={{ marginTop: '4rem', padding: '2.5rem', background: '#111', borderRadius: 12, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', textAlign: 'center' }}>
-            <div style={{ fontSize: 12, color: '#F5C400', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Prêt à passer à l'action ?</div>
-            <h3 style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 900, marginBottom: 12, letterSpacing: '-0.02em' }}>
-              Organisez votre recherche avec Jean find my Job
-            </h3>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 20, fontWeight: 500 }}>
-              Tableau de bord, suivi de candidatures, CV IA — tout gratuit.
-            </p>
-            <Link href="/auth/signup" style={{ display: 'inline-block', background: '#F5C400', color: '#111', border: '2px solid #fff', borderRadius: 8, padding: '14px 32px', fontSize: 14, fontWeight: 900, textDecoration: 'none', letterSpacing: '0.02em' }}>
+          {/* CTA sobre en fin d'article */}
+          <div style={{ marginTop: '4rem', padding: '2.5rem', background: '#FAFAFA', borderRadius: 12, border: '2.5px solid #111', boxShadow: '4px 4px 0 #111', display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                Prêt à passer à l'action ?
+              </div>
+              <h3 style={{ color: '#111', fontSize: '1.3rem', fontWeight: 900, marginBottom: 8, letterSpacing: '-0.02em' }}>
+                Organisez votre recherche avec Jean find my Job
+              </h3>
+              <p style={{ color: '#555', fontSize: 14, fontWeight: 500, lineHeight: 1.6, margin: 0 }}>
+                Tableau de bord, suivi de candidatures, CV IA — tout gratuit.
+              </p>
+            </div>
+            <Link href="/auth/signup" style={{ display: 'inline-block', background: '#111', color: '#F5C400', border: '2.5px solid #111', borderRadius: 8, padding: '14px 28px', fontSize: 14, fontWeight: 900, textDecoration: 'none', boxShadow: '4px 4px 0 #E8151B', letterSpacing: '0.02em', whiteSpace: 'nowrap', flexShrink: 0 }}>
               Go Jean find my Job ! →
             </Link>
           </div>
         </article>
 
-        {/* Sidebar */}
-        <aside className="article-sidebar" style={{ position: 'sticky', top: 80 }}>
-          {/* CTA sidebar */}
-          <div style={{ background: '#111', borderRadius: 12, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', padding: '1.5rem', marginBottom: '2rem', textAlign: 'center' }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>🚀</div>
-            <h3 style={{ color: '#F5C400', fontSize: '1rem', fontWeight: 900, marginBottom: 8, fontFamily: 'Montserrat, sans-serif' }}>
-              Jean find my Job
-            </h3>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginBottom: 16, lineHeight: 1.6, fontWeight: 500 }}>
-              Organisez votre recherche d'emploi avec notre tableau de bord gratuit.
-            </p>
-            <Link href="/auth/signup" style={{ display: 'block', background: '#F5C400', color: '#111', border: '2px solid #fff', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 900, textDecoration: 'none', textAlign: 'center' }}>
-              Commencer gratuitement →
-            </Link>
-          </div>
-
-          {/* Articles liés */}
-          {related.length > 0 && (
-            <div>
-              <h4 style={{ fontSize: 12, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16, borderBottom: '2px solid #111', paddingBottom: 8 }}>
-                Dans la même catégorie
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {related.map(rel => (
-                  <Link key={rel.id} href={`/blog/${rel.slug}`} className="blog-card-small">
-                    {rel.cover_image_url && (
-                      <img src={rel.cover_image_url} alt={rel.title} style={{ width: '100%', height: 100, objectFit: 'cover' }} />
-                    )}
-                    <div style={{ padding: '10px 12px' }}>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-                        {rel.category}
-                      </div>
-                      <div style={{ fontSize: 13, fontWeight: 800, lineHeight: 1.3, color: '#111' }}>
-                        {rel.title}
-                      </div>
+        {/* Articles liés — pleine largeur en dessous */}
+        {related.length > 0 && (
+          <div style={{ maxWidth: 860, margin: '4rem auto 0' }}>
+            <h4 style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 20, borderBottom: '2px solid #111', paddingBottom: 8, fontFamily: 'Montserrat, sans-serif' }}>
+              Dans la même catégorie
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(related.length, 3)}, 1fr)`, gap: '1.5rem' }}>
+              {related.map(rel => (
+                <Link key={rel.id} href={`/blog/${rel.slug}`} className="blog-card-related">
+                  {rel.cover_image_url && (
+                    <img src={rel.cover_image_url} alt={rel.title} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+                  )}
+                  <div style={{ padding: '1rem' }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                      {rel.category}
                     </div>
-                  </Link>
-                ))}
-              </div>
+                    <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.3, color: '#111' }}>
+                      {rel.title}
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
-          )}
-        </aside>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{ borderTop: '2.5px solid #111', padding: '2rem', textAlign: 'center', background: '#fff', marginTop: '4rem' }}>
+        <p style={{ fontSize: 13, color: '#888', fontWeight: 500 }}>
+          © 2026 Jean find my Job ·{' '}
+          <Link href="/" style={{ color: '#E8151B', textDecoration: 'none', fontWeight: 700 }}>Retour à l'accueil</Link>
+        </p>
       </div>
     </div>
   )
