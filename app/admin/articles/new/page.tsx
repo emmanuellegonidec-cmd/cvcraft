@@ -24,7 +24,8 @@ export default function AdminNewArticlePage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [token, setToken] = useState('')
+  const [success, setSuccess] = useState('')
+  const [tokenReady, setTokenReady] = useState(false)
 
   const [form, setForm] = useState({
     title: '',
@@ -39,7 +40,13 @@ export default function AdminNewArticlePage() {
     const getToken = async () => {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
-      if (session?.access_token) setToken(session.access_token)
+      if (session?.access_token) {
+        // Stocke le token dans window pour y accéder depuis le handler
+        ;(window as unknown as Record<string, unknown>).__admin_token = session.access_token
+        setTokenReady(true)
+      } else {
+        setError('Session expirée — reconnecte-toi sur /auth/login')
+      }
     }
     getToken()
   }, [])
@@ -55,9 +62,17 @@ export default function AdminNewArticlePage() {
 
   const handleSave = async (publish: boolean) => {
     if (!form.title.trim()) { setError('Le titre est obligatoire.'); return }
-    if (!token) { setError('Session expirée, reconnecte-toi.'); return }
+
+    const token = (window as unknown as Record<string, unknown>).__admin_token as string
+    if (!token) {
+      setError('Token manquant — reconnecte-toi.')
+      return
+    }
+
     setSaving(true)
     setError('')
+    setSuccess('')
+
     try {
       const res = await fetch('/api/admin/articles', {
         method: 'POST',
@@ -71,8 +86,16 @@ export default function AdminNewArticlePage() {
           published_at: publish ? new Date().toISOString() : null,
         }),
       })
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? 'Erreur') }
-      router.push('/admin/articles')
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error ?? `Erreur ${res.status}`)
+      }
+
+      setSuccess(publish ? '🎉 Article publié !' : '💾 Brouillon sauvegardé !')
+      setTimeout(() => router.push('/admin/articles'), 1500)
+
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
     } finally {
@@ -91,9 +114,22 @@ export default function AdminNewArticlePage() {
         </button>
       </div>
 
+      {/* Indicateur token */}
+      {!tokenReady && !error && (
+        <div className="mb-4 px-4 py-3 rounded text-sm font-semibold" style={{ backgroundColor: '#fffbe6', border: '1px solid #F5C400', color: '#B8900A' }}>
+          ⏳ Chargement de la session...
+        </div>
+      )}
+
       {error && (
         <div className="mb-6 px-4 py-3 rounded font-semibold text-sm" style={{ backgroundColor: '#fee2e2', color: '#E8151B', border: '1px solid #E8151B' }}>
-          {error}
+          ❌ {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="mb-6 px-4 py-3 rounded font-semibold text-sm" style={{ backgroundColor: '#dcfce7', color: '#16a34a', border: '1px solid #16a34a' }}>
+          {success}
         </div>
       )}
 
@@ -135,10 +171,20 @@ export default function AdminNewArticlePage() {
       </div>
 
       <div className="flex gap-3">
-        <button onClick={() => handleSave(false)} disabled={saving} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#fff', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: saving ? 0.6 : 1 }}>
+        <button
+          onClick={() => handleSave(false)}
+          disabled={saving || !tokenReady}
+          className="px-6 py-3 font-black text-sm rounded"
+          style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#fff', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: (saving || !tokenReady) ? 0.6 : 1 }}
+        >
           {saving ? 'Sauvegarde...' : '💾 Sauvegarder en brouillon'}
         </button>
-        <button onClick={() => handleSave(true)} disabled={saving} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#F5C400', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: saving ? 0.6 : 1 }}>
+        <button
+          onClick={() => handleSave(true)}
+          disabled={saving || !tokenReady}
+          className="px-6 py-3 font-black text-sm rounded"
+          style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#F5C400', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: (saving || !tokenReady) ? 0.6 : 1 }}
+        >
           {saving ? 'Publication...' : '🚀 Publier maintenant'}
         </button>
       </div>
