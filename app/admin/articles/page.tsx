@@ -1,3 +1,5 @@
+export const revalidate = 0
+
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 
