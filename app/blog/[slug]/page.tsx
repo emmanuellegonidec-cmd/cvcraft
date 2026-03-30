@@ -14,6 +14,14 @@ type Article = {
   created_at: string
 }
 
+type ArticlePreview = {
+  id: string
+  title: string
+  slug: string
+  cover_image_url: string | null
+  category: string
+}
+
 async function getArticle(slug: string): Promise<Article | null> {
   const adminClient = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,14 +36,14 @@ async function getArticle(slug: string): Promise<Article | null> {
   return data ?? null
 }
 
-async function getRelatedArticles(currentSlug: string, category: string): Promise<Article[]> {
+async function getRelatedArticles(currentSlug: string, category: string): Promise<ArticlePreview[]> {
   const adminClient = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
   const { data } = await adminClient
     .from('articles')
-    .select('id, title, slug, excerpt, cover_image_url, category, published_at, created_at')
+    .select('id, title, slug, cover_image_url, category')
     .eq('published', true)
     .eq('category', category)
     .neq('slug', currentSlug)
@@ -76,6 +84,10 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         .article-content img { max-width: 100%; border-radius: 8px; margin: 1.5rem auto; border: 2px solid #111; box-shadow: 4px 4px 0 #111; display: block; }
         .blog-card-small { background:#fff;border:2px solid #111;border-radius:10px;overflow:hidden;box-shadow:3px 3px 0 #111;transition:all 0.2s;text-decoration:none;color:#111;display:block; }
         .blog-card-small:hover { transform:translate(-2px,-2px);box-shadow:5px 5px 0 #E8151B; }
+        @media(max-width:768px){
+          .article-layout { grid-template-columns: 1fr !important; }
+          .article-sidebar { display: none; }
+        }
       `}</style>
 
       {/* NAV */}
@@ -91,19 +103,18 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         </div>
       </nav>
 
-      {/* Image de couverture full width */}
+      {/* Image de couverture */}
       {article.cover_image_url && (
         <div style={{ width: '100%', height: 420, overflow: 'hidden', borderBottom: '2.5px solid #111' }}>
           <img src={article.cover_image_url} alt={article.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
       )}
 
-      {/* Contenu principal */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '3rem 2rem', display: 'grid', gridTemplateColumns: '1fr 340px', gap: '4rem', alignItems: 'start' }}>
+      {/* Layout principal */}
+      <div className="article-layout" style={{ maxWidth: 1200, margin: '0 auto', padding: '3rem 2rem', display: 'grid', gridTemplateColumns: '1fr 320px', gap: '4rem', alignItems: 'start' }}>
 
-        {/* Article */}
+        {/* Article principal */}
         <article>
-          {/* Catégorie + date */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem' }}>
             <span style={{ background: '#F5C400', color: '#111', border: '2px solid #111', borderRadius: 20, padding: '4px 14px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               {article.category}
@@ -111,19 +122,16 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             <span style={{ fontSize: 13, color: '#888', fontWeight: 600 }}>{dateStr}</span>
           </div>
 
-          {/* Titre */}
           <h1 style={{ fontSize: '2.8rem', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: '1.25rem', color: '#111' }}>
             {article.title}
           </h1>
 
-          {/* Extrait */}
           {article.excerpt && (
             <p style={{ fontSize: '1.15rem', color: '#555', lineHeight: 1.7, fontWeight: 600, marginBottom: '2.5rem', paddingBottom: '2rem', borderBottom: '2px solid #f0f0f0' }}>
               {article.excerpt}
             </p>
           )}
 
-          {/* Contenu rich text */}
           {article.content && (
             <div className="article-content" dangerouslySetInnerHTML={{ __html: article.content }} />
           )}
@@ -137,15 +145,14 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 20, fontWeight: 500 }}>
               Tableau de bord, suivi de candidatures, CV IA — tout gratuit.
             </p>
-            <Link href="/auth/signup" style={{ display: 'inline-block', background: '#F5C400', color: '#111', border: '2px solid #fff', borderRadius: 8, padding: '14px 32px', fontSize: 14, fontWeight: 900, textDecoration: 'none', boxShadow: '3px 3px 0 rgba(255,255,255,0.3)', letterSpacing: '0.02em' }}>
+            <Link href="/auth/signup" style={{ display: 'inline-block', background: '#F5C400', color: '#111', border: '2px solid #fff', borderRadius: 8, padding: '14px 32px', fontSize: 14, fontWeight: 900, textDecoration: 'none', letterSpacing: '0.02em' }}>
               Go Jean find my Job ! →
             </Link>
           </div>
         </article>
 
         {/* Sidebar */}
-        <aside style={{ position: 'sticky', top: 80 }}>
-
+        <aside className="article-sidebar" style={{ position: 'sticky', top: 80 }}>
           {/* CTA sidebar */}
           <div style={{ background: '#111', borderRadius: 12, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', padding: '1.5rem', marginBottom: '2rem', textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>🚀</div>
@@ -170,9 +177,9 @@ export default async function ArticlePage({ params }: { params: { slug: string }
                 {related.map(rel => (
                   <Link key={rel.id} href={`/blog/${rel.slug}`} className="blog-card-small">
                     {rel.cover_image_url && (
-                      <img src={rel.cover_image_url} alt={rel.title} style={{ width: '100%', height: 120, objectFit: 'cover' }} />
+                      <img src={rel.cover_image_url} alt={rel.title} style={{ width: '100%', height: 100, objectFit: 'cover' }} />
                     )}
-                    <div style={{ padding: '12px 14px' }}>
+                    <div style={{ padding: '10px 12px' }}>
                       <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
                         {rel.category}
                       </div>
