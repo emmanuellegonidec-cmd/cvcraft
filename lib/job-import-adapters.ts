@@ -35,6 +35,7 @@ export type NormalizedJobOffer = {
   salary_max: number | null
   currency: string | null
   description: string | null
+  company_description: string | null
   requirements: string | null
   benefits: string | null
   posted_at_text: string | null

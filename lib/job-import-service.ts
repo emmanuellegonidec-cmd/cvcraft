@@ -366,6 +366,7 @@ async function saveImportedJob({
       user_id: userId,
       title: job.title ?? 'Offre importée',
       company: job.company_name ?? 'Entreprise inconnue',
+      company_description: truncate(job.company_description, 10000) ?? null,
       location: job.location_text ?? '',
       description: truncate(job.description, 50000) ?? '',
       company_description: truncate(job.company_description, 10000) ?? null,
