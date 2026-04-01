@@ -20,7 +20,6 @@ interface Job {
   interview_at: string | null; interview_time: string | null; interview_time_end: string | null
   interview_type: string | null; interview_contact_id: string | null
   interview_location: string | null; interview_link: string | null; interview_phone: string | null
-  // Infos entreprise
   company_description: string | null
   company_website: string | null
   company_size: string | null
@@ -171,7 +170,6 @@ function extractTransmittedBy(notes: string | null): string | null {
   return match ? match[1].trim() : null
 }
 
-// ─── JobSidebar ───────────────────────────────────────────────────────────────
 function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect: (id: string) => void }) {
   const [jobs, setJobs] = useState<Job[]>([])
   useEffect(() => {
@@ -213,7 +211,6 @@ function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect
   )
 }
 
-// ─── DraggableStep ────────────────────────────────────────────────────────────
 function DraggableStep({ step, isActive, isDone, isCustom, onStepClick, onDeleteRequest }: {
   step: { id: string; label: string; num: number }; isActive: boolean; isDone: boolean; isCustom: boolean
   currentStepId: string; onStepClick: (id: string) => void; onDeleteRequest: (id: string, label: string) => void; allStepsLength: number
@@ -270,7 +267,6 @@ function ActionDropZone({ id, isOver }: { id: string; isOver: boolean }) {
   return <div ref={setNodeRef} style={{ height: isOver ? 44 : 6, borderRadius: 8, background: isOver ? '#FFFDE7' : 'transparent', border: isOver ? '2px dashed #F5C400' : '2px dashed transparent', transition: 'all .15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gridColumn: isOver ? '1 / -1' : undefined }} />
 }
 
-// ─── Page principale ──────────────────────────────────────────────────────────
 export default function JobDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -306,7 +302,6 @@ export default function JobDetailPage() {
 
   const [contacts, setContacts] = useState<ContactMin[]>([])
 
-  // ── Modifier offre ─────────────────────────────────────────────────────────
   const [showEditModal, setShowEditModal] = useState(false)
   const [editForm, setEditForm] = useState({
     title: '', company: '', location: '', job_type: 'CDI',
@@ -314,12 +309,10 @@ export default function JobDetailPage() {
     company_description: '', company_website: '', company_size: '',
   })
 
-  // ── Supprimer offre ────────────────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  // ── Créer contact depuis "Transmis par" ────────────────────────────────────
   const [showCreateContact, setShowCreateContact] = useState(false)
   const [contactFirstName, setContactFirstName] = useState('')
   const [contactLastName, setContactLastName] = useState('')
@@ -402,7 +395,6 @@ export default function JobDetailPage() {
     }, 800)
   }
 
-  // ── Modifier offre ─────────────────────────────────────────────────────────
   function openEditModal() {
     if (!job) return
     setEditForm({
@@ -429,7 +421,6 @@ export default function JobDetailPage() {
     if (data.job) { setJob(data.job); setShowEditModal(false) }
   }
 
-  // ── Supprimer offre ────────────────────────────────────────────────────────
   async function deleteJob() {
     if (deleteConfirmText !== 'SUPPRIMER') return
     setDeleteLoading(true)
@@ -437,7 +428,6 @@ export default function JobDetailPage() {
     router.push('/dashboard')
   }
 
-  // ── Créer contact depuis "Transmis par" ────────────────────────────────────
   function openCreateContact(transmittedBy: string) {
     const parts = transmittedBy.trim().split(/\s+/)
     setContactFirstName(parts[0] || '')
@@ -459,21 +449,13 @@ export default function JobDetailPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({
-        name: fullName,
-        role: contactRole.trim() || null,
-        company: contactCompany.trim() || null,
-        email: contactEmail.trim() || null,
-        phone: contactPhone.trim() || null,
-        linkedin: contactLinkedin.trim() || null,
-        job_id: jobId,
+        name: fullName, role: contactRole.trim() || null, company: contactCompany.trim() || null,
+        email: contactEmail.trim() || null, phone: contactPhone.trim() || null,
+        linkedin: contactLinkedin.trim() || null, job_id: jobId,
       }),
     })
     setContactSaving(false)
-    if (res.ok) {
-      setContactSaved(true)
-      await loadContacts()
-      setTimeout(() => setShowCreateContact(false), 1500)
-    }
+    if (res.ok) { setContactSaved(true); await loadContacts(); setTimeout(() => setShowCreateContact(false), 1500) }
   }
 
   const sortedCustom = [...customSteps].sort((a, b) => a.position - b.position)
@@ -637,8 +619,6 @@ export default function JobDetailPage() {
     ? contacts.some(c => c.name.toLowerCase().includes(transmittedBy.toLowerCase().split(' ')[0].toLowerCase()))
     : false
 
-  const hasCompanyInfo = !!(job.company_description || job.company_website || job.company_size || job.department)
-
   return (
     <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, display: 'flex' }}>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -703,56 +683,58 @@ export default function JobDetailPage() {
           </div>
         </div>
 
-        {/* ─── INFOS ENTREPRISE ───────────────────────────────────────────── */}
-        {hasCompanyInfo && (
-          <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '1.5px solid #EBEBEB', overflow: 'hidden' }}>
-            <button
-              onClick={() => setCompanyExpanded(v => !v)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: '#FAFAFA', border: 'none', cursor: 'pointer', fontFamily: FONT }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 16 }}>🏢</span>
-                <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>À propos de {job.company}</span>
-              </div>
-              <span style={{ fontSize: 12, color: '#aaa', transform: companyExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
-            </button>
-            {companyExpanded && (
-              <div style={{ padding: '16px 20px' }}>
-                {job.company_description && (
-                  <div style={{ marginBottom: 14 }}>
-                    <p style={{ fontSize: 13, color: '#444', lineHeight: 1.7, fontWeight: 500, margin: 0 }}>{job.company_description}</p>
+        {/* ─── INFOS ENTREPRISE — toujours visible ────────────────────────── */}
+        <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '1.5px solid #EBEBEB', overflow: 'hidden' }}>
+          <button
+            onClick={() => setCompanyExpanded(v => !v)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: '#FAFAFA', border: 'none', cursor: 'pointer', fontFamily: FONT }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 16 }}>🏢</span>
+              <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>À propos de {job.company}</span>
+            </div>
+            <span style={{ fontSize: 12, color: '#aaa', transform: companyExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
+          </button>
+          {companyExpanded && (
+            <div style={{ padding: '16px 20px' }}>
+              {job.company_description ? (
+                <div style={{ marginBottom: 14 }}>
+                  <p style={{ fontSize: 13, color: '#444', lineHeight: 1.7, fontWeight: 500, margin: 0 }}>{job.company_description}</p>
+                </div>
+              ) : (
+                <p style={{ fontSize: 13, color: '#bbb', fontStyle: 'italic', marginBottom: 14, fontFamily: FONT }}>
+                  Aucune description — cliquez sur ✏️ Modifier pour en ajouter une.
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                {job.company_size && (
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Taille</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.company_size}</div>
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                  {job.company_size && (
-                    <div>
-                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Taille</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.company_size}</div>
-                    </div>
-                  )}
-                  {job.department && (
-                    <div>
-                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Département</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.department}</div>
-                    </div>
-                  )}
-                  {job.company_website && (
-                    <div>
-                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Site web</div>
-                      <a href={job.company_website.startsWith('http') ? job.company_website : `https://${job.company_website}`}
-                        target="_blank" rel="noopener noreferrer"
-                        style={{ fontSize: 13, fontWeight: 700, color: '#0A66C2', textDecoration: 'none' }}>
-                        {job.company_website} ↗
-                      </a>
-                    </div>
-                  )}
-                </div>
+                {job.department && (
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Département</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.department}</div>
+                  </div>
+                )}
+                {job.company_website && (
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Site web</div>
+                    <a href={job.company_website.startsWith('http') ? job.company_website : `https://${job.company_website}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 13, fontWeight: 700, color: '#0A66C2', textDecoration: 'none' }}>
+                      {job.company_website} ↗
+                    </a>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
-        {/* ─── TRANSMIS PAR → Créer contact ──────────────────────────────── */}
+        {/* ─── TRANSMIS PAR ───────────────────────────────────────────────── */}
         {transmittedBy && !transmittedByAlreadyContact && (
           <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 12, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -762,8 +744,7 @@ export default function JobDetailPage() {
                 <div style={{ fontSize: 11, color: '#7C3AED', fontWeight: 500 }}>Ce contact n&apos;est pas encore dans vos contacts.</div>
               </div>
             </div>
-            <button
-              onClick={() => openCreateContact(transmittedBy)}
+            <button onClick={() => openCreateContact(transmittedBy)}
               style={{ background: '#7C3AED', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap', boxShadow: '2px 2px 0 #111' }}>
               + Créer la fiche contact
             </button>
@@ -1166,24 +1147,19 @@ export default function JobDetailPage() {
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
               <h3 style={{ fontSize: 18, fontWeight: 900, color: '#E8151B', margin: '0 0 8px', fontFamily: FONT }}>Suppression définitive</h3>
-              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>
-                Cette action est <strong>irréversible</strong>.<br />
-                Toutes les données seront supprimées : échanges, documents, étapes.
-              </p>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>Cette action est <strong>irréversible</strong>.<br />Toutes les données seront supprimées.</p>
             </div>
             <div style={{ background: '#FEF2F2', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: '#111', margin: '0 0 4px', fontFamily: FONT }}>{job.title}</p>
               <p style={{ fontSize: 12, color: '#888', margin: 0, fontFamily: FONT }}>{job.company}</p>
             </div>
-            <p style={{ fontSize: 12, color: '#555', marginBottom: 8, fontFamily: FONT }}>
-              Pour confirmer, tapez exactement : <strong style={{ color: '#E8151B' }}>SUPPRIMER</strong>
-            </p>
+            <p style={{ fontSize: 12, color: '#555', marginBottom: 8, fontFamily: FONT }}>Pour confirmer, tapez : <strong style={{ color: '#E8151B' }}>SUPPRIMER</strong></p>
             <input className="fi" value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder="SUPPRIMER"
               style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em', borderColor: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#E0E0E0' }} autoFocus />
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <button onClick={() => setShowDeleteModal(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
               <button onClick={deleteJob} disabled={deleteConfirmText !== 'SUPPRIMER' || deleteLoading}
-                style={{ flex: 1, background: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#eee', color: deleteConfirmText === 'SUPPRIMER' ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: deleteConfirmText === 'SUPPRIMER' ? 'pointer' : 'not-allowed', fontFamily: FONT, transition: 'all 0.15s' }}>
+                style={{ flex: 1, background: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#eee', color: deleteConfirmText === 'SUPPRIMER' ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: deleteConfirmText === 'SUPPRIMER' ? 'pointer' : 'not-allowed', fontFamily: FONT }}>
                 {deleteLoading ? '…' : 'Supprimer définitivement'}
               </button>
             </div>
@@ -1210,36 +1186,15 @@ export default function JobDetailPage() {
             ) : (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">Prénom *</label>
-                    <input className="fi" value={contactFirstName} onChange={e => setContactFirstName(e.target.value)} placeholder="Philippe" autoFocus />
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">Nom *</label>
-                    <input className="fi" value={contactLastName} onChange={e => setContactLastName(e.target.value)} placeholder="Martin" />
-                  </div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Prénom *</label><input className="fi" value={contactFirstName} onChange={e => setContactFirstName(e.target.value)} placeholder="Philippe" autoFocus /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Nom *</label><input className="fi" value={contactLastName} onChange={e => setContactLastName(e.target.value)} placeholder="Martin" /></div>
                 </div>
-                <div style={{ marginBottom: 14 }}>
-                  <label className="fl">Fonction / Poste</label>
-                  <input className="fi" value={contactRole} onChange={e => setContactRole(e.target.value)} placeholder="Ex : DRH, Directeur Marketing, Chasseur de tête..." />
-                </div>
+                <div style={{ marginBottom: 14 }}><label className="fl">Fonction / Poste</label><input className="fi" value={contactRole} onChange={e => setContactRole(e.target.value)} placeholder="Ex : DRH, Directeur Marketing..." /></div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">Entreprise</label>
-                    <input className="fi" value={contactCompany} onChange={e => setContactCompany(e.target.value)} placeholder="Lenôtre, Michael Page..." />
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">Email</label>
-                    <input className="fi" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="p.martin@..." />
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">Téléphone</label>
-                    <input className="fi" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+33 6..." />
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label className="fl">LinkedIn</label>
-                    <input className="fi" value={contactLinkedin} onChange={e => setContactLinkedin(e.target.value)} placeholder="linkedin.com/in/..." />
-                  </div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Entreprise</label><input className="fi" value={contactCompany} onChange={e => setContactCompany(e.target.value)} placeholder="Lenôtre..." /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Email</label><input className="fi" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="p.martin@..." /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Téléphone</label><input className="fi" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+33 6..." /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">LinkedIn</label><input className="fi" value={contactLinkedin} onChange={e => setContactLinkedin(e.target.value)} placeholder="linkedin.com/in/..." /></div>
                 </div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                   <button onClick={() => setShowCreateContact(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
