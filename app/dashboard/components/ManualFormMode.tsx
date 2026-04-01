@@ -33,6 +33,7 @@ type Props = {
   contacts: ContactOption[];
   isFileImport: boolean;
   companyExtras: CompanyExtras;
+  setCompanyExtras?: (fn: (prev: CompanyExtras) => CompanyExtras) => void;
   transmittedById: string;
   setTransmittedById: (v: string) => void;
   transmittedByFree: string;
@@ -46,7 +47,7 @@ type Props = {
 
 export default function ManualFormMode({
   editingJobId, newJob, setNewJob, stages, contacts,
-  isFileImport, companyExtras,
+  isFileImport, companyExtras, setCompanyExtras,
   transmittedById, setTransmittedById, transmittedByFree, setTransmittedByFree,
   customSource, setCustomSource,
   onSave, onClose, onBack,
@@ -54,6 +55,12 @@ export default function ManualFormMode({
 
   const showTransmitted = showTransmittedByFor(newJob.source || '') || !!transmittedById || !!transmittedByFree;
   const showCustomSource = ['Autre', 'Chasseur de tête', 'Cabinet recrutement'].includes(newJob.source || '');
+
+  function updateCompanyExtra(field: keyof CompanyExtras, value: string) {
+    if (setCompanyExtras) {
+      setCompanyExtras(prev => ({ ...prev, [field]: value }));
+    }
+  }
 
   return (
     <div>
@@ -71,21 +78,6 @@ export default function ManualFormMode({
           <div>
             <div style={{ fontSize: 12, fontWeight: 800, color: '#1A7A4A' }}>Offre analysée par IA</div>
             <div style={{ fontSize: 11, color: '#555', fontWeight: 500 }}>Vérifiez et complétez les champs avant de sauvegarder.</div>
-          </div>
-        </div>
-      )}
-
-      {(companyExtras.company_description || companyExtras.company_website || companyExtras.company_size) && (
-        <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#5B21B6', marginBottom: 8 }}>🏢 Infos entreprise extraites</div>
-          {companyExtras.company_description && (
-            <p style={{ fontSize: 12, color: '#444', lineHeight: 1.5, margin: '0 0 6px', fontFamily: 'Montserrat,sans-serif' }}>
-              {companyExtras.company_description.slice(0, 200)}{companyExtras.company_description.length > 200 ? '…' : ''}
-            </p>
-          )}
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            {companyExtras.company_size    && <span style={{ fontSize: 11, fontWeight: 700, color: '#5B21B6' }}>👥 {companyExtras.company_size}</span>}
-            {companyExtras.company_website && <span style={{ fontSize: 11, fontWeight: 700, color: '#0A66C2' }}>🔗 {companyExtras.company_website}</span>}
           </div>
         </div>
       )}
@@ -175,6 +167,31 @@ export default function ManualFormMode({
             <textarea className="fi" value={newJob.description} onChange={e => setNewJob(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Missions, compétences requises..." rows={5} style={{ resize: 'vertical', minHeight: 120 }} />
           </div>
+
+          {/* ── À propos de l'entreprise ── */}
+          <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}>
+            <label className="fl">🏢 À propos de l&apos;entreprise</label>
+            <textarea className="fi"
+              value={companyExtras.company_description || ''}
+              onChange={e => updateCompanyExtra('company_description', e.target.value)}
+              placeholder="Secteur d'activité, valeurs, taille, histoire de l'entreprise..."
+              rows={3} style={{ resize: 'vertical' }} />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label className="fl">Site web entreprise</label>
+            <input className="fi"
+              value={companyExtras.company_website || ''}
+              onChange={e => updateCompanyExtra('company_website', e.target.value)}
+              placeholder="https://www.entreprise.com" />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label className="fl">Taille entreprise</label>
+            <input className="fi"
+              value={companyExtras.company_size || ''}
+              onChange={e => updateCompanyExtra('company_size', e.target.value)}
+              placeholder="Ex : 500-1000 salariés, ETI, Grand groupe..." />
+          </div>
+
           <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}>
             <label className="fl">Mes notes personnelles</label>
             <textarea className="fi" value={newJob.notes} onChange={e => setNewJob(prev => ({ ...prev, notes: e.target.value }))}

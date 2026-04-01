@@ -6,7 +6,7 @@ import SpontaneousMode from './SpontaneousMode';
 import FileImportMode from './FileImportMode';
 import ManualFormMode from './ManualFormMode';
 
-// ─── Types partagés exportés (utilisés par SpontaneousMode, FileImportMode, ManualFormMode) ───
+// ─── Types partagés exportés ───
 export type ContactOption = { id: string; name: string; role?: string; company?: string };
 
 export function ContactPicker({ contacts, contactId, setContactId, freeText, setFreeText, placeholder }: {
@@ -67,7 +67,6 @@ export default function JobModal({
   onImport, onSave, onClose, onSetExtra,
 }: Props) {
 
-  // ─── États partagés entre modes ───
   const [contacts, setContacts]                   = useState<ContactOption[]>([]);
   const [transmittedById, setTransmittedById]     = useState('');
   const [transmittedByFree, setTransmittedByFree] = useState('');
@@ -117,7 +116,6 @@ export default function JobModal({
     setTimeout(() => { onSave(); }, 50);
   }
 
-  // Détection import fichier : source vide + description longue ou infos entreprise extraites
   const isFileImport = (!(newJob as any).source || (newJob as any).source === '') &&
     (Object.keys(companyExtras).length > 0 || (transmittedByFree !== '') || ((newJob.description || '').length > 200));
 
@@ -134,7 +132,7 @@ export default function JobModal({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 900, margin: 0 }}>{modalTitle}</h2>
           <button
-            onClick={addJobMode === 'spontaneous' ? onClose : onClose}
+            onClick={onClose}
             style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕
           </button>
         </div>
@@ -190,7 +188,7 @@ export default function JobModal({
           </div>
         )}
 
-        {/* ── Mode fichier → délégué à FileImportMode ── */}
+        {/* ── Mode fichier ── */}
         {addJobMode === 'file' && (
           <FileImportMode
             contacts={contacts}
@@ -202,7 +200,7 @@ export default function JobModal({
           />
         )}
 
-        {/* ── Mode manuel → délégué à ManualFormMode ── */}
+        {/* ── Mode manuel ── */}
         {addJobMode === 'manual' && (
           <ManualFormMode
             editingJobId={editingJobId}
@@ -212,6 +210,7 @@ export default function JobModal({
             contacts={contacts}
             isFileImport={isFileImport}
             companyExtras={companyExtras}
+            setCompanyExtras={fn => setCompanyExtras(fn)}
             transmittedById={transmittedById}
             setTransmittedById={setTransmittedById}
             transmittedByFree={transmittedByFree}
@@ -224,7 +223,7 @@ export default function JobModal({
           />
         )}
 
-        {/* ── Mode édition → même formulaire manuel, sans bouton retour ── */}
+        {/* ── Mode édition ── */}
         {editingJobId && !addJobMode && (
           <ManualFormMode
             editingJobId={editingJobId}
@@ -234,6 +233,7 @@ export default function JobModal({
             contacts={contacts}
             isFileImport={false}
             companyExtras={companyExtras}
+            setCompanyExtras={fn => setCompanyExtras(fn)}
             transmittedById={transmittedById}
             setTransmittedById={setTransmittedById}
             transmittedByFree={transmittedByFree}
@@ -246,7 +246,7 @@ export default function JobModal({
           />
         )}
 
-        {/* ── Mode spontané → délégué à SpontaneousMode ── */}
+        {/* ── Mode spontané ── */}
         {addJobMode === 'spontaneous' && (
           <SpontaneousMode
             contacts={contacts}
