@@ -275,7 +275,7 @@ export default function JobDetailPage() {
   const addExchange = async () => {
     const step = allSteps.find(s => s.id === currentStepId)
     const res = await fetch('/api/jobs/exchanges', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ job_id: jobId, title: 'Nouvel échange', exchange_type: 'autre', exchange_date: new Date().toISOString().split('T')[0], step_label: step?.label ?? null }) })
-    if (res.ok) setExchanges(prev => [...prev, await res.json()])
+    if (res.ok) { const newEx = await res.json(); setExchanges(prev => [...prev, newEx]) }
   }
 
   const updateExchange = async (id: string, field: string, value: string) => {
