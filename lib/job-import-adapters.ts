@@ -35,7 +35,6 @@ export type NormalizedJobOffer = {
   salary_max: number | null
   currency: string | null
   description: string | null
-  company_description: string | null
   requirements: string | null
   benefits: string | null
   posted_at_text: string | null
@@ -255,10 +254,8 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
   let employment_type: string | null = null
   let seniority_level: string | null = null
 
-  // ── 1. TITRE et LIEU ──────────────────────────────────────────
   if (companyFromMeta) {
     const escaped = companyFromMeta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
     const anchoredRegex = new RegExp(
       `Postuler\\s+(.+?)\\s+${escaped}\\s+((?:Ville de |Province de |Région de )?[A-ZÀ-Ÿ][a-zà-ÿ\\s,\\-]+?)\\s+il y a`,
       'i'
@@ -297,8 +294,6 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
     }
   }
 
-  // ── 2. DESCRIPTION ENTREPRISE ─────────────────────────────────
-  // LinkedIn place souvent "À propos de l'entreprise" ou "About the company" avant la description entreprise
   const companyDescStart = rawText.search(
     /À propos de (?:l'entreprise|la société)|About the company|Présentation de l'entreprise/i
   )
@@ -308,15 +303,12 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
       /Description du poste|Missions|Vos missions|Le poste|Offres d'emploi similaires|Show more Show less/i
     )
     const raw = afterCompany.slice(0, companyDescEnd > -1 ? companyDescEnd : 3000)
-    // Retirer le titre de section lui-même
     company_description = cleanText(raw.replace(/^À propos de (?:l'entreprise|la société)|^About the company|^Présentation de l'entreprise/i, '').trim())
   }
 
-  // ── 3. DESCRIPTION POSTE ──────────────────────────────────────
   const descStart = rawText.search(
     /(?:⭐|🎯|Missions|À propos|Description du poste|Rattaché|Dans le cadre|Nous recherchons|Le poste|Vos missions|Contexte|Présentation)/i
   )
-
   if (descStart > -1) {
     const afterDesc = rawText.slice(descStart)
     const descEndMatch = afterDesc.search(
@@ -334,7 +326,6 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
     }
   }
 
-  // ── 4. EMPLOYMENT TYPE et SENIORITY ───────────────────────────
   const employmentMatch = rawText.match(
     /Type d'emploi\s+(Temps plein|Temps partiel|CDI|CDD|Freelance|Stage|Alternance)/i
   )

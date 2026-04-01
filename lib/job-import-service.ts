@@ -75,14 +75,12 @@ function normalizeImportUrl(url: string): string {
   try {
     const parsed = new URL(url)
     const hostname = parsed.hostname.replace(/^www\./, '')
-
     if (hostname.includes('indeed.')) {
       const jk = parsed.searchParams.get('jk') || parsed.searchParams.get('vjk')
       if (jk) {
         return `${parsed.protocol}//${parsed.hostname}/viewjob?jk=${encodeURIComponent(jk)}`
       }
     }
-
     return parsed.toString()
   } catch {
     return url
@@ -245,9 +243,7 @@ async function fetchJobPage(url: string, source: JobSource): Promise<{
         return { ok: true, status: response.status, html, error: null, wasBlocked: false }
       }
 
-      if (wasBlocked) {
-        continue
-      }
+      if (wasBlocked) continue
 
       return {
         ok: false,
@@ -369,7 +365,6 @@ async function saveImportedJob({
       company_description: truncate(job.company_description, 10000) ?? null,
       location: job.location_text ?? '',
       description: truncate(job.description, 50000) ?? '',
-      company_description: truncate(job.company_description, 10000) ?? null,
       source_platform: job.source_platform,
       source_url: job.source_url,
       source_hostname: job.source_hostname,
@@ -430,6 +425,7 @@ function buildMinimalJobFromUrl(
     external_job_id: externalId,
     title: claudeData?.title ?? null,
     company_name: claudeData?.company_name ?? null,
+    company_description: claudeData?.company_description ?? null,
     location_text: claudeData?.location_text ?? null,
     workplace_type: null,
     employment_type: claudeData?.employment_type ?? null,
@@ -440,7 +436,6 @@ function buildMinimalJobFromUrl(
     salary_max: null,
     currency: null,
     description: claudeData?.description ?? null,
-    company_description: claudeData?.company_description ?? null,
     requirements: null,
     benefits: null,
     posted_at_text: null,
