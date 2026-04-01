@@ -327,7 +327,10 @@ export default function JobDetailPage() {
   const loadJob = useCallback(async () => {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
-    if (session) setUserId(session.user.id)
+    if (session) {
+      setUserId(session.user.id)
+      if (typeof window !== 'undefined') (window as any).__jfmj_token = session.access_token
+    }
     const { data } = await supabase.from('jobs').select('*').eq('id', jobId).single()
     if (data) { setJob(data); setNotes(data.notes ?? '') }
   }, [jobId])
@@ -683,57 +686,6 @@ export default function JobDetailPage() {
           </div>
         </div>
 
-        {/* ─── INFOS ENTREPRISE — toujours visible ────────────────────────── */}
-        <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '1.5px solid #EBEBEB', overflow: 'hidden' }}>
-          <button
-            onClick={() => setCompanyExpanded(v => !v)}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: '#FAFAFA', border: 'none', cursor: 'pointer', fontFamily: FONT }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 16 }}>🏢</span>
-              <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>À propos de {job.company}</span>
-            </div>
-            <span style={{ fontSize: 12, color: '#aaa', transform: companyExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
-          </button>
-          {companyExpanded && (
-            <div style={{ padding: '16px 20px' }}>
-              {job.company_description ? (
-                <div style={{ marginBottom: 14 }}>
-                  <p style={{ fontSize: 13, color: '#444', lineHeight: 1.7, fontWeight: 500, margin: 0 }}>{job.company_description}</p>
-                </div>
-              ) : (
-                <p style={{ fontSize: 13, color: '#bbb', fontStyle: 'italic', marginBottom: 14, fontFamily: FONT }}>
-                  Aucune description — cliquez sur ✏️ Modifier pour en ajouter une.
-                </p>
-              )}
-              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                {job.company_size && (
-                  <div>
-                    <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Taille</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.company_size}</div>
-                  </div>
-                )}
-                {job.department && (
-                  <div>
-                    <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Département</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.department}</div>
-                  </div>
-                )}
-                {job.company_website && (
-                  <div>
-                    <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Site web</div>
-                    <a href={job.company_website.startsWith('http') ? job.company_website : `https://${job.company_website}`}
-                      target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 13, fontWeight: 700, color: '#0A66C2', textDecoration: 'none' }}>
-                      {job.company_website} ↗
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* ─── TRANSMIS PAR ───────────────────────────────────────────────── */}
         {transmittedBy && !transmittedByAlreadyContact && (
           <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 12, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -1080,6 +1032,54 @@ export default function JobDetailPage() {
             {descExpanded ? 'Réduire ↑' : 'Lire la description complète ↓'}
           </button>
         </div>
+        {/* ─── À PROPOS DE L'ENTREPRISE — en bas ──────────────────────────── */}
+        <div style={card}>
+          <button
+            onClick={() => setCompanyExpanded(v => !v)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT, padding: 0, marginBottom: companyExpanded ? 14 : 0 }}
+          >
+            <span style={sectionLabel}>🏢 À propos de {job.company}</span>
+            <span style={{ fontSize: 12, color: '#aaa', transform: companyExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s', marginBottom: 14 }}>▼</span>
+          </button>
+          {companyExpanded && (
+            <>
+              {job.company_description ? (
+                <p style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontWeight: 500, margin: '0 0 14px', fontFamily: FONT }}>{job.company_description}</p>
+              ) : (
+                <p style={{ fontSize: 13, color: '#bbb', fontStyle: 'italic', marginBottom: 14, fontFamily: FONT }}>
+                  Aucune description — cliquez sur ✏️ Modifier pour en ajouter une.
+                </p>
+              )}
+              {(job.company_size || job.company_website || job.department) && (
+                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                  {job.company_size && (
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Taille</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.company_size}</div>
+                    </div>
+                  )}
+                  {job.department && (
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Département</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#333' }}>{job.department}</div>
+                    </div>
+                  )}
+                  {job.company_website && (
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#bbb', marginBottom: 3 }}>Site web</div>
+                      <a href={job.company_website.startsWith('http') ? job.company_website : `https://${job.company_website}`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{ fontSize: 13, fontWeight: 700, color: '#0A66C2', textDecoration: 'none' }}>
+                        {job.company_website} ↗
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
       </div>
 
       {/* ════════ MODALES ════════════════════════════════════════════════════ */}
