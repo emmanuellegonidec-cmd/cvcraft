@@ -165,7 +165,6 @@ function authHeaders(): HeadersInit {
     : { 'Content-Type': 'application/json' }
 }
 
-// ─── Extraire "Transmis par" depuis les notes ─────────────────────────────────
 function extractTransmittedBy(notes: string | null): string | null {
   if (!notes) return null
   const match = notes.match(/Transmis par\s*:\s*(.+?)(?:\n|$)/i)
@@ -309,7 +308,11 @@ export default function JobDetailPage() {
 
   // ── Modifier offre ─────────────────────────────────────────────────────────
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editForm, setEditForm] = useState({ title: '', company: '', location: '', job_type: 'CDI', salary_text: '', description: '' })
+  const [editForm, setEditForm] = useState({
+    title: '', company: '', location: '', job_type: 'CDI',
+    salary_text: '', description: '',
+    company_description: '', company_website: '', company_size: '',
+  })
 
   // ── Supprimer offre ────────────────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -402,7 +405,17 @@ export default function JobDetailPage() {
   // ── Modifier offre ─────────────────────────────────────────────────────────
   function openEditModal() {
     if (!job) return
-    setEditForm({ title: job.title || '', company: job.company || '', location: job.location || '', job_type: job.job_type || 'CDI', salary_text: job.salary_text || '', description: job.description || '' })
+    setEditForm({
+      title: job.title || '',
+      company: job.company || '',
+      location: job.location || '',
+      job_type: job.job_type || 'CDI',
+      salary_text: job.salary_text || '',
+      description: job.description || '',
+      company_description: job.company_description || '',
+      company_website: job.company_website || '',
+      company_size: job.company_size || '',
+    })
     setShowEditModal(true)
   }
 
@@ -426,7 +439,6 @@ export default function JobDetailPage() {
 
   // ── Créer contact depuis "Transmis par" ────────────────────────────────────
   function openCreateContact(transmittedBy: string) {
-    // Tenter de séparer prénom et nom
     const parts = transmittedBy.trim().split(/\s+/)
     setContactFirstName(parts[0] || '')
     setContactLastName(parts.slice(1).join(' ') || '')
@@ -620,13 +632,11 @@ export default function JobDetailPage() {
   const sortedStepActions = [...stepActions].sort((a, b) => a.position - b.position)
   const selectedContact = contacts.find(c => c.id === job.interview_contact_id)
 
-  // Extraire "Transmis par" des notes
   const transmittedBy = extractTransmittedBy(job.notes)
   const transmittedByAlreadyContact = transmittedBy
     ? contacts.some(c => c.name.toLowerCase().includes(transmittedBy.toLowerCase().split(' ')[0].toLowerCase()))
     : false
 
-  // Infos entreprise disponibles
   const hasCompanyInfo = !!(job.company_description || job.company_website || job.company_size || job.department)
 
   return (
@@ -686,7 +696,6 @@ export default function JobDetailPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
             {job.source_url && <button onClick={() => window.open(job.source_url, '_blank')} style={{ background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #E8151B', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #fff', whiteSpace: 'nowrap' }}>Voir l&apos;offre ↗</button>}
             <button onClick={() => router.push(`/dashboard/editor?job_id=${jobId}`)} style={{ background: '#F5C400', color: '#111', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #111', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' }}>Générer un CV</button>
-            {/* Boutons Modifier / Supprimer */}
             <div style={{ display: 'flex', gap: 6 }}>
               <button className="btn-edit" onClick={openEditModal}>✏️ Modifier</button>
               <button className="btn-delete" onClick={() => { setDeleteConfirmText(''); setShowDeleteModal(true) }}>🗑️ Supprimer</button>
@@ -707,7 +716,6 @@ export default function JobDetailPage() {
               </div>
               <span style={{ fontSize: 12, color: '#aaa', transform: companyExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
             </button>
-
             {companyExpanded && (
               <div style={{ padding: '16px 20px' }}>
                 {job.company_description && (
@@ -1127,8 +1135,20 @@ export default function JobDetailPage() {
                 <input className="fi" value={editForm.salary_text} onChange={e => setEditForm(p => ({ ...p, salary_text: e.target.value }))} placeholder="45-55k€ / an" />
               </div>
               <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
-                <label className="fl">Description</label>
+                <label className="fl">Description du poste</label>
                 <textarea className="fi" value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={5} style={{ resize: 'vertical', minHeight: 120, marginBottom: 0 }} />
+              </div>
+              <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
+                <label className="fl">🏢 À propos de l&apos;entreprise</label>
+                <textarea className="fi" value={editForm.company_description} onChange={e => setEditForm(p => ({ ...p, company_description: e.target.value }))} rows={3} style={{ resize: 'vertical', marginBottom: 0 }} placeholder="Secteur d'activité, valeurs, taille, histoire..." />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label className="fl">Site web entreprise</label>
+                <input className="fi" value={editForm.company_website} onChange={e => setEditForm(p => ({ ...p, company_website: e.target.value }))} placeholder="https://www.entreprise.com" />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label className="fl">Taille entreprise</label>
+                <input className="fi" value={editForm.company_size} onChange={e => setEditForm(p => ({ ...p, company_size: e.target.value }))} placeholder="Ex : 500-1000 salariés, ETI..." />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
@@ -1158,19 +1178,11 @@ export default function JobDetailPage() {
             <p style={{ fontSize: 12, color: '#555', marginBottom: 8, fontFamily: FONT }}>
               Pour confirmer, tapez exactement : <strong style={{ color: '#E8151B' }}>SUPPRIMER</strong>
             </p>
-            <input
-              className="fi"
-              value={deleteConfirmText}
-              onChange={e => setDeleteConfirmText(e.target.value)}
-              placeholder="SUPPRIMER"
-              style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em', borderColor: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#E0E0E0' }}
-              autoFocus
-            />
+            <input className="fi" value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder="SUPPRIMER"
+              style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em', borderColor: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#E0E0E0' }} autoFocus />
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <button onClick={() => setShowDeleteModal(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
-              <button
-                onClick={deleteJob}
-                disabled={deleteConfirmText !== 'SUPPRIMER' || deleteLoading}
+              <button onClick={deleteJob} disabled={deleteConfirmText !== 'SUPPRIMER' || deleteLoading}
                 style={{ flex: 1, background: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#eee', color: deleteConfirmText === 'SUPPRIMER' ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: deleteConfirmText === 'SUPPRIMER' ? 'pointer' : 'not-allowed', fontFamily: FONT, transition: 'all 0.15s' }}>
                 {deleteLoading ? '…' : 'Supprimer définitivement'}
               </button>
@@ -1187,12 +1199,9 @@ export default function JobDetailPage() {
               <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: 0, fontFamily: FONT }}>👤 Créer une fiche contact</h3>
               <button onClick={() => setShowCreateContact(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
             </div>
-
-            {/* Badge offre liée */}
             <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 12, fontWeight: 700, color: '#5B21B6', fontFamily: FONT }}>
               🔗 Ce contact sera lié à : <strong>{job.title}</strong> — {job.company}
             </div>
-
             {contactSaved ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{ fontSize: 36, marginBottom: 10 }}>✅</div>
@@ -1200,7 +1209,6 @@ export default function JobDetailPage() {
               </div>
             ) : (
               <>
-                {/* Prénom + Nom séparés */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                   <div style={{ marginBottom: 14 }}>
                     <label className="fl">Prénom *</label>
@@ -1211,13 +1219,10 @@ export default function JobDetailPage() {
                     <input className="fi" value={contactLastName} onChange={e => setContactLastName(e.target.value)} placeholder="Martin" />
                   </div>
                 </div>
-
-                {/* Fonction */}
                 <div style={{ marginBottom: 14 }}>
                   <label className="fl">Fonction / Poste</label>
                   <input className="fi" value={contactRole} onChange={e => setContactRole(e.target.value)} placeholder="Ex : DRH, Directeur Marketing, Chasseur de tête..." />
                 </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                   <div style={{ marginBottom: 14 }}>
                     <label className="fl">Entreprise</label>
@@ -1236,12 +1241,9 @@ export default function JobDetailPage() {
                     <input className="fi" value={contactLinkedin} onChange={e => setContactLinkedin(e.target.value)} placeholder="linkedin.com/in/..." />
                   </div>
                 </div>
-
                 <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                   <button onClick={() => setShowCreateContact(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
-                  <button
-                    onClick={saveContact}
-                    disabled={!contactFirstName.trim() || contactSaving}
+                  <button onClick={saveContact} disabled={!contactFirstName.trim() || contactSaving}
                     style={{ flex: 2, background: (!contactFirstName.trim() || contactSaving) ? '#eee' : '#7C3AED', color: (!contactFirstName.trim() || contactSaving) ? '#aaa' : '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: contactFirstName.trim() ? 'pointer' : 'not-allowed', fontFamily: FONT, boxShadow: contactFirstName.trim() ? '2px 2px 0 #111' : 'none' }}>
                     {contactSaving ? '…' : 'Créer le contact →'}
                   </button>
