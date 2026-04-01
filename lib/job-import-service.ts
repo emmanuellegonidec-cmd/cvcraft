@@ -89,12 +89,6 @@ function normalizeImportUrl(url: string): string {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// DÉTECTION PAGE DE LOGIN / BLOCAGE
-// LinkedIn renvoie sa page d'auth quand il détecte un bot serveur.
-// On détecte ça en cherchant des marqueurs fiables dans le HTML.
-// ─────────────────────────────────────────────────────────────────
-
 function isBlockedPage(html: string): boolean {
   const markers = [
     'authwall',
@@ -114,13 +108,6 @@ function isBlockedPage(html: string): boolean {
   return markers.some((m) => lowerHtml.includes(m.toLowerCase()))
 }
 
-// ─────────────────────────────────────────────────────────────────
-// EXTRACTION VIA CLAUDE + WEB SEARCH (fallback quand scraping bloqué)
-// Claude recherche l'offre sur le web depuis son ID LinkedIn et
-// extrait toutes les infos disponibles : titre, entreprise, lieu,
-// description complète, type de contrat, etc.
-// ─────────────────────────────────────────────────────────────────
-
 async function extractJobWithClaude(
   url: string,
   source: JobSource
@@ -128,7 +115,6 @@ async function extractJobWithClaude(
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return null
 
-  // Extraire l'ID LinkedIn depuis l'URL
   const jobIdMatch = url.match(/\/jobs\/view\/(?:[^/]*?-)?(\d{6,})\/?/)
   const jobId = jobIdMatch?.[1] ?? null
 
@@ -137,14 +123,11 @@ async function extractJobWithClaude(
 
 Recherche l'offre d'emploi LinkedIn avec l'ID ${jobId} (URL : ${url}).
 
-Utilise la recherche web pour trouver cette offre et extraire toutes les informations disponibles, notamment :
-- Le titre exact du poste
-- Le nom de l'entreprise qui recrute
-- Le lieu (ville, pays, hybride/présentiel/remote)
-- Le type de contrat (CDI, CDD, Stage, Alternance, Freelance...)
-- Le niveau hiérarchique (Junior, Senior, Manager, Directeur...)
-- La description complète du poste : missions, responsabilités, profil recherché, compétences requises
-- Le salaire si mentionné
+Utilise la recherche web pour trouver cette offre et extraire toutes les informations disponibles.
+
+IMPORTANT : distingue bien deux choses séparées :
+- "description" = le descriptif du POSTE uniquement (missions, responsabilités, profil recherché, compétences requises)
+- "company_description" = le descriptif de l'ENTREPRISE uniquement (activité, secteur, histoire, valeurs, taille, chiffres clés)
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après :
 {
@@ -153,13 +136,18 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant o
   "location_text": "ville et mode de travail (ex: Paris · Hybride) ou null",
   "employment_type": "CDI ou CDD ou Stage ou Alternance ou Freelance ou null",
   "seniority_level": "niveau hiérarchique ou null",
-  "description": "description complète du poste (missions, profil, compétences) ou null",
+  "description": "description du POSTE uniquement (missions, profil, compétences) ou null",
+  "company_description": "description de l'ENTREPRISE uniquement (secteur, activité, valeurs, taille) ou null",
   "salary_text": "fourchette salariale ou null",
   "external_job_id": "${jobId}"
 }`
     : `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
 
 Recherche cette offre d'emploi : ${url}
+
+IMPORTANT : distingue bien deux choses séparées :
+- "description" = le descriptif du POSTE uniquement (missions, responsabilités, profil recherché, compétences requises)
+- "company_description" = le descriptif de l'ENTREPRISE uniquement (activité, secteur, histoire, valeurs, taille, chiffres clés)
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après :
 {
@@ -169,6 +157,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant o
   "employment_type": null,
   "seniority_level": null,
   "description": null,
+  "company_description": null,
   "salary_text": null,
   "external_job_id": null
 }`
@@ -193,7 +182,6 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant o
 
     const data = await response.json()
 
-    // Récupérer le dernier bloc text (après éventuel tool_use)
     const textBlock = data?.content
       ?.filter((b: { type: string }) => b.type === 'text')
       ?.at(-1)?.text ?? ''
@@ -205,10 +193,6 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant o
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// FETCH AVEC PLUSIEURS STRATÉGIES POUR CONTOURNER LE BLOCAGE
-// ─────────────────────────────────────────────────────────────────
-
 async function fetchJobPage(url: string, source: JobSource): Promise<{
   ok: boolean
   status: number
@@ -216,7 +200,6 @@ async function fetchJobPage(url: string, source: JobSource): Promise<{
   error: string | null
   wasBlocked: boolean
 }> {
-  // Stratégie 1 : fetch standard avec headers navigateur
   const strategies: Array<{ headers: Record<string, string> }> = [
     {
       headers: {
@@ -236,7 +219,6 @@ async function fetchJobPage(url: string, source: JobSource): Promise<{
         'Upgrade-Insecure-Requests': '1',
       },
     },
-    // Stratégie 2 : via version mobile (parfois moins bloquée)
     {
       headers: {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -264,7 +246,6 @@ async function fetchJobPage(url: string, source: JobSource): Promise<{
       }
 
       if (wasBlocked) {
-        // On continue avec la stratégie suivante
         continue
       }
 
@@ -280,7 +261,6 @@ async function fetchJobPage(url: string, source: JobSource): Promise<{
     }
   }
 
-  // Toutes les stratégies ont échoué ou sont bloquées
   return {
     ok: false,
     status: 0,
@@ -388,6 +368,7 @@ async function saveImportedJob({
       company: job.company_name ?? 'Entreprise inconnue',
       location: job.location_text ?? '',
       description: truncate(job.description, 50000) ?? '',
+      company_description: truncate(job.company_description, 10000) ?? null,
       source_platform: job.source_platform,
       source_url: job.source_url,
       source_hostname: job.source_hostname,
@@ -433,18 +414,11 @@ async function saveImportedJob({
   return { jobId, duplicateOf: null }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// CONSTRUCTION D'UN JOB MINIMAL DEPUIS L'URL (dernier recours)
-// Quand ni le scraping ni Claude ne fonctionnent, on construit
-// une fiche vide mais importable, que l'utilisateur peut compléter.
-// ─────────────────────────────────────────────────────────────────
-
 function buildMinimalJobFromUrl(
   url: string,
   source: JobSource,
   claudeData: Partial<NormalizedJobOffer> | null
 ): NormalizedJobOffer {
-  // Extraction de l'ID depuis l'URL LinkedIn
   const jobIdMatch = url.match(/\/jobs\/view\/(?:[^/]*?-)?(\d{6,})\/?/)
   const externalId = claudeData?.external_job_id ?? jobIdMatch?.[1] ?? null
 
@@ -465,6 +439,7 @@ function buildMinimalJobFromUrl(
     salary_max: null,
     currency: null,
     description: claudeData?.description ?? null,
+    company_description: claudeData?.company_description ?? null,
     requirements: null,
     benefits: null,
     posted_at_text: null,
@@ -513,13 +488,11 @@ export async function importJobFromUrl({
   const source = detectJobSource(normalizedUrl)
   const sourceHostname = getSafeHostname(normalizedUrl)
 
-  // ── ÉTAPE 1 : Tentative de scraping normal ─────────────────────
   const fetchResult = await fetchJobPage(normalizedUrl, source)
 
   let job: NormalizedJobOffer
 
   if (fetchResult.ok && fetchResult.html) {
-    // Scraping réussi → parsing normal
     try {
       job = parseJobHtml(normalizedUrl, fetchResult.html)
     } catch (error) {
@@ -545,7 +518,6 @@ export async function importJobFromUrl({
       }
     }
   } else {
-    // ── ÉTAPE 2 : Scraping bloqué → fallback Claude + web search ──
     const claudeData = await extractJobWithClaude(normalizedUrl, source)
     job = buildMinimalJobFromUrl(normalizedUrl, source, claudeData)
 
@@ -560,7 +532,6 @@ export async function importJobFromUrl({
     })
   }
 
-  // ── ÉTAPE 3 : Sauvegarde ───────────────────────────────────────
   try {
     const { jobId, duplicateOf } = await saveImportedJob({
       userId,

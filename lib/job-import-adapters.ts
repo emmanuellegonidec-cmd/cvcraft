@@ -24,6 +24,7 @@ export type NormalizedJobOffer = {
   external_job_id: string | null
   title: string | null
   company_name: string | null
+  company_description: string | null
   location_text: string | null
   workplace_type: WorkplaceType
   employment_type: string | null
@@ -141,6 +142,7 @@ function createEmptyJob(source: JobSource, url: string): NormalizedJobOffer {
     external_job_id: null,
     title: null,
     company_name: null,
+    company_description: null,
     location_text: null,
     workplace_type: null,
     employment_type: null,
@@ -235,21 +237,12 @@ function externalIdFromPath(url: string, regex: RegExp): string | null {
   return match?.[1] ?? null
 }
 
-// ─────────────────────────────────────────────────────────────────
-// EXTRACTION DEPUIS LE RAW_TEXT LINKEDIN (page non connectée)
-//
-// Structure du raw_text LinkedIn non connecté :
-// "...Postuler [TITRE] [ENTREPRISE] [LIEU] Postuler [TITRE] [ENTREPRISE] [LIEU] il y a X jours..."
-//
-// On ancre sur le 2e "Postuler" suivi du pattern complet jusqu'à "il y a".
-// C'est le bloc le plus court et le plus fiable.
-// ─────────────────────────────────────────────────────────────────
-
 function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | null): {
   title: string | null
   company_name: string | null
   location_text: string | null
   description: string | null
+  company_description: string | null
   employment_type: string | null
   seniority_level: string | null
 } {
@@ -257,17 +250,14 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
   let company_name: string | null = companyFromMeta
   let location_text: string | null = null
   let description: string | null = null
+  let company_description: string | null = null
   let employment_type: string | null = null
   let seniority_level: string | null = null
 
   // ── 1. TITRE et LIEU ──────────────────────────────────────────
-  // Pattern ancré : "Postuler [TITRE] [ENTREPRISE] [LIEU] il y a X"
-  // Le 2e "Postuler" précède toujours le bloc répété court et propre.
-
   if (companyFromMeta) {
     const escaped = companyFromMeta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-    // Cherche : "Postuler [TITRE] [ENTREPRISE] [LIEU] il y a"
     const anchoredRegex = new RegExp(
       `Postuler\\s+(.+?)\\s+${escaped}\\s+((?:Ville de |Province de |Région de )?[A-ZÀ-Ÿ][a-zà-ÿ\\s,\\-]+?)\\s+il y a`,
       'i'
@@ -280,7 +270,6 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
         .trim() ?? null
     }
 
-    // Fallback : "Postuler [TITRE] [ENTREPRISE] [LIEU] Plus de"
     if (!title) {
       const fallback1 = new RegExp(
         `Postuler\\s+(.+?)\\s+${escaped}\\s+((?:Ville de |Province de |Région de )?[A-ZÀ-Ÿ][a-zà-ÿ\\s,\\-]+?)\\s+(?:Plus de|Découvrez)`,
@@ -295,7 +284,6 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
       }
     }
   } else {
-    // Pas d'entreprise connue : pattern générique après "Postuler"
     const genericMatch = rawText.match(
       /Postuler\s+([A-ZÀ-Ÿ].+?)\s+([A-ZÀ-Ÿ][a-zA-ZÀ-ÿ\s&'\-\.]{1,40}?)\s+((?:Ville de |Province de )?[A-ZÀ-Ÿ][a-zà-ÿ\s,\-]+?)\s+il y a/i
     )
@@ -308,7 +296,22 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
     }
   }
 
-  // ── 2. DESCRIPTION ────────────────────────────────────────────
+  // ── 2. DESCRIPTION ENTREPRISE ─────────────────────────────────
+  // LinkedIn place souvent "À propos de l'entreprise" ou "About the company" avant la description entreprise
+  const companyDescStart = rawText.search(
+    /À propos de (?:l'entreprise|la société)|About the company|Présentation de l'entreprise/i
+  )
+  if (companyDescStart > -1) {
+    const afterCompany = rawText.slice(companyDescStart)
+    const companyDescEnd = afterCompany.search(
+      /Description du poste|Missions|Vos missions|Le poste|Offres d'emploi similaires|Show more Show less/i
+    )
+    const raw = afterCompany.slice(0, companyDescEnd > -1 ? companyDescEnd : 3000)
+    // Retirer le titre de section lui-même
+    company_description = cleanText(raw.replace(/^À propos de (?:l'entreprise|la société)|^About the company|^Présentation de l'entreprise/i, '').trim())
+  }
+
+  // ── 3. DESCRIPTION POSTE ──────────────────────────────────────
   const descStart = rawText.search(
     /(?:⭐|🎯|Missions|À propos|Description du poste|Rattaché|Dans le cadre|Nous recherchons|Le poste|Vos missions|Contexte|Présentation)/i
   )
@@ -330,7 +333,7 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
     }
   }
 
-  // ── 3. EMPLOYMENT TYPE et SENIORITY ───────────────────────────
+  // ── 4. EMPLOYMENT TYPE et SENIORITY ───────────────────────────
   const employmentMatch = rawText.match(
     /Type d'emploi\s+(Temps plein|Temps partiel|CDI|CDD|Freelance|Stage|Alternance)/i
   )
@@ -341,7 +344,7 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
   )
   if (seniorityMatch) seniority_level = cleanText(seniorityMatch[1])
 
-  return { title, company_name, location_text, description, employment_type, seniority_level }
+  return { title, company_name, location_text, description, company_description, employment_type, seniority_level }
 }
 
 const linkedinAdapter: JobAdapter = {
@@ -365,7 +368,6 @@ const linkedinAdapter: JobAdapter = {
     const rawText = bodyText($) ?? cleanText(html) ?? ''
     const extracted = extractLinkedInFromRawText(rawText, companyFromMeta)
 
-    // Nettoyage titre meta comme dernier recours
     const cleanMetaTitle = titleFromMeta
       ?.replace(/\s*[|]\s*LinkedIn.*$/i, '')
       ?.replace(/\s*-\s*LinkedIn.*$/i, '')
@@ -377,6 +379,7 @@ const linkedinAdapter: JobAdapter = {
       external_job_id: externalIdFromPath(url, /\/jobs\/view\/(\d+)/),
       title: extracted.title || cleanMetaTitle || null,
       company_name: extracted.company_name || companyFromMeta,
+      company_description: extracted.company_description ?? null,
       location_text: extracted.location_text ?? null,
       employment_type: extracted.employment_type ||
         cleanText($('li:contains("Employment type") span').last().text()),
@@ -388,10 +391,6 @@ const linkedinAdapter: JobAdapter = {
     })
   },
 }
-
-// ─────────────────────────────────────────────────────────────────
-// AUTRES ADAPTATEURS — inchangés, prêts pour futurs jobboards
-// ─────────────────────────────────────────────────────────────────
 
 const apecAdapter: JobAdapter = {
   source: 'apec',
