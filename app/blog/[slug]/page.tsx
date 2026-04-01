@@ -103,13 +103,13 @@ export default async function ArticlePage({ params }: { params: { slug: string }
 
       {/* Image de couverture — ratio 16/9 */}
       {article.cover_image_url && (
-        <div style={{ width: '100%', aspectRatio: '16/9', maxHeight: 520, overflow: 'hidden', borderBottom: '2.5px solid #111' }}>
-          <img
-            src={article.cover_image_url}
-            alt={article.cover_image_alt || article.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        </div>
+       <div style={{ width: '100%', borderBottom: '2.5px solid #111' }}>
+  <img
+    src={article.cover_image_url}
+    alt={article.cover_image_alt || article.title}
+    style={{ width: '100%', height: 'auto', display: 'block' }}
+  />
+</div>
       )}
 
       {/* Contenu — largeur 1400px comme la home, texte centré 860px */}
