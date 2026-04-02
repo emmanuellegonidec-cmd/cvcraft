@@ -144,6 +144,11 @@ export default function JobDetailPage() {
   const [contacts, setContacts] = useState<ContactMin[]>([])
   const notesTimer = useRef<NodeJS.Timeout | null>(null)
 
+  // Upload documents
+  const [uploadingDoc, setUploadingDoc] = useState<'cv' | 'cover_letter' | null>(null)
+  const cvInputRef = useRef<HTMLInputElement>(null)
+  const coverLetterInputRef = useRef<HTMLInputElement>(null)
+
   // Modales
   const [showEditModal, setShowEditModal] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -245,6 +250,51 @@ export default function JobDetailPage() {
     }, 800)
   }
 
+  // ─── Upload document ───────────────────────────────────────────────────────
+  const handleDocumentUpload = async (file: File, docType: 'cv' | 'cover_letter') => {
+    if (!file || !userId) return
+    setUploadingDoc(docType)
+    try {
+      const supabase = createClient()
+      const ext = file.name.split('.').pop()
+      const path = `${userId}/${jobId}/${docType}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('job-documents')
+        .upload(path, file, { upsert: true })
+      if (uploadError) throw uploadError
+
+      const { data: signedData } = await supabase.storage
+        .from('job-documents')
+        .createSignedUrl(path, 60 * 60 * 24 * 365) // 1 an
+
+      if (!signedData?.signedUrl) throw new Error('URL non générée')
+
+      const urlField = docType === 'cv' ? 'cv_url' : 'cover_letter_url'
+      await fetch(`/api/jobs?id=${jobId}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ [urlField]: signedData.signedUrl }),
+      })
+      setJob(prev => prev ? { ...prev, [urlField]: signedData.signedUrl } : prev)
+    } catch (err) {
+      console.error('Erreur upload document:', err)
+      alert('Erreur lors du chargement du fichier. Veuillez réessayer.')
+    } finally {
+      setUploadingDoc(null)
+    }
+  }
+
+  const handleDeleteDocument = async (docType: 'cv' | 'cover_letter') => {
+    if (!confirm('Supprimer ce document ?')) return
+    const urlField = docType === 'cv' ? 'cv_url' : 'cover_letter_url'
+    await fetch(`/api/jobs?id=${jobId}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ [urlField]: null }),
+    })
+    setJob(prev => prev ? { ...prev, [urlField]: null } : prev)
+  }
+
   // ─── Modifier ──────────────────────────────────────────────────────────────
   function openEditModal() {
     if (!job) return
@@ -327,6 +377,11 @@ export default function JobDetailPage() {
     ? contacts.some(c => c.name.toLowerCase().includes(transmittedBy.toLowerCase().split(' ')[0].toLowerCase()))
     : false
 
+  const docItems = [
+    { docType: 'cv' as const, sent: job.cv_sent, name: 'CV', url: job.cv_url, inputRef: cvInputRef },
+    { docType: 'cover_letter' as const, sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url, inputRef: coverLetterInputRef },
+  ]
+
   return (
     <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, display: 'flex' }}>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -349,6 +404,8 @@ export default function JobDetailPage() {
         .fi { width: 100%; border: 1.5px solid #E0E0E0; border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: ${FONT}; outline: none; background: #fff; color: #111; box-sizing: border-box; font-weight: 500; margin-bottom: 12px; }
         .fi:focus { border-color: #111; }
         .fl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #888; display: block; margin-bottom: 5px; font-family: ${FONT}; }
+        .doc-upload-btn { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 7px; border: 1.5px solid #EBEBEB; cursor: pointer; font-family: ${FONT}; transition: all 0.15s; }
+        .doc-upload-btn:hover { border-color: #111; }
       `}</style>
 
       <div className="jfmj-sidebar">
@@ -456,18 +513,64 @@ export default function JobDetailPage() {
         <div className="jfmj-docs-grid">
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={sectionLabel}>Documents</span>
-            {[{ sent: job.cv_sent, name: 'CV', url: job.cv_url }, { sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url }].map(doc => (
-              <div key={doc.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #F5F5F0' }}>
+
+            {/* Inputs file cachés */}
+            <input
+              ref={cvInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx"
+              style={{ display: 'none' }}
+              onChange={e => { if (e.target.files?.[0]) handleDocumentUpload(e.target.files[0], 'cv') }}
+            />
+            <input
+              ref={coverLetterInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx"
+              style={{ display: 'none' }}
+              onChange={e => { if (e.target.files?.[0]) handleDocumentUpload(e.target.files[0], 'cover_letter') }}
+            />
+
+            {docItems.map(doc => (
+              <div key={doc.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F5F5F0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <div style={{ width: 22, height: 22, background: doc.sent ? '#111' : '#eee', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {doc.sent && <svg viewBox="0 0 12 12" fill="none" width="10" height="10"><path d="M2 6l3 3 5-5" stroke="#F5C400" strokeWidth="2.5" strokeLinecap="round" /></svg>}
+                  <div style={{ width: 22, height: 22, background: doc.url ? '#111' : '#eee', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {doc.url && <svg viewBox="0 0 12 12" fill="none" width="10" height="10"><path d="M2 6l3 3 5-5" stroke="#F5C400" strokeWidth="2.5" strokeLinecap="round" /></svg>}
                   </div>
                   <div>
                     <p style={{ fontSize: 13, fontWeight: 700, color: '#222', margin: 0, fontFamily: FONT }}>{doc.name}</p>
-                    <p style={{ fontSize: 11, color: '#aaa', margin: 0, fontFamily: FONT, fontWeight: 500 }}>{doc.sent ? 'Envoyé — étape Postulé' : 'Non envoyé'}</p>
+                    <p style={{ fontSize: 11, color: doc.url ? '#1A7A4A' : '#aaa', margin: 0, fontFamily: FONT, fontWeight: 500 }}>
+                      {uploadingDoc === doc.docType ? '⏳ Chargement…' : doc.url ? '✓ Fichier chargé' : 'Aucun fichier'}
+                    </p>
                   </div>
                 </div>
-                {doc.url && <button onClick={() => doc.url && window.open(doc.url, '_blank')} style={{ background: '#F9F9F7', color: '#111', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 7, border: '1.5px solid #EBEBEB', cursor: 'pointer', fontFamily: FONT }}>Voir</button>}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {doc.url && (
+                    <button
+                      className="doc-upload-btn"
+                      onClick={() => window.open(doc.url!, '_blank')}
+                      style={{ background: '#F9F9F7', color: '#111' }}
+                    >
+                      Voir
+                    </button>
+                  )}
+                  <button
+                    className="doc-upload-btn"
+                    onClick={() => doc.inputRef.current?.click()}
+                    disabled={uploadingDoc !== null}
+                    style={{ background: doc.url ? '#F9F9F7' : '#111', color: doc.url ? '#111' : '#F5C400' }}
+                  >
+                    {uploadingDoc === doc.docType ? '…' : doc.url ? 'Remplacer' : 'Charger'}
+                  </button>
+                  {doc.url && (
+                    <button
+                      className="doc-upload-btn"
+                      onClick={() => handleDeleteDocument(doc.docType)}
+                      style={{ background: 'transparent', color: '#E8151B', borderColor: '#E8151B' }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
