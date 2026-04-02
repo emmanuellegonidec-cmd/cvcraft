@@ -172,6 +172,9 @@ function DraggableActionCard({
         textDecoration: action.is_done ? 'line-through' : 'none',
         marginBottom: 3,
         lineHeight: 1.3,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
       }}>
         {action.title}
         {action.type === 'included' && !action.is_done && (
@@ -179,9 +182,6 @@ function DraggableActionCard({
         )}
         {action.type === 'new' && !action.is_done && (
           <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>Nouveau</span>
-        )}
-        {action.is_done && (
-          <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>Fait ✓</span>
         )}
       </span>
 
