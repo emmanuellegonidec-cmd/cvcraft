@@ -82,31 +82,108 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
 
 interface StepActionRow {
   id: string; title: string; icon: string; sub: string; position: number
-  is_custom: boolean; type: 'included' | 'action' | 'new'
+  is_custom: boolean; type: 'included' | 'action' | 'new'; is_done: boolean
 }
 
-function DraggableActionCard({ action, dragId, onDelete }: { action: StepActionRow; dragId: string; onDelete: (id: string, title: string) => void }) {
+function DraggableActionCard({
+  action, dragId, onDelete, onToggleDone
+}: {
+  action: StepActionRow
+  dragId: string
+  onDelete: (id: string, title: string) => void
+  onToggleDone: (id: string, value: boolean) => void
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId })
-  const borderColor = action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#EBEBEB'
-  const bgColor = action.type === 'included' ? '#F1F8E9' : '#fff'
+  const borderColor = action.is_done
+    ? '#A5D6A7'
+    : action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#EBEBEB'
+  const bgColor = action.is_done
+    ? '#F1F8E9'
+    : action.type === 'included' ? '#F1F8E9' : '#fff'
+
   return (
-    <div ref={setNodeRef} style={{ background: bgColor, border: `1.5px solid ${isDragging ? '#F5C400' : borderColor}`, borderRadius: 10, padding: '12px 14px', cursor: isDragging ? 'grabbing' : 'grab', opacity: isDragging ? 0.5 : 1, transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined, zIndex: isDragging ? 50 : 1, position: 'relative', touchAction: 'none', userSelect: 'none' }} {...listeners} {...attributes}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
-        <span style={{ fontSize: 15, display: 'block', marginBottom: 5 }}>{action.icon}</span>
-        <div style={{ display: 'flex', gap: 4, marginTop: -2 }}>
+    <div
+      ref={setNodeRef}
+      style={{
+        background: bgColor,
+        border: `1.5px solid ${isDragging ? '#F5C400' : borderColor}`,
+        borderRadius: 10,
+        padding: '10px 12px 12px',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        opacity: isDragging ? 0.5 : 1,
+        transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
+        zIndex: isDragging ? 50 : 1,
+        position: 'relative',
+        touchAction: 'none',
+        userSelect: 'none',
+      }}
+      {...listeners}
+      {...attributes}
+    >
+      {/* Ligne du haut : icône + drag handle + supprimer */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4, marginBottom: 4 }}>
+        <span style={{ fontSize: 15 }}>{action.icon}</span>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: -2 }}>
           <span style={{ fontSize: 9, color: '#ccc', cursor: 'grab', lineHeight: 1, paddingTop: 2 }}>⠿</span>
-          {action.is_custom && (
-            <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
-              style={{ background: 'none', border: 'none', color: '#ccc', fontSize: 12, cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
-          )}
+          {/* Bouton supprimer — sur toutes les cartes */}
+          <button
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
+            title="Supprimer cette action"
+            style={{
+              background: 'none', border: 'none', color: '#ccc', fontSize: 13,
+              cursor: 'pointer', padding: 0, lineHeight: 1, fontWeight: 700,
+            }}
+            onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.color = '#E8151B' }}
+            onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ccc' }}
+          >×</button>
         </div>
       </div>
-      <span style={{ fontSize: 12, fontWeight: 800, color: action.type === 'included' ? '#2E7D32' : '#111', display: 'block', fontFamily: FONT }}>
+
+      {/* Titre + badges */}
+      <span style={{
+        fontSize: 12, fontWeight: 800,
+        color: action.is_done ? '#2E7D32' : action.type === 'included' ? '#2E7D32' : '#111',
+        display: 'block', fontFamily: FONT,
+        textDecoration: action.is_done ? 'line-through' : 'none',
+        marginBottom: 2,
+      }}>
         {action.title}
-        {action.type === 'included' && <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>✓</span>}
-        {action.type === 'new' && <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>Nouveau</span>}
+        {action.type === 'included' && !action.is_done && (
+          <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>✓</span>
+        )}
+        {action.type === 'new' && !action.is_done && (
+          <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>Nouveau</span>
+        )}
+        {action.is_done && (
+          <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>Fait ✓</span>
+        )}
       </span>
-      <span style={{ fontSize: 11, color: '#888', marginTop: 3, display: 'block', fontFamily: FONT }}>{action.sub}</span>
+
+      <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: 8 }}>{action.sub}</span>
+
+      {/* Case à cocher */}
+      <div
+        onPointerDown={e => e.stopPropagation()}
+        onClick={e => { e.stopPropagation(); onToggleDone(action.id, !action.is_done) }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+          marginTop: 4,
+        }}
+      >
+        <div style={{
+          width: 16, height: 16, borderRadius: 4,
+          border: `2px solid ${action.is_done ? '#2E7D32' : '#ccc'}`,
+          background: action.is_done ? '#2E7D32' : '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, transition: 'all .15s',
+        }}>
+          {action.is_done && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+        </div>
+        <span style={{ fontSize: 10, fontWeight: 700, color: action.is_done ? '#2E7D32' : '#aaa', fontFamily: FONT }}>
+          {action.is_done ? 'Fait !' : 'Marquer comme fait'}
+        </span>
+      </div>
     </div>
   )
 }
@@ -149,14 +226,34 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
     const supabase = createClient()
     const { data: existing } = await supabase.from('job_step_actions').select('*').eq('job_id', jobId).eq('step_id', currentStepId).order('position')
     if (existing && existing.length > 0) {
-      setStepActions(existing.map((r: any) => ({ id: r.id, title: r.title, icon: r.icon, sub: r.sub, position: r.position, is_custom: r.is_custom, type: r.is_custom ? 'action' : (r.type ?? 'action') })))
+      setStepActions(existing.map((r: any) => ({
+        id: r.id, title: r.title, icon: r.icon, sub: r.sub,
+        position: r.position, is_custom: r.is_custom,
+        type: r.is_custom ? 'action' : (r.type ?? 'action'),
+        is_done: r.is_done ?? false,
+      })))
     } else {
       const baseData = STEP_ACTIONS[currentStepId] || STEP_ACTIONS['hr_interview']
-      const rows = baseData.actions.map((a, i) => ({ user_id: userId, job_id: jobId, step_id: currentStepId, title: a.title, icon: a.icon, sub: a.sub, position: (i + 1) * 1000, is_custom: false, type: a.type }))
+      const rows = baseData.actions.map((a, i) => ({
+        user_id: userId, job_id: jobId, step_id: currentStepId,
+        title: a.title, icon: a.icon, sub: a.sub,
+        position: (i + 1) * 1000, is_custom: false, type: a.type, is_done: false,
+      }))
       const { data: inserted } = await supabase.from('job_step_actions').insert(rows).select()
-      if (inserted) setStepActions(inserted.map((r: any) => ({ id: r.id, title: r.title, icon: r.icon, sub: r.sub, position: r.position, is_custom: r.is_custom, type: r.type ?? 'action' })))
+      if (inserted) setStepActions(inserted.map((r: any) => ({
+        id: r.id, title: r.title, icon: r.icon, sub: r.sub,
+        position: r.position, is_custom: r.is_custom,
+        type: r.type ?? 'action', is_done: r.is_done ?? false,
+      })))
     }
     setLoading(false)
+  }
+
+  const handleToggleDone = async (id: string, value: boolean) => {
+    // Mise à jour optimiste (instantané dans l'UI)
+    setStepActions(prev => prev.map(a => a.id === id ? { ...a, is_done: value } : a))
+    const supabase = createClient()
+    await supabase.from('job_step_actions').update({ is_done: value }).eq('id', id)
   }
 
   const handleAddAction = async () => {
@@ -171,8 +268,15 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
       const nextCard = sorted[newActionPosition + 1]
       insertPosition = nextCard ? Math.round((afterCard.position + nextCard.position) / 2) : afterCard.position + 1000
     }
-    const { data } = await supabase.from('job_step_actions').insert({ user_id: userId, job_id: jobId, step_id: currentStepId, title: newActionTitle.trim(), icon: newActionIcon, sub: newActionSub.trim(), position: insertPosition, is_custom: true, type: 'action' }).select().single()
-    if (data) setStepActions(prev => [...prev, { id: data.id, title: data.title, icon: data.icon, sub: data.sub, position: data.position, is_custom: true, type: 'action' }])
+    const { data } = await supabase.from('job_step_actions').insert({
+      user_id: userId, job_id: jobId, step_id: currentStepId,
+      title: newActionTitle.trim(), icon: newActionIcon, sub: newActionSub.trim(),
+      position: insertPosition, is_custom: true, type: 'action', is_done: false,
+    }).select().single()
+    if (data) setStepActions(prev => [...prev, {
+      id: data.id, title: data.title, icon: data.icon, sub: data.sub,
+      position: data.position, is_custom: true, type: 'action', is_done: false,
+    }])
     setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setNewActionPosition(-1); setShowAddAction(false)
   }
 
@@ -231,13 +335,26 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
               {sortedStepActions.map((action) => (
                 <div key={action.id} style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
                   <ActionDropZone id={`action-before-${action.id}`} isOver={overActionZone === `action-before-${action.id}`} />
-                  <div style={{ width: 148 }}><DraggableActionCard action={action} dragId={action.id} onDelete={(id, title) => setActionToDelete({ id, title })} /></div>
+                  <div style={{ width: 148 }}>
+                    <DraggableActionCard
+                      action={action}
+                      dragId={action.id}
+                      onDelete={(id, title) => setActionToDelete({ id, title })}
+                      onToggleDone={handleToggleDone}
+                    />
+                  </div>
                 </div>
               ))}
               <ActionDropZone id={`action-after-${sortedStepActions[sortedStepActions.length - 1]?.id ?? 'end'}`} isOver={overActionZone === `action-after-${sortedStepActions[sortedStepActions.length - 1]?.id ?? 'end'}`} />
             </div>
             <DragOverlay>
-              {activeAction ? <div style={{ background: '#fff', border: '1.5px solid #F5C400', borderRadius: 10, padding: '12px 14px', boxShadow: '3px 3px 0 #111', cursor: 'grabbing', width: 148 }}><span style={{ fontSize: 15, display: 'block', marginBottom: 5 }}>{activeAction.icon}</span><span style={{ fontSize: 12, fontWeight: 800, color: '#111', display: 'block', fontFamily: FONT }}>{activeAction.title}</span><span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT }}>{activeAction.sub}</span></div> : null}
+              {activeAction ? (
+                <div style={{ background: '#fff', border: '1.5px solid #F5C400', borderRadius: 10, padding: '12px 14px', boxShadow: '3px 3px 0 #111', cursor: 'grabbing', width: 148 }}>
+                  <span style={{ fontSize: 15, display: 'block', marginBottom: 5 }}>{activeAction.icon}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: '#111', display: 'block', fontFamily: FONT }}>{activeAction.title}</span>
+                  <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT }}>{activeAction.sub}</span>
+                </div>
+              ) : null}
             </DragOverlay>
           </DndContext>
         )}
@@ -305,5 +422,5 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
         </div>
       )}
     </>
-   )
+  )
 }
