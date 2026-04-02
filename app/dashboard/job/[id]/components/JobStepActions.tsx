@@ -17,7 +17,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     desc: "Vous avez repéré cette offre. Vérifiez votre compatibilité et préparez vos documents avant de postuler.",
     actions: [
       { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'action' },
-      { icon: '📄', title: 'Préparer mon CV', sub: 'Adapter à ce poste', type: 'action' },
+      { icon: '📄', title: 'Préparer mon CV', sub: 'Adapté à ce poste', type: 'action' },
       { icon: '✉️', title: 'Rédiger ma LM', sub: 'Personnalisée pour cette offre', type: 'action' },
       { icon: '🔍', title: "Rechercher l'entreprise", sub: 'Actualités, culture, équipe', type: 'action' },
       { icon: '📅', title: 'Fixer une deadline', sub: 'Date limite de candidature', type: 'action' },
@@ -181,7 +181,7 @@ function DraggableActionCard({
           {action.is_done && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900, lineHeight: 1 }}>✓</span>}
         </div>
         <span style={{ fontSize: 10, fontWeight: 700, color: action.is_done ? '#2E7D32' : '#aaa', fontFamily: FONT }}>
-          {action.is_done ? 'Fait !' : 'Marquer comme fait'}
+          {action.is_done ? 'Fait ✓' : 'À faire'}
         </span>
       </div>
     </div>
