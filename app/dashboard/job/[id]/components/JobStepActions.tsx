@@ -116,26 +116,50 @@ function DraggableActionCard({
         position: 'relative',
         touchAction: 'none',
         userSelect: 'none',
+        width: '100%',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
       }}
       {...listeners}
       {...attributes}
     >
       {/* Ligne du haut : icône + drag handle + supprimer */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4, marginBottom: 4 }}>
-        <span style={{ fontSize: 15 }}>{action.icon}</span>
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: -2 }}>
-          <span style={{ fontSize: 9, color: '#ccc', cursor: 'grab', lineHeight: 1, paddingTop: 2 }}>⠿</span>
-          {/* Bouton supprimer — sur toutes les cartes */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4, marginBottom: 6 }}>
+        <span style={{ fontSize: 18 }}>{action.icon}</span>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: '#bbb', cursor: 'grab', lineHeight: 1 }}>⠿</span>
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
             title="Supprimer cette action"
             style={{
-              background: 'none', border: 'none', color: '#ccc', fontSize: 13,
-              cursor: 'pointer', padding: 0, lineHeight: 1, fontWeight: 700,
+              background: '#f0f0f0',
+              border: '1px solid #ddd',
+              color: '#999',
+              fontSize: 14,
+              fontWeight: 900,
+              cursor: 'pointer',
+              padding: '0px 5px',
+              lineHeight: '18px',
+              borderRadius: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
-            onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.color = '#E8151B' }}
-            onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ccc' }}
+            onMouseOver={e => {
+              const b = e.currentTarget as HTMLButtonElement
+              b.style.background = '#E8151B'
+              b.style.borderColor = '#E8151B'
+              b.style.color = '#fff'
+            }}
+            onMouseOut={e => {
+              const b = e.currentTarget as HTMLButtonElement
+              b.style.background = '#f0f0f0'
+              b.style.borderColor = '#ddd'
+              b.style.color = '#999'
+            }}
           >×</button>
         </div>
       </div>
@@ -146,7 +170,8 @@ function DraggableActionCard({
         color: action.is_done ? '#2E7D32' : action.type === 'included' ? '#2E7D32' : '#111',
         display: 'block', fontFamily: FONT,
         textDecoration: action.is_done ? 'line-through' : 'none',
-        marginBottom: 2,
+        marginBottom: 3,
+        lineHeight: 1.3,
       }}>
         {action.title}
         {action.type === 'included' && !action.is_done && (
@@ -160,16 +185,13 @@ function DraggableActionCard({
         )}
       </span>
 
-      <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: 8 }}>{action.sub}</span>
+      <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: 10, flex: 1 }}>{action.sub}</span>
 
       {/* Case à cocher */}
       <div
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onToggleDone(action.id, !action.is_done) }}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-          marginTop: 4,
-        }}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginTop: 'auto' }}
       >
         <div style={{
           width: 16, height: 16, borderRadius: 4,
@@ -331,11 +353,11 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
             onDragStart={e => setActiveActionId(e.active.id as string)}
             onDragOver={e => setOverActionZone(e.over?.id as string ?? null)}
             onDragEnd={handleActionDragEnd}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'stretch' }}>
               {sortedStepActions.map((action) => (
-                <div key={action.id} style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
+                <div key={action.id} style={{ display: 'flex', alignItems: 'stretch' }}>
                   <ActionDropZone id={`action-before-${action.id}`} isOver={overActionZone === `action-before-${action.id}`} />
-                  <div style={{ width: 148 }}>
+                  <div style={{ width: 170, display: 'flex' }}>
                     <DraggableActionCard
                       action={action}
                       dragId={action.id}
