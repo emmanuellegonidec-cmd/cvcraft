@@ -56,6 +56,13 @@ export default function DashboardPage() {
   const [newStageColor, setNewStageColor] = useState('#E8151B');
   const [newStagePosition, setNewStagePosition] = useState(3);
 
+  // Ref pour capturer newJob de façon synchrone au moment du save
+  const newJobRef = useRef<NewJobState>({ ...EMPTY_JOB });
+
+  useEffect(() => {
+    newJobRef.current = newJob;
+  }, [newJob]);
+
   useEffect(() => {
     if (accessToken) (window as any).__jfmj_token = accessToken;
   }, [accessToken]);
@@ -144,6 +151,7 @@ export default function DashboardPage() {
 
   function openAddJobModal(defaultStatus?: string) {
     setNewJob({ ...EMPTY_JOB, status: (defaultStatus || 'to_apply') as JobStatus });
+    extraJobFields.current = {};
     setImportUrl(''); setImportError(false); setAddJobMode(null);
     setEditingJobId(null); setShowAddJob(true);
   }
@@ -163,20 +171,33 @@ export default function DashboardPage() {
   }
 
   async function saveJob() {
-    if (!newJob.title || !newJob.company) return;
+    // Lire newJob depuis le ref (valeur synchrone la plus récente)
+    const job = newJobRef.current;
+    if (!job.title || !job.company) return;
+
+    // Lire les champs entreprise depuis extraJobFields (remontés par FileImportMode)
+    const extras = extraJobFields.current || {};
+
     const payload = {
-      title: newJob.title, company: newJob.company,
-      location: newJob.location || '', description: newJob.description || '',
-      job_type: newJob.job_type || 'CDI', status: newJob.status || 'to_apply',
-      notes: newJob.notes || '',
-      ...(newJob.salary   ? { salary_text: newJob.salary }             : {}),
-      ...(newJob.source   ? { source_platform: newJob.source }         : {}),
-      ...(newJob.url      ? { source_url: newJob.url }                 : {}),
-      ...(newJob.favorite !== undefined ? { favorite: newJob.favorite } : {}),
-      ...((newJob as any).company_description ? { company_description: (newJob as any).company_description } : {}),
-      ...((newJob as any).company_website     ? { company_website: (newJob as any).company_website }         : {}),
-      ...((newJob as any).company_size        ? { company_size: (newJob as any).company_size }               : {}),
+      title: job.title, company: job.company,
+      location: job.location || '', description: job.description || '',
+      job_type: job.job_type || 'CDI', status: job.status || 'to_apply',
+      notes: job.notes || '',
+      ...(job.salary   ? { salary_text: job.salary }             : {}),
+      ...(job.source   ? { source_platform: job.source }         : {}),
+      ...(job.url      ? { source_url: job.url }                 : {}),
+      ...(job.favorite !== undefined ? { favorite: job.favorite } : {}),
+      // Champs entreprise : d'abord extraJobFields (import fichier), puis newJob si déjà fusionné
+      company_description: extras.company_description || (job as any).company_description || '',
+      company_website:     extras.company_website     || (job as any).company_website     || '',
+      company_size:        extras.company_size        || (job as any).company_size        || '',
     };
+
+    // Nettoyer les champs vides pour ne pas écraser des valeurs existantes
+    if (!payload.company_description) delete (payload as any).company_description;
+    if (!payload.company_website)     delete (payload as any).company_website;
+    if (!payload.company_size)        delete (payload as any).company_size;
+
     if (editingJobId) {
       const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: editingJobId, ...payload }) });
       const data = await res.json();
@@ -409,7 +430,8 @@ export default function DashboardPage() {
           importUrl={importUrl} setImportUrl={setImportUrl}
           addJobMode={addJobMode} setAddJobMode={setAddJobMode}
           importError={importError} setImportError={setImportError}
-          importLoading={importLoading} onImport={importJobFromUrl} onSave={saveJob} onSetExtra={(d: Record<string, string>) => { extraJobFields.current = d; }}
+          importLoading={importLoading} onImport={importJobFromUrl} onSave={saveJob}
+          onSetExtra={(d: Record<string, string>) => { extraJobFields.current = d; }}
           onClose={() => setShowAddJob(false)}
         />
       )}
