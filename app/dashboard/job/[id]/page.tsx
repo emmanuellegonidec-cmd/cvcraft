@@ -142,6 +142,7 @@ export default function JobDetailPage() {
   const [companyExpanded, setCompanyExpanded] = useState(true)
   const [notes, setNotes] = useState('')
   const [contacts, setContacts] = useState<ContactMin[]>([])
+  const [showCoverLetter, setShowCoverLetter] = useState(true)
   const notesTimer = useRef<NodeJS.Timeout | null>(null)
 
   // Upload documents
@@ -203,6 +204,18 @@ export default function JobDetailPage() {
     if (data) setContacts(data)
   }, [])
 
+  // ─── Vérifie si la carte LM existe dans les actions de l'étape courante ───
+  const loadCoverLetterVisibility = useCallback(async (stepId: string) => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('job_step_actions')
+      .select('id')
+      .eq('job_id', jobId)
+      .eq('step_id', stepId)
+      .ilike('title', '%LM%')
+    setShowCoverLetter(data === null || data.length > 0)
+  }, [jobId])
+
   useEffect(() => {
     Promise.all([loadJob(), loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
   }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
@@ -225,6 +238,11 @@ export default function JobDetailPage() {
   const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId)
   const currentStepLabel = allSteps.find(s => s.id === currentStepId)?.label ?? ''
   const isInterviewStep = INTERVIEW_STEP_IDS.includes(currentStepId) || customSteps.some(cs => cs.id === currentStepId)
+
+  // Charge la visibilité LM dès que le job est chargé
+  useEffect(() => {
+    if (currentStepId) loadCoverLetterVisibility(currentStepId)
+  }, [currentStepId, loadCoverLetterVisibility])
 
   const handleStepClick = async (stepId: string) => {
     if (!job) return
@@ -265,7 +283,7 @@ export default function JobDetailPage() {
 
       const { data: signedData } = await supabase.storage
         .from('job-documents')
-        .createSignedUrl(path, 60 * 60 * 24 * 365) // 1 an
+        .createSignedUrl(path, 60 * 60 * 24 * 365)
 
       if (!signedData?.signedUrl) throw new Error('URL non générée')
 
@@ -377,9 +395,10 @@ export default function JobDetailPage() {
     ? contacts.some(c => c.name.toLowerCase().includes(transmittedBy.toLowerCase().split(' ')[0].toLowerCase()))
     : false
 
+  // LM visible uniquement si la carte existe dans les actions
   const docItems = [
     { docType: 'cv' as const, sent: job.cv_sent, name: 'CV', url: job.cv_url, inputRef: cvInputRef },
-    { docType: 'cover_letter' as const, sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url, inputRef: coverLetterInputRef },
+    ...(showCoverLetter ? [{ docType: 'cover_letter' as const, sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url, inputRef: coverLetterInputRef }] : []),
   ]
 
   return (
@@ -514,7 +533,6 @@ export default function JobDetailPage() {
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={sectionLabel}>Documents</span>
 
-            {/* Inputs file cachés */}
             <input
               ref={cvInputRef}
               type="file"
