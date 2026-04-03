@@ -65,7 +65,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ✅ PATCH — mise à jour partielle d'une offre (status, sub_status, notes…)
+// ✅ PATCH — mise à jour partielle (status, sub_status, notes, dates…)
+// Si le status change → on enregistre automatiquement stage_changed_at
 export async function PATCH(req: NextRequest) {
   const { userId, supabase } = await getAuth(req);
   if (!userId) return NextResponse.json({ error: 'Non connecté' }, { status: 401 });
@@ -74,10 +75,37 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'ID manquant' }, { status: 400 });
 
   const body = await req.json();
+  const now = new Date().toISOString();
+
+  // Si le status ou sub_status change, on enregistre la date du changement d'étape
+  const stageUpdate = (body.status !== undefined || body.sub_status !== undefined)
+    ? { stage_changed_at: now }
+    : {};
+
+  // Si on passe en "in_progress" (entretien), on met à jour interview_at
+  // seulement si interview_at n'est pas déjà renseigné
+  let interviewUpdate = {};
+  if (body.status === 'in_progress') {
+    // On vérifie si interview_at est déjà renseigné
+    const { data: existing } = await supabase
+      .from('jobs')
+      .select('interview_at')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+    if (existing && !existing.interview_at) {
+      interviewUpdate = { interview_at: now };
+    }
+  }
 
   const { data, error } = await supabase
     .from('jobs')
-    .update({ ...body, updated_at: new Date().toISOString() })
+    .update({
+      ...body,
+      ...stageUpdate,
+      ...interviewUpdate,
+      updated_at: now,
+    })
     .eq('id', id)
     .eq('user_id', userId)
     .select()

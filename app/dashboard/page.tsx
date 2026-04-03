@@ -67,8 +67,10 @@ export default function DashboardPage() {
     if (accessToken) (window as any).__jfmj_token = accessToken;
   }, [accessToken]);
 
+  // ✅ Date du jour affichée en fuseau France
   const today = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    timeZone: 'Europe/Paris',
   });
 
   function authFetch(url: string, options: RequestInit = {}) {
@@ -213,9 +215,17 @@ export default function DashboardPage() {
 
   async function updateJobStatus(id: string, newStatus: string) {
     const subStatus = STATUS_TO_SUB[newStatus] ?? newStatus;
+    const now = new Date().toISOString();
+
+    // Mise à jour optimiste côté UI
     setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus as JobStatus, sub_status: subStatus } as any : j));
     if (selectedJob?.id === id) setSelectedJob(prev => prev ? { ...prev, status: newStatus as JobStatus } : prev);
-    const res = await authFetch(`/api/jobs?id=${id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus, sub_status: subStatus }) });
+
+    // PATCH vers l'API — route.ts gère stage_changed_at et interview_at automatiquement
+    const res = await authFetch(`/api/jobs?id=${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus, sub_status: subStatus }),
+    });
     const data = await res.json();
     if (data.job) {
       setJobs(prev => prev.map(j => j.id === id ? data.job : j));
