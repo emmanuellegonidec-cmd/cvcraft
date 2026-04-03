@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Job } from '@/lib/jobs';
+import { createClient } from '@/lib/supabase';
 
 // ─── Types & constantes ───────────────────────────────────────────────────────
 
@@ -13,20 +14,23 @@ const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 type CalEvent = {
   jobId: string;
   date: Date;
-  dateField: 'interview_at' | 'applied_at' | 'created_at';
+  dateField: 'interview_at' | 'applied_at' | 'created_at' | 'deadline';
   title: string;
   company: string;
-  type: 'envie' | 'postule' | 'entretien' | 'offre' | 'archive';
+  type: 'envie' | 'postule' | 'entretien' | 'offre' | 'archive' | 'deadline';
   hour?: number;
   minutes?: number;
+  deadlineLabel?: string; // ex: "Fixer une deadline", "Ajouter un rappel"
 };
 
+// ✅ Nouveau type "deadline" en orange
 const EV_STYLE: Record<CalEvent['type'], React.CSSProperties> = {
   envie:     { background: '#1C1C1E', color: '#fff' },
   postule:   { background: '#1A4A8A', color: '#fff' },
   entretien: { background: '#E8151B', color: '#fff' },
   offre:     { background: '#1A7A4A', color: '#fff' },
   archive:   { background: '#999', color: '#fff' },
+  deadline:  { background: '#D97706', color: '#fff' },
 };
 
 const EV_LABEL: Record<CalEvent['type'], string> = {
@@ -35,6 +39,7 @@ const EV_LABEL: Record<CalEvent['type'], string> = {
   entretien: 'Entretien',
   offre:     'Offre reçue',
   archive:   'Archivé',
+  deadline:  'Deadline',
 };
 
 const navBtnStyle: React.CSSProperties = {
@@ -63,11 +68,11 @@ function formatTime(h: number, m: number) {
 function jobsToEvents(jobs: Job[]): CalEvent[] {
   return jobs.map(job => {
     const typeMap: Record<string, CalEvent['type']> = {
-      to_apply:  'envie',
-      applied:   'postule',
-      interview: 'entretien',
-      offer:     'offre',
-      archived:  'archive',
+      to_apply:    'envie',
+      applied:     'postule',
+      in_progress: 'entretien',
+      offer:       'offre',
+      archived:    'archive',
     };
     const evType: CalEvent['type'] = typeMap[job.status] ?? 'envie';
 
@@ -76,15 +81,15 @@ function jobsToEvents(jobs: Job[]): CalEvent[] {
     let hour: number | undefined;
     let minutes: number | undefined;
 
-    if (job.status === 'interview' && job.interview_at) {
-      date = new Date(job.interview_at);
+    if ((job.status === 'in_progress' || job.status === 'interview') && (job as any).interview_at) {
+      date = new Date((job as any).interview_at);
       dateField = 'interview_at';
       if (date.getHours() > 0 || date.getMinutes() > 0) {
         hour = date.getHours();
         minutes = date.getMinutes();
       }
-    } else if (job.status === 'applied' && job.applied_at) {
-      date = new Date(job.applied_at);
+    } else if (job.status === 'applied' && (job as any).applied_at) {
+      date = new Date((job as any).applied_at);
       dateField = 'applied_at';
       if (date.getHours() > 0 || date.getMinutes() > 0) {
         hour = date.getHours();
@@ -129,23 +134,31 @@ function EventCard({
   onDragStart: (e: React.DragEvent, ev: CalEvent) => void;
 }) {
   const isArchived = ev.type === 'archive';
+  const isDeadline = ev.type === 'deadline';
   const timeLabel = ev.hour !== undefined ? formatTime(ev.hour, ev.minutes || 0) : undefined;
 
   return (
     <div
-      draggable={!isArchived}
-      onDragStart={e => !isArchived && onDragStart(e, ev)}
+      draggable={!isArchived && !isDeadline}
+      onDragStart={e => !isArchived && !isDeadline && onDragStart(e, ev)}
       onClick={e => { e.stopPropagation(); onJobClick(ev.jobId); }}
-      title={`${ev.title} — ${ev.company}${timeLabel ? ' · ' + timeLabel : ''}`}
+      title={`${isDeadline ? '⏰ ' + (ev.deadlineLabel || 'Deadline') + ' — ' : ''}${ev.title} — ${ev.company}`}
       style={{
         ...EV_STYLE[ev.type],
         borderRadius: 5, padding: '5px 8px', marginBottom: 3,
-        cursor: isArchived ? 'pointer' : 'grab',
+        cursor: 'pointer',
         fontFamily: 'Montserrat,sans-serif', overflow: 'hidden',
         userSelect: 'none', opacity: isArchived ? 0.65 : 1,
+        // Deadlines : style légèrement différent (bordure pointillée)
+        border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : 'none',
       }}
     >
-      {timeLabel && (
+      {isDeadline && (
+        <div style={{ fontSize: 10, opacity: .9, fontWeight: 800, lineHeight: 1.3 }}>
+          ⏰ {ev.deadlineLabel || 'Deadline'}
+        </div>
+      )}
+      {timeLabel && !isDeadline && (
         <div style={{ fontSize: 11, opacity: .9, fontWeight: 700, lineHeight: 1.3 }}>{timeLabel}</div>
       )}
       <div style={{
@@ -173,14 +186,61 @@ export default function DashboardCalendar({
   onJobClick: (jobId: string) => void;
   onDateChange: (jobId: string, field: string, newDate: Date) => void;
 }) {
-  const [calView, setCalView]   = useState<'week' | 'month'>('week');
-  const [offset, setOffset]     = useState(0);
-  const [visible, setVisible]   = useState(true);
-  const [dragOver, setDragOver] = useState<string | null>(null);
+  const [calView, setCalView]       = useState<'week' | 'month'>('week');
+  const [offset, setOffset]         = useState(0);
+  const [visible, setVisible]       = useState(true);
+  const [dragOver, setDragOver]     = useState<string | null>(null);
+  const [deadlineEvents, setDeadlineEvents] = useState<CalEvent[]>([]);
   const dragEvRef = useRef<CalEvent | null>(null);
 
   const today  = new Date();
-  const events = jobsToEvents(jobs);
+  const jobEvents = jobsToEvents(jobs);
+
+  // ✅ Charge les deadlines depuis Supabase au chargement + quand jobs change
+  useEffect(() => {
+    if (!jobs.length) return;
+    loadDeadlines();
+  }, [jobs]);
+
+  async function loadDeadlines() {
+    const supabase = createClient();
+    // Récupère toutes les actions avec une deadline_date pour les jobs de l'utilisateur
+    const jobIds = jobs.map(j => j.id);
+    if (!jobIds.length) return;
+
+    const { data } = await supabase
+      .from('job_step_actions')
+      .select('job_id, title, deadline_date')
+      .in('job_id', jobIds)
+      .not('deadline_date', 'is', null);
+
+    if (!data) return;
+
+    const evs: CalEvent[] = data
+      .filter((row: any) => row.deadline_date)
+      .map((row: any) => {
+        const job = jobs.find(j => j.id === row.job_id);
+        if (!job) return null;
+        // deadline_date est au format YYYY-MM-DD → on parse en heure neutre
+        const [y, m, d] = row.deadline_date.split('-').map(Number);
+        const date = new Date(y, m - 1, d); // heure locale, pas UTC
+        return {
+          jobId: row.job_id,
+          date,
+          dateField: 'deadline' as CalEvent['dateField'],
+          title: job.title || 'Sans titre',
+          company: job.company || '',
+          type: 'deadline' as CalEvent['type'],
+          deadlineLabel: row.title, // ex: "Fixer une deadline"
+        };
+      })
+      .filter(Boolean) as CalEvent[];
+
+    setDeadlineEvents(evs);
+  }
+
+  // Tous les événements = offres + deadlines
+  const allEvents = [...jobEvents, ...deadlineEvents];
 
   function handleDragStart(e: React.DragEvent, ev: CalEvent) {
     dragEvRef.current = ev;
@@ -193,6 +253,7 @@ export default function DashboardCalendar({
     if (!dragEvRef.current) return;
     const ev = dragEvRef.current;
     dragEvRef.current = null;
+    if (ev.type === 'deadline') return; // les deadlines ne sont pas draggables
 
     const newDate = new Date(targetDate);
     if (targetHour !== undefined) {
@@ -290,9 +351,11 @@ export default function DashboardCalendar({
               {days.map((d, di) => {
                 const isTod = sameDay(d, today);
                 const key = cellKey(d, h);
-                const cellEvs = events.filter(e =>
+                const cellEvs = allEvents.filter(e =>
                   sameDay(e.date, d) && (
-                    e.hour !== undefined ? e.hour === h : h === 8
+                    e.type === 'deadline'
+                      ? h === 8  // deadlines affichées à 8h
+                      : e.hour !== undefined ? e.hour === h : h === 8
                   )
                 );
                 return (
@@ -350,7 +413,7 @@ export default function DashboardCalendar({
             {cells.map((d, idx) => {
               const isOther = d.getMonth() !== base.getMonth();
               const isTod   = sameDay(d, today);
-              const dayEvs  = sortEvents(events.filter(e => sameDay(e.date, d)));
+              const dayEvs  = sortEvents(allEvents.filter(e => sameDay(e.date, d)));
               const key     = cellKey(d);
               return (
                 <div
