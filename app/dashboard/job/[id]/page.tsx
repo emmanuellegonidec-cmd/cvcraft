@@ -220,10 +220,7 @@ export default function JobDetailPage() {
     Promise.all([loadJob(), loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
   }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
 
-  useEffect(() => {
-    const interval = setInterval(() => loadJob(), 30000)
-    return () => clearInterval(interval)
-  }, [loadJob])
+  
 
   useEffect(() => { if (userId) loadContacts() }, [userId])
 
