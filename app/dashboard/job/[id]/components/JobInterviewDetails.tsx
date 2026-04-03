@@ -26,9 +26,10 @@ interface Props {
   contacts: Contact[]
   onPatch: (field: string, value: any) => void
   onJobChange: (field: string, value: any) => void
+  onCreateContact: () => void
 }
 
-export default function JobInterviewDetails({ job, contacts, onPatch, onJobChange }: Props) {
+export default function JobInterviewDetails({ job, contacts, onPatch, onJobChange, onCreateContact }: Props) {
   const sectionLabel: React.CSSProperties = {
     fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
     letterSpacing: '1.5px', color: '#B8900A', marginBottom: 14,
@@ -129,12 +130,38 @@ export default function JobInterviewDetails({ job, contacts, onPatch, onJobChang
       {/* Contact */}
       <div>
         <label style={{ fontSize: 10, fontWeight: 700, color: '#888', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>👤 Contact pour l&apos;entretien</label>
-        <select className="interview-inp" value={job.interview_contact_id || ''} onChange={e => onPatch('interview_contact_id', e.target.value || null)}>
-          <option value="">— Aucun contact —</option>
-          {contacts.map(c => (
-            <option key={c.id} value={c.id}>{c.name}{c.role ? ` – ${c.role}` : ''}{c.company ? ` (${c.company})` : ''}</option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <select
+            className="interview-inp"
+            value={job.interview_contact_id || ''}
+            onChange={e => onPatch('interview_contact_id', e.target.value || null)}
+            style={{ flex: 1 }}
+          >
+            <option value="">— Aucun contact —</option>
+            {contacts.map(c => (
+              <option key={c.id} value={c.id}>{c.name}{c.role ? ` – ${c.role}` : ''}{c.company ? ` (${c.company})` : ''}</option>
+            ))}
+          </select>
+          <button
+            onClick={onCreateContact}
+            style={{
+              flexShrink: 0,
+              background: '#111',
+              color: '#F5C400',
+              fontSize: 12,
+              fontWeight: 800,
+              padding: '8px 14px',
+              borderRadius: 8,
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: FONT,
+              whiteSpace: 'nowrap',
+              boxShadow: '2px 2px 0 #F5C400',
+            }}
+          >
+            + Nouveau
+          </button>
+        </div>
         {selectedContact && (
           <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#B8900A' }}>
             👤 {selectedContact.name}{selectedContact.role ? ` – ${selectedContact.role}` : ''}{selectedContact.company ? ` · ${selectedContact.company}` : ''}

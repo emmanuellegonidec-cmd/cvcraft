@@ -509,12 +509,13 @@ const handleStepClick = async (stepId: string) => {
 
         {/* Entretien */}
         {isInterviewStep && (
-          <JobInterviewDetails
-            job={job}
-            contacts={contacts}
-            onPatch={patchJob}
-            onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
-          />
+         <JobInterviewDetails
+  job={job}
+  contacts={contacts}
+  onPatch={patchJob}
+  onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
+  onCreateContact={() => openCreateContact('')}
+/>
         )}
 
         {/* Échanges */}
