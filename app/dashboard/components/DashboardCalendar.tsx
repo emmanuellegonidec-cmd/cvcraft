@@ -81,7 +81,7 @@ function jobsToEvents(jobs: Job[]): CalEvent[] {
     let hour: number | undefined;
     let minutes: number | undefined;
 
-    if ((job.status === 'in_progress' || job.status === 'interview') && (job as any).interview_at) {
+    if (job.status === 'in_progress' && (job as any).interview_at) {
       date = new Date((job as any).interview_at);
       dateField = 'interview_at';
       if (date.getHours() > 0 || date.getMinutes() > 0) {
