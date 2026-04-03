@@ -71,14 +71,33 @@ export function capitalize(str: string) {
 
 export function formatDate(dateStr: string | null) {
   if (!dateStr) return null;
-  return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(dateStr).toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    timeZone: 'Europe/Paris',
+  });
 }
 
+// ✅ CORRIGÉ — compare les dates en "jour calendaire France" et non en millisecondes UTC
+// Exemple : une offre créée le 3 avril à 23h UTC = 3 avril en France (pas le 4)
 export function formatRelative(dateStr: string) {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-  if (diff === 0) return "Aujourd'hui";
-  if (diff === 1) return 'Hier';
-  if (diff < 7) return `Il y a ${diff} jours`;
+  const TZ = 'Europe/Paris';
+
+  // Convertit une date en "YYYY-MM-DD" selon le fuseau France
+  function toLocalDay(date: Date): string {
+    return date.toLocaleDateString('fr-CA', { timeZone: TZ }); // fr-CA = format YYYY-MM-DD
+  }
+
+  const itemDay  = toLocalDay(new Date(dateStr));
+  const todayDay = toLocalDay(new Date());
+
+  // Calcul de la différence en jours calendaires (pas en ms)
+  const itemDate  = new Date(itemDay);
+  const todayDate = new Date(todayDay);
+  const diffDays  = Math.round((todayDate.getTime() - itemDate.getTime()) / 86400000);
+
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7)  return `Il y a ${diffDays} jours`;
   return formatDate(dateStr) || '';
 }
 
