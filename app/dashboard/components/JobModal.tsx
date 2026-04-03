@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Job, JobStatus, JobType } from '@/lib/jobs';
+import { Job, JobStatus } from '@/lib/jobs';
 import { Stage, NewJobState, EMPTY_JOB } from './types';
 import SpontaneousMode from './SpontaneousMode';
 import FileImportMode from './FileImportMode';
@@ -85,14 +85,6 @@ export default function JobModal({
       .catch(() => {});
   }, []);
 
-  function resolveContact(contactId: string, freeText: string): string {
-    if (contactId && contactId !== '__new__') {
-      const c = contacts.find(c => c.id === contactId);
-      if (c) return [c.name, c.role, c.company].filter(Boolean).join(' — ');
-    }
-    return freeText.trim();
-  }
-
   function resolveSource(): string {
     if (['Autre', 'Chasseur de tête', 'Cabinet recrutement'].includes(newJob.source || '')) {
       return customSource.trim() || newJob.source || '';
@@ -100,19 +92,76 @@ export default function JobModal({
     return newJob.source || '';
   }
 
-  function handleSave() {
-    const transmitted = resolveContact(transmittedById, transmittedByFree);
+  // ─── Crée un contact si nouveau nom saisi, retourne l'id ───
+  async function resolveOrCreateContact(): Promise<string | null> {
+    // Cas 1 : contact existant sélectionné dans le dropdown
+    if (transmittedById && transmittedById !== '__new__') {
+      return transmittedById;
+    }
+
+    // Cas 2 : nouveau nom saisi manuellement
+    const freeText = transmittedByFree.trim();
+    if (!freeText) return null;
+
+    try {
+      const token = (window as unknown as { __jfmj_token?: string }).__jfmj_token;
+
+      // Parser "Prénom Nom — Rôle" si le format contient " — "
+      const parts = freeText.split(' — ');
+      const name = parts[0].trim();
+      const role = parts[1]?.trim() || '';
+
+      const res = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ name, role }),
+      });
+      const data = await res.json();
+      if (data.contact?.id) {
+        // Ajouter le nouveau contact à la liste locale
+        setContacts(prev => [data.contact, ...prev]);
+        return data.contact.id;
+      }
+    } catch {}
+    return null;
+  }
+
+  async function handleSave() {
     const resolvedSource = resolveSource();
+
     if (onSetExtra && Object.keys(companyExtras).length) {
       onSetExtra(companyExtras as Record<string, string>);
     }
+
+    // Créer ou récupérer le contact "Transmis par"
+    const contactId = await resolveOrCreateContact();
+
+    // Construire le label texte pour les notes (rétrocompatibilité)
+    let transmittedLabel = '';
+    if (contactId && contactId !== transmittedById) {
+      // Contact fraîchement créé : utiliser le texte libre
+      transmittedLabel = transmittedByFree.trim();
+    } else if (transmittedById && transmittedById !== '__new__') {
+      // Contact existant : construire le label depuis la liste
+      const c = contacts.find(c => c.id === transmittedById);
+      if (c) transmittedLabel = [c.name, c.role, c.company].filter(Boolean).join(' — ');
+    } else {
+      transmittedLabel = transmittedByFree.trim();
+    }
+
     setNewJob(prev => ({
       ...prev,
       source: resolvedSource,
-      notes: transmitted
-        ? [prev.notes, `Transmis par : ${transmitted}`].filter(Boolean).join('\n')
+      // Stocker l'id du contact pour que saveJob() puisse l'enregistrer
+      ...(contactId ? { transmitted_by_contact_id: contactId } as any : {}),
+      notes: transmittedLabel
+        ? [prev.notes, `Transmis par : ${transmittedLabel}`].filter(Boolean).join('\n')
         : prev.notes,
     }));
+
     setTimeout(() => { onSave(); }, 50);
   }
 

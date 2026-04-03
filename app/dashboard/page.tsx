@@ -193,6 +193,10 @@ export default function DashboardPage() {
       company_description: extras.company_description || (job as any).company_description || '',
       company_website:     extras.company_website     || (job as any).company_website     || '',
       company_size:        extras.company_size        || (job as any).company_size        || '',
+      // ✅ Contact "Transmis par" créé ou sélectionné dans JobModal
+      ...((job as any).transmitted_by_contact_id
+        ? { transmitted_by_contact_id: (job as any).transmitted_by_contact_id }
+        : {}),
     };
 
     // Nettoyer les champs vides pour ne pas écraser des valeurs existantes
