@@ -288,6 +288,9 @@ interface Props {
 export default function JobStepActions({ jobId, userId, currentStepId, currentStepLabel, currentStepIndex }: Props) {
   const [stepActions, setStepActions] = useState<StepActionRow[]>([])
   const [loading, setLoading] = useState(false)
+  // ✅ Vérifie si CV et LM ont vraiment été envoyés
+  const [cvSent, setCvSent] = useState<boolean>(false)
+  const [lmSent, setLmSent] = useState<boolean>(false)
   const [activeActionId, setActiveActionId] = useState<string | null>(null)
   const [overActionZone, setOverActionZone] = useState<string | null>(null)
   const [showAddAction, setShowAddAction] = useState(false)
@@ -298,12 +301,35 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
   const [actionToDelete, setActionToDelete] = useState<{ id: string; title: string } | null>(null)
 
   const stepData = STEP_ACTIONS[currentStepId] || STEP_ACTIONS['hr_interview']
-  const sortedStepActions = [...stepActions].sort((a, b) => a.position - b.position)
+
+  // ✅ Filtre les cartes CV/LM : ne les affiche que si réellement envoyés
+  const sortedStepActions = [...stepActions]
+    .sort((a, b) => a.position - b.position)
+    .filter(a => {
+      if (a.title === 'CV' && a.type === 'included') return cvSent
+      if ((a.title === 'LM' || a.title === 'Lettre de motivation') && a.type === 'included') return lmSent
+      return true
+    })
 
   useEffect(() => {
     if (!currentStepId || !userId) return
+    loadJobDocStatus()
     loadStepActions()
   }, [currentStepId, userId])
+
+  // ✅ Charge cv_sent et cover_letter_sent depuis la table jobs
+  async function loadJobDocStatus() {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('jobs')
+      .select('cv_sent, cover_letter_sent, cv_url, cover_letter_url')
+      .eq('id', jobId)
+      .single()
+    if (data) {
+      setCvSent(!!(data.cv_sent || data.cv_url))
+      setLmSent(!!(data.cover_letter_sent || data.cover_letter_url))
+    }
+  }
 
   async function loadStepActions() {
     setLoading(true)
