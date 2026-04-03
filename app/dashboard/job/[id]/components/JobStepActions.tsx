@@ -80,26 +80,65 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
   },
 }
 
+// Titres des cartes qui doivent afficher un champ date
+const DATE_ACTION_TITLES = ['Fixer une deadline', 'Ajouter un rappel', 'Date de prise de poste']
+
 interface StepActionRow {
   id: string; title: string; icon: string; sub: string; position: number
   is_custom: boolean; type: 'included' | 'action' | 'new'; is_done: boolean
+  deadline_date?: string | null
 }
 
 function DraggableActionCard({
-  action, dragId, onDelete, onToggleDone
+  action, dragId, onDelete, onToggleDone, onDeadlineSave
 }: {
   action: StepActionRow
   dragId: string
   onDelete: (id: string, title: string) => void
   onToggleDone: (id: string, value: boolean) => void
+  onDeadlineSave: (id: string, date: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId })
+  const [localDate, setLocalDate] = useState(action.deadline_date || '')
+
+  // ✅ Détecte si cette carte doit afficher un champ date
+  const isDateCard = DATE_ACTION_TITLES.includes(action.title)
+
   const borderColor = action.is_done
     ? '#A5D6A7'
     : action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#EBEBEB'
   const bgColor = action.is_done
     ? '#F1F8E9'
     : action.type === 'included' ? '#F1F8E9' : '#fff'
+
+  function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    setLocalDate(val)
+    if (val) onDeadlineSave(action.id, val)
+  }
+
+  // Formate la date pour l'affichage (ex: "15 avr. 2026")
+  function formatDisplayDate(dateStr: string) {
+    if (!dateStr) return ''
+    const [y, m, d] = dateStr.split('-')
+    const months = ['jan.','fév.','mar.','avr.','mai','juin','juil.','aoû.','sep.','oct.','nov.','déc.']
+    return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`
+  }
+
+  // Détermine si la deadline est dépassée ou proche (dans les 3 prochains jours)
+  function getDeadlineStatus(dateStr: string): 'urgent' | 'warning' | 'ok' | null {
+    if (!dateStr) return null
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const deadline = new Date(dateStr)
+    deadline.setHours(0, 0, 0, 0)
+    const diffDays = Math.round((deadline.getTime() - today.getTime()) / 86400000)
+    if (diffDays < 0) return 'urgent'   // dépassée
+    if (diffDays <= 3) return 'warning'  // dans 3 jours
+    return 'ok'
+  }
+
+  const deadlineStatus = isDateCard ? getDeadlineStatus(localDate) : null
 
   return (
     <div
@@ -135,31 +174,12 @@ function DraggableActionCard({
             onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
             title="Supprimer cette action"
             style={{
-              background: '#f0f0f0',
-              border: '1px solid #ddd',
-              color: '#999',
-              fontSize: 14,
-              fontWeight: 900,
-              cursor: 'pointer',
-              padding: '0px 5px',
-              lineHeight: '18px',
-              borderRadius: 4,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              background: '#f0f0f0', border: '1px solid #ddd', color: '#999',
+              fontSize: 14, fontWeight: 900, cursor: 'pointer', padding: '0px 5px',
+              lineHeight: '18px', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
-            onMouseOver={e => {
-              const b = e.currentTarget as HTMLButtonElement
-              b.style.background = '#E8151B'
-              b.style.borderColor = '#E8151B'
-              b.style.color = '#fff'
-            }}
-            onMouseOut={e => {
-              const b = e.currentTarget as HTMLButtonElement
-              b.style.background = '#f0f0f0'
-              b.style.borderColor = '#ddd'
-              b.style.color = '#999'
-            }}
+            onMouseOver={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#E8151B'; b.style.borderColor = '#E8151B'; b.style.color = '#fff' }}
+            onMouseOut={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#f0f0f0'; b.style.borderColor = '#ddd'; b.style.color = '#999' }}
           >×</button>
         </div>
       </div>
@@ -170,11 +190,8 @@ function DraggableActionCard({
         color: action.is_done ? '#2E7D32' : action.type === 'included' ? '#2E7D32' : '#111',
         display: 'block', fontFamily: FONT,
         textDecoration: action.is_done ? 'line-through' : 'none',
-        marginBottom: 3,
-        lineHeight: 1.3,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
+        marginBottom: 3, lineHeight: 1.3,
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         {action.title}
         {action.type === 'included' && !action.is_done && (
@@ -185,7 +202,52 @@ function DraggableActionCard({
         )}
       </span>
 
-      <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: 10, flex: 1 }}>{action.sub}</span>
+      <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: isDateCard ? 8 : 10, flex: isDateCard ? 'none' : 1 }}>{action.sub}</span>
+
+      {/* ✅ Champ date pour les cartes deadline/rappel */}
+      {isDateCard && (
+        <div
+          onPointerDown={e => e.stopPropagation()}
+          style={{ marginBottom: 8 }}
+        >
+          <input
+            type="date"
+            value={localDate}
+            onChange={handleDateChange}
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%',
+              border: `1.5px solid ${deadlineStatus === 'urgent' ? '#E8151B' : deadlineStatus === 'warning' ? '#F5C400' : '#E0E0E0'}`,
+              borderRadius: 6,
+              padding: '4px 7px',
+              fontSize: 11,
+              fontFamily: FONT,
+              fontWeight: 700,
+              color: deadlineStatus === 'urgent' ? '#E8151B' : '#111',
+              background: deadlineStatus === 'urgent' ? '#FFF0F0' : deadlineStatus === 'warning' ? '#FFFDE7' : '#FAFAFA',
+              outline: 'none',
+              cursor: 'pointer',
+              boxSizing: 'border-box',
+            }}
+          />
+          {/* Affichage du statut de la deadline */}
+          {localDate && deadlineStatus === 'urgent' && (
+            <span style={{ fontSize: 9, fontWeight: 800, color: '#E8151B', display: 'block', marginTop: 2, fontFamily: FONT }}>
+              ⚠️ Deadline dépassée
+            </span>
+          )}
+          {localDate && deadlineStatus === 'warning' && (
+            <span style={{ fontSize: 9, fontWeight: 800, color: '#B8900A', display: 'block', marginTop: 2, fontFamily: FONT }}>
+              ⏰ Dans moins de 3 jours !
+            </span>
+          )}
+          {localDate && deadlineStatus === 'ok' && (
+            <span style={{ fontSize: 9, fontWeight: 600, color: '#888', display: 'block', marginTop: 2, fontFamily: FONT }}>
+              📅 {formatDisplayDate(localDate)}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Case à cocher */}
       <div
@@ -253,6 +315,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
         position: r.position, is_custom: r.is_custom,
         type: r.is_custom ? 'action' : (r.type ?? 'action'),
         is_done: r.is_done ?? false,
+        deadline_date: r.deadline_date || null,
       })))
     } else {
       const baseData = STEP_ACTIONS[currentStepId] || STEP_ACTIONS['hr_interview']
@@ -266,16 +329,23 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
         id: r.id, title: r.title, icon: r.icon, sub: r.sub,
         position: r.position, is_custom: r.is_custom,
         type: r.type ?? 'action', is_done: r.is_done ?? false,
+        deadline_date: r.deadline_date || null,
       })))
     }
     setLoading(false)
   }
 
   const handleToggleDone = async (id: string, value: boolean) => {
-    // Mise à jour optimiste (instantané dans l'UI)
     setStepActions(prev => prev.map(a => a.id === id ? { ...a, is_done: value } : a))
     const supabase = createClient()
     await supabase.from('job_step_actions').update({ is_done: value }).eq('id', id)
+  }
+
+  // ✅ Sauvegarde de la deadline_date
+  const handleDeadlineSave = async (id: string, date: string) => {
+    setStepActions(prev => prev.map(a => a.id === id ? { ...a, deadline_date: date } : a))
+    const supabase = createClient()
+    await supabase.from('job_step_actions').update({ deadline_date: date }).eq('id', id)
   }
 
   const handleAddAction = async () => {
@@ -298,6 +368,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
     if (data) setStepActions(prev => [...prev, {
       id: data.id, title: data.title, icon: data.icon, sub: data.sub,
       position: data.position, is_custom: true, type: 'action', is_done: false,
+      deadline_date: null,
     }])
     setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setNewActionPosition(-1); setShowAddAction(false)
   }
@@ -363,6 +434,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
                       dragId={action.id}
                       onDelete={(id, title) => setActionToDelete({ id, title })}
                       onToggleDone={handleToggleDone}
+                      onDeadlineSave={handleDeadlineSave}
                     />
                   </div>
                 </div>
