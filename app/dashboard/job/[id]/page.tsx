@@ -244,14 +244,13 @@ export default function JobDetailPage() {
     if (currentStepId) loadCoverLetterVisibility(currentStepId)
   }, [currentStepId, loadCoverLetterVisibility])
 
-  const handleStepClick = async (stepId: string) => {
-    if (!job) return
-    const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
-    const patch = { sub_status: stepId, status: globalStatus }
-    setJob(prev => prev ? { ...prev, ...patch } : prev)
-    const res = await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch) })
-    if (res.ok) { const data = await res.json(); if (data.job) setJob(data.job) }
-  }
+const handleStepClick = async (stepId: string) => {
+  if (!job) return
+  const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
+  const patch = { sub_status: stepId, status: globalStatus }
+  setJob(prev => prev ? { ...prev, ...patch } : prev)
+  await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch) })
+}
 
   // ─── Patch rapide ───────────────────────────────────────────────────────────
   const patchJob = useCallback(async (field: string, value: any) => {
