@@ -244,9 +244,10 @@ export default function JobDetailPage() {
 const handleStepClick = async (stepId: string) => {
   if (!job) return
   const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
-  const patch = { sub_status: stepId, status: globalStatus }
+  const patch = { sub_status: stepId, status: globalStatus, updated_at: new Date().toISOString() }
   setJob(prev => prev ? { ...prev, ...patch } : prev)
-  await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(patch) })
+  const supabase = createClient()
+  await supabase.from('jobs').update(patch).eq('id', jobId)
 }
 
   // ─── Patch rapide ───────────────────────────────────────────────────────────
