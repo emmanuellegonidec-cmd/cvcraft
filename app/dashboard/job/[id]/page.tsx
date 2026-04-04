@@ -555,6 +555,13 @@ export default function JobDetailPage() {
           onStepDatesChange={handleStepDatesChange}
         />
 
+        <JobExchanges
+          exchanges={exchanges}
+          onAdd={addExchange}
+          onUpdate={updateExchange}
+          onDelete={deleteExchange}
+        />
+
         <JobStepActions
           jobId={jobId}
           userId={userId}
@@ -570,15 +577,10 @@ export default function JobDetailPage() {
             onPatch={patchJob}
             onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
             onCreateContact={() => openCreateContact('')}
+            currentStepNum={currentStepIndex + 1}
+            currentStepLabel={currentStepLabel}
           />
         )}
-
-        <JobExchanges
-          exchanges={exchanges}
-          onAdd={addExchange}
-          onUpdate={updateExchange}
-          onDelete={deleteExchange}
-        />
 
         <div className="jfmj-docs-grid">
           <div style={{ ...card, marginBottom: 0 }}>

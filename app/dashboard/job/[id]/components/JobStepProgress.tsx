@@ -66,7 +66,7 @@ function DraggableStep({ step, isActive, isDone, isCustom, onStepClick, date }: 
           boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.18)' : 'none',
           fontFamily: FONT, touchAction: 'none',
         }}>
-        {isDone && !isActive ? '✓' : step.num}
+        {step.num}
       </div>
       <p onClick={() => onStepClick(step.id)} style={{
         fontSize: 10, fontWeight: 700, textAlign: 'center',
