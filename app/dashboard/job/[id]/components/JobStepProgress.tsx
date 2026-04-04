@@ -176,17 +176,19 @@ export default function JobStepProgress({
             onClick={() => { setShowPanel(v => !v); setView('add') }}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
-              background: showPanel ? '#111' : '#F9F9F7',
-              border: showPanel ? '1.5px solid #111' : '1.5px dashed #ddd',
-              color: showPanel ? '#F5C400' : '#999',
-              fontSize: 12, fontWeight: 700,
+              background: showPanel ? '#111' : '#fff',
+              border: '2px solid #111',
+              boxShadow: showPanel ? 'none' : '3px 3px 0 #111',
+              color: showPanel ? '#F5C400' : '#111',
+              fontSize: 12, fontWeight: 800,
               padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: FONT,
               transition: 'all 0.15s',
             }}>
             <span style={{
-              width: 15, height: 15, background: showPanel ? '#F5C400' : '#ddd', borderRadius: '50%',
+              width: 16, height: 16, background: '#F5C400', borderRadius: '50%',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, fontWeight: 900, color: showPanel ? '#111' : '#fff', lineHeight: 1,
+              fontSize: 13, fontWeight: 900, color: '#111', lineHeight: 1,
+              border: '1.5px solid #111',
             }}>{showPanel ? '×' : '+'}</span>
             Ajouter ou supprimer une étape
           </button>
