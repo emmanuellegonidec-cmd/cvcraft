@@ -116,16 +116,15 @@ async function extractJobWithClaude(
   const jobIdMatch = url.match(/\/jobs\/view\/(?:[^/]*?-)?(\d{6,})\/?/)
   const jobId = jobIdMatch?.[1] ?? null
 
-  const prompt = jobId
-    ? `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
+  const prompt = `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
 
-Recherche l'offre d'emploi LinkedIn avec l'ID ${jobId} (URL : ${url}).
+Accède à cette page et extrais les informations directement depuis son contenu : ${url}
 
-Utilise la recherche web pour trouver cette offre et extraire toutes les informations disponibles.
+IMPORTANT — deux champs distincts à extraire depuis la page de l'offre :
+- "description" = le descriptif du POSTE uniquement (missions, responsabilités, profil recherché, compétences requises). Retourne le texte intégral tel qu'il apparaît dans l'offre.
+- "company_description" = le descriptif de l'ENTREPRISE uniquement (activité, secteur, valeurs, taille, chiffres clés). Ce texte figure souvent en bas de l'offre dans une section "À propos de [entreprise]" ou "About". Extrais-le tel quel depuis la page.
 
-IMPORTANT : distingue bien deux choses séparées :
-- "description" = le descriptif du POSTE uniquement (missions, responsabilités, profil recherché, compétences requises)
-- "company_description" = le descriptif de l'ENTREPRISE uniquement (activité, secteur, histoire, valeurs, taille, chiffres clés)
+Ne cherche pas d'informations sur d'autres sites. Extrais uniquement ce qui est présent dans la page de l'offre.
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après :
 {
@@ -134,30 +133,10 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant o
   "location_text": "ville et mode de travail (ex: Paris · Hybride) ou null",
   "employment_type": "CDI ou CDD ou Stage ou Alternance ou Freelance ou null",
   "seniority_level": "niveau hiérarchique ou null",
-  "description": "description du POSTE uniquement (missions, profil, compétences) ou null",
-  "company_description": "description de l'ENTREPRISE uniquement (secteur, activité, valeurs, taille) ou null",
+  "description": "description complète du POSTE telle qu'elle apparaît dans l'offre ou null",
+  "company_description": "description de l'ENTREPRISE telle qu'elle apparaît dans l'offre (section À propos) ou null",
   "salary_text": "fourchette salariale ou null",
-  "external_job_id": "${jobId}"
-}`
-    : `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
-
-Recherche cette offre d'emploi : ${url}
-
-IMPORTANT : distingue bien deux choses séparées :
-- "description" = le descriptif du POSTE uniquement (missions, responsabilités, profil recherché, compétences requises)
-- "company_description" = le descriptif de l'ENTREPRISE uniquement (activité, secteur, histoire, valeurs, taille, chiffres clés)
-
-Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après :
-{
-  "title": null,
-  "company_name": null,
-  "location_text": null,
-  "employment_type": null,
-  "seniority_level": null,
-  "description": null,
-  "company_description": null,
-  "salary_text": null,
-  "external_job_id": null
+  "external_job_id": ${jobId ? `"${jobId}"` : 'null'}
 }`
 
   try {
