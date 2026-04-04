@@ -90,7 +90,6 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
     const stepDates = (job as any).step_dates as Record<string, string> | null;
 
     if ((job as any).status === 'in_progress') {
-      // Résolution du label de l'étape
       if (subStatus) {
         subStatusLabel = DETAIL_STEP_LABELS[subStatus]
           || stagesLabelMap[subStatus]
@@ -99,25 +98,25 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
 
       // Priorité 1 : date de l'étape courante dans step_dates
       if (subStatus && stepDates && stepDates[subStatus]) {
-  const [y, m, d] = stepDates[subStatus].split('-').map(Number);
-  date = new Date(y, m - 1, d);
-  dateField = 'interview_at';
-  // Ajoute l'heure depuis interview_at si disponible
-  if ((job as any).interview_at) {
-    const interviewDate = new Date((job as any).interview_at);
-    if (interviewDate.getHours() > 0 || interviewDate.getMinutes() > 0) {
-      hour = interviewDate.getHours();
-      minutes = interviewDate.getMinutes();
-    }
-  }
-}
+        const [y, m, d] = stepDates[subStatus].split('-').map(Number);
+        date = new Date(y, m - 1, d);
+        dateField = 'interview_at';
+        // Ajoute l'heure depuis interview_at si disponible (en UTC)
+        if ((job as any).interview_at) {
+          const interviewDate = new Date((job as any).interview_at);
+          if (interviewDate.getUTCHours() > 0 || interviewDate.getUTCMinutes() > 0) {
+            hour = interviewDate.getUTCHours();
+            minutes = interviewDate.getUTCMinutes();
+          }
+        }
+      }
       // Priorité 2 : interview_at
       else if ((job as any).interview_at) {
         date = new Date((job as any).interview_at);
         dateField = 'interview_at';
-        if (date.getHours() > 0 || date.getMinutes() > 0) {
-          hour = date.getHours();
-          minutes = date.getMinutes();
+        if (date.getUTCHours() > 0 || date.getUTCMinutes() > 0) {
+          hour = date.getUTCHours();
+          minutes = date.getUTCMinutes();
         }
       }
       // Priorité 3 : created_at
@@ -128,16 +127,16 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
     } else if (job.status === 'applied' && (job as any).applied_at) {
       date = new Date((job as any).applied_at);
       dateField = 'applied_at';
-      if (date.getHours() > 0 || date.getMinutes() > 0) {
-        hour = date.getHours();
-        minutes = date.getMinutes();
+      if (date.getUTCHours() > 0 || date.getUTCMinutes() > 0) {
+        hour = date.getUTCHours();
+        minutes = date.getUTCMinutes();
       }
     } else {
       date = new Date(job.created_at);
       dateField = 'created_at';
-      if (date.getHours() > 0 || date.getMinutes() > 0) {
-        hour = date.getHours();
-        minutes = date.getMinutes();
+      if (date.getUTCHours() > 0 || date.getUTCMinutes() > 0) {
+        hour = date.getUTCHours();
+        minutes = date.getUTCMinutes();
       }
     }
 
