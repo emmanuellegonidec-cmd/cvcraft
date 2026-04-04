@@ -11,22 +11,20 @@ import { Job } from '@/lib/jobs';
 import { Stage, formatRelative, getSubStatusLabel } from './types';
 import { HeartDisplay } from './HeartComponents';
 
-// ─── Config cartouches SOURCE ──────────────────────────────────────────────────
 const SOURCE_MAP: Record<string, { bg: string; color: string; label: string }> = {
   'linkedin':              { bg: '#0A66C2', color: '#fff',    label: 'LinkedIn' },
   'indeed':                { bg: '#003A9B', color: '#fff',    label: 'Indeed' },
   'welcome to the jungle': { bg: '#1DBE6E', color: '#fff',    label: 'WTTJ' },
   'wttj':                  { bg: '#1DBE6E', color: '#fff',    label: 'WTTJ' },
   'apec':                  { bg: '#E8151B', color: '#fff',    label: 'APEC' },
-  'pôle emploi':           { bg: '#005F9E', color: '#fff',    label: 'Pôle Emploi' },
-  'pole emploi':           { bg: '#005F9E', color: '#fff',    label: 'Pôle Emploi' },
+  'france travail':        { bg: '#005F9E', color: '#fff',    label: 'France Travail' },
   'site entreprise':       { bg: '#444',    color: '#fff',    label: 'Site co.' },
   'réseau':                { bg: '#7C3AED', color: '#fff',    label: '🤝 Réseau' },
   'reseau':                { bg: '#7C3AED', color: '#fff',    label: '🤝 Réseau' },
   'hellowork':             { bg: '#FF6B35', color: '#fff',    label: 'HelloWork' },
   'chasseur de tête':      { bg: '#0D9488', color: '#fff',    label: '🎯 Chasseur de tête' },
   'chasseur de tete':      { bg: '#0D9488', color: '#fff',    label: '🎯 Chasseur de tête' },
-  'cabinet recrutement':   { bg: '#0D9488', color: '#fff',    label: '🎯 Cabinet recrutement' },
+  'cabinet recrutement':   { bg: '#0D9488', color: '#fff',    label: '🎯 Cabinet de recrutement' },
   'cooptation':            { bg: '#7C3AED', color: '#fff',    label: '🤝 Cooptation' },
   'spontaneous':           { bg: '#F5C400', color: '#92400E', label: '📨 Spontanée' },
   'autre':                 { bg: '#888',    color: '#fff',    label: 'Autre' },
@@ -41,15 +39,25 @@ function getSourceBadge(source?: string) {
 }
 
 // ─── Carte draggable ───────────────────────────────────────────────────────────
-function DraggableCard({ job, colId, stages, onClick }: {
-  job: Job; colId: string; stages: Stage[]; onClick: () => void;
+function DraggableCard({ job, colId, stages, stagesLabelMap, onClick }: {
+  job: Job; colId: string; stages: Stage[];
+  stagesLabelMap: Record<string, string>;
+  onClick: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: job.id, data: { job, fromColId: colId },
   });
 
-  const subLabel = colId === 'in_progress'
-    ? getSubStatusLabel((job as any).sub_status, stages) : null;
+  // Cherche le label : DETAIL_STAGES → global custom stages → lookup map per-job
+  const subStatus = (job as any).sub_status as string | null;
+  let subLabel: string | null = null;
+  if (colId === 'in_progress' && subStatus) {
+    subLabel = getSubStatusLabel(subStatus, stages);
+    // Fallback : étapes personnalisées par offre (UUID)
+    if (!subLabel && stagesLabelMap[subStatus]) {
+      subLabel = stagesLabelMap[subStatus];
+    }
+  }
 
   const sourceBadge = getSourceBadge((job as any).source_platform);
 
@@ -115,8 +123,9 @@ function DraggableCard({ job, colId, stages, onClick }: {
 }
 
 // ─── Colonne droppable ────────────────────────────────────────────────────────
-function DroppableColumn({ col, jobs, stages, onCardClick, onAddJob, isDragOver }: {
+function DroppableColumn({ col, jobs, stages, stagesLabelMap, onCardClick, onAddJob, isDragOver }: {
   col: Stage; jobs: Job[]; stages: Stage[];
+  stagesLabelMap: Record<string, string>;
   onCardClick: (job: Job) => void; onAddJob: (stageId: string) => void; isDragOver: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id: col.id });
@@ -136,7 +145,11 @@ function DroppableColumn({ col, jobs, stages, onCardClick, onAddJob, isDragOver 
         </div>
       </div>
       {jobs.map(job => (
-        <DraggableCard key={job.id} job={job} colId={col.id} stages={stages} onClick={() => onCardClick(job)} />
+        <DraggableCard
+          key={job.id} job={job} colId={col.id} stages={stages}
+          stagesLabelMap={stagesLabelMap}
+          onClick={() => onCardClick(job)}
+        />
       ))}
       <div className="add-card" onClick={() => onAddJob(col.id)}>+ Ajouter</div>
     </div>
@@ -156,12 +169,13 @@ function GhostCard({ job }: { job: Job }) {
 // ─── Composant principal ───────────────────────────────────────────────────────
 type Props = {
   jobs: Job[]; stages: Stage[];
+  stagesLabelMap: Record<string, string>;
   onJobClick: (job: Job) => void; onAddJob: (stageId: string) => void;
   onOpenSettings: () => void; onRefresh: () => void;
   onStatusChange: (id: string, newStatus: string) => void;
 };
 
-export default function KanbanView({ jobs, stages, onJobClick, onAddJob, onRefresh, onStatusChange }: Props) {
+export default function KanbanView({ jobs, stages, stagesLabelMap, onJobClick, onAddJob, onRefresh, onStatusChange }: Props) {
   const router = useRouter();
   const [activeJob, setActiveJob] = useState<Job | null>(null);
   const [overColId, setOverColId] = useState<string | null>(null);
@@ -201,9 +215,12 @@ export default function KanbanView({ jobs, stages, onJobClick, onAddJob, onRefre
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'start', width: '100%', height: '100%' }}>
         {stages.map(col => (
-          <DroppableColumn key={col.id} col={col} jobs={jobsByStatus(col.id)} stages={stages}
+          <DroppableColumn
+            key={col.id} col={col} jobs={jobsByStatus(col.id)} stages={stages}
+            stagesLabelMap={stagesLabelMap}
             onCardClick={job => router.push(`/dashboard/job/${job.id}`)}
-            onAddJob={onAddJob} isDragOver={overColId === col.id} />
+            onAddJob={onAddJob} isDragOver={overColId === col.id}
+          />
         ))}
       </div>
       <DragOverlay>{activeJob ? <GhostCard job={activeJob} /> : null}</DragOverlay>

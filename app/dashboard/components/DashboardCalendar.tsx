@@ -81,12 +81,29 @@ function jobsToEvents(jobs: Job[]): CalEvent[] {
     let hour: number | undefined;
     let minutes: number | undefined;
 
-    if ((job as any).status === 'in_progress' && (job as any).interview_at) {
-      date = new Date((job as any).interview_at);
-      dateField = 'interview_at';
-      if (date.getHours() > 0 || date.getMinutes() > 0) {
-        hour = date.getHours();
-        minutes = date.getMinutes();
+    if ((job as any).status === 'in_progress') {
+      const subStatus = (job as any).sub_status as string | null;
+      const stepDates = (job as any).step_dates as Record<string, string> | null;
+
+      // Priorité 1 : date de l'étape courante dans step_dates
+      if (subStatus && stepDates && stepDates[subStatus]) {
+        const [y, m, d] = stepDates[subStatus].split('-').map(Number);
+        date = new Date(y, m - 1, d);
+        dateField = 'interview_at';
+      }
+      // Priorité 2 : interview_at
+      else if ((job as any).interview_at) {
+        date = new Date((job as any).interview_at);
+        dateField = 'interview_at';
+        if (date.getHours() > 0 || date.getMinutes() > 0) {
+          hour = date.getHours();
+          minutes = date.getMinutes();
+        }
+      }
+      // Priorité 3 : created_at
+      else {
+        date = new Date(job.created_at);
+        dateField = 'created_at';
       }
     } else if (job.status === 'applied' && (job as any).applied_at) {
       date = new Date((job as any).applied_at);
@@ -104,7 +121,12 @@ function jobsToEvents(jobs: Job[]): CalEvent[] {
       }
     }
 
-    return { jobId: job.id, date, dateField, title: job.title || 'Sans titre', company: job.company || '', type: evType, hour, minutes };
+    return {
+      jobId: job.id, date, dateField,
+      title: job.title || 'Sans titre',
+      company: job.company || '',
+      type: evType, hour, minutes,
+    };
   }).filter(e => !isNaN(e.date.getTime()));
 }
 

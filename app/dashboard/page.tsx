@@ -55,7 +55,7 @@ export default function DashboardPage() {
   const [newStageName, setNewStageName]   = useState('');
   const [newStageColor, setNewStageColor] = useState('#E8151B');
   const [newStagePosition, setNewStagePosition] = useState(3);
-
+const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, string>>({});
   const newJobRef = useRef<NewJobState>({ ...EMPTY_JOB });
 
   useEffect(() => {
@@ -125,16 +125,26 @@ export default function DashboardPage() {
       setContacts(cd.contacts || []);
 
       const { data: customStages } = await supabase
-        .from('pipeline_stages').select('*')
-        .eq('user_id', session.user.id).is('job_id', null).order('position');
+  .from('pipeline_stages').select('*')
+  .eq('user_id', session.user.id).is('job_id', null).order('position');
 
-      if (customStages && customStages.length > 0) {
-        const all = [
-          ...DEFAULT_STAGES,
-          ...customStages.map((s: any) => ({ id: s.id, label: s.label, color: s.color, position: s.position, is_default: false })),
-        ].sort((a, b) => a.position - b.position);
-        setStages(all);
-      }
+if (customStages && customStages.length > 0) {
+  const all = [
+    ...DEFAULT_STAGES,
+    ...customStages.map((s: any) => ({ id: s.id, label: s.label, color: s.color, position: s.position, is_default: false })),
+  ].sort((a, b) => a.position - b.position);
+  setStages(all);
+}
+
+// Charge TOUTES les étapes (y compris par offre) pour afficher les labels sur les cartes
+const { data: allPipelineStages } = await supabase
+  .from('pipeline_stages').select('id, label')
+  .eq('user_id', session.user.id);
+if (allPipelineStages) {
+  const map: Record<string, string> = {};
+  allPipelineStages.forEach((s: any) => { map[s.id] = s.label; });
+  setStagesLabelMap(map);
+}
       setLoading(false);
     }
     load();
@@ -399,11 +409,12 @@ export default function DashboardPage() {
 
           {view === 'kanban' && (
             <KanbanView
-              jobs={jobs} stages={stages}
-              onJobClick={setSelectedJob} onAddJob={openAddJobModal}
-              onOpenSettings={() => setShowSettings(true)}
-              onRefresh={handleRefresh} onStatusChange={updateJobStatus}
-            />
+  jobs={jobs} stages={stages}
+  stagesLabelMap={stagesLabelMap}
+  onJobClick={setSelectedJob} onAddJob={openAddJobModal}
+  onOpenSettings={() => setShowSettings(true)}
+  onRefresh={handleRefresh} onStatusChange={updateJobStatus}
+/>
           )}
           {view === 'list' && (
             <ListView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onDeleteJob={deleteJob} onAddJob={openAddJobModal} />
