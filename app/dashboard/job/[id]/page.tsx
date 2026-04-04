@@ -248,6 +248,20 @@ export default function JobDetailPage() {
 
   const allSteps = allStepsMerged.map((s, i) => ({ id: s.id, label: s.label, num: i + 1 }))
 
+  // Dates dérivées des échanges — priorité sur les dates manuelles
+  // Pour chaque étape, on prend la date la plus ancienne parmi ses échanges
+  const stepDatesFromExchanges: Record<string, string> = {}
+  for (const exchange of exchanges) {
+    if (!exchange.step_label || !exchange.exchange_date) continue
+    const step = allSteps.find(s => s.label === exchange.step_label)
+    if (!step) continue
+    if (!stepDatesFromExchanges[step.id] || exchange.exchange_date < stepDatesFromExchanges[step.id]) {
+      stepDatesFromExchanges[step.id] = exchange.exchange_date
+    }
+  }
+  // Les dates d'échanges écrasent les dates manuelles pour les étapes concernées
+  const mergedStepDates = { ...stepDates, ...stepDatesFromExchanges }
+
   const currentStepId = job?.sub_status || job?.status || 'to_apply'
   const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId)
   const currentStepLabel = allSteps.find(s => s.id === currentStepId)?.label ?? ''
@@ -537,7 +551,7 @@ export default function JobDetailPage() {
           onStepClick={handleStepClick}
           onCustomStepsChange={setCustomSteps}
           onHideBaseStep={handleHideBaseStep}
-          stepDates={stepDates}
+          stepDates={mergedStepDates}
           onStepDatesChange={handleStepDatesChange}
         />
 
