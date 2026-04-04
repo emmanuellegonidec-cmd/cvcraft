@@ -24,13 +24,12 @@ interface Props {
   onHideBaseStep: (stepId: string) => void
 }
 
-function DraggableStep({ step, isActive, isDone, isCustom, onStepClick, onDeleteRequest }: {
+function DraggableStep({ step, isActive, isDone, isCustom, onStepClick }: {
   step: { id: string; label: string; num: number }
   isActive: boolean
   isDone: boolean
   isCustom: boolean
   onStepClick: (id: string) => void
-  onDeleteRequest: (id: string, label: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: step.id, disabled: !isCustom, data: { stepId: step.id },
@@ -44,19 +43,6 @@ function DraggableStep({ step, isActive, isDone, isCustom, onStepClick, onDelete
       transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
       zIndex: isDragging ? 50 : 1,
     }}>
-      {/* Bouton supprimer — visible sur toutes les étapes */}
-      <button
-        onClick={e => { e.stopPropagation(); onDeleteRequest(step.id, step.label) }}
-        style={{
-          position: 'absolute', top: 0, right: 'calc(50% - 28px)',
-          width: 16, height: 16, borderRadius: '50%',
-          background: '#E8151B', border: '2px solid #fff',
-          color: '#fff', fontSize: 10, fontWeight: 900,
-          cursor: 'pointer', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', zIndex: 10, lineHeight: 1,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-        }}>×</button>
-
       <div
         ref={isCustom ? setNodeRef : undefined}
         {...(isCustom ? { ...listeners, ...attributes } : {})}
@@ -65,7 +51,7 @@ function DraggableStep({ step, isActive, isDone, isCustom, onStepClick, onDelete
           width: 34, height: 34, borderRadius: '50%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 13, fontWeight: 900, position: 'relative', zIndex: 1,
-          flexShrink: 0, marginTop: 10,
+          flexShrink: 0,
           cursor: isCustom ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
           background: isActive ? '#111' : isDone ? '#F5C400' : '#fff',
           border: `2.5px solid ${isActive ? '#111' : isDone ? '#F5C400' : '#DEDEDE'}`,
@@ -95,7 +81,7 @@ function DropZone({ id, isOver }: { id: string; isOver: boolean }) {
       background: isOver ? '#F5C400' : 'transparent',
       border: isOver ? '2px dashed #111' : '2px dashed transparent',
       flexShrink: 0, transition: 'all .15s', alignSelf: 'center',
-      marginBottom: 20, marginTop: 10,
+      marginBottom: 20,
     }} />
   )
 }
@@ -104,12 +90,13 @@ export default function JobStepProgress({
   jobId, userId, currentStepId, customSteps, allSteps,
   currentStepIndex, onStepClick, onCustomStepsChange, onHideBaseStep,
 }: Props) {
-  const [showModal, setShowModal] = useState(false)
+  const [showPanel, setShowPanel] = useState(false)
   const [newStepName, setNewStepName] = useState('')
-  const [newStepPos, setNewStepPos] = useState(5)
+  const [newStepPos, setNewStepPos] = useState(0)
   const [activeStepId, setActiveStepId] = useState<string | null>(null)
   const [overDropZone, setOverDropZone] = useState<string | null>(null)
   const [stepToDelete, setStepToDelete] = useState<{ id: string; label: string; isBase: boolean } | null>(null)
+  const [view, setView] = useState<'add' | 'remove'>('add')
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -126,8 +113,8 @@ export default function JobStepProgress({
       .select().single()
     if (data) onCustomStepsChange([...customSteps, { id: data.id, label: data.label, position: data.position }])
     setNewStepName('')
-    setNewStepPos(allSteps.length - 2)
-    setShowModal(false)
+    setNewStepPos(0)
+    setShowPanel(false)
   }
 
   const handleDeleteCustomStep = async (stepId: string) => {
@@ -182,45 +169,41 @@ export default function JobStepProgress({
     <>
       <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '1.5px solid #EBEBEB' }}>
 
-        {/* En-tête : titre + bouton Ajouter à droite */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        {/* En-tête */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <span style={sectionLabel}>Parcours de candidature</span>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => { setShowPanel(v => !v); setView('add') }}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: '#F9F9F7', border: '1.5px dashed #ddd',
-              color: '#999', fontSize: 12, fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              background: showPanel ? '#111' : '#F9F9F7',
+              border: showPanel ? '1.5px solid #111' : '1.5px dashed #ddd',
+              color: showPanel ? '#F5C400' : '#999',
+              fontSize: 12, fontWeight: 700,
               padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: FONT,
-            }}
-            onMouseOver={e => {
-              const el = e.currentTarget
-              el.style.borderColor = '#F5C400'; el.style.color = '#111'; el.style.background = '#FFFDE7'
-            }}
-            onMouseOut={e => {
-              const el = e.currentTarget
-              el.style.borderColor = '#ddd'; el.style.color = '#999'; el.style.background = '#F9F9F7'
+              transition: 'all 0.15s',
             }}>
             <span style={{
-              width: 15, height: 15, background: '#ddd', borderRadius: '50%',
+              width: 15, height: 15,
+              background: showPanel ? '#F5C400' : '#ddd',
+              borderRadius: '50%',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 900, color: '#fff',
-            }}>+</span>
-            Ajouter une étape
+              fontSize: 13, fontWeight: 900,
+              color: showPanel ? '#111' : '#fff',
+              lineHeight: 1,
+              transition: 'all 0.15s',
+            }}>{showPanel ? '×' : '+'}</span>
+            {showPanel ? 'Ajouter ou supprimer une étape' : 'Ajouter une étape'}
           </button>
         </div>
 
-        <p style={{ fontSize: 12, color: '#bbb', fontWeight: 600, marginBottom: 14, fontFamily: FONT }}>
-          💡 Cliquez pour avancer · Glissez les étapes custom · × pour supprimer une étape
-        </p>
-
+        {/* Timeline */}
         <DndContext
           sensors={sensors}
           onDragStart={e => setActiveStepId(e.active.id as string)}
           onDragOver={e => setOverDropZone(e.over?.id as string ?? null)}
           onDragEnd={handleStepDragEnd}>
-          {/* paddingTop: 18 pour que le bouton × en position absolute ne soit pas coupé */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 8, paddingTop: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 8 }}>
             {allSteps.map((step, idx) => {
               const isDone = idx < currentStepIndex
               const isActive = step.id === currentStepId
@@ -230,7 +213,7 @@ export default function JobStepProgress({
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
                     {idx < allSteps.length - 1 && (
                       <div style={{
-                        position: 'absolute', top: 27,
+                        position: 'absolute', top: 17,
                         left: 'calc(50% + 17px)', right: 'calc(-50% + 17px)',
                         height: 2.5, background: isDone ? '#F5C400' : '#EBEBEB', zIndex: 0,
                       }} />
@@ -241,7 +224,6 @@ export default function JobStepProgress({
                       isDone={isDone}
                       isCustom={isCustom}
                       onStepClick={onStepClick}
-                      onDeleteRequest={(id, label) => setStepToDelete({ id, label, isBase: !isCustom })}
                     />
                   </div>
                   {isCustom && idx < allSteps.length - 1 && (
@@ -263,73 +245,145 @@ export default function JobStepProgress({
             ) : null}
           </DragOverlay>
         </DndContext>
+
+        {/* Panneau Ajouter / Supprimer — inline sous la timeline */}
+        {showPanel && (
+          <div style={{ marginTop: 20, borderTop: '1.5px solid #F0F0F0', paddingTop: 20 }}>
+
+            {/* Onglets */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+              {(['add', 'remove'] as const).map(tab => (
+                <button key={tab} onClick={() => setView(tab)} style={{
+                  flex: 1, padding: '9px 0', borderRadius: 8, cursor: 'pointer',
+                  fontSize: 12, fontWeight: 800, fontFamily: FONT,
+                  border: view === tab ? '2px solid #111' : '1.5px solid #E5E5E5',
+                  background: view === tab ? '#111' : '#F9F9F7',
+                  color: view === tab ? '#F5C400' : '#888',
+                  transition: 'all 0.15s',
+                }}>
+                  {tab === 'add' ? '＋ Ajouter une étape' : '🗑 Supprimer une étape'}
+                </button>
+              ))}
+            </div>
+
+            {/* Vue : Ajouter */}
+            {view === 'add' && (
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#666', marginBottom: 6, display: 'block', fontFamily: FONT }}>
+                  Nom de l&apos;étape
+                </label>
+                <input
+                  style={{ ...inp, marginBottom: 14 }}
+                  placeholder="Ex : Test technique, Entretien DRH..."
+                  value={newStepName}
+                  onChange={e => setNewStepName(e.target.value)}
+                  onFocus={e => { e.target.style.borderColor = '#F5C400' }}
+                  onBlur={e => { e.target.style.borderColor = '#eee' }}
+                  autoFocus
+                />
+                <label style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#666', marginBottom: 8, display: 'block', fontFamily: FONT }}>
+                  Où l&apos;insérer ?
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                  {allSteps.slice(0, -1).map((step, idx) => {
+                    const nextStep = allSteps[idx + 1]
+                    const isSelected = newStepPos === idx
+                    return (
+                      <button key={idx} onClick={() => setNewStepPos(idx)} style={{
+                        background: isSelected ? '#111' : '#F9F9F7',
+                        color: isSelected ? '#F5C400' : '#555',
+                        border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`,
+                        borderRadius: 8, padding: '9px 13px', cursor: 'pointer',
+                        fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                        textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      }}>
+                        <span>Après <strong style={{ color: isSelected ? '#F5C400' : '#111' }}>{step.label}</strong></span>
+                        <span style={{ fontSize: 10, fontWeight: 500, opacity: 0.6 }}>→ avant {nextStep.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button onClick={() => setShowPanel(false)} style={{
+                    background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700,
+                    padding: '9px 18px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT,
+                  }}>Annuler</button>
+                  <button
+                    onClick={handleAddCustomStep}
+                    disabled={!newStepName.trim()}
+                    style={{
+                      background: newStepName.trim() ? '#111' : '#eee',
+                      color: newStepName.trim() ? '#F5C400' : '#aaa',
+                      fontSize: 13, fontWeight: 800,
+                      padding: '9px 20px', borderRadius: 8, border: 'none',
+                      cursor: newStepName.trim() ? 'pointer' : 'not-allowed', fontFamily: FONT,
+                    }}>Ajouter l&apos;étape →</button>
+                </div>
+              </div>
+            )}
+
+            {/* Vue : Supprimer */}
+            {view === 'remove' && (
+              <div>
+                <p style={{ fontSize: 12, color: '#999', fontWeight: 600, marginBottom: 14, fontFamily: FONT }}>
+                  Cliquez sur &ldquo;Retirer&rdquo; pour enlever une étape de ce parcours.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {allSteps.map(step => {
+                    const isCustom = !!customSteps.find(cs => cs.id === step.id)
+                    const isCurrent = step.id === currentStepId
+                    return (
+                      <div key={step.id} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 14px', borderRadius: 9,
+                        border: `1.5px solid ${isCurrent ? '#F5C400' : '#EBEBEB'}`,
+                        background: isCurrent ? '#FFFDE7' : '#FAFAFA',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{
+                            width: 24, height: 24, borderRadius: '50%',
+                            background: isCurrent ? '#F5C400' : isCustom ? '#111' : '#E0E0E0',
+                            color: isCurrent ? '#111' : isCustom ? '#F5C400' : '#888',
+                            fontSize: 11, fontWeight: 900,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0, fontFamily: FONT,
+                          }}>{step.num}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#111', fontFamily: FONT }}>{step.label}</span>
+                          {isCustom && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#888', background: '#F0F0F0', padding: '2px 7px', borderRadius: 20, fontFamily: FONT }}>perso.</span>
+                          )}
+                          {isCurrent && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#B8900A', background: '#FFF8E1', padding: '2px 7px', borderRadius: 20, fontFamily: FONT }}>en cours</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => !isCurrent && setStepToDelete({ id: step.id, label: step.label, isBase: !isCustom })}
+                          disabled={isCurrent}
+                          style={{
+                            background: isCurrent ? '#F5F5F5' : '#FEF2F2',
+                            color: isCurrent ? '#ccc' : '#E8151B',
+                            border: `1.5px solid ${isCurrent ? '#E5E5E5' : '#FECACA'}`,
+                            borderRadius: 7, padding: '5px 12px',
+                            fontSize: 11, fontWeight: 800,
+                            cursor: isCurrent ? 'not-allowed' : 'pointer',
+                            fontFamily: FONT, whiteSpace: 'nowrap',
+                          }}>
+                          {isCurrent ? 'Étape active' : 'Retirer'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p style={{ fontSize: 11, color: '#bbb', fontWeight: 600, marginTop: 12, fontFamily: FONT }}>
+                  L&apos;étape active ne peut pas être retirée. Changez d&apos;étape d&apos;abord.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ── Modale ajout étape ───────────────────────────────────────────── */}
-      {showModal && (
-        <div style={{
-          background: 'rgba(0,0,0,0.45)', borderRadius: 12, padding: '32px 16px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-        }}>
-          <div style={{
-            background: '#fff', borderRadius: 12, padding: 26,
-            width: '100%', maxWidth: 440, border: '2px solid #111', boxShadow: '4px 4px 0 #111',
-          }}>
-            <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', marginBottom: 5, fontFamily: FONT }}>
-              Ajouter une étape personnalisée
-            </h3>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.5, fontFamily: FONT }}>
-              Donnez un nom à cette étape et choisissez où l&apos;insérer.
-            </p>
-            <label style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#666', marginBottom: 5, display: 'block', fontFamily: FONT }}>
-              Nom de l&apos;étape
-            </label>
-            <input
-              style={inp}
-              placeholder="Ex : Test technique, Entretien DRH..."
-              value={newStepName}
-              onChange={e => setNewStepName(e.target.value)}
-              onFocus={e => { e.target.style.borderColor = '#F5C400' }}
-              onBlur={e => { e.target.style.borderColor = '#eee' }}
-            />
-            <label style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#666', marginTop: 14, marginBottom: 8, display: 'block', fontFamily: FONT }}>
-              Où l&apos;insérer ?
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {allSteps.slice(0, -1).map((step, idx) => {
-                const nextStep = allSteps[idx + 1]
-                const pos = idx + 1
-                const isSelected = newStepPos === pos
-                return (
-                  <button key={pos} onClick={() => setNewStepPos(pos)} style={{
-                    background: isSelected ? '#111' : '#F9F9F7',
-                    color: isSelected ? '#F5C400' : '#555',
-                    border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`,
-                    borderRadius: 8, padding: '9px 13px', cursor: 'pointer',
-                    fontSize: 12, fontWeight: 700, fontFamily: FONT,
-                    textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  }}>
-                    <span>Après <strong style={{ color: isSelected ? '#F5C400' : '#111' }}>{step.label}</strong></span>
-                    <span style={{ fontSize: 10, fontWeight: 500, opacity: 0.6 }}>→ avant {nextStep.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
-              <button onClick={() => setShowModal(false)} style={{
-                background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700,
-                padding: '8px 16px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT,
-              }}>Annuler</button>
-              <button onClick={handleAddCustomStep} style={{
-                background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800,
-                padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT,
-              }}>Ajouter l&apos;étape</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modale suppression étape (base ou custom) ────────────────────── */}
+      {/* ── Modale confirmation suppression ─────────────────────────────────── */}
       {stepToDelete && (
         <div style={{
           background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0,
@@ -348,12 +402,12 @@ export default function JobStepProgress({
               &ldquo;{stepToDelete.label}&rdquo;
             </p>
             {stepToDelete.isBase ? (
-              <p style={{ fontSize: 12, color: '#888', marginBottom: 18, textAlign: 'center', fontFamily: FONT, lineHeight: 1.5 }}>
-                Cette étape sera masquée de <strong>cette candidature uniquement</strong>. Vous pourrez la réafficher en l&apos;ajoutant manuellement.
+              <p style={{ fontSize: 12, color: '#888', marginBottom: 18, textAlign: 'center', fontFamily: FONT, lineHeight: 1.6 }}>
+                Cette étape sera masquée de <strong>cette candidature uniquement</strong>.
               </p>
             ) : (
               <p style={{ fontSize: 12, color: '#E8151B', marginBottom: 18, textAlign: 'center', fontFamily: FONT }}>
-                Cette action est définitive.
+                Cette étape personnalisée sera supprimée définitivement.
               </p>
             )}
             <div style={{ display: 'flex', gap: 10 }}>
