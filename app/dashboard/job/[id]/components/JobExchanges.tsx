@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { JobExchange, ExchangeType, EXCHANGE_TYPE_LABELS } from '@/lib/types'
 
 const FONT = "'Montserrat', sans-serif"
@@ -20,28 +20,6 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
   const [sectionOpen, setSectionOpen] = useState(false)
   const [openExchanges, setOpenExchanges] = useState<Set<string>>(new Set())
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
-  const [localValues, setLocalValues] = useState<Record<string, Record<string, string>>>({})
-
-  // Initialise les valeurs locales à chaque nouvel échange
-  useEffect(() => {
-    setLocalValues(prev => {
-      const next = { ...prev }
-      for (const ex of exchanges) {
-        if (!next[ex.id]) {
-          next[ex.id] = {
-            title: ex.title ?? '',
-            exchange_type: ex.exchange_type ?? '',
-            exchange_date: ex.exchange_date ?? '',
-            content: (ex as any).content ?? '',
-            questions: (ex as any).questions ?? '',
-            answers: (ex as any).answers ?? '',
-            next_step: (ex as any).next_step ?? '',
-          }
-        }
-      }
-      return next
-    })
-  }, [exchanges])
 
   const toggle = (id: string) => {
     setOpenExchanges(prev => {
@@ -57,21 +35,6 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
       next.delete(id)
       return next
     })
-  }
-
-  const updateLocal = (exchangeId: string, field: string, value: string) => {
-    setLocalValues(prev => ({
-      ...prev,
-      [exchangeId]: { ...(prev[exchangeId] ?? {}), [field]: value }
-    }))
-  }
-
-  const handleSaveAndClose = (id: string) => {
-    const vals = localValues[id] ?? {}
-    for (const [field, value] of Object.entries(vals)) {
-      onUpdate(id, field, value)
-    }
-    close(id)
   }
 
   const inp: React.CSSProperties = {
@@ -126,7 +89,6 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
               const stepInfo = (ex as any).step_label
                 ? `Étape ${circleNumber} — ${(ex as any).step_label}`
                 : null
-              const vals = localValues[ex.id] ?? {}
 
               return (
                 <div key={ex.id} style={{ border: `1.5px solid ${isLatest ? '#F5C400' : '#EBEBEB'}`, borderRadius: 10, overflow: 'hidden' }}>
@@ -170,31 +132,22 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                     <div style={{ padding: 14, borderTop: '1px solid #F0F0F0' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 10, marginBottom: 12 }}>
                         {[
-                          { field: 'title', label: 'Titre', type: 'text' },
-                          { field: 'exchange_type', label: 'Type', type: 'select' },
-                          { field: 'exchange_date', label: 'Date', type: 'date' },
+                          { field: 'title', label: 'Titre', type: 'text', val: ex.title },
+                          { field: 'exchange_type', label: 'Type', type: 'select', val: ex.exchange_type },
+                          { field: 'exchange_date', label: 'Date', type: 'date', val: ex.exchange_date },
                         ].map(f => (
                           <div key={f.field}>
                             <label style={{ ...fieldLabel, marginBottom: 5 }}>{f.label}</label>
                             {f.type === 'select' ? (
-                              <select
-                                value={vals[f.field] ?? ''}
-                                onChange={e => updateLocal(ex.id, f.field, e.target.value)}
-                                style={{ ...inp, background: '#fff' }}
-                              >
+                              <select defaultValue={f.val} onChange={e => onUpdate(ex.id, f.field, e.target.value)} style={{ ...inp, background: '#fff' }}>
                                 {(Object.entries(EXCHANGE_TYPE_LABELS) as [ExchangeType, string][]).map(([v, l]) => (
                                   <option key={v} value={v}>{l}</option>
                                 ))}
                               </select>
                             ) : (
-                              <input
-                                type={f.type}
-                                value={vals[f.field] ?? ''}
-                                onChange={e => updateLocal(ex.id, f.field, e.target.value)}
-                                style={inp}
+                              <input type={f.type} defaultValue={f.val} style={inp}
                                 onFocus={e => { e.target.style.borderColor = '#F5C400' }}
-                                onBlur={e => { e.target.style.borderColor = '#eee' }}
-                              />
+                                onBlur={e => { e.target.style.borderColor = '#eee'; onUpdate(ex.id, f.field, e.target.value) }} />
                             )}
                           </div>
                         ))}
@@ -209,12 +162,11 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                         <div key={field} style={{ marginBottom: 10 }}>
                           <label style={{ ...fieldLabel, marginBottom: 5 }}>{label}</label>
                           <textarea
-                            value={vals[field] ?? ''}
-                            onChange={e => updateLocal(ex.id, field, e.target.value)}
+                            defaultValue={(ex as any)[field] ?? ''}
                             placeholder={placeholder}
+                            onBlur={e => onUpdate(ex.id, field, e.target.value)}
                             style={{ ...ta, minHeight: field === 'next_step' ? 52 : 76 }}
                             onFocus={e => { e.target.style.borderColor = '#F5C400' }}
-                            onBlur={e => { e.target.style.borderColor = '#eee' }}
                           />
                         </div>
                       ))}
@@ -235,7 +187,7 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                             Fermer
                           </button>
                           <button
-                            onClick={() => handleSaveAndClose(ex.id)}
+                            onClick={() => close(ex.id)}
                             style={{ background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #F5C400' }}
                           >
                             Enregistrer →
