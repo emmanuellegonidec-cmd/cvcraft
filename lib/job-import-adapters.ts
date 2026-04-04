@@ -481,29 +481,38 @@ const genericAdapter: JobAdapter = {
   source: 'unknown',
   canHandle: () => true,
   parse: ({ url, $, html, hostname }) => {
-  const jsonLd = extractJsonLdJobPosting($)
-  if (jsonLd) return normalizeJsonLd(url, 'unknown', jsonLd)
+    const jsonLd = extractJsonLdJobPosting($)
+    if (jsonLd) return normalizeJsonLd(url, 'unknown', jsonLd)
 
-  // Cherche la description entreprise dans les sélecteurs communs des sites carrière
-  const companyDesc =
-    text($, '[class*="company-description"]') ||
-    text($, '[class*="about-company"]') ||
-    text($, '[class*="entreprise"]') ||
-    text($, '[id*="company"]') ||
-    text($, '[class*="who-we-are"]') ||
-    text($, '[class*="our-company"]') ||
-    null
+    const rawText = bodyText($) ?? cleanText(html) ?? ''
 
-  return finalizeJob('unknown', 'genericAdapter', url, {
-    source_hostname: hostname,
-    title: attr($, 'meta[property="og:title"]', 'content') || text($, 'h1') || text($, 'title'),
-    company_name: text($, '[class*="company-name"]') || text($, '[class*="employer"]') || null,
-    company_description: companyDesc,
-    description: attr($, 'meta[name="description"]', 'content') || text($, 'article') || bodyText($),
-    raw_text: bodyText($) ?? cleanText(html),
-  })
-},
+    // Cherche la section entreprise dans le texte brut (fonctionne pour tous les sites)
+    const companyDescStart = rawText.search(
+      /L[''e\s]entreprise|À propos|About us|Notre société|Qui sommes.nous|Notre entreprise/i
+    )
+    let company_description: string | null = null
+    if (companyDescStart > -1) {
+      const after = rawText.slice(companyDescStart)
+      const endMatch = after.search(
+        /Le poste|Missions|Vos missions|Description du poste|Profil recherché|Postuler/i
+      )
+      const raw = after.slice(0, endMatch > -1 ? endMatch : 3000)
+      company_description = cleanText(
+        raw.replace(/^(L[''e\s]entreprise|À propos[^\n]*|About us|Notre société|Qui sommes.nous|Le groupe|Notre entreprise)[^\n]*/i, '').trim()
+      )
+    }
+
+    return finalizeJob('unknown', 'genericAdapter', url, {
+      source_hostname: hostname,
+      title: attr($, 'meta[property="og:title"]', 'content') || text($, 'h1') || text($, 'title'),
+      company_name: text($, '[class*="company-name"]') || text($, '[class*="employer"]') || null,
+      company_description,
+      description: attr($, 'meta[name="description"]', 'content') || text($, 'article') || rawText,
+      raw_text: rawText,
+    })
+  },
 }
+
 
 export const JOB_ADAPTERS: JobAdapter[] = [
   linkedinAdapter,
