@@ -18,19 +18,41 @@ interface Props {
 
 export default function JobCompanySection({ job, expanded, onToggle }: Props) {
   const sectionLabel: React.CSSProperties = {
-    fontSize: 12, fontWeight: 800, textTransform: 'uppercase',
-    letterSpacing: '1.5px', color: '#666', marginBottom: 14,
-    display: 'block', fontFamily: FONT,
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '1.5px',
+    color: '#555',
+    display: 'block',
+    fontFamily: FONT,
   }
 
   return (
     <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '1.5px solid #EBEBEB' }}>
       <button
         onClick={onToggle}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT, padding: 0, marginBottom: expanded ? 14 : 0 }}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          fontFamily: FONT,
+          padding: 0,
+          marginBottom: expanded ? 16 : 0,
+          color: '#555',
+        }}
       >
         <span style={sectionLabel}>🏢 À propos de {job.company}</span>
-        <span style={{ fontSize: 12, color: '#aaa', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s', marginBottom: 14 }}>▼</span>
+        <span style={{
+          fontSize: 12,
+          color: '#bbb',
+          display: 'inline-block',
+          transform: expanded ? 'rotate(180deg)' : 'none',
+          transition: 'transform .2s',
+        }}>▼</span>
       </button>
 
       {expanded && (

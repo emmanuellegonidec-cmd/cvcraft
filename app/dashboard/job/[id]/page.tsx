@@ -346,7 +346,6 @@ export default function JobDetailPage() {
     router.push('/dashboard')
   }
 
-  // ─── MODIFIÉ : ajout de step_number à la création d'un échange ───────────
   const addExchange = async () => {
     const step = allSteps.find(s => s.id === currentStepId)
     const res = await fetch('/api/jobs/exchanges', {
@@ -402,7 +401,19 @@ export default function JobDetailPage() {
   const atsScore = job.ats_score ?? null
   const atsKw = job.ats_keywords ?? { present: [], missing: [] }
   const card: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '1.5px solid #EBEBEB' }
-  const sectionLabel: React.CSSProperties = { fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#666', marginBottom: 14, display: 'block', fontFamily: FONT }
+
+  // ── sectionLabel : fontSize 12 pour une meilleure lisibilité ──
+  const sectionLabel: React.CSSProperties = {
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '1.5px',
+    color: '#555',
+    marginBottom: 14,
+    display: 'block',
+    fontFamily: FONT,
+  }
+
   const inp: React.CSSProperties = { width: '100%', border: '1.5px solid #eee', borderRadius: 8, padding: '9px 12px', fontSize: 14, fontFamily: FONT, outline: 'none', background: '#fff', color: '#111', boxSizing: 'border-box', fontWeight: 500 }
   const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 80, lineHeight: '1.6' }
 
@@ -574,13 +585,13 @@ export default function JobDetailPage() {
 
         <div style={card}>
           <span style={sectionLabel}>Description du poste</span>
-         <div style={{ position: 'relative', maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden' }}>
-  <div
-    dangerouslySetInnerHTML={{ __html: job.description }}
-    style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500 }}
-  />
-  {!descExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(transparent, #fff)' }} />}
-</div>
+          <div style={{ position: 'relative', maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden' }}>
+            <div
+              dangerouslySetInnerHTML={{ __html: job.description }}
+              style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500 }}
+            />
+            {!descExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(transparent, #fff)' }} />}
+          </div>
           <button onClick={() => setDescExpanded(v => !v)} style={{ background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800, border: 'none', borderRadius: 9, padding: '9px 18px', cursor: 'pointer', marginTop: 12, fontFamily: FONT, boxShadow: '2px 2px 0 #E8151B' }}>
             {descExpanded ? 'Réduire ↑' : 'Lire la description complète ↓'}
           </button>

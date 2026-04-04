@@ -17,9 +17,7 @@ interface Props {
 }
 
 export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: Props) {
-  // Section fermée par défaut
   const [sectionOpen, setSectionOpen] = useState(false)
-  // Tous les échanges fermés par défaut
   const [openExchanges, setOpenExchanges] = useState<Set<string>>(new Set())
 
   const toggle = (id: string) => {
@@ -30,53 +28,74 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
     })
   }
 
-  const inp: React.CSSProperties = { width: '100%', border: '1.5px solid #eee', borderRadius: 8, padding: '9px 12px', fontSize: 14, fontFamily: FONT, outline: 'none', background: '#fff', color: '#111', boxSizing: 'border-box', fontWeight: 500 }
+  const inp: React.CSSProperties = {
+    width: '100%', border: '1.5px solid #eee', borderRadius: 8,
+    padding: '9px 12px', fontSize: 14, fontFamily: FONT,
+    outline: 'none', background: '#fff', color: '#111',
+    boxSizing: 'border-box', fontWeight: 500,
+  }
   const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 80, lineHeight: '1.6' }
-  const sectionLabel: React.CSSProperties = { fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#666', display: 'block', fontFamily: FONT }
+
+  // Titre principal de section — plus grand
+  const mainSectionLabel: React.CSSProperties = {
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '1.5px',
+    color: '#555',
+    display: 'block',
+    fontFamily: FONT,
+  }
+
+  // Labels de champs à l'intérieur des échanges — plus petits
+  const fieldLabel: React.CSSProperties = {
+    fontSize: 10,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '1.5px',
+    color: '#666',
+    display: 'block',
+    fontFamily: FONT,
+  }
 
   return (
     <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '1.5px solid #EBEBEB', overflow: 'hidden' }}>
 
-      {/* En-tête cliquable pour ouvrir/fermer la section */}
+      {/* En-tête cliquable */}
       <div
         onClick={() => setSectionOpen(p => !p)}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 24px', cursor: 'pointer',
           background: sectionOpen ? '#fff' : '#F9F9F7',
-          borderBottom: sectionOpen ? '1.5px solid #EBEBEB' : 'none'
+          borderBottom: sectionOpen ? '1.5px solid #EBEBEB' : 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={sectionLabel}>Synthèse des échanges</span>
+          <span style={mainSectionLabel}>Synthèse des échanges</span>
           {exchanges.length > 0 && (
             <span style={{
               background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800,
-              borderRadius: 20, padding: '1px 8px', fontFamily: FONT
+              borderRadius: 20, padding: '1px 8px', fontFamily: FONT,
             }}>
               {exchanges.length}
             </span>
           )}
         </div>
         <span style={{
-          fontSize: 10, color: '#bbb',
-          display: 'inline-block',
+          fontSize: 10, color: '#bbb', display: 'inline-block',
           transform: sectionOpen ? 'rotate(180deg)' : 'none',
-          transition: 'transform .2s'
+          transition: 'transform .2s',
         }}>▼</span>
       </div>
 
-      {/* Contenu de la section — visible seulement si ouverte */}
       {sectionOpen && (
         <div style={{ padding: '20px 24px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {exchanges.map((ex, idx) => {
               const isOpen = openExchanges.has(ex.id)
               const isLatest = idx === exchanges.length - 1
-
-              // Numéro affiché dans le cercle : step_number si dispo, sinon idx+1
               const circleNumber = (ex as any).step_number ?? (idx + 1)
-              // Label d'étape affiché sous le titre
               const stepInfo = (ex as any).step_label
                 ? `Étape ${circleNumber} — ${(ex as any).step_label}`
                 : null
@@ -89,7 +108,7 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       padding: '10px 14px',
                       background: isLatest ? '#FFFDE7' : '#F9F9F7',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -98,7 +117,7 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                         background: '#111', color: '#F5C400',
                         fontSize: 11, fontWeight: 900,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0, fontFamily: FONT
+                        flexShrink: 0, fontFamily: FONT,
                       }}>
                         {circleNumber}
                       </div>
@@ -115,13 +134,13 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{
                         background: '#F5C400', color: '#111', fontSize: 10, fontWeight: 700,
-                        padding: '2px 9px', borderRadius: 20, fontFamily: FONT
+                        padding: '2px 9px', borderRadius: 20, fontFamily: FONT,
                       }}>
                         {EXCHANGE_TYPE_LABELS[ex.exchange_type]}
                       </span>
                       <span style={{
                         fontSize: 10, color: '#bbb', display: 'inline-block',
-                        transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s'
+                        transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s',
                       }}>▼</span>
                     </div>
                   </div>
@@ -135,7 +154,7 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                           { field: 'exchange_date', label: 'Date', type: 'date', val: ex.exchange_date },
                         ].map(f => (
                           <div key={f.field}>
-                            <label style={{ ...sectionLabel, marginBottom: 5 }}>{f.label}</label>
+                            <label style={{ ...fieldLabel, marginBottom: 5 }}>{f.label}</label>
                             {f.type === 'select' ? (
                               <select defaultValue={f.val} onChange={e => onUpdate(ex.id, f.field, e.target.value)} style={{ ...inp, background: '#fff' }}>
                                 {(Object.entries(EXCHANGE_TYPE_LABELS) as [ExchangeType, string][]).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -156,7 +175,7 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                         { field: 'next_step', label: 'Prochaine étape annoncée', placeholder: 'Suite du process, délai, contact...' },
                       ].map(({ field, label, placeholder }) => (
                         <div key={field} style={{ marginBottom: 10 }}>
-                          <label style={{ ...sectionLabel, marginBottom: 5 }}>{label}</label>
+                          <label style={{ ...fieldLabel, marginBottom: 5 }}>{label}</label>
                           <textarea defaultValue={(ex as any)[field] ?? ''} placeholder={placeholder}
                             onBlur={e => onUpdate(ex.id, field, e.target.value)}
                             style={{ ...ta, minHeight: field === 'next_step' ? 52 : 76 }}
