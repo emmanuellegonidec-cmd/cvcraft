@@ -193,7 +193,7 @@ export default function JobStepProgress({
               lineHeight: 1,
               transition: 'all 0.15s',
             }}>{showPanel ? '×' : '+'}</span>
-            {showPanel ? 'Ajouter ou supprimer une étape' : 'Ajouter une étape'}
+            Ajouter ou supprimer une étape
           </button>
         </div>
 
