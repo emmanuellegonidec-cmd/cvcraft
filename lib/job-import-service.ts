@@ -122,7 +122,7 @@ Accède à cette page et extrais les informations directement depuis son contenu
 
 IMPORTANT — deux champs distincts à extraire depuis la page de l'offre :
 - "description" = le descriptif du POSTE uniquement (missions, responsabilités, profil recherché, compétences requises). Retourne le texte intégral tel qu'il apparaît dans l'offre.
-- "company_description" = le descriptif de l'ENTREPRISE uniquement (activité, secteur, valeurs, taille, chiffres clés). Ce texte figure souvent en bas de l'offre dans une section "À propos de [entreprise]" ou "About". Extrais-le tel quel depuis la page.
+- "company_description" = le descriptif de l'ENTREPRISE uniquement (activité, secteur, valeurs, taille, chiffres clés). Ce texte peut figurer n'importe où dans la page sous n'importe quel titre. Extrais-le tel quel depuis la page.
 
 Ne cherche pas d'informations sur d'autres sites. Extrais uniquement ce qui est présent dans la page de l'offre.
 
@@ -134,7 +134,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant o
   "employment_type": "CDI ou CDD ou Stage ou Alternance ou Freelance ou null",
   "seniority_level": "niveau hiérarchique ou null",
   "description": "description complète du POSTE telle qu'elle apparaît dans l'offre ou null",
-  "company_description": "description de l'ENTREPRISE telle qu'elle apparaît dans l'offre (section À propos) ou null",
+  "company_description": "description de l'ENTREPRISE telle qu'elle apparaît dans l'offre ou null",
   "salary_text": "fourchette salariale ou null",
   "external_job_id": ${jobId ? `"${jobId}"` : 'null'}
 }`
@@ -245,35 +245,6 @@ async function fetchJobPage(url: string, source: JobSource): Promise<{
   }
 }
 
-async function findDuplicateJob(
-  userId: string,
-  accessToken: string,
-  job: NormalizedJobOffer
-) {
-  const supabase = getAuthedSupabase(accessToken)
-
-  if (job.external_job_id) {
-    const { data } = await supabase
-      .from('jobs')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('source_platform', job.source_platform)
-      .eq('external_job_id', job.external_job_id)
-      .maybeSingle()
-
-    if (data?.id) return data.id as string
-  }
-
-  const { data } = await supabase
-    .from('jobs')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('source_url', job.source_url)
-    .maybeSingle()
-
-  return data?.id ?? null
-}
-
 async function logImportEvent(params: {
   userId: string
   accessToken: string
@@ -301,92 +272,6 @@ async function logImportEvent(params: {
     raw_text: truncate(params.rawText, 50000),
     import_error: params.importError ?? null,
   })
-}
-
-async function saveImportedJob({
-  userId,
-  accessToken,
-  job,
-  rawHtml = null,
-  importError = null,
-}: SaveImportedJobParams): Promise<{
-  jobId: string | null
-  duplicateOf: string | null
-}> {
-  const supabase = getAuthedSupabase(accessToken)
-
-  const duplicateId = await findDuplicateJob(userId, accessToken, job)
-
-  if (duplicateId) {
-    await logImportEvent({
-      userId,
-      accessToken,
-      jobId: duplicateId,
-      sourcePlatform: job.source_platform,
-      sourceUrl: job.source_url,
-      sourceHostname: job.source_hostname,
-      parserName: job.parser_name,
-      parserVersion: job.parser_version,
-      rawPayload: job as Record<string, unknown>,
-      rawText: job.raw_text ?? rawHtml,
-      importError: importError ?? 'duplicate_detected',
-    })
-
-    return { jobId: duplicateId, duplicateOf: duplicateId }
-  }
-
-  const { data, error } = await supabase
-    .from('jobs')
-    .insert({
-      user_id: userId,
-      title: job.title ?? 'Offre importée',
-      company: job.company_name ?? 'Entreprise inconnue',
-      company_description: truncate(job.company_description, 10000) ?? null,
-      location: job.location_text ?? '',
-      description: truncate(job.description, 50000) ?? '',
-      source_platform: job.source_platform,
-      source_url: job.source_url,
-      source_hostname: job.source_hostname,
-      external_job_id: job.external_job_id,
-      workplace_type: job.workplace_type,
-      employment_type: job.employment_type,
-      seniority_level: job.seniority_level,
-      department: job.department,
-      salary_text: job.salary_text,
-      salary_min: job.salary_min,
-      salary_max: job.salary_max,
-      currency: job.currency,
-      requirements: truncate(job.requirements, 20000),
-      benefits: truncate(job.benefits, 20000),
-      posted_at_text: job.posted_at_text,
-      raw_text: truncate(job.raw_text ?? rawHtml, 50000),
-      import_status: job.import_status,
-      extraction_confidence: job.extraction_confidence,
-      parser_name: job.parser_name,
-      parser_version: job.parser_version,
-    })
-    .select('id')
-    .single()
-
-  if (error) throw new Error(error.message)
-
-  const jobId = data?.id as string
-
-  await logImportEvent({
-    userId,
-    accessToken,
-    jobId,
-    sourcePlatform: job.source_platform,
-    sourceUrl: job.source_url,
-    sourceHostname: job.source_hostname,
-    parserName: job.parser_name,
-    parserVersion: job.parser_version,
-    rawPayload: job as Record<string, unknown>,
-    rawText: job.raw_text ?? rawHtml,
-    importError,
-  })
-
-  return { jobId, duplicateOf: null }
 }
 
 function buildMinimalJobFromUrl(
@@ -436,33 +321,20 @@ export async function importJobFromUrl({
 
   if (!normalizedUrl) {
     return {
-      success: false,
-      source: 'unknown',
-      job: null,
-      savedJobId: null,
-      editUrl: null,
-      duplicateOf: null,
-      message: 'URL manquante.',
-      error: 'URL manquante',
+      success: false, source: 'unknown', job: null, savedJobId: null,
+      editUrl: null, duplicateOf: null, message: 'URL manquante.', error: 'URL manquante',
     }
   }
 
   if (!isValidHttpUrl(normalizedUrl)) {
     return {
-      success: false,
-      source: 'unknown',
-      job: null,
-      savedJobId: null,
-      editUrl: null,
-      duplicateOf: null,
-      message: 'URL invalide.',
-      error: 'URL invalide',
+      success: false, source: 'unknown', job: null, savedJobId: null,
+      editUrl: null, duplicateOf: null, message: 'URL invalide.', error: 'URL invalide',
     }
   }
 
   const source = detectJobSource(normalizedUrl)
   const sourceHostname = getSafeHostname(normalizedUrl)
-
   const fetchResult = await fetchJobPage(normalizedUrl, source)
 
   let job: NormalizedJobOffer
@@ -473,77 +345,34 @@ export async function importJobFromUrl({
     } catch (error) {
       const parserError = error instanceof Error ? error.message : 'Erreur de parsing'
       await logImportEvent({
-        userId,
-        accessToken,
-        sourcePlatform: source,
-        sourceUrl: normalizedUrl,
-        sourceHostname,
-        rawText: fetchResult.html,
-        importError: parserError,
+        userId, accessToken, sourcePlatform: source, sourceUrl: normalizedUrl,
+        sourceHostname, rawText: fetchResult.html, importError: parserError,
       })
       return {
-        success: false,
-        source,
-        job: null,
-        savedJobId: null,
-        editUrl: null,
-        duplicateOf: null,
-        message: 'Le parsing de la page a échoué.',
-        error: parserError,
+        success: false, source, job: null, savedJobId: null,
+        editUrl: null, duplicateOf: null, message: 'Le parsing de la page a échoué.', error: parserError,
       }
     }
   } else {
     const claudeData = await extractJobWithClaude(normalizedUrl, source)
     job = buildMinimalJobFromUrl(normalizedUrl, source, claudeData)
-
     await logImportEvent({
-      userId,
-      accessToken,
-      sourcePlatform: source,
-      sourceUrl: normalizedUrl,
-      sourceHostname,
+      userId, accessToken, sourcePlatform: source, sourceUrl: normalizedUrl, sourceHostname,
       rawPayload: { fetchError: fetchResult.error, wasBlocked: fetchResult.wasBlocked, claudeData },
       importError: fetchResult.wasBlocked ? 'page_blocked_claude_fallback' : fetchResult.error,
     })
   }
 
-  try {
-    const { jobId, duplicateOf } = await saveImportedJob({
-      userId,
-      accessToken,
-      job,
-      rawHtml: fetchResult.html,
-      importError: null,
-    })
-
-    const wasBlocked = !fetchResult.ok || fetchResult.wasBlocked
-    const message = duplicateOf
-      ? 'Cette offre existe déjà dans ton tableau de bord.'
-      : wasBlocked
-        ? 'Offre importée depuis l\'URL (LinkedIn a bloqué le scraping — complète les infos manquantes).'
-        : 'Offre importée avec succès.'
-
-    return {
-      success: true,
-      source,
-      job,
-      savedJobId: jobId,
-      editUrl: jobId ? `/dashboard/job/${jobId}` : null,
-      duplicateOf,
-      message,
-      error: null,
-    }
-  } catch (error) {
-    const saveError = error instanceof Error ? error.message : 'Erreur de sauvegarde'
-    return {
-      success: false,
-      source,
-      job,
-      savedJobId: null,
-      editUrl: null,
-      duplicateOf: null,
-      message: 'Le parsing a marché, mais pas la sauvegarde.',
-      error: saveError,
-    }
+  // ✅ On retourne les données extraites SANS sauvegarder
+  // La sauvegarde est faite une seule fois par le bouton "Ajouter l'offre" du formulaire
+  return {
+    success: true,
+    source,
+    job,
+    savedJobId: null,
+    editUrl: null,
+    duplicateOf: null,
+    message: 'Offre extraite avec succès.',
+    error: null,
   }
 }
