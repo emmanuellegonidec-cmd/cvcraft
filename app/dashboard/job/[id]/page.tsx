@@ -574,10 +574,13 @@ export default function JobDetailPage() {
 
         <div style={card}>
           <span style={sectionLabel}>Description du poste</span>
-          <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden', position: 'relative', fontFamily: FONT, fontWeight: 500 }}>
-            {job.description}
-            {!descExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(transparent, #fff)' }} />}
-          </div>
+         <div style={{ position: 'relative', maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden' }}>
+  <div
+    dangerouslySetInnerHTML={{ __html: job.description }}
+    style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500 }}
+  />
+  {!descExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(transparent, #fff)' }} />}
+</div>
           <button onClick={() => setDescExpanded(v => !v)} style={{ background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800, border: 'none', borderRadius: 9, padding: '9px 18px', cursor: 'pointer', marginTop: 12, fontFamily: FONT, boxShadow: '2px 2px 0 #E8151B' }}>
             {descExpanded ? 'Réduire ↑' : 'Lire la description complète ↓'}
           </button>

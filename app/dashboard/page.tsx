@@ -56,7 +56,6 @@ export default function DashboardPage() {
   const [newStageColor, setNewStageColor] = useState('#E8151B');
   const [newStagePosition, setNewStagePosition] = useState(3);
 
-  // Ref pour capturer newJob de façon synchrone au moment du save
   const newJobRef = useRef<NewJobState>({ ...EMPTY_JOB });
 
   useEffect(() => {
@@ -67,7 +66,6 @@ export default function DashboardPage() {
     if (accessToken) (window as any).__jfmj_token = accessToken;
   }, [accessToken]);
 
-  // ✅ Date du jour affichée en fuseau France
   const today = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     timeZone: 'Europe/Paris',
@@ -173,11 +171,9 @@ export default function DashboardPage() {
   }
 
   async function saveJob() {
-    // Lire newJob depuis le ref (valeur synchrone la plus récente)
     const job = newJobRef.current;
     if (!job.title || !job.company) return;
 
-    // Lire les champs entreprise depuis extraJobFields (remontés par FileImportMode)
     const extras = extraJobFields.current || {};
 
     const payload = {
@@ -189,17 +185,14 @@ export default function DashboardPage() {
       ...(job.source   ? { source_platform: job.source }         : {}),
       ...(job.url      ? { source_url: job.url }                 : {}),
       ...(job.favorite !== undefined ? { favorite: job.favorite } : {}),
-      // Champs entreprise : d'abord extraJobFields (import fichier), puis newJob si déjà fusionné
       company_description: extras.company_description || (job as any).company_description || '',
       company_website:     extras.company_website     || (job as any).company_website     || '',
       company_size:        extras.company_size        || (job as any).company_size        || '',
-      // ✅ Contact "Transmis par" créé ou sélectionné dans JobModal
       ...((job as any).transmitted_by_contact_id
         ? { transmitted_by_contact_id: (job as any).transmitted_by_contact_id }
         : {}),
     };
 
-    // Nettoyer les champs vides pour ne pas écraser des valeurs existantes
     if (!payload.company_description) delete (payload as any).company_description;
     if (!payload.company_website)     delete (payload as any).company_website;
     if (!payload.company_size)        delete (payload as any).company_size;
@@ -219,13 +212,10 @@ export default function DashboardPage() {
 
   async function updateJobStatus(id: string, newStatus: string) {
     const subStatus = STATUS_TO_SUB[newStatus] ?? newStatus;
-    const now = new Date().toISOString();
 
-    // Mise à jour optimiste côté UI
     setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus as JobStatus, sub_status: subStatus } as any : j));
     if (selectedJob?.id === id) setSelectedJob(prev => prev ? { ...prev, status: newStatus as JobStatus } : prev);
 
-    // PATCH vers l'API — route.ts gère stage_changed_at et interview_at automatiquement
     const res = await authFetch(`/api/jobs?id=${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ status: newStatus, sub_status: subStatus }),
@@ -270,40 +260,37 @@ export default function DashboardPage() {
     setSelectedJob(null);
   }
 
- async function importJobFromUrl(url: string) {
-  if (!url) return;
-  setImportLoading(true); setImportError(false);
-  try {
-    const res = await authFetch('/api/jobs/import', { method: 'POST', body: JSON.stringify({ url }) });
-    const data = await res.json();
-    if (!res.ok || !data.success) { setImportError(true); return; }
+  async function importJobFromUrl(url: string) {
+    if (!url) return;
+    setImportLoading(true); setImportError(false);
+    try {
+      const res = await authFetch('/api/jobs/import', { method: 'POST', body: JSON.stringify({ url }) });
+      const data = await res.json();
+      if (!res.ok || !data.success) { setImportError(true); return; }
 
-    // ✅ L'offre est déjà sauvegardée par l'API — on l'ajoute à la liste et on ferme
-    if (data.savedJobId) {
-      const jobRes = await authFetch(`/api/jobs/${data.savedJobId}`);
-      // Recharger toute la liste pour inclure la nouvelle offre
-      if (accessToken) await fetchJobs(accessToken);
-      setShowAddJob(false);
-      setNewJob({ ...EMPTY_JOB });
-      // Optionnel : naviguer vers la page de l'offre
-      router.push(`/dashboard/jobs/${data.savedJobId}`);
-      return;
-    }
+      // ✅ L'offre est déjà sauvegardée par l'API — on recharge et on redirige directement
+      if (data.savedJobId) {
+        if (accessToken) await fetchJobs(accessToken);
+        setShowAddJob(false);
+        setNewJob({ ...EMPTY_JOB });
+        router.push(`/dashboard/jobs/${data.savedJobId}`);
+        return;
+      }
 
-    // Fallback si pas de savedJobId (ne devrait pas arriver)
-    const job = data.job || {};
-    const description = (job.description && job.description.length > 150)
-      ? job.description : (job.raw_text || job.description || '');
-    setNewJob({
-      title: cleanJobTitle(job.title), company: job.company_name || '',
-      location: cleanLocation(job.location_text), description,
-      job_type: 'CDI', status: 'to_apply', notes: '',
-      salary: job.salary_text || '', source: detectSource(url), url, favorite: 0,
-    });
-    setAddJobMode('manual');
-  } catch { setImportError(true); }
-  finally { setImportLoading(false); }
-}
+      // Fallback si pas de savedJobId
+      const job = data.job || {};
+      const description = (job.description && job.description.length > 150)
+        ? job.description : (job.raw_text || job.description || '');
+      setNewJob({
+        title: cleanJobTitle(job.title), company: job.company_name || '',
+        location: cleanLocation(job.location_text), description,
+        job_type: 'CDI', status: 'to_apply', notes: '',
+        salary: job.salary_text || '', source: detectSource(url), url, favorite: 0,
+      });
+      setAddJobMode('manual');
+    } catch { setImportError(true); }
+    finally { setImportLoading(false); }
+  }
 
   async function deleteContact(id: string) {
     await authFetch('/api/contacts?id=' + id, { method: 'DELETE' });
@@ -351,7 +338,6 @@ export default function DashboardPage() {
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        {/* ── Topbar ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', borderBottom: '2px solid #111', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
@@ -366,7 +352,6 @@ export default function DashboardPage() {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
 
-          {/* ── Stats ── */}
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
               <div style={{ padding: '10px 16px', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
@@ -391,7 +376,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ── Calendrier ── */}
           {['kanban', 'list'].includes(view) && (
             <DashboardCalendar
               jobs={jobs}
@@ -400,17 +384,9 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* ── Titre section Candidatures dans un bloc ── */}
           {view === 'kanban' && (
-            <div style={{
-              marginBottom: '0.75rem', marginTop: '0.25rem',
-              background: '#fff', border: '2px solid #111', borderRadius: 12,
-              boxShadow: '3px 3px 0 #111', overflow: 'hidden',
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 16px', background: '#FAFAFA',
-              }}>
+            <div style={{ marginBottom: '0.75rem', marginTop: '0.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#FAFAFA' }}>
                 <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
                   📋 Candidatures
                 </span>
