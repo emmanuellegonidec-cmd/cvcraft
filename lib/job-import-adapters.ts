@@ -294,17 +294,17 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
     }
   }
 
-  const companyDescStart = rawText.search(
-    /À propos de (?:l['']entreprise|la société|[A-ZÀ-Ÿa-zà-ÿ])|About the company|Présentation de l['']entreprise/i
+ const companyDescStart = rawText.search(
+  /À propos de |About the company|Présentation de l['']entreprise|Notre entreprise|Qui sommes.nous|L['']entreprise/i
+)
+if (companyDescStart > -1) {
+  const afterCompany = rawText.slice(companyDescStart)
+  const companyDescEnd = afterCompany.search(
+    /Description du poste|Missions|Vos missions|Le poste|Offres d['']emploi similaires|Show more Show less/i
   )
-  if (companyDescStart > -1) {
-    const afterCompany = rawText.slice(companyDescStart)
-    const companyDescEnd = afterCompany.search(
-      /Description du poste|Missions|Vos missions|Le poste|Offres d'emploi similaires|Show more Show less/i
-    )
-    const raw = afterCompany.slice(0, companyDescEnd > -1 ? companyDescEnd : 3000)
-    company_description = cleanText(raw.replace(/^À propos de (?:l'entreprise|la société)|^About the company|^Présentation de l'entreprise/i, '').trim())
-  }
+  const raw = afterCompany.slice(0, companyDescEnd > -1 ? companyDescEnd : 3000)
+  company_description = cleanText(raw.replace(/^(À propos de |About the company|Présentation de l['']entreprise|Notre entreprise|Qui sommes.nous|L['']entreprise)[^\n]*/i, '').trim())
+}
 
   const descStart = rawText.search(
     /(?:⭐|🎯|Missions|À propos|Description du poste|Rattaché|Dans le cadre|Nous recherchons|Le poste|Vos missions|Contexte|Présentation)/i
@@ -481,15 +481,28 @@ const genericAdapter: JobAdapter = {
   source: 'unknown',
   canHandle: () => true,
   parse: ({ url, $, html, hostname }) => {
-    const jsonLd = extractJsonLdJobPosting($)
-    if (jsonLd) return normalizeJsonLd(url, 'unknown', jsonLd)
-    return finalizeJob('unknown', 'genericAdapter', url, {
-      source_hostname: hostname,
-      title: attr($, 'meta[property="og:title"]', 'content') || text($, 'h1') || text($, 'title'),
-      description: attr($, 'meta[name="description"]', 'content') || text($, 'article') || bodyText($),
-      raw_text: bodyText($) ?? cleanText(html),
-    })
-  },
+  const jsonLd = extractJsonLdJobPosting($)
+  if (jsonLd) return normalizeJsonLd(url, 'unknown', jsonLd)
+
+  // Cherche la description entreprise dans les sélecteurs communs des sites carrière
+  const companyDesc =
+    text($, '[class*="company-description"]') ||
+    text($, '[class*="about-company"]') ||
+    text($, '[class*="entreprise"]') ||
+    text($, '[id*="company"]') ||
+    text($, '[class*="who-we-are"]') ||
+    text($, '[class*="our-company"]') ||
+    null
+
+  return finalizeJob('unknown', 'genericAdapter', url, {
+    source_hostname: hostname,
+    title: attr($, 'meta[property="og:title"]', 'content') || text($, 'h1') || text($, 'title'),
+    company_name: text($, '[class*="company-name"]') || text($, '[class*="employer"]') || null,
+    company_description: companyDesc,
+    description: attr($, 'meta[name="description"]', 'content') || text($, 'article') || bodyText($),
+    raw_text: bodyText($) ?? cleanText(html),
+  })
+},
 }
 
 export const JOB_ADAPTERS: JobAdapter[] = [
