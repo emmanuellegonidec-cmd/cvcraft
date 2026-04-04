@@ -397,8 +397,7 @@ export default function JobDetailPage() {
     await fetch(`/api/jobs/exchanges?id=${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }) })
   }
 
-  const deleteExchange = async (id: string) => {
-    if (!confirm('Supprimer cet échange ?')) return
+ const deleteExchange = async (id: string) => {
     await fetch(`/api/jobs/exchanges?id=${id}`, { method: 'DELETE', headers: authHeaders() })
     setExchanges(prev => prev.filter(e => e.id !== id))
   }
@@ -452,7 +451,7 @@ export default function JobDetailPage() {
 
   const docItems = [
     { docType: 'cv' as const, sent: job.cv_sent, name: 'CV', url: job.cv_url, inputRef: cvInputRef },
-    ...(showCoverLetter ? [{ docType: 'cover_letter' as const, sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url, inputRef: coverLetterInputRef }] : []),
+    { docType: 'cover_letter' as const, sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url, inputRef: coverLetterInputRef },
   ]
 
   return (

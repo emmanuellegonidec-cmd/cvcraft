@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { JobExchange, ExchangeType, EXCHANGE_TYPE_LABELS } from '@/lib/types'
 
 const FONT = "'Montserrat', sans-serif"
@@ -19,6 +19,29 @@ interface Props {
 export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: Props) {
   const [sectionOpen, setSectionOpen] = useState(false)
   const [openExchanges, setOpenExchanges] = useState<Set<string>>(new Set())
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+  const [localValues, setLocalValues] = useState<Record<string, Record<string, string>>>({})
+
+  // Initialise les valeurs locales à chaque nouvel échange
+  useEffect(() => {
+    setLocalValues(prev => {
+      const next = { ...prev }
+      for (const ex of exchanges) {
+        if (!next[ex.id]) {
+          next[ex.id] = {
+            title: ex.title ?? '',
+            exchange_type: ex.exchange_type ?? '',
+            exchange_date: ex.exchange_date ?? '',
+            content: (ex as any).content ?? '',
+            questions: (ex as any).questions ?? '',
+            answers: (ex as any).answers ?? '',
+            next_step: (ex as any).next_step ?? '',
+          }
+        }
+      }
+      return next
+    })
+  }, [exchanges])
 
   const toggle = (id: string) => {
     setOpenExchanges(prev => {
@@ -26,6 +49,29 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
+  }
+
+  const close = (id: string) => {
+    setOpenExchanges(prev => {
+      const next = new Set(Array.from(prev))
+      next.delete(id)
+      return next
+    })
+  }
+
+  const updateLocal = (exchangeId: string, field: string, value: string) => {
+    setLocalValues(prev => ({
+      ...prev,
+      [exchangeId]: { ...(prev[exchangeId] ?? {}), [field]: value }
+    }))
+  }
+
+  const handleSaveAndClose = (id: string) => {
+    const vals = localValues[id] ?? {}
+    for (const [field, value] of Object.entries(vals)) {
+      onUpdate(id, field, value)
+    }
+    close(id)
   }
 
   const inp: React.CSSProperties = {
@@ -36,26 +82,14 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
   }
   const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 80, lineHeight: '1.6' }
 
-  // Titre principal de section — plus grand
   const mainSectionLabel: React.CSSProperties = {
-    fontSize: 12,
-    fontWeight: 800,
-    textTransform: 'uppercase',
-    letterSpacing: '1.5px',
-    color: '#555',
-    display: 'block',
-    fontFamily: FONT,
+    fontSize: 12, fontWeight: 800, textTransform: 'uppercase',
+    letterSpacing: '1.5px', color: '#555', display: 'block', fontFamily: FONT,
   }
 
-  // Labels de champs à l'intérieur des échanges — plus petits
   const fieldLabel: React.CSSProperties = {
-    fontSize: 10,
-    fontWeight: 800,
-    textTransform: 'uppercase',
-    letterSpacing: '1.5px',
-    color: '#666',
-    display: 'block',
-    fontFamily: FONT,
+    fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
+    letterSpacing: '1.5px', color: '#666', display: 'block', fontFamily: FONT,
   }
 
   return (
@@ -74,19 +108,12 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={mainSectionLabel}>Synthèse des échanges</span>
           {exchanges.length > 0 && (
-            <span style={{
-              background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800,
-              borderRadius: 20, padding: '1px 8px', fontFamily: FONT,
-            }}>
+            <span style={{ background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, borderRadius: 20, padding: '1px 8px', fontFamily: FONT }}>
               {exchanges.length}
             </span>
           )}
         </div>
-        <span style={{
-          fontSize: 10, color: '#bbb', display: 'inline-block',
-          transform: sectionOpen ? 'rotate(180deg)' : 'none',
-          transition: 'transform .2s',
-        }}>▼</span>
+        <span style={{ fontSize: 10, color: '#bbb', display: 'inline-block', transform: sectionOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
       </div>
 
       {sectionOpen && (
@@ -99,9 +126,12 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
               const stepInfo = (ex as any).step_label
                 ? `Étape ${circleNumber} — ${(ex as any).step_label}`
                 : null
+              const vals = localValues[ex.id] ?? {}
 
               return (
                 <div key={ex.id} style={{ border: `1.5px solid ${isLatest ? '#F5C400' : '#EBEBEB'}`, borderRadius: 10, overflow: 'hidden' }}>
+
+                  {/* Header rangée échange */}
                   <div
                     onClick={() => toggle(ex.id)}
                     style={{
@@ -113,18 +143,14 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                       <div style={{
-                        width: 24, height: 24, borderRadius: '50%',
-                        background: '#111', color: '#F5C400',
-                        fontSize: 11, fontWeight: 900,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: 24, height: 24, borderRadius: '50%', background: '#111', color: '#F5C400',
+                        fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center',
                         flexShrink: 0, fontFamily: FONT,
                       }}>
                         {circleNumber}
                       </div>
                       <div>
-                        <p style={{ fontSize: 13, fontWeight: 800, color: '#111', margin: 0, fontFamily: FONT }}>
-                          {ex.title}
-                        </p>
+                        <p style={{ fontSize: 13, fontWeight: 800, color: '#111', margin: 0, fontFamily: FONT }}>{ex.title}</p>
                         <p style={{ fontSize: 11, color: '#888', margin: 0, fontFamily: FONT, fontWeight: 500 }}>
                           {stepInfo && <span style={{ color: '#555', fontWeight: 700 }}>{stepInfo} · </span>}
                           {formatDate(ex.exchange_date)}
@@ -132,37 +158,43 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <span style={{
-                        background: '#F5C400', color: '#111', fontSize: 10, fontWeight: 700,
-                        padding: '2px 9px', borderRadius: 20, fontFamily: FONT,
-                      }}>
+                      <span style={{ background: '#F5C400', color: '#111', fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 20, fontFamily: FONT }}>
                         {EXCHANGE_TYPE_LABELS[ex.exchange_type]}
                       </span>
-                      <span style={{
-                        fontSize: 10, color: '#bbb', display: 'inline-block',
-                        transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s',
-                      }}>▼</span>
+                      <span style={{ fontSize: 10, color: '#bbb', display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
                     </div>
                   </div>
 
+                  {/* Contenu échange ouvert */}
                   {isOpen && (
                     <div style={{ padding: 14, borderTop: '1px solid #F0F0F0' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 10, marginBottom: 12 }}>
                         {[
-                          { field: 'title', label: 'Titre', type: 'text', val: ex.title },
-                          { field: 'exchange_type', label: 'Type', type: 'select', val: ex.exchange_type },
-                          { field: 'exchange_date', label: 'Date', type: 'date', val: ex.exchange_date },
+                          { field: 'title', label: 'Titre', type: 'text' },
+                          { field: 'exchange_type', label: 'Type', type: 'select' },
+                          { field: 'exchange_date', label: 'Date', type: 'date' },
                         ].map(f => (
                           <div key={f.field}>
                             <label style={{ ...fieldLabel, marginBottom: 5 }}>{f.label}</label>
                             {f.type === 'select' ? (
-                              <select defaultValue={f.val} onChange={e => onUpdate(ex.id, f.field, e.target.value)} style={{ ...inp, background: '#fff' }}>
-                                {(Object.entries(EXCHANGE_TYPE_LABELS) as [ExchangeType, string][]).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                              <select
+                                value={vals[f.field] ?? ''}
+                                onChange={e => updateLocal(ex.id, f.field, e.target.value)}
+                                style={{ ...inp, background: '#fff' }}
+                              >
+                                {(Object.entries(EXCHANGE_TYPE_LABELS) as [ExchangeType, string][]).map(([v, l]) => (
+                                  <option key={v} value={v}>{l}</option>
+                                ))}
                               </select>
                             ) : (
-                              <input type={f.type} defaultValue={f.val} style={inp}
+                              <input
+                                type={f.type}
+                                value={vals[f.field] ?? ''}
+                                onChange={e => updateLocal(ex.id, f.field, e.target.value)}
+                                style={inp}
                                 onFocus={e => { e.target.style.borderColor = '#F5C400' }}
-                                onBlur={e => { e.target.style.borderColor = '#eee'; onUpdate(ex.id, f.field, e.target.value) }} />
+                                onBlur={e => { e.target.style.borderColor = '#eee' }}
+                              />
                             )}
                           </div>
                         ))}
@@ -176,17 +208,40 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                       ].map(({ field, label, placeholder }) => (
                         <div key={field} style={{ marginBottom: 10 }}>
                           <label style={{ ...fieldLabel, marginBottom: 5 }}>{label}</label>
-                          <textarea defaultValue={(ex as any)[field] ?? ''} placeholder={placeholder}
-                            onBlur={e => onUpdate(ex.id, field, e.target.value)}
+                          <textarea
+                            value={vals[field] ?? ''}
+                            onChange={e => updateLocal(ex.id, field, e.target.value)}
+                            placeholder={placeholder}
                             style={{ ...ta, minHeight: field === 'next_step' ? 52 : 76 }}
-                            onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
+                            onFocus={e => { e.target.style.borderColor = '#F5C400' }}
+                            onBlur={e => { e.target.style.borderColor = '#eee' }}
+                          />
                         </div>
                       ))}
 
-                      <button onClick={() => onDelete(ex.id)}
-                        style={{ background: 'none', border: 'none', color: '#E8151B', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, padding: 0, marginTop: 4 }}>
-                        Supprimer cet échange
-                      </button>
+                      {/* Barre d'actions */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '1px solid #F0F0F0' }}>
+                        <button
+                          onClick={() => setDeleteTargetId(ex.id)}
+                          style={{ background: 'none', border: 'none', color: '#E8151B', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, padding: 0 }}
+                        >
+                          Supprimer cet échange
+                        </button>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            onClick={() => close(ex.id)}
+                            style={{ background: '#F9F9F7', color: '#555', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}
+                          >
+                            Fermer
+                          </button>
+                          <button
+                            onClick={() => handleSaveAndClose(ex.id)}
+                            style={{ background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #F5C400' }}
+                          >
+                            Enregistrer →
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -201,6 +256,35 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
             <span style={{ width: 19, height: 19, background: '#ddd', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#fff', flexShrink: 0 }}>+</span>
             Ajouter un échange
           </button>
+        </div>
+      )}
+
+      {/* ── Modale confirmation suppression échange ── */}
+      {deleteTargetId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '0 20px' }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 28, width: '100%', maxWidth: 380, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B' }}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>🗑️</div>
+              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#E8151B', margin: '0 0 8px', fontFamily: FONT }}>Supprimer cet échange ?</h3>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>
+                Cette action est <strong>irréversible</strong>.<br />Les données de cet échange seront perdues.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setDeleteTargetId(null)}
+                style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => { onDelete(deleteTargetId); setDeleteTargetId(null) }}
+                style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: FONT }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
