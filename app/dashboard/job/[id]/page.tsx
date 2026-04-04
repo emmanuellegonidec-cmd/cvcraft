@@ -251,7 +251,7 @@ useEffect(() => {
       if (!exchange.step_label || !exchange.exchange_date) continue
       const stepId = stepsByLabel[exchange.step_label]
       if (!stepId) continue
-      if (!fromExchanges[stepId] || exchange.exchange_date < fromExchanges[stepId]) {
+      if (!fromExchanges[stepId] || exchange.exchange_date > fromExchanges[stepId]) {
         fromExchanges[stepId] = exchange.exchange_date
       }
     }
