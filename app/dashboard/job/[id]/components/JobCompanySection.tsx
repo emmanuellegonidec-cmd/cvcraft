@@ -18,8 +18,8 @@ interface Props {
 
 export default function JobCompanySection({ job, expanded, onToggle }: Props) {
   const sectionLabel: React.CSSProperties = {
-    fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
-    letterSpacing: '1.5px', color: '#bbb', marginBottom: 14,
+    fontSize: 12, fontWeight: 800, textTransform: 'uppercase',
+    letterSpacing: '1.5px', color: '#666', marginBottom: 14,
     display: 'block', fontFamily: FONT,
   }
 
