@@ -295,7 +295,7 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
   }
 
   const companyDescStart = rawText.search(
-    /À propos de (?:l'entreprise|la société)|About the company|Présentation de l'entreprise/i
+    /À propos de (?:l['']entreprise|la société|[A-ZÀ-Ÿa-zà-ÿ])|About the company|Présentation de l['']entreprise/i
   )
   if (companyDescStart > -1) {
     const afterCompany = rawText.slice(companyDescStart)
