@@ -24,6 +24,16 @@ const BASE_STEPS = [
   { id: 'offer',             label: 'Offre reçue',            num: 6 },
 ]
 
+// Position fixe de chaque étape de base — les étapes custom s'intercalent entre ces valeurs
+const BASE_STEP_POSITIONS: Record<string, number> = {
+  to_apply:          1000,
+  applied:           2000,
+  phone_interview:   3000,
+  hr_interview:      4000,
+  manager_interview: 5000,
+  offer:             6000,
+}
+
 const INTERVIEW_STEP_IDS = ['phone_interview', 'hr_interview', 'manager_interview']
 
 const STATUS_MAP: Record<string, string> = {
@@ -147,12 +157,10 @@ export default function JobDetailPage() {
   const [showCoverLetter, setShowCoverLetter] = useState(true)
   const notesTimer = useRef<NodeJS.Timeout | null>(null)
 
-  // Upload documents
   const [uploadingDoc, setUploadingDoc] = useState<'cv' | 'cover_letter' | null>(null)
   const cvInputRef = useRef<HTMLInputElement>(null)
   const coverLetterInputRef = useRef<HTMLInputElement>(null)
 
-  // Modales
   const [showEditModal, setShowEditModal] = useState(false)
   const [editForm, setEditForm] = useState({
     title: '', company: '', location: '', job_type: 'CDI',
@@ -163,7 +171,6 @@ export default function JobDetailPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  // Contact
   const [showCreateContact, setShowCreateContact] = useState(false)
   const [contactFirstName, setContactFirstName] = useState('')
   const [contactLastName, setContactLastName] = useState('')
@@ -227,25 +234,22 @@ export default function JobDetailPage() {
 
   useEffect(() => { if (userId) loadContacts() }, [userId])
 
-  // ─── Steps : filtrage des étapes cachées + renumérotation ─────────────────
-  const sortedCustom = [...customSteps].sort((a, b) => a.position - b.position)
-
-  // BASE_STEPS visibles (non masquées), toutes sauf la dernière
+  // ─── Construction de allSteps : vrai interleaving base + custom ────────────
+  // Les étapes de base ont des positions fixes (1000, 2000…)
+  // Les étapes custom ont des positions libres qui s'intercalent entre ces valeurs
+  // On trie tout ensemble pour obtenir l'ordre final
   const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
-  const baseExceptLast = visibleBase.slice(0, -1)
-  const lastBase = visibleBase[visibleBase.length - 1]
 
-  const allSteps = [
-    ...baseExceptLast.map((s, i) => ({ ...s, num: i + 1 })),
-    ...sortedCustom.map((cs, i) => ({ id: cs.id, label: cs.label, num: baseExceptLast.length + 1 + i })),
-    ...(lastBase ? [{ ...lastBase, num: baseExceptLast.length + 1 + customSteps.length }] : []),
-  ]
+  const allStepsMerged = [
+    ...visibleBase.map(s => ({ id: s.id, label: s.label, sortPos: BASE_STEP_POSITIONS[s.id] })),
+    ...customSteps.map(cs => ({ id: cs.id, label: cs.label, sortPos: cs.position })),
+  ].sort((a, b) => a.sortPos - b.sortPos)
+
+  const allSteps = allStepsMerged.map((s, i) => ({ id: s.id, label: s.label, num: i + 1 }))
 
   const currentStepId = job?.sub_status || job?.status || 'to_apply'
   const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId)
   const currentStepLabel = allSteps.find(s => s.id === currentStepId)?.label ?? ''
-
-  // Section entretien visible uniquement si l'étape n'est pas masquée
   const isInterviewStep =
     (INTERVIEW_STEP_IDS.includes(currentStepId) || customSteps.some(cs => cs.id === currentStepId))
     && !hiddenSteps.includes(currentStepId)
@@ -274,13 +278,11 @@ export default function JobDetailPage() {
     })
   }, [hiddenSteps, jobId])
 
-  // ─── Patch rapide ───────────────────────────────────────────────────────────
   const patchJob = useCallback(async (field: string, value: any) => {
     setJob(prev => prev ? { ...prev, [field]: value } : prev)
     await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }) })
   }, [jobId])
 
-  // ─── Notes ─────────────────────────────────────────────────────────────────
   const handleNotesChange = (val: string) => {
     setNotes(val)
     if (notesTimer.current) clearTimeout(notesTimer.current)
@@ -289,7 +291,6 @@ export default function JobDetailPage() {
     }, 800)
   }
 
-  // ─── Upload document ───────────────────────────────────────────────────────
   const handleDocumentUpload = async (file: File, docType: 'cv' | 'cover_letter') => {
     if (!file || !userId) return
     setUploadingDoc(docType)
@@ -301,17 +302,13 @@ export default function JobDetailPage() {
         .from('job-documents')
         .upload(path, file, { upsert: true })
       if (uploadError) throw uploadError
-
       const { data: signedData } = await supabase.storage
         .from('job-documents')
         .createSignedUrl(path, 60 * 60 * 24 * 365)
-
       if (!signedData?.signedUrl) throw new Error('URL non générée')
-
       const urlField = docType === 'cv' ? 'cv_url' : 'cover_letter_url'
       await fetch(`/api/jobs?id=${jobId}`, {
-        method: 'PATCH',
-        headers: authHeaders(),
+        method: 'PATCH', headers: authHeaders(),
         body: JSON.stringify({ [urlField]: signedData.signedUrl }),
       })
       setJob(prev => prev ? { ...prev, [urlField]: signedData.signedUrl } : prev)
@@ -326,15 +323,10 @@ export default function JobDetailPage() {
   const handleDeleteDocument = async (docType: 'cv' | 'cover_letter') => {
     if (!confirm('Supprimer ce document ?')) return
     const urlField = docType === 'cv' ? 'cv_url' : 'cover_letter_url'
-    await fetch(`/api/jobs?id=${jobId}`, {
-      method: 'PATCH',
-      headers: authHeaders(),
-      body: JSON.stringify({ [urlField]: null }),
-    })
+    await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [urlField]: null }) })
     setJob(prev => prev ? { ...prev, [urlField]: null } : prev)
   }
 
-  // ─── Modifier ──────────────────────────────────────────────────────────────
   function openEditModal() {
     if (!job) return
     setEditForm({
@@ -352,7 +344,6 @@ export default function JobDetailPage() {
     if (data.job) { setJob(data.job); setShowEditModal(false) }
   }
 
-  // ─── Supprimer ─────────────────────────────────────────────────────────────
   async function deleteJob() {
     if (deleteConfirmText !== 'SUPPRIMER') return
     setDeleteLoading(true)
@@ -360,7 +351,6 @@ export default function JobDetailPage() {
     router.push('/dashboard')
   }
 
-  // ─── Échanges ──────────────────────────────────────────────────────────────
   const addExchange = async () => {
     const step = allSteps.find(s => s.id === currentStepId)
     const res = await fetch('/api/jobs/exchanges', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ job_id: jobId, title: 'Nouvel échange', exchange_type: 'autre', exchange_date: new Date().toISOString().split('T')[0], step_label: step?.label ?? null }) })
@@ -378,7 +368,6 @@ export default function JobDetailPage() {
     setExchanges(prev => prev.filter(e => e.id !== id))
   }
 
-  // ─── Contact ───────────────────────────────────────────────────────────────
   function openCreateContact(transmittedBy: string) {
     const parts = transmittedBy.trim().split(/\s+/)
     setContactFirstName(parts[0] || ''); setContactLastName(parts.slice(1).join(' ') || '')
@@ -400,7 +389,6 @@ export default function JobDetailPage() {
     if (res.ok) { setContactSaved(true); await loadContacts(); setTimeout(() => setShowCreateContact(false), 1500) }
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────────
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#999', fontWeight: 700, fontSize: 15 }}>Chargement…</p></div>
   if (!job) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#E8151B', fontWeight: 700, fontSize: 15 }}>Offre introuvable.</p></div>
 
@@ -456,17 +444,14 @@ export default function JobDetailPage() {
           <button onClick={() => router.back()} style={{ background: '#fff', border: '1.5px solid #EBEBEB', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: '#111', cursor: 'pointer', fontFamily: FONT }}>← Mes candidatures</button>
         </div>
 
-        {/* Header */}
         <JobHeader
-          job={job}
-          jobId={jobId}
+          job={job} jobId={jobId}
           onBack={() => router.back()}
           onEdit={openEditModal}
           onDelete={() => { setDeleteConfirmText(''); setShowDeleteModal(true) }}
           onGenerateCV={() => router.push(`/dashboard/editor?job_id=${jobId}`)}
         />
 
-        {/* Transmis par */}
         {transmittedBy && !transmittedByAlreadyContact && (
           <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 12, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -483,7 +468,6 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {/* Score ATS */}
         {(atsScore !== null || atsKw.present.length > 0 || atsKw.missing.length > 0) && (
           <div style={{ ...card, border: '1.5px solid #F5C400', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
             {atsScore !== null && (
@@ -509,20 +493,19 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {/* Parcours */}
         <JobStepProgress
           jobId={jobId}
           userId={userId}
           currentStepId={currentStepId}
           customSteps={customSteps}
           allSteps={allSteps}
+          allStepsMerged={allStepsMerged}
           currentStepIndex={currentStepIndex}
           onStepClick={handleStepClick}
           onCustomStepsChange={setCustomSteps}
           onHideBaseStep={handleHideBaseStep}
         />
 
-        {/* Étape active + actions */}
         <JobStepActions
           jobId={jobId}
           userId={userId}
@@ -531,7 +514,6 @@ export default function JobDetailPage() {
           currentStepIndex={currentStepIndex}
         />
 
-        {/* Entretien */}
         {isInterviewStep && (
           <JobInterviewDetails
             job={job}
@@ -542,7 +524,6 @@ export default function JobDetailPage() {
           />
         )}
 
-        {/* Échanges */}
         <JobExchanges
           exchanges={exchanges}
           onAdd={addExchange}
@@ -550,26 +531,11 @@ export default function JobDetailPage() {
           onDelete={deleteExchange}
         />
 
-        {/* Documents + Notes */}
         <div className="jfmj-docs-grid">
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={sectionLabel}>Documents</span>
-
-            <input
-              ref={cvInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx"
-              style={{ display: 'none' }}
-              onChange={e => { if (e.target.files?.[0]) handleDocumentUpload(e.target.files[0], 'cv') }}
-            />
-            <input
-              ref={coverLetterInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx"
-              style={{ display: 'none' }}
-              onChange={e => { if (e.target.files?.[0]) handleDocumentUpload(e.target.files[0], 'cover_letter') }}
-            />
-
+            <input ref={cvInputRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) handleDocumentUpload(e.target.files[0], 'cv') }} />
+            <input ref={coverLetterInputRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) handleDocumentUpload(e.target.files[0], 'cover_letter') }} />
             {docItems.map(doc => (
               <div key={doc.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F5F5F0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -584,19 +550,11 @@ export default function JobDetailPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  {doc.url && (
-                    <button className="doc-upload-btn" onClick={() => window.open(doc.url!, '_blank')} style={{ background: '#F9F9F7', color: '#111' }}>Voir</button>
-                  )}
-                  <button
-                    className="doc-upload-btn"
-                    onClick={() => doc.inputRef.current?.click()}
-                    disabled={uploadingDoc !== null}
-                    style={{ background: doc.url ? '#F9F9F7' : '#111', color: doc.url ? '#111' : '#F5C400' }}>
+                  {doc.url && <button className="doc-upload-btn" onClick={() => window.open(doc.url!, '_blank')} style={{ background: '#F9F9F7', color: '#111' }}>Voir</button>}
+                  <button className="doc-upload-btn" onClick={() => doc.inputRef.current?.click()} disabled={uploadingDoc !== null} style={{ background: doc.url ? '#F9F9F7' : '#111', color: doc.url ? '#111' : '#F5C400' }}>
                     {uploadingDoc === doc.docType ? '…' : doc.url ? 'Remplacer' : 'Charger'}
                   </button>
-                  {doc.url && (
-                    <button className="doc-upload-btn" onClick={() => handleDeleteDocument(doc.docType)} style={{ background: 'transparent', color: '#E8151B', borderColor: '#E8151B' }}>✕</button>
-                  )}
+                  {doc.url && <button className="doc-upload-btn" onClick={() => handleDeleteDocument(doc.docType)} style={{ background: 'transparent', color: '#E8151B', borderColor: '#E8151B' }}>✕</button>}
                 </div>
               </div>
             ))}
@@ -607,7 +565,6 @@ export default function JobDetailPage() {
           </div>
         </div>
 
-        {/* Description */}
         <div style={card}>
           <span style={sectionLabel}>Description du poste</span>
           <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden', position: 'relative', fontFamily: FONT, fontWeight: 500 }}>
@@ -619,25 +576,13 @@ export default function JobDetailPage() {
           </button>
         </div>
 
-        {/* À propos de l'entreprise */}
-        <JobCompanySection
-          job={job}
-          expanded={companyExpanded}
-          onToggle={() => setCompanyExpanded(v => !v)}
-        />
+        <JobCompanySection job={job} expanded={companyExpanded} onToggle={() => setCompanyExpanded(v => !v)} />
       </div>
 
-      {/* ── Modale Modifier ─────────────────────────────────────────────────── */}
       {showEditModal && (
-        <EditJobModal
-          editForm={editForm}
-          onChange={(field, value) => setEditForm(p => ({ ...p, [field]: value }))}
-          onSave={saveEdit}
-          onClose={() => setShowEditModal(false)}
-        />
+        <EditJobModal editForm={editForm} onChange={(field, value) => setEditForm(p => ({ ...p, [field]: value }))} onSave={saveEdit} onClose={() => setShowEditModal(false)} />
       )}
 
-      {/* ── Modale Supprimer ────────────────────────────────────────────────── */}
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 30, width: '100%', maxWidth: 420, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B' }}>
@@ -651,8 +596,7 @@ export default function JobDetailPage() {
               <p style={{ fontSize: 12, color: '#888', margin: 0, fontFamily: FONT }}>{job.company}</p>
             </div>
             <p style={{ fontSize: 12, color: '#555', marginBottom: 8, fontFamily: FONT }}>Pour confirmer, tapez : <strong style={{ color: '#E8151B' }}>SUPPRIMER</strong></p>
-            <input className="fi" value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder="SUPPRIMER"
-              style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em', borderColor: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#E0E0E0' }} autoFocus />
+            <input className="fi" value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder="SUPPRIMER" style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em', borderColor: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#E0E0E0' }} autoFocus />
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <button onClick={() => setShowDeleteModal(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
               <button onClick={deleteJob} disabled={deleteConfirmText !== 'SUPPRIMER' || deleteLoading}
@@ -664,7 +608,6 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* ── Modale Créer contact ─────────────────────────────────────────────── */}
       {showCreateContact && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 480, border: '2px solid #111', boxShadow: '4px 4px 0 #7C3AED', maxHeight: '90vh', overflowY: 'auto' }}>
