@@ -101,12 +101,12 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
         const [y, m, d] = stepDates[subStatus].split('-').map(Number);
         date = new Date(y, m - 1, d);
         dateField = 'interview_at';
-        // Ajoute l'heure depuis interview_at si disponible (en UTC)
+        // Ajoute l'heure depuis interview_at si disponible (heure locale)
         if ((job as any).interview_at) {
           const interviewDate = new Date((job as any).interview_at);
-          if (interviewDate.getUTCHours() > 0 || interviewDate.getUTCMinutes() > 0) {
-            hour = interviewDate.getUTCHours();
-            minutes = interviewDate.getUTCMinutes();
+          if (interviewDate.getHours() > 0 || interviewDate.getMinutes() > 0) {
+            hour = interviewDate.getHours();
+            minutes = interviewDate.getMinutes();
           }
         }
       }
@@ -114,9 +114,9 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
       else if ((job as any).interview_at) {
         date = new Date((job as any).interview_at);
         dateField = 'interview_at';
-        if (date.getUTCHours() > 0 || date.getUTCMinutes() > 0) {
-          hour = date.getUTCHours();
-          minutes = date.getUTCMinutes();
+        if (date.getHours() > 0 || date.getMinutes() > 0) {
+          hour = date.getHours();
+          minutes = date.getMinutes();
         }
       }
       // Priorité 3 : created_at
@@ -127,16 +127,16 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
     } else if (job.status === 'applied' && (job as any).applied_at) {
       date = new Date((job as any).applied_at);
       dateField = 'applied_at';
-      if (date.getUTCHours() > 0 || date.getUTCMinutes() > 0) {
-        hour = date.getUTCHours();
-        minutes = date.getUTCMinutes();
+      if (date.getHours() > 0 || date.getMinutes() > 0) {
+        hour = date.getHours();
+        minutes = date.getMinutes();
       }
     } else {
       date = new Date(job.created_at);
       dateField = 'created_at';
-      if (date.getUTCHours() > 0 || date.getUTCMinutes() > 0) {
-        hour = date.getUTCHours();
-        minutes = date.getUTCMinutes();
+      if (date.getHours() > 0 || date.getMinutes() > 0) {
+        hour = date.getHours();
+        minutes = date.getMinutes();
       }
     }
 
