@@ -25,12 +25,20 @@ interface Props {
   onStepClick: (stepId: string) => void
   onCustomStepsChange: (steps: CustomStep[]) => void
   onHideBaseStep: (stepId: string) => void
+  stepDates: Record<string, string>
+  onStepDatesChange: (dates: Record<string, string>) => void
 }
 
-function DraggableStep({ step, isActive, isDone, isCustom, onStepClick }: {
+function formatDate(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  return `${d}/${m}/${y.slice(2)}`
+}
+
+function DraggableStep({ step, isActive, isDone, isCustom, onStepClick, date }: {
   step: { id: string; label: string; num: number }
   isActive: boolean; isDone: boolean; isCustom: boolean
   onStepClick: (id: string) => void
+  date?: string
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: step.id, disabled: !isCustom, data: { stepId: step.id },
@@ -58,14 +66,31 @@ function DraggableStep({ step, isActive, isDone, isCustom, onStepClick }: {
           boxShadow: isActive ? '0 0 0 4px rgba(245,196,0,.18)' : 'none',
           fontFamily: FONT, touchAction: 'none',
         }}>
-        {step.num}
+        {isDone && !isActive ? '✓' : step.num}
       </div>
       <p onClick={() => onStepClick(step.id)} style={{
         fontSize: 10, fontWeight: 700, textAlign: 'center',
         marginTop: 6, lineHeight: 1.3,
         color: isActive ? '#111' : isDone ? '#777' : '#ccc',
         fontFamily: FONT, cursor: 'pointer', maxWidth: 70,
+        marginBottom: date ? 4 : 0,
       }}>{step.label}</p>
+
+      {/* Pill date */}
+      {date && (
+        <span style={{
+          fontSize: 10, fontWeight: 700,
+          padding: '2px 8px', borderRadius: 20,
+          background: isActive ? '#F5C400' : '#111',
+          color: isActive ? '#111' : '#fff',
+          border: `1.5px solid #111`,
+          whiteSpace: 'nowrap',
+          fontFamily: FONT,
+        }}>
+          {formatDate(date)}
+        </span>
+      )}
+      {!date && <div style={{ height: 20 }} />}
     </div>
   )
 }
@@ -85,6 +110,7 @@ function DropZone({ id, isOver }: { id: string; isOver: boolean }) {
 export default function JobStepProgress({
   jobId, userId, currentStepId, customSteps, allSteps, allStepsMerged,
   currentStepIndex, onStepClick, onCustomStepsChange, onHideBaseStep,
+  stepDates, onStepDatesChange,
 }: Props) {
   const [showPanel, setShowPanel] = useState(false)
   const [newStepName, setNewStepName] = useState('')
@@ -99,12 +125,21 @@ export default function JobStepProgress({
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   )
 
-  // ─── Ajouter une étape : position calculée entre les deux étapes voisines ──
+  // Quand on clique sur une étape : on enregistre la date du jour si pas encore de date
+  const handleStepClick = (stepId: string) => {
+    if (!stepDates[stepId]) {
+      const today = new Date().toISOString().split('T')[0]
+      const newDates = { ...stepDates, [stepId]: today }
+      onStepDatesChange(newDates)
+    }
+    onStepClick(stepId)
+  }
+
+  // ─── Ajouter une étape ──
   const handleAddCustomStep = async () => {
     if (!newStepName.trim() || !userId) return
     const supabase = createClient()
 
-    // newStepPos = index dans allStepsMerged APRÈS lequel on insère
     const prevSortPos = allStepsMerged[newStepPos]?.sortPos ?? 0
     const nextSortPos = allStepsMerged[newStepPos + 1]?.sortPos ?? (prevSortPos + 2000)
     const position = Math.round((prevSortPos + nextSortPos) / 2)
@@ -205,13 +240,21 @@ export default function JobStepProgress({
               const isDone = idx < currentStepIndex
               const isActive = step.id === currentStepId
               const isCustom = !!customSteps.find(cs => cs.id === step.id)
+              const date = stepDates[step.id]
               return (
                 <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 72 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
                     {idx < allSteps.length - 1 && (
                       <div style={{ position: 'absolute', top: 17, left: 'calc(50% + 17px)', right: 'calc(-50% + 17px)', height: 2.5, background: isDone ? '#F5C400' : '#EBEBEB', zIndex: 0 }} />
                     )}
-                    <DraggableStep step={step} isActive={isActive} isDone={isDone} isCustom={isCustom} onStepClick={onStepClick} />
+                    <DraggableStep
+                      step={step}
+                      isActive={isActive}
+                      isDone={isDone}
+                      isCustom={isCustom}
+                      onStepClick={handleStepClick}
+                      date={(isActive || isDone) ? date : undefined}
+                    />
                   </div>
                   {isCustom && idx < allSteps.length - 1 && (
                     <DropZone id={`after-${step.id}`} isOver={overDropZone === `after-${step.id}`} />

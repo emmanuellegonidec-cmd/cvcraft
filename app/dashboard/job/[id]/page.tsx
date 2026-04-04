@@ -73,6 +73,7 @@ interface Job {
   company_description: string | null; company_website: string | null
   company_size: string | null; department: string | null; source_platform: string | null
   hidden_steps: string[] | null
+  step_dates: Record<string, string> | null
 }
 
 interface ContactMin { id: string; name: string; role?: string | null; company?: string | null }
@@ -147,6 +148,8 @@ export default function JobDetailPage() {
   const [exchanges, setExchanges] = useState<JobExchange[]>([])
   const [customSteps, setCustomSteps] = useState<CustomStep[]>([])
   const [hiddenSteps, setHiddenSteps] = useState<string[]>([])
+  // MODIF 1 : état pour les dates des étapes
+  const [stepDates, setStepDates] = useState<Record<string, string>>({})
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [descExpanded, setDescExpanded] = useState(false)
@@ -194,6 +197,8 @@ export default function JobDetailPage() {
       setJob(data)
       setNotes(data.notes ?? '')
       setHiddenSteps(data.hidden_steps ?? [])
+      // MODIF 2 : charger les dates sauvegardées
+      setStepDates(data.step_dates ?? {})
     }
   }, [jobId])
 
@@ -272,6 +277,16 @@ export default function JobDetailPage() {
       body: JSON.stringify({ hidden_steps: updated }),
     })
   }, [hiddenSteps, jobId])
+
+  // MODIF 3 : sauvegarder les dates des étapes
+  const handleStepDatesChange = useCallback(async (dates: Record<string, string>) => {
+    setStepDates(dates)
+    await fetch(`/api/jobs?id=${jobId}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ step_dates: dates }),
+    })
+  }, [jobId])
 
   const patchJob = useCallback(async (field: string, value: any) => {
     setJob(prev => prev ? { ...prev, [field]: value } : prev)
@@ -402,7 +417,6 @@ export default function JobDetailPage() {
   const atsKw = job.ats_keywords ?? { present: [], missing: [] }
   const card: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '1.5px solid #EBEBEB' }
 
-  // ── sectionLabel : fontSize 12 pour une meilleure lisibilité ──
   const sectionLabel: React.CSSProperties = {
     fontSize: 12,
     fontWeight: 800,
@@ -511,6 +525,7 @@ export default function JobDetailPage() {
           </div>
         )}
 
+        {/* MODIF 4 : ajout des props stepDates et onStepDatesChange */}
         <JobStepProgress
           jobId={jobId}
           userId={userId}
@@ -522,6 +537,8 @@ export default function JobDetailPage() {
           onStepClick={handleStepClick}
           onCustomStepsChange={setCustomSteps}
           onHideBaseStep={handleHideBaseStep}
+          stepDates={stepDates}
+          onStepDatesChange={handleStepDatesChange}
         />
 
         <JobStepActions
