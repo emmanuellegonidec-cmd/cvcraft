@@ -63,6 +63,7 @@ interface Job {
   interview_location: string | null; interview_link: string | null; interview_phone: string | null
   company_description: string | null; company_website: string | null
   company_size: string | null; department: string | null; source_platform: string | null
+  hidden_steps: string[] | null
 }
 
 interface ContactMin { id: string; name: string; role?: string | null; company?: string | null }
@@ -136,6 +137,7 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<Job | null>(null)
   const [exchanges, setExchanges] = useState<JobExchange[]>([])
   const [customSteps, setCustomSteps] = useState<CustomStep[]>([])
+  const [hiddenSteps, setHiddenSteps] = useState<string[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [descExpanded, setDescExpanded] = useState(false)
@@ -182,7 +184,11 @@ export default function JobDetailPage() {
       if (typeof window !== 'undefined') (window as any).__jfmj_token = session.access_token
     }
     const { data } = await supabase.from('jobs').select('*').eq('id', jobId).single()
-    if (data) { setJob(data); setNotes(data.notes ?? '') }
+    if (data) {
+      setJob(data)
+      setNotes(data.notes ?? '')
+      setHiddenSteps(data.hidden_steps ?? [])
+    }
   }, [jobId])
 
   const loadCustomSteps = useCallback(async () => {
@@ -204,7 +210,6 @@ export default function JobDetailPage() {
     if (data) setContacts(data)
   }, [])
 
-  // ─── Vérifie si la carte LM existe dans les actions de l'étape courante ───
   const loadCoverLetterVisibility = useCallback(async (stepId: string) => {
     const supabase = createClient()
     const { data } = await supabase
@@ -220,35 +225,54 @@ export default function JobDetailPage() {
     Promise.all([loadJob(), loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
   }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
 
-  
-
   useEffect(() => { if (userId) loadContacts() }, [userId])
 
-  // ─── Steps ─────────────────────────────────────────────────────────────────
+  // ─── Steps : filtrage des étapes cachées + renumérotation ─────────────────
   const sortedCustom = [...customSteps].sort((a, b) => a.position - b.position)
+
+  // BASE_STEPS visibles (non masquées), toutes sauf la dernière
+  const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
+  const baseExceptLast = visibleBase.slice(0, -1)
+  const lastBase = visibleBase[visibleBase.length - 1]
+
   const allSteps = [
-    ...BASE_STEPS.slice(0, 5),
-    ...sortedCustom.map((cs, i) => ({ id: cs.id, label: cs.label, num: 6 + i })),
-    { ...BASE_STEPS[5], num: 6 + customSteps.length },
+    ...baseExceptLast.map((s, i) => ({ ...s, num: i + 1 })),
+    ...sortedCustom.map((cs, i) => ({ id: cs.id, label: cs.label, num: baseExceptLast.length + 1 + i })),
+    ...(lastBase ? [{ ...lastBase, num: baseExceptLast.length + 1 + customSteps.length }] : []),
   ]
+
   const currentStepId = job?.sub_status || job?.status || 'to_apply'
   const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId)
   const currentStepLabel = allSteps.find(s => s.id === currentStepId)?.label ?? ''
-  const isInterviewStep = INTERVIEW_STEP_IDS.includes(currentStepId) || customSteps.some(cs => cs.id === currentStepId)
 
-  // Charge la visibilité LM dès que le job est chargé
+  // Section entretien visible uniquement si l'étape n'est pas masquée
+  const isInterviewStep =
+    (INTERVIEW_STEP_IDS.includes(currentStepId) || customSteps.some(cs => cs.id === currentStepId))
+    && !hiddenSteps.includes(currentStepId)
+
   useEffect(() => {
     if (currentStepId) loadCoverLetterVisibility(currentStepId)
   }, [currentStepId, loadCoverLetterVisibility])
 
-const handleStepClick = async (stepId: string) => {
-  if (!job) return
-  const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
-  const patch = { sub_status: stepId, status: globalStatus, updated_at: new Date().toISOString() }
-  setJob(prev => prev ? { ...prev, ...patch } : prev)
-  const supabase = createClient()
-  await supabase.from('jobs').update(patch).eq('id', jobId)
-}
+  const handleStepClick = async (stepId: string) => {
+    if (!job) return
+    const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
+    const patch = { sub_status: stepId, status: globalStatus, updated_at: new Date().toISOString() }
+    setJob(prev => prev ? { ...prev, ...patch } : prev)
+    const supabase = createClient()
+    await supabase.from('jobs').update(patch).eq('id', jobId)
+  }
+
+  // ─── Masquer une étape de base ─────────────────────────────────────────────
+  const handleHideBaseStep = useCallback(async (stepId: string) => {
+    const updated = [...hiddenSteps, stepId]
+    setHiddenSteps(updated)
+    await fetch(`/api/jobs?id=${jobId}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ hidden_steps: updated }),
+    })
+  }, [hiddenSteps, jobId])
 
   // ─── Patch rapide ───────────────────────────────────────────────────────────
   const patchJob = useCallback(async (field: string, value: any) => {
@@ -392,7 +416,6 @@ const handleStepClick = async (stepId: string) => {
     ? contacts.some(c => c.name.toLowerCase().includes(transmittedBy.toLowerCase().split(' ')[0].toLowerCase()))
     : false
 
-  // LM visible uniquement si la carte existe dans les actions
   const docItems = [
     { docType: 'cv' as const, sent: job.cv_sent, name: 'CV', url: job.cv_url, inputRef: cvInputRef },
     ...(showCoverLetter ? [{ docType: 'cover_letter' as const, sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url, inputRef: coverLetterInputRef }] : []),
@@ -496,6 +519,7 @@ const handleStepClick = async (stepId: string) => {
           currentStepIndex={currentStepIndex}
           onStepClick={handleStepClick}
           onCustomStepsChange={setCustomSteps}
+          onHideBaseStep={handleHideBaseStep}
         />
 
         {/* Étape active + actions */}
@@ -509,13 +533,13 @@ const handleStepClick = async (stepId: string) => {
 
         {/* Entretien */}
         {isInterviewStep && (
-         <JobInterviewDetails
-  job={job}
-  contacts={contacts}
-  onPatch={patchJob}
-  onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
-  onCreateContact={() => openCreateContact('')}
-/>
+          <JobInterviewDetails
+            job={job}
+            contacts={contacts}
+            onPatch={patchJob}
+            onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
+            onCreateContact={() => openCreateContact('')}
+          />
         )}
 
         {/* Échanges */}
@@ -561,30 +585,17 @@ const handleStepClick = async (stepId: string) => {
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   {doc.url && (
-                    <button
-                      className="doc-upload-btn"
-                      onClick={() => window.open(doc.url!, '_blank')}
-                      style={{ background: '#F9F9F7', color: '#111' }}
-                    >
-                      Voir
-                    </button>
+                    <button className="doc-upload-btn" onClick={() => window.open(doc.url!, '_blank')} style={{ background: '#F9F9F7', color: '#111' }}>Voir</button>
                   )}
                   <button
                     className="doc-upload-btn"
                     onClick={() => doc.inputRef.current?.click()}
                     disabled={uploadingDoc !== null}
-                    style={{ background: doc.url ? '#F9F9F7' : '#111', color: doc.url ? '#111' : '#F5C400' }}
-                  >
+                    style={{ background: doc.url ? '#F9F9F7' : '#111', color: doc.url ? '#111' : '#F5C400' }}>
                     {uploadingDoc === doc.docType ? '…' : doc.url ? 'Remplacer' : 'Charger'}
                   </button>
                   {doc.url && (
-                    <button
-                      className="doc-upload-btn"
-                      onClick={() => handleDeleteDocument(doc.docType)}
-                      style={{ background: 'transparent', color: '#E8151B', borderColor: '#E8151B' }}
-                    >
-                      ✕
-                    </button>
+                    <button className="doc-upload-btn" onClick={() => handleDeleteDocument(doc.docType)} style={{ background: 'transparent', color: '#E8151B', borderColor: '#E8151B' }}>✕</button>
                   )}
                 </div>
               </div>
