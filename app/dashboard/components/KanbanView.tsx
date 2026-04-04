@@ -48,18 +48,40 @@ function DraggableCard({ job, colId, stages, stagesLabelMap, onClick }: {
     id: job.id, data: { job, fromColId: colId },
   });
 
-  // Cherche le label : DETAIL_STAGES → global custom stages → lookup map per-job
   const subStatus = (job as any).sub_status as string | null;
   let subLabel: string | null = null;
   if (colId === 'in_progress' && subStatus) {
     subLabel = getSubStatusLabel(subStatus, stages);
-    // Fallback : étapes personnalisées par offre (UUID)
     if (!subLabel && stagesLabelMap[subStatus]) {
       subLabel = stagesLabelMap[subStatus];
     }
   }
 
   const sourceBadge = getSourceBadge((job as any).source_platform);
+
+  // ── Calcul date à afficher ──
+  const stepDatesMap = (job as any).step_dates as Record<string, string> | null;
+  const stepDate = (colId === 'in_progress' && subStatus && stepDatesMap?.[subStatus])
+    ? stepDatesMap[subStatus] : null;
+
+  const stepLabel = stepDate && subStatus
+    ? (stagesLabelMap[subStatus] || getSubStatusLabel(subStatus, stages))
+    : null;
+
+  const futureLabel = (() => {
+    if (!stepDate) return null;
+    const [y, m, d] = stepDate.split('-').map(Number);
+    const stepDateObj = new Date(y, m - 1, d);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((stepDateObj.getTime() - today.getTime()) / 86400000);
+    if (diffDays === 0) return "Aujourd'hui";
+    if (diffDays === 1) return 'Demain';
+    if (diffDays > 1) return `Dans ${diffDays} jours`;
+    return null;
+  })();
+
+  const dateColor = futureLabel ? '#1A7A4A' : '#555';
+  const dateText = futureLabel ?? formatRelative(job.created_at);
 
   return (
     <div
@@ -117,19 +139,10 @@ function DraggableCard({ job, colId, stages, stagesLabelMap, onClick }: {
       )}
 
       {(job as any).favorite > 0 && <HeartDisplay value={(job as any).favorite} />}
-      {(() => {
-  const subStatus = (job as any).sub_status as string | null
-  const stepDatesMap = (job as any).step_dates as Record<string, string> | null
-  const stepDate = (colId === 'in_progress' && subStatus && stepDatesMap?.[subStatus])
-    ? stepDatesMap[subStatus] : null
-  const stepLabel = stepDate && subStatus ? (stagesLabelMap[subStatus] || getSubStatusLabel(subStatus, stages)) : null
-  const displayDate = stepDate ?? job.created_at
-  return (
-    <div className="date-tag" style={{ color: '#555' }}>
-      📅 {stepLabel ? `${stepLabel} · ` : ''}{formatRelative(displayDate)}
-    </div>
-  )
-})()}
+
+      <div className="date-tag" style={{ color: dateColor }}>
+        📅 {stepLabel ? `${stepLabel} · ` : ''}{dateText}
+      </div>
     </div>
   );
 }

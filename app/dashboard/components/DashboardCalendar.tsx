@@ -99,10 +99,18 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
 
       // Priorité 1 : date de l'étape courante dans step_dates
       if (subStatus && stepDates && stepDates[subStatus]) {
-        const [y, m, d] = stepDates[subStatus].split('-').map(Number);
-        date = new Date(y, m - 1, d);
-        dateField = 'interview_at';
-      }
+  const [y, m, d] = stepDates[subStatus].split('-').map(Number);
+  date = new Date(y, m - 1, d);
+  dateField = 'interview_at';
+  // Ajoute l'heure depuis interview_at si disponible
+  if ((job as any).interview_at) {
+    const interviewDate = new Date((job as any).interview_at);
+    if (interviewDate.getHours() > 0 || interviewDate.getMinutes() > 0) {
+      hour = interviewDate.getHours();
+      minutes = interviewDate.getMinutes();
+    }
+  }
+}
       // Priorité 2 : interview_at
       else if ((job as any).interview_at) {
         date = new Date((job as any).interview_at);
