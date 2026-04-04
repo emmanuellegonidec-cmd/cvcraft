@@ -273,7 +273,7 @@ export default function DashboardPage() {
         if (accessToken) await fetchJobs(accessToken);
         setShowAddJob(false);
         setNewJob({ ...EMPTY_JOB });
-        router.push(`/dashboard/jobs/${data.savedJobId}`);
+        router.push(`/dashboard/job/${data.savedJobId}`);
         return;
       }
 
