@@ -117,7 +117,19 @@ function DraggableCard({ job, colId, stages, stagesLabelMap, onClick }: {
       )}
 
       {(job as any).favorite > 0 && <HeartDisplay value={(job as any).favorite} />}
-      <div className="date-tag" style={{ color: '#555' }}>📅 {formatRelative(job.created_at)}</div>
+      {(() => {
+  const subStatus = (job as any).sub_status as string | null
+  const stepDatesMap = (job as any).step_dates as Record<string, string> | null
+  const stepDate = (colId === 'in_progress' && subStatus && stepDatesMap?.[subStatus])
+    ? stepDatesMap[subStatus] : null
+  const stepLabel = stepDate && subStatus ? (stagesLabelMap[subStatus] || getSubStatusLabel(subStatus, stages)) : null
+  const displayDate = stepDate ?? job.created_at
+  return (
+    <div className="date-tag" style={{ color: '#555' }}>
+      📅 {stepLabel ? `${stepLabel} · ` : ''}{formatRelative(displayDate)}
+    </div>
+  )
+})()}
     </div>
   );
 }

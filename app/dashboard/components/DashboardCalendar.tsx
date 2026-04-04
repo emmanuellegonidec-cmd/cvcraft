@@ -4,12 +4,19 @@ import { useState, useRef, useEffect } from 'react';
 import { Job } from '@/lib/jobs';
 import { createClient } from '@/lib/supabase';
 
-// ─── Types & constantes ───────────────────────────────────────────────────────
-
 const CAL_DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const CAL_MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+
+const DETAIL_STEP_LABELS: Record<string, string> = {
+  to_apply:          'Envie de postuler',
+  applied:           'Postulé',
+  phone_interview:   'Entretien téléphonique',
+  hr_interview:      'Entretien RH',
+  manager_interview: 'Entretien manager',
+  offer:             'Offre reçue',
+}
 
 type CalEvent = {
   jobId: string;
@@ -20,10 +27,9 @@ type CalEvent = {
   type: 'envie' | 'postule' | 'entretien' | 'offre' | 'archive' | 'deadline';
   hour?: number;
   minutes?: number;
-  deadlineLabel?: string; // ex: "Fixer une deadline", "Ajouter un rappel"
+  deadlineLabel?: string;
 };
 
-// ✅ Nouveau type "deadline" en orange
 const EV_STYLE: Record<CalEvent['type'], React.CSSProperties> = {
   envie:     { background: '#1C1C1E', color: '#fff' },
   postule:   { background: '#1A4A8A', color: '#fff' },
@@ -53,8 +59,6 @@ const weekTh: React.CSSProperties = {
   background: '#FAFAFA', padding: '8px 4px', borderBottom: '2px solid #111',
 };
 
-// ─── Utilitaires ──────────────────────────────────────────────────────────────
-
 function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
@@ -65,7 +69,7 @@ function formatTime(h: number, m: number) {
   return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
 }
 
-function jobsToEvents(jobs: Job[]): CalEvent[] {
+function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}): CalEvent[] {
   return jobs.map(job => {
     const typeMap: Record<string, CalEvent['type']> = {
       to_apply:    'envie',
@@ -80,10 +84,18 @@ function jobsToEvents(jobs: Job[]): CalEvent[] {
     let dateField: CalEvent['dateField'] = 'created_at';
     let hour: number | undefined;
     let minutes: number | undefined;
+    let subStatusLabel: string | null = null;
+
+    const subStatus = (job as any).sub_status as string | null;
+    const stepDates = (job as any).step_dates as Record<string, string> | null;
 
     if ((job as any).status === 'in_progress') {
-      const subStatus = (job as any).sub_status as string | null;
-      const stepDates = (job as any).step_dates as Record<string, string> | null;
+      // Résolution du label de l'étape
+      if (subStatus) {
+        subStatusLabel = DETAIL_STEP_LABELS[subStatus]
+          || stagesLabelMap[subStatus]
+          || null;
+      }
 
       // Priorité 1 : date de l'étape courante dans step_dates
       if (subStatus && stepDates && stepDates[subStatus]) {
@@ -122,10 +134,16 @@ function jobsToEvents(jobs: Job[]): CalEvent[] {
     }
 
     return {
-      jobId: job.id, date, dateField,
+      jobId: job.id,
+      date,
+      dateField,
       title: job.title || 'Sans titre',
-      company: job.company || '',
-      type: evType, hour, minutes,
+      company: subStatusLabel
+        ? `${subStatusLabel} · ${job.company || ''}`
+        : (job.company || ''),
+      type: evType,
+      hour,
+      minutes,
     };
   }).filter(e => !isNaN(e.date.getTime()));
 }
@@ -145,8 +163,6 @@ function getWeekStart(base: Date, off: number): Date {
   d.setHours(0, 0, 0, 0);
   return d;
 }
-
-// ─── EventCard ────────────────────────────────────────────────────────────────
 
 function EventCard({
   ev, onJobClick, onDragStart,
@@ -171,7 +187,6 @@ function EventCard({
         cursor: 'pointer',
         fontFamily: 'Montserrat,sans-serif', overflow: 'hidden',
         userSelect: 'none', opacity: isArchived ? 0.65 : 1,
-        // Deadlines : style légèrement différent (bordure pointillée)
         border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : 'none',
       }}
     >
@@ -199,26 +214,24 @@ function EventCard({
   );
 }
 
-// ─── DashboardCalendar (export) ───────────────────────────────────────────────
-
 export default function DashboardCalendar({
-  jobs, onJobClick, onDateChange,
+  jobs, onJobClick, onDateChange, stagesLabelMap = {},
 }: {
   jobs: Job[];
+  stagesLabelMap?: Record<string, string>;
   onJobClick: (jobId: string) => void;
   onDateChange: (jobId: string, field: string, newDate: Date) => void;
 }) {
-  const [calView, setCalView]       = useState<'week' | 'month'>('week');
-  const [offset, setOffset]         = useState(0);
-  const [visible, setVisible]       = useState(true);
-  const [dragOver, setDragOver]     = useState<string | null>(null);
+  const [calView, setCalView]   = useState<'week' | 'month'>('week');
+  const [offset, setOffset]     = useState(0);
+  const [visible, setVisible]   = useState(true);
+  const [dragOver, setDragOver] = useState<string | null>(null);
   const [deadlineEvents, setDeadlineEvents] = useState<CalEvent[]>([]);
   const dragEvRef = useRef<CalEvent | null>(null);
 
-  const today  = new Date();
-  const jobEvents = jobsToEvents(jobs);
+  const today = new Date();
+  const jobEvents = jobsToEvents(jobs, stagesLabelMap);
 
-  // ✅ Charge les deadlines depuis Supabase au chargement + quand jobs change
   useEffect(() => {
     if (!jobs.length) return;
     loadDeadlines();
@@ -226,7 +239,6 @@ export default function DashboardCalendar({
 
   async function loadDeadlines() {
     const supabase = createClient();
-    // Récupère toutes les actions avec une deadline_date pour les jobs de l'utilisateur
     const jobIds = jobs.map(j => j.id);
     if (!jobIds.length) return;
 
@@ -243,9 +255,8 @@ export default function DashboardCalendar({
       .map((row: any) => {
         const job = jobs.find(j => j.id === row.job_id);
         if (!job) return null;
-        // deadline_date est au format YYYY-MM-DD → on parse en heure neutre
         const [y, m, d] = row.deadline_date.split('-').map(Number);
-        const date = new Date(y, m - 1, d); // heure locale, pas UTC
+        const date = new Date(y, m - 1, d);
         return {
           jobId: row.job_id,
           date,
@@ -253,7 +264,7 @@ export default function DashboardCalendar({
           title: job.title || 'Sans titre',
           company: job.company || '',
           type: 'deadline' as CalEvent['type'],
-          deadlineLabel: row.title, // ex: "Fixer une deadline"
+          deadlineLabel: row.title,
         };
       })
       .filter(Boolean) as CalEvent[];
@@ -261,7 +272,6 @@ export default function DashboardCalendar({
     setDeadlineEvents(evs);
   }
 
-  // Tous les événements = offres + deadlines
   const allEvents = [...jobEvents, ...deadlineEvents];
 
   function handleDragStart(e: React.DragEvent, ev: CalEvent) {
@@ -275,7 +285,7 @@ export default function DashboardCalendar({
     if (!dragEvRef.current) return;
     const ev = dragEvRef.current;
     dragEvRef.current = null;
-    if (ev.type === 'deadline') return; // les deadlines ne sont pas draggables
+    if (ev.type === 'deadline') return;
 
     const newDate = new Date(targetDate);
     if (targetHour !== undefined) {
@@ -303,7 +313,6 @@ export default function DashboardCalendar({
   function NavBar({ periodLabel }: { periodLabel: string }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        {/* Légendes à gauche */}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {(Object.keys(EV_LABEL) as CalEvent['type'][]).map(t => (
             <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#333', fontWeight: 700 }}>
@@ -312,7 +321,6 @@ export default function DashboardCalendar({
             </div>
           ))}
         </div>
-        {/* Navigation + Semaine/Mois à droite */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <button onClick={() => setOffset(o => o - 1)} style={navBtnStyle}>‹</button>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#555', minWidth: 160, textAlign: 'center' }}>{periodLabel}</span>
@@ -376,7 +384,7 @@ export default function DashboardCalendar({
                 const cellEvs = allEvents.filter(e =>
                   sameDay(e.date, d) && (
                     e.type === 'deadline'
-                      ? h === 8  // deadlines affichées à 8h
+                      ? h === 8
                       : e.hour !== undefined ? e.hour === h : h === 8
                   )
                 );

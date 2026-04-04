@@ -158,7 +158,7 @@ export default function JobDetailPage() {
   const [contacts, setContacts] = useState<ContactMin[]>([])
   const [showCoverLetter, setShowCoverLetter] = useState(true)
   const notesTimer = useRef<NodeJS.Timeout | null>(null)
-
+const savedExchangeDatesRef = useRef<string>('')
   const [uploadingDoc, setUploadingDoc] = useState<'cv' | 'cover_letter' | null>(null)
   const cvInputRef = useRef<HTMLInputElement>(null)
   const coverLetterInputRef = useRef<HTMLInputElement>(null)
@@ -238,7 +238,32 @@ export default function JobDetailPage() {
     })
   }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
   useEffect(() => { if (userId) loadContacts() }, [userId])
-
+useEffect(() => {
+    if (!exchanges.length || !allSteps.length) return
+    const fromExchanges: Record<string, string> = {}
+    for (const exchange of exchanges) {
+      if (!exchange.step_label || !exchange.exchange_date) continue
+      const step = allSteps.find(s => s.label === exchange.step_label)
+      if (!step) continue
+      if (!fromExchanges[step.id] || exchange.exchange_date < fromExchanges[step.id]) {
+        fromExchanges[step.id] = exchange.exchange_date
+      }
+    }
+    const toSave: Record<string, string> = {}
+    for (const [stepId, date] of Object.entries(fromExchanges)) {
+      if (!stepDates[stepId]) toSave[stepId] = date
+    }
+    if (!Object.keys(toSave).length) return
+    const key = JSON.stringify(toSave)
+    if (key === savedExchangeDatesRef.current) return
+    savedExchangeDatesRef.current = key
+    const merged = { ...stepDates, ...toSave }
+    setStepDates(merged)
+    fetch(`/api/jobs?id=${jobId}`, {
+      method: 'PATCH', headers: authHeaders(),
+      body: JSON.stringify({ step_dates: merged }),
+    })
+  }, [exchanges.length, allSteps.length])
   // ─── Construction de allSteps ──────────────────────────────────────────────
   const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
 

@@ -388,10 +388,11 @@ if (allPipelineStages) {
 
           {['kanban', 'list'].includes(view) && (
             <DashboardCalendar
-              jobs={jobs}
-              onJobClick={handleCalendarJobClick}
-              onDateChange={handleCalendarDateChange}
-            />
+  jobs={jobs}
+  stagesLabelMap={stagesLabelMap}
+  onJobClick={handleCalendarJobClick}
+  onDateChange={handleCalendarDateChange}
+/>
           )}
 
           {view === 'kanban' && (
