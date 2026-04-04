@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-  DndContext, DragEndEvent, DragOverlay, DragStartEvent,
+  DndContext, DragEndEvent, DragOverlay,
   PointerSensor, TouchSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core'
@@ -80,7 +80,6 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
   },
 }
 
-// Titres des cartes qui doivent afficher un champ date
 const DATE_ACTION_TITLES = ['Fixer une deadline', 'Ajouter un rappel', 'Date de prise de poste']
 
 interface StepActionRow {
@@ -89,9 +88,7 @@ interface StepActionRow {
   deadline_date?: string | null
 }
 
-function DraggableActionCard({
-  action, dragId, onDelete, onToggleDone, onDeadlineSave
-}: {
+function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlineSave }: {
   action: StepActionRow
   dragId: string
   onDelete: (id: string, title: string) => void
@@ -100,16 +97,10 @@ function DraggableActionCard({
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId })
   const [localDate, setLocalDate] = useState(action.deadline_date || '')
-
-  // ✅ Détecte si cette carte doit afficher un champ date
   const isDateCard = DATE_ACTION_TITLES.includes(action.title)
 
-  const borderColor = action.is_done
-    ? '#A5D6A7'
-    : action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#EBEBEB'
-  const bgColor = action.is_done
-    ? '#F1F8E9'
-    : action.type === 'included' ? '#F1F8E9' : '#fff'
+  const borderColor = action.is_done ? '#A5D6A7' : action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#EBEBEB'
+  const bgColor = action.is_done ? '#F1F8E9' : action.type === 'included' ? '#F1F8E9' : '#fff'
 
   function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value
@@ -117,7 +108,6 @@ function DraggableActionCard({
     if (val) onDeadlineSave(action.id, val)
   }
 
-  // Formate la date pour l'affichage (ex: "15 avr. 2026")
   function formatDisplayDate(dateStr: string) {
     if (!dateStr) return ''
     const [y, m, d] = dateStr.split('-')
@@ -125,46 +115,31 @@ function DraggableActionCard({
     return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`
   }
 
-  // Détermine si la deadline est dépassée ou proche (dans les 3 prochains jours)
   function getDeadlineStatus(dateStr: string): 'urgent' | 'warning' | 'ok' | null {
     if (!dateStr) return null
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const deadline = new Date(dateStr)
-    deadline.setHours(0, 0, 0, 0)
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const deadline = new Date(dateStr); deadline.setHours(0, 0, 0, 0)
     const diffDays = Math.round((deadline.getTime() - today.getTime()) / 86400000)
-    if (diffDays < 0) return 'urgent'   // dépassée
-    if (diffDays <= 3) return 'warning'  // dans 3 jours
+    if (diffDays < 0) return 'urgent'
+    if (diffDays <= 3) return 'warning'
     return 'ok'
   }
 
   const deadlineStatus = isDateCard ? getDeadlineStatus(localDate) : null
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        background: bgColor,
-        border: `1.5px solid ${isDragging ? '#F5C400' : borderColor}`,
-        borderRadius: 10,
-        padding: '10px 12px 12px',
-        cursor: isDragging ? 'grabbing' : 'grab',
-        opacity: isDragging ? 0.5 : 1,
-        transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
-        zIndex: isDragging ? 50 : 1,
-        position: 'relative',
-        touchAction: 'none',
-        userSelect: 'none',
-        width: '100%',
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-      }}
-      {...listeners}
-      {...attributes}
-    >
-      {/* Ligne du haut : icône + drag handle + supprimer */}
+    <div ref={setNodeRef} style={{
+      background: bgColor, border: `1.5px solid ${isDragging ? '#F5C400' : borderColor}`,
+      borderRadius: 10, padding: '10px 12px 12px',
+      cursor: isDragging ? 'grabbing' : 'grab',
+      opacity: isDragging ? 0.5 : 1,
+      transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
+      zIndex: isDragging ? 50 : 1, position: 'relative',
+      touchAction: 'none', userSelect: 'none',
+      width: '100%', boxSizing: 'border-box',
+      display: 'flex', flexDirection: 'column', height: '100%',
+    }} {...listeners} {...attributes}>
+
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4, marginBottom: 6 }}>
         <span style={{ fontSize: 18 }}>{action.icon}</span>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -172,19 +147,13 @@ function DraggableActionCard({
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
-            title="Supprimer cette action"
-            style={{
-              background: '#f0f0f0', border: '1px solid #ddd', color: '#999',
-              fontSize: 14, fontWeight: 900, cursor: 'pointer', padding: '0px 5px',
-              lineHeight: '18px', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
+            style={{ background: '#f0f0f0', border: '1px solid #ddd', color: '#999', fontSize: 14, fontWeight: 900, cursor: 'pointer', padding: '0px 5px', lineHeight: '18px', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onMouseOver={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#E8151B'; b.style.borderColor = '#E8151B'; b.style.color = '#fff' }}
             onMouseOut={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#f0f0f0'; b.style.borderColor = '#ddd'; b.style.color = '#999' }}
           >×</button>
         </div>
       </div>
 
-      {/* Titre + badges */}
       <span style={{
         fontSize: 12, fontWeight: 800,
         color: action.is_done ? '#2E7D32' : action.type === 'included' ? '#2E7D32' : '#111',
@@ -194,73 +163,36 @@ function DraggableActionCard({
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         {action.title}
-        {action.type === 'included' && !action.is_done && (
-          <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>✓</span>
-        )}
-        {action.type === 'new' && !action.is_done && (
-          <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>Nouveau</span>
-        )}
+        {action.type === 'included' && !action.is_done && <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>✓</span>}
+        {action.type === 'new' && !action.is_done && <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>Nouveau</span>}
       </span>
 
       <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: isDateCard ? 8 : 10, flex: isDateCard ? 'none' : 1 }}>{action.sub}</span>
 
-      {/* ✅ Champ date pour les cartes deadline/rappel */}
       {isDateCard && (
-        <div
-          onPointerDown={e => e.stopPropagation()}
-          style={{ marginBottom: 8 }}
-        >
-          <input
-            type="date"
-            value={localDate}
-            onChange={handleDateChange}
-            onClick={e => e.stopPropagation()}
+        <div onPointerDown={e => e.stopPropagation()} style={{ marginBottom: 8 }}>
+          <input type="date" value={localDate} onChange={handleDateChange} onClick={e => e.stopPropagation()}
             style={{
               width: '100%',
               border: `1.5px solid ${deadlineStatus === 'urgent' ? '#E8151B' : deadlineStatus === 'warning' ? '#F5C400' : '#E0E0E0'}`,
-              borderRadius: 6,
-              padding: '4px 7px',
-              fontSize: 11,
-              fontFamily: FONT,
-              fontWeight: 700,
+              borderRadius: 6, padding: '4px 7px', fontSize: 11, fontFamily: FONT, fontWeight: 700,
               color: deadlineStatus === 'urgent' ? '#E8151B' : '#111',
               background: deadlineStatus === 'urgent' ? '#FFF0F0' : deadlineStatus === 'warning' ? '#FFFDE7' : '#FAFAFA',
-              outline: 'none',
-              cursor: 'pointer',
-              boxSizing: 'border-box',
-            }}
-          />
-          {/* Affichage du statut de la deadline */}
-          {localDate && deadlineStatus === 'urgent' && (
-            <span style={{ fontSize: 9, fontWeight: 800, color: '#E8151B', display: 'block', marginTop: 2, fontFamily: FONT }}>
-              ⚠️ Deadline dépassée
-            </span>
-          )}
-          {localDate && deadlineStatus === 'warning' && (
-            <span style={{ fontSize: 9, fontWeight: 800, color: '#B8900A', display: 'block', marginTop: 2, fontFamily: FONT }}>
-              ⏰ Dans moins de 3 jours !
-            </span>
-          )}
-          {localDate && deadlineStatus === 'ok' && (
-            <span style={{ fontSize: 9, fontWeight: 600, color: '#888', display: 'block', marginTop: 2, fontFamily: FONT }}>
-              📅 {formatDisplayDate(localDate)}
-            </span>
-          )}
+              outline: 'none', cursor: 'pointer', boxSizing: 'border-box',
+            }} />
+          {localDate && deadlineStatus === 'urgent' && <span style={{ fontSize: 9, fontWeight: 800, color: '#E8151B', display: 'block', marginTop: 2, fontFamily: FONT }}>⚠️ Deadline dépassée</span>}
+          {localDate && deadlineStatus === 'warning' && <span style={{ fontSize: 9, fontWeight: 800, color: '#B8900A', display: 'block', marginTop: 2, fontFamily: FONT }}>⏰ Dans moins de 3 jours !</span>}
+          {localDate && deadlineStatus === 'ok' && <span style={{ fontSize: 9, fontWeight: 600, color: '#888', display: 'block', marginTop: 2, fontFamily: FONT }}>📅 {formatDisplayDate(localDate)}</span>}
         </div>
       )}
 
-      {/* Case à cocher */}
-      <div
-        onPointerDown={e => e.stopPropagation()}
-        onClick={e => { e.stopPropagation(); onToggleDone(action.id, !action.is_done) }}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginTop: 'auto' }}
-      >
+      <div onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onToggleDone(action.id, !action.is_done) }}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginTop: 'auto' }}>
         <div style={{
           width: 16, height: 16, borderRadius: 4,
           border: `2px solid ${action.is_done ? '#2E7D32' : '#ccc'}`,
           background: action.is_done ? '#2E7D32' : '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, transition: 'all .15s',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .15s',
         }}>
           {action.is_done && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900, lineHeight: 1 }}>✓</span>}
         </div>
@@ -288,21 +220,26 @@ interface Props {
 export default function JobStepActions({ jobId, userId, currentStepId, currentStepLabel, currentStepIndex }: Props) {
   const [stepActions, setStepActions] = useState<StepActionRow[]>([])
   const [loading, setLoading] = useState(false)
-  // ✅ Vérifie si CV et LM ont vraiment été envoyés
   const [cvSent, setCvSent] = useState<boolean>(false)
   const [lmSent, setLmSent] = useState<boolean>(false)
   const [activeActionId, setActiveActionId] = useState<string | null>(null)
   const [overActionZone, setOverActionZone] = useState<string | null>(null)
-  const [showAddAction, setShowAddAction] = useState(false)
+
+  // Panneau unifié
+  const [showPanel, setShowPanel] = useState(false)
+  const [panelView, setPanelView] = useState<'add' | 'remove'>('add')
+
+  // Formulaire ajout
   const [newActionTitle, setNewActionTitle] = useState('')
   const [newActionSub, setNewActionSub] = useState('')
   const [newActionIcon, setNewActionIcon] = useState('⭐')
   const [newActionPosition, setNewActionPosition] = useState<number>(-1)
+
+  // Suppression
   const [actionToDelete, setActionToDelete] = useState<{ id: string; title: string } | null>(null)
 
   const stepData = STEP_ACTIONS[currentStepId] || STEP_ACTIONS['hr_interview']
 
-  // ✅ Filtre les cartes CV/LM : ne les affiche que si réellement envoyés
   const sortedStepActions = [...stepActions]
     .sort((a, b) => a.position - b.position)
     .filter(a => {
@@ -315,16 +252,12 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
     if (!currentStepId || !userId) return
     loadJobDocStatus()
     loadStepActions()
+    setShowPanel(false)
   }, [currentStepId, userId])
 
-  // ✅ Charge cv_sent et cover_letter_sent depuis la table jobs
   async function loadJobDocStatus() {
     const supabase = createClient()
-    const { data } = await supabase
-      .from('jobs')
-      .select('cv_sent, cover_letter_sent, cv_url, cover_letter_url')
-      .eq('id', jobId)
-      .single()
+    const { data } = await supabase.from('jobs').select('cv_sent, cover_letter_sent, cv_url, cover_letter_url').eq('id', jobId).single()
     if (data) {
       setCvSent(!!(data.cv_sent || data.cv_url))
       setLmSent(!!(data.cover_letter_sent || data.cover_letter_url))
@@ -340,8 +273,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
         id: r.id, title: r.title, icon: r.icon, sub: r.sub,
         position: r.position, is_custom: r.is_custom,
         type: r.is_custom ? 'action' : (r.type ?? 'action'),
-        is_done: r.is_done ?? false,
-        deadline_date: r.deadline_date || null,
+        is_done: r.is_done ?? false, deadline_date: r.deadline_date || null,
       })))
     } else {
       const baseData = STEP_ACTIONS[currentStepId] || STEP_ACTIONS['hr_interview']
@@ -354,8 +286,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
       if (inserted) setStepActions(inserted.map((r: any) => ({
         id: r.id, title: r.title, icon: r.icon, sub: r.sub,
         position: r.position, is_custom: r.is_custom,
-        type: r.type ?? 'action', is_done: r.is_done ?? false,
-        deadline_date: r.deadline_date || null,
+        type: r.type ?? 'action', is_done: r.is_done ?? false, deadline_date: r.deadline_date || null,
       })))
     }
     setLoading(false)
@@ -367,7 +298,6 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
     await supabase.from('job_step_actions').update({ is_done: value }).eq('id', id)
   }
 
-  // ✅ Sauvegarde de la deadline_date
   const handleDeadlineSave = async (id: string, date: string) => {
     setStepActions(prev => prev.map(a => a.id === id ? { ...a, deadline_date: date } : a))
     const supabase = createClient()
@@ -393,18 +323,22 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
     }).select().single()
     if (data) setStepActions(prev => [...prev, {
       id: data.id, title: data.title, icon: data.icon, sub: data.sub,
-      position: data.position, is_custom: true, type: 'action', is_done: false,
-      deadline_date: null,
+      position: data.position, is_custom: true, type: 'action', is_done: false, deadline_date: null,
     }])
-    setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setNewActionPosition(-1); setShowAddAction(false)
+    setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setNewActionPosition(-1)
+    setShowPanel(false)
+  }
+
+  const handleDeleteAction = async (id: string) => {
+    const supabase = createClient()
+    await supabase.from('job_step_actions').delete().eq('id', id)
+    setStepActions(prev => prev.filter(a => a.id !== id))
+    setActionToDelete(null)
   }
 
   const confirmDeleteAction = async () => {
     if (!actionToDelete) return
-    const supabase = createClient()
-    await supabase.from('job_step_actions').delete().eq('id', actionToDelete.id)
-    setStepActions(prev => prev.filter(a => a.id !== actionToDelete.id))
-    setActionToDelete(null)
+    await handleDeleteAction(actionToDelete.id)
   }
 
   const actionSensors = useSensors(
@@ -437,12 +371,41 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
   return (
     <>
       <div style={{ background: '#FFFDE7', borderRadius: 12, padding: '18px 22px', marginBottom: 14, border: '1.5px solid #F5C400' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8, flexWrap: 'wrap' }}>
-          <span style={{ background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '3px 11px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONT }}>Étape {currentStepIndex + 1} — En cours</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: '#111', fontFamily: FONT }}>{currentStepLabel}</span>
+
+        {/* ── En-tête : badge étape + bouton unifié à droite ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+            <span style={{ background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '3px 11px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONT }}>
+              Étape {currentStepIndex + 1} — En cours
+            </span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#111', fontFamily: FONT }}>{currentStepLabel}</span>
+          </div>
+
+          {/* Bouton standard */}
+          <button
+            onClick={() => { setShowPanel(v => !v); setPanelView('add') }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
+              background: showPanel ? '#111' : '#fff',
+              border: '2px solid #111',
+              boxShadow: showPanel ? 'none' : '3px 3px 0 #111',
+              color: showPanel ? '#F5C400' : '#111',
+              fontSize: 12, fontWeight: 800,
+              padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: FONT,
+              transition: 'all 0.15s',
+            }}>
+            <span style={{
+              width: 16, height: 16, background: '#F5C400', borderRadius: '50%',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, fontWeight: 900, color: '#111', lineHeight: 1, border: '1.5px solid #111',
+            }}>{showPanel ? '×' : '+'}</span>
+            Ajouter ou supprimer une action
+          </button>
         </div>
+
         <p style={{ fontSize: 13, color: '#555', marginBottom: 14, lineHeight: 1.6, fontFamily: FONT }}>{stepData.desc}</p>
 
+        {/* ── Cartes actions ── */}
         {loading ? (
           <p style={{ fontSize: 12, color: '#bbb', fontWeight: 600, fontFamily: FONT }}>Chargement des actions…</p>
         ) : (
@@ -479,54 +442,103 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
           </DndContext>
         )}
 
-        {showAddAction ? (
-          <div style={{ background: '#fff', border: '1.5px solid #F5C400', borderRadius: 10, padding: '14px 16px', marginTop: 8 }}>
-            <p style={{ fontSize: 12, fontWeight: 800, color: '#111', marginBottom: 10, fontFamily: FONT }}>Nouvelle action</p>
-            <div style={{ marginBottom: 10 }}>
-              <label style={{ ...sectionLabel, marginBottom: 6 }}>Icône</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {ICON_CHOICES.map(ic => (
-                  <button key={ic} onClick={() => setNewActionIcon(ic)} style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${newActionIcon === ic ? '#111' : '#eee'}`, background: newActionIcon === ic ? '#FFFDE7' : '#F9F9F7', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{ic}</button>
-                ))}
-              </div>
+        {/* ── Panneau unifié inline ── */}
+        {showPanel && (
+          <div style={{ marginTop: 16, borderTop: '1.5px solid #F5C400', paddingTop: 16 }}>
+
+            {/* Onglets */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              {(['add', 'remove'] as const).map(tab => (
+                <button key={tab} onClick={() => setPanelView(tab)} style={{
+                  flex: 1, padding: '9px 0', borderRadius: 8, cursor: 'pointer',
+                  fontSize: 12, fontWeight: 800, fontFamily: FONT,
+                  border: panelView === tab ? '2px solid #111' : '1.5px solid #E5E5E5',
+                  background: panelView === tab ? '#111' : '#FFFDE7',
+                  color: panelView === tab ? '#F5C400' : '#888',
+                  transition: 'all 0.15s',
+                }}>
+                  {tab === 'add' ? '＋ Ajouter une action' : '🗑 Supprimer une action'}
+                </button>
+              ))}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+
+            {/* Vue : Ajouter */}
+            {panelView === 'add' && (
+              <div style={{ background: '#fff', border: '1.5px solid #F5C400', borderRadius: 10, padding: '14px 16px' }}>
+                <div style={{ marginBottom: 10 }}>
+                  <label style={{ ...sectionLabel, marginBottom: 6 }}>Icône</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {ICON_CHOICES.map(ic => (
+                      <button key={ic} onClick={() => setNewActionIcon(ic)} style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${newActionIcon === ic ? '#111' : '#eee'}`, background: newActionIcon === ic ? '#FFFDE7' : '#F9F9F7', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{ic}</button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <label style={{ ...sectionLabel, marginBottom: 5 }}>Titre *</label>
+                    <input style={inp} placeholder="Ex : Préparer mes questions" value={newActionTitle} onChange={e => setNewActionTitle(e.target.value)} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} autoFocus />
+                  </div>
+                  <div>
+                    <label style={{ ...sectionLabel, marginBottom: 5 }}>Sous-titre</label>
+                    <input style={inp} placeholder="Courte description" value={newActionSub} onChange={e => setNewActionSub(e.target.value)} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ ...sectionLabel, marginBottom: 6 }}>Position</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {sortedStepActions.map((a, idx) => {
+                      const isSelected = newActionPosition === idx
+                      return (
+                        <button key={a.id} onClick={() => setNewActionPosition(idx)} style={{ background: isSelected ? '#111' : '#F9F9F7', color: isSelected ? '#F5C400' : '#555', border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 13 }}>{a.icon}</span>
+                          Après <strong style={{ color: isSelected ? '#F5C400' : '#111' }}>{a.title}</strong>
+                        </button>
+                      )
+                    })}
+                    <button onClick={() => setNewActionPosition(-1)} style={{ background: newActionPosition === -1 ? '#111' : '#F9F9F7', color: newActionPosition === -1 ? '#F5C400' : '#555', border: `1.5px solid ${newActionPosition === -1 ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left' }}>En dernier</button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setShowPanel(false)} style={{ background: '#F9F9F7', color: '#555', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
+                  <button onClick={handleAddAction} disabled={!newActionTitle.trim()} style={{ background: newActionTitle.trim() ? '#111' : '#eee', color: newActionTitle.trim() ? '#F5C400' : '#aaa', fontSize: 12, fontWeight: 800, padding: '7px 16px', borderRadius: 8, border: 'none', cursor: newActionTitle.trim() ? 'pointer' : 'not-allowed', fontFamily: FONT }}>
+                    Ajouter l&apos;action →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Vue : Supprimer */}
+            {panelView === 'remove' && (
               <div>
-                <label style={{ ...sectionLabel, marginBottom: 5 }}>Titre *</label>
-                <input style={inp} placeholder="Ex : Préparer mes questions" value={newActionTitle} onChange={e => setNewActionTitle(e.target.value)} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} />
+                <p style={{ fontSize: 12, color: '#999', fontWeight: 600, marginBottom: 12, fontFamily: FONT }}>
+                  Cliquez sur &ldquo;Retirer&rdquo; pour supprimer une action de cette étape.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {sortedStepActions.map(action => (
+                    <div key={action.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 9, border: '1.5px solid #EBEBEB', background: '#fff' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 16 }}>{action.icon}</span>
+                        <div>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#111', display: 'block', fontFamily: FONT }}>{action.title}</span>
+                          <span style={{ fontSize: 11, color: '#888', fontFamily: FONT }}>{action.sub}</span>
+                        </div>
+                        {action.is_done && <span style={{ fontSize: 10, fontWeight: 700, color: '#2E7D32', background: '#E8F5E9', padding: '2px 7px', borderRadius: 20, fontFamily: FONT }}>fait ✓</span>}
+                      </div>
+                      <button
+                        onClick={() => setActionToDelete({ id: action.id, title: action.title })}
+                        style={{ background: '#FEF2F2', color: '#E8151B', border: '1.5px solid #FECACA', borderRadius: 7, padding: '5px 12px', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap' }}>
+                        Retirer
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label style={{ ...sectionLabel, marginBottom: 5 }}>Sous-titre</label>
-                <input style={inp} placeholder="Courte description" value={newActionSub} onChange={e => setNewActionSub(e.target.value)} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} />
-              </div>
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ ...sectionLabel, marginBottom: 6 }}>Position</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {sortedStepActions.map((a, idx) => {
-                  const isSelected = newActionPosition === idx
-                  return <button key={a.id} onClick={() => setNewActionPosition(idx)} style={{ background: isSelected ? '#111' : '#F9F9F7', color: isSelected ? '#F5C400' : '#555', border: `1.5px solid ${isSelected ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 13 }}>{a.icon}</span>Après <strong style={{ color: isSelected ? '#F5C400' : '#111' }}>{a.title}</strong></button>
-                })}
-                <button onClick={() => setNewActionPosition(-1)} style={{ background: newActionPosition === -1 ? '#111' : '#F9F9F7', color: newActionPosition === -1 ? '#F5C400' : '#555', border: `1.5px solid ${newActionPosition === -1 ? '#111' : '#E5E5E5'}`, borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: FONT, textAlign: 'left' }}>En dernier</button>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowAddAction(false); setNewActionTitle(''); setNewActionSub(''); setNewActionIcon('⭐'); setNewActionPosition(-1) }} style={{ background: '#F9F9F7', color: '#555', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
-              <button onClick={handleAddAction} style={{ background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT }}>Ajouter</button>
-            </div>
+            )}
           </div>
-        ) : (
-          <button onClick={() => setShowAddAction(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.7)', border: '1.5px dashed #F5C400', color: '#B8900A', fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', marginTop: 4, fontFamily: FONT }}
-            onMouseOver={e => { const el = e.currentTarget; el.style.background = '#fff'; el.style.borderColor = '#111'; el.style.color = '#111' }}
-            onMouseOut={e => { const el = e.currentTarget; el.style.background = 'rgba(255,255,255,0.7)'; el.style.borderColor = '#F5C400'; el.style.color = '#B8900A' }}>
-            <span style={{ width: 15, height: 15, background: '#F5C400', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: '#111' }}>+</span>
-            Ajouter une action
-          </button>
         )}
       </div>
 
-      {/* Modale suppression action */}
+      {/* ── Modale confirmation suppression ── */}
       {actionToDelete && (
         <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 400, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
