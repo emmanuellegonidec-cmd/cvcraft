@@ -51,7 +51,7 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
           <span style={sectionLabel}>Synthèse des échanges</span>
           {exchanges.length > 0 && (
             <span style={{
-              background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800,
+              background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800,
               borderRadius: 20, padding: '1px 8px', fontFamily: FONT
             }}>
               {exchanges.length}
