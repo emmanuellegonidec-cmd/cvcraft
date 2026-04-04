@@ -24,7 +24,6 @@ const BASE_STEPS = [
   { id: 'offer',             label: 'Offre reçue',            num: 6 },
 ]
 
-// Position fixe de chaque étape de base — les étapes custom s'intercalent entre ces valeurs
 const BASE_STEP_POSITIONS: Record<string, number> = {
   to_apply:          1000,
   applied:           2000,
@@ -234,10 +233,7 @@ export default function JobDetailPage() {
 
   useEffect(() => { if (userId) loadContacts() }, [userId])
 
-  // ─── Construction de allSteps : vrai interleaving base + custom ────────────
-  // Les étapes de base ont des positions fixes (1000, 2000…)
-  // Les étapes custom ont des positions libres qui s'intercalent entre ces valeurs
-  // On trie tout ensemble pour obtenir l'ordre final
+  // ─── Construction de allSteps ──────────────────────────────────────────────
   const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
 
   const allStepsMerged = [
@@ -267,7 +263,6 @@ export default function JobDetailPage() {
     await supabase.from('jobs').update(patch).eq('id', jobId)
   }
 
-  // ─── Masquer une étape de base ─────────────────────────────────────────────
   const handleHideBaseStep = useCallback(async (stepId: string) => {
     const updated = [...hiddenSteps, stepId]
     setHiddenSteps(updated)
@@ -351,9 +346,21 @@ export default function JobDetailPage() {
     router.push('/dashboard')
   }
 
+  // ─── MODIFIÉ : ajout de step_number à la création d'un échange ───────────
   const addExchange = async () => {
     const step = allSteps.find(s => s.id === currentStepId)
-    const res = await fetch('/api/jobs/exchanges', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ job_id: jobId, title: 'Nouvel échange', exchange_type: 'autre', exchange_date: new Date().toISOString().split('T')[0], step_label: step?.label ?? null }) })
+    const res = await fetch('/api/jobs/exchanges', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        job_id: jobId,
+        title: 'Nouvel échange',
+        exchange_type: 'autre',
+        exchange_date: new Date().toISOString().split('T')[0],
+        step_label: step?.label ?? null,
+        step_number: step?.num ?? null,
+      })
+    })
     if (res.ok) { const newEx = await res.json(); setExchanges(prev => [...prev, newEx]) }
   }
 
