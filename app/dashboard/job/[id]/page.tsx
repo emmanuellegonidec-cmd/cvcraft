@@ -232,10 +232,11 @@ export default function JobDetailPage() {
     setShowCoverLetter(data === null || data.length > 0)
   }, [jobId])
 
-  useEffect(() => {
-    Promise.all([loadJob(), loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
+ useEffect(() => {
+    loadJob().then(() => {
+      Promise.all([loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
+    })
   }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
-
   useEffect(() => { if (userId) loadContacts() }, [userId])
 
   // ─── Construction de allSteps ──────────────────────────────────────────────
