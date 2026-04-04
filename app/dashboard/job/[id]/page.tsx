@@ -239,14 +239,20 @@ const savedExchangeDatesRef = useRef<string>('')
   }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
   useEffect(() => { if (userId) loadContacts() }, [userId])
 useEffect(() => {
-    if (!exchanges.length || !allSteps.length) return
+    if (!exchanges.length) return
+    // Reconstruit le mapping label → id sans dépendre de allSteps
+    const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
+    const stepsByLabel: Record<string, string> = {}
+    for (const s of visibleBase) stepsByLabel[s.label] = s.id
+    for (const s of customSteps) stepsByLabel[s.label] = s.id
+
     const fromExchanges: Record<string, string> = {}
     for (const exchange of exchanges) {
       if (!exchange.step_label || !exchange.exchange_date) continue
-      const step = allSteps.find(s => s.label === exchange.step_label)
-      if (!step) continue
-      if (!fromExchanges[step.id] || exchange.exchange_date < fromExchanges[step.id]) {
-        fromExchanges[step.id] = exchange.exchange_date
+      const stepId = stepsByLabel[exchange.step_label]
+      if (!stepId) continue
+      if (!fromExchanges[stepId] || exchange.exchange_date < fromExchanges[stepId]) {
+        fromExchanges[stepId] = exchange.exchange_date
       }
     }
     const toSave: Record<string, string> = {}
@@ -263,7 +269,7 @@ useEffect(() => {
       method: 'PATCH', headers: authHeaders(),
       body: JSON.stringify({ step_dates: merged }),
     })
-  }, [exchanges.length, allSteps.length])
+  }, [exchanges.length, customSteps.length, hiddenSteps.length])
   // ─── Construction de allSteps ──────────────────────────────────────────────
   const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
 
