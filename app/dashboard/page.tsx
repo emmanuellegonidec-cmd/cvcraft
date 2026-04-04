@@ -270,26 +270,40 @@ export default function DashboardPage() {
     setSelectedJob(null);
   }
 
-  async function importJobFromUrl(url: string) {
-    if (!url) return;
-    setImportLoading(true); setImportError(false);
-    try {
-      const res = await authFetch('/api/jobs/import', { method: 'POST', body: JSON.stringify({ url }) });
-      const data = await res.json();
-      if (!res.ok || !data.success) { setImportError(true); return; }
-      const job = data.job || {};
-      const description = (job.description && job.description.length > 150)
-        ? job.description : (job.raw_text || job.description || '');
-      setNewJob({
-        title: cleanJobTitle(job.title), company: job.company_name || '',
-        location: cleanLocation(job.location_text), description,
-        job_type: 'CDI', status: 'to_apply', notes: '',
-        salary: job.salary_text || '', source: detectSource(url), url, favorite: 0,
-      });
-      setAddJobMode('manual');
-    } catch { setImportError(true); }
-    finally { setImportLoading(false); }
-  }
+ async function importJobFromUrl(url: string) {
+  if (!url) return;
+  setImportLoading(true); setImportError(false);
+  try {
+    const res = await authFetch('/api/jobs/import', { method: 'POST', body: JSON.stringify({ url }) });
+    const data = await res.json();
+    if (!res.ok || !data.success) { setImportError(true); return; }
+
+    // ✅ L'offre est déjà sauvegardée par l'API — on l'ajoute à la liste et on ferme
+    if (data.savedJobId) {
+      const jobRes = await authFetch(`/api/jobs/${data.savedJobId}`);
+      // Recharger toute la liste pour inclure la nouvelle offre
+      if (accessToken) await fetchJobs(accessToken);
+      setShowAddJob(false);
+      setNewJob({ ...EMPTY_JOB });
+      // Optionnel : naviguer vers la page de l'offre
+      router.push(`/dashboard/jobs/${data.savedJobId}`);
+      return;
+    }
+
+    // Fallback si pas de savedJobId (ne devrait pas arriver)
+    const job = data.job || {};
+    const description = (job.description && job.description.length > 150)
+      ? job.description : (job.raw_text || job.description || '');
+    setNewJob({
+      title: cleanJobTitle(job.title), company: job.company_name || '',
+      location: cleanLocation(job.location_text), description,
+      job_type: 'CDI', status: 'to_apply', notes: '',
+      salary: job.salary_text || '', source: detectSource(url), url, favorite: 0,
+    });
+    setAddJobMode('manual');
+  } catch { setImportError(true); }
+  finally { setImportLoading(false); }
+}
 
   async function deleteContact(id: string) {
     await authFetch('/api/contacts?id=' + id, { method: 'DELETE' });
