@@ -106,7 +106,31 @@ export default function JobStepProgress({
   const handleAddCustomStep = async () => {
     if (!newStepName.trim() || !userId) return
     const supabase = createClient()
-    const position = (newStepPos + 1) * 1000 + (Date.now() % 100)
+
+    // Trier les étapes custom existantes par position
+    const sorted = [...customSteps].sort((a, b) => a.position - b.position)
+
+    // Compter combien d'étapes custom se trouvent avant (ou à) l'index sélectionné
+    let customStepsBefore = 0
+    for (let i = 0; i <= newStepPos && i < allSteps.length; i++) {
+      if (customSteps.find(cs => cs.id === allSteps[i].id)) customStepsBefore++
+    }
+
+    // La nouvelle étape doit s'insérer entre sorted[customStepsBefore-1] et sorted[customStepsBefore]
+    const prevCustom = sorted[customStepsBefore - 1]
+    const nextCustom = sorted[customStepsBefore]
+
+    let position: number
+    if (!prevCustom && !nextCustom) {
+      position = 1000
+    } else if (!prevCustom) {
+      position = nextCustom.position - 500
+    } else if (!nextCustom) {
+      position = prevCustom.position + 1000
+    } else {
+      position = Math.round((prevCustom.position + nextCustom.position) / 2)
+    }
+
     const { data } = await supabase
       .from('pipeline_stages')
       .insert({ user_id: userId, job_id: jobId, label: newStepName.trim(), color: '#F5C400', position })
