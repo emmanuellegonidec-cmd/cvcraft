@@ -237,6 +237,40 @@ function externalIdFromPath(url: string, regex: RegExp): string | null {
   return match?.[1] ?? null
 }
 
+// ─── Cherche la description entreprise via les titres h1/h2/h3 ───────────────
+// Fonctionne pour tous les sites carrière quelle que soit la formulation du titre
+function extractCompanyDescFromHeadings($: CheerioAPI): string | null {
+  const keywords = /l.entreprise|entreprise|about us|qui sommes.nous|notre soci.t.|qui nous sommes/i
+  let found: string | null = null
+
+  $('h1, h2, h3').each((_, el) => {
+    if (found) return
+    const headingText = $(el).text().trim()
+    if (!keywords.test(headingText)) return
+
+    // Essaie d'abord le contenu du parent direct
+    const parent = $(el).parent()
+    const parentText = cleanText(parent.text())
+    const withoutHeading = parentText
+      ? parentText.replace(headingText, '').trim()
+      : null
+    if (withoutHeading && withoutHeading.length > 30) {
+      found = withoutHeading
+      return
+    }
+
+    // Sinon prend les éléments qui suivent le titre
+    const nextContent: string[] = []
+    $(el).nextAll('p, div, ul, li').slice(0, 8).each((_, sib) => {
+      const t = cleanText($(sib).text())
+      if (t && t.length > 10) nextContent.push(t)
+    })
+    if (nextContent.length > 0) found = nextContent.join(' ')
+  })
+
+  return found
+}
+
 function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | null): {
   title: string | null
   company_name: string | null
@@ -294,17 +328,19 @@ function extractLinkedInFromRawText(rawText: string, companyFromMeta: string | n
     }
   }
 
- const companyDescStart = rawText.search(
-  /À propos de |About the company|Présentation de l['']entreprise|Notre entreprise|Qui sommes.nous|L['']entreprise/i
-)
-if (companyDescStart > -1) {
-  const afterCompany = rawText.slice(companyDescStart)
-  const companyDescEnd = afterCompany.search(
-    /Description du poste|Missions|Vos missions|Le poste|Offres d['']emploi similaires|Show more Show less/i
+  const companyDescStart = rawText.search(
+    /À propos de |About the company|Présentation de l.entreprise|Notre entreprise|Qui sommes.nous|L.entreprise/i
   )
-  const raw = afterCompany.slice(0, companyDescEnd > -1 ? companyDescEnd : 3000)
-  company_description = cleanText(raw.replace(/^(À propos de |About the company|Présentation de l['']entreprise|Notre entreprise|Qui sommes.nous|L['']entreprise)[^\n]*/i, '').trim())
-}
+  if (companyDescStart > -1) {
+    const afterCompany = rawText.slice(companyDescStart)
+    const companyDescEnd = afterCompany.search(
+      /Description du poste|Missions|Vos missions|Le poste|Offres d.emploi similaires|Show more Show less/i
+    )
+    const raw = afterCompany.slice(0, companyDescEnd > -1 ? companyDescEnd : 3000)
+    company_description = cleanText(
+      raw.replace(/^(À propos de |About the company|Présentation de l.entreprise|Notre entreprise|Qui sommes.nous|L.entreprise)[^\n]*/i, '').trim()
+    )
+  }
 
   const descStart = rawText.search(
     /(?:⭐|🎯|Missions|À propos|Description du poste|Rattaché|Dans le cadre|Nous recherchons|Le poste|Vos missions|Contexte|Présentation)/i
@@ -486,33 +522,20 @@ const genericAdapter: JobAdapter = {
 
     const rawText = bodyText($) ?? cleanText(html) ?? ''
 
-    // Cherche la section entreprise dans le texte brut (fonctionne pour tous les sites)
-    const companyDescStart = rawText.search(
-      /L[''e\s]entreprise|À propos|About us|Notre société|Qui sommes.nous|Notre entreprise/i
-    )
-    let company_description: string | null = null
-    if (companyDescStart > -1) {
-      const after = rawText.slice(companyDescStart)
-      const endMatch = after.search(
-        /Le poste|Missions|Vos missions|Description du poste|Profil recherché|Postuler/i
-      )
-      const raw = after.slice(0, endMatch > -1 ? endMatch : 3000)
-      company_description = cleanText(
-        raw.replace(/^(L[''e\s]entreprise|À propos[^\n]*|About us|Notre société|Qui sommes.nous|Le groupe|Notre entreprise)[^\n]*/i, '').trim()
-      )
-    }
+    // ✅ Cherche la description entreprise via les titres h1/h2/h3
+    // Fonctionne pour tous les sites carrière quelle que soit la formulation
+    const companyDescription = extractCompanyDescFromHeadings($)
 
     return finalizeJob('unknown', 'genericAdapter', url, {
       source_hostname: hostname,
       title: attr($, 'meta[property="og:title"]', 'content') || text($, 'h1') || text($, 'title'),
       company_name: text($, '[class*="company-name"]') || text($, '[class*="employer"]') || null,
-      company_description,
+      company_description: companyDescription,
       description: attr($, 'meta[name="description"]', 'content') || text($, 'article') || rawText,
       raw_text: rawText,
     })
   },
 }
-
 
 export const JOB_ADAPTERS: JobAdapter[] = [
   linkedinAdapter,
