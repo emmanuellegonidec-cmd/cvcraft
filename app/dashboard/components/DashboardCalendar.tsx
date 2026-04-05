@@ -27,6 +27,8 @@ type CalEvent = {
   type: 'envie' | 'postule' | 'entretien' | 'en_cours' | 'offre' | 'archive' | 'deadline' | 'action';
   hour?: number;
   minutes?: number;
+  endHour?: number;
+  endMinutes?: number;
   deadlineLabel?: string;
 };
 
@@ -229,7 +231,9 @@ function EventCard({
         <div style={{ fontSize: 11, opacity: .9, fontWeight: 700, lineHeight: 1.3 }}>{timeLabel}</div>
       )}
       {timeLabel && isAction && (
-        <div style={{ fontSize: 10, opacity: .8, fontWeight: 600, lineHeight: 1.3 }}>{timeLabel}</div>
+        <div style={{ fontSize: 10, opacity: .8, fontWeight: 600, lineHeight: 1.3 }}>
+          {timeLabel}{ev.endHour !== undefined ? ` → ${formatTime(ev.endHour, ev.endMinutes || 0)}` : ''}
+        </div>
       )}
       <div style={{
         fontSize: 12, fontWeight: 800, lineHeight: 1.4,
@@ -321,6 +325,9 @@ export default function DashboardCalendar({
         const date = new Date(action.date_debut);
         const hour = date.getHours();
         const minutes = date.getMinutes();
+        const endDate = action.date_fin ? new Date(action.date_fin) : null;
+        const endHour = endDate ? endDate.getHours() : undefined;
+        const endMinutes = endDate ? endDate.getMinutes() : undefined;
         return {
           jobId: action.id,
           date,
@@ -330,6 +337,8 @@ export default function DashboardCalendar({
           type: 'action' as CalEvent['type'],
           hour: hour > 0 || minutes > 0 ? hour : undefined,
           minutes: hour > 0 || minutes > 0 ? minutes : undefined,
+          endHour,
+          endMinutes,
         };
       });
 
