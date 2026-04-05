@@ -100,17 +100,7 @@ export default function ActionsSection({ triggerOpen = 0 }: { triggerOpen?: numb
             {actions.length}
           </span>
         </div>
-        <button
-          onClick={() => { setSelectedAction(null); setModalOpen(true) }}
-          style={{
-            background: '#F5C400', border: '2px solid #111',
-            padding: '6px 14px', cursor: 'pointer',
-            fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 12,
-            boxShadow: '2px 2px 0 #111',
-          }}
-        >
-          + Ajouter une action
-        </button>
+
       </div>
 
       {/* Content */}
