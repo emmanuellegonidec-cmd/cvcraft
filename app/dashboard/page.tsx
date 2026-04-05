@@ -451,7 +451,7 @@ export default function DashboardPage() {
             <StatsView jobs={jobs} stages={stages} contactCount={contacts.length} />
           )}
           {view === 'kanban' && (
-            <ActionsSection triggerOpen={view === 'kanban' ? 0 : triggerAddAction} />
+            <ActionsSection triggerOpen={triggerAddAction} />
           )}
           {view === 'actions' && (
             <ActionsSection triggerOpen={triggerAddAction} />
