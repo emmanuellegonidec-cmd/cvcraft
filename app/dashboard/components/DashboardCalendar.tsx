@@ -126,12 +126,18 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
       const hasInterview = hasAnyDate;
 
       if (hasAnyDate) {
-        // interview_at prime : c'est la date réelle planifiée de l'entretien
-        // step_dates = quand l'étape a été cochée (pas la date de l'entretien)
-        if (interviewAtObj) {
-          date = interviewAtObj;
+        // Logique : step_dates future = prochaine étape planifiée (priorité)
+        // step_dates passée = date du clic, pas de l'entretien → utiliser interview_at
+        const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+        if (stepDateObj && stepDateObj >= todayMidnight) {
+          date = stepDateObj; // date future = prochaine étape planifiée
+        } else if (interviewAtObj) {
+          date = interviewAtObj; // step_date passée → interview_at prime
+        } else if (stepDateObj) {
+          date = stepDateObj; // pas d'interview_at → step_date même passée
         } else {
-          date = stepDateObj!;
+          date = new Date(job.created_at);
+          dateField = 'created_at';
         }
         dateField = 'interview_at';
         const hm = extractHour();
