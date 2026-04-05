@@ -21,10 +21,10 @@ const DETAIL_STEP_LABELS: Record<string, string> = {
 type CalEvent = {
   jobId: string;
   date: Date;
-  dateField: 'interview_at' | 'applied_at' | 'created_at' | 'deadline';
+  dateField: 'interview_at' | 'applied_at' | 'created_at' | 'deadline' | 'action';
   title: string;
   company: string;
-  type: 'envie' | 'postule' | 'entretien' | 'en_cours' | 'offre' | 'archive' | 'deadline';
+  type: 'envie' | 'postule' | 'entretien' | 'en_cours' | 'offre' | 'archive' | 'deadline' | 'action';
   hour?: number;
   minutes?: number;
   deadlineLabel?: string;
@@ -38,6 +38,7 @@ const EV_STYLE: Record<CalEvent['type'], React.CSSProperties> = {
   offre:     { background: '#1A7A4A', color: '#fff' },
   archive:   { background: '#999', color: '#fff' },
   deadline:  { background: '#D97706', color: '#fff' },
+  action:    { background: '#7C3AED', color: '#fff' },
 };
 
 const EV_LABEL: Record<CalEvent['type'], string> = {
@@ -48,6 +49,7 @@ const EV_LABEL: Record<CalEvent['type'], string> = {
   offre:     'Offre reçue',
   archive:   'Archivé',
   deadline:  'Deadline',
+  action:    'Action',
 };
 
 const navBtnStyle: React.CSSProperties = {
@@ -71,7 +73,6 @@ function formatTime(h: number, m: number) {
   return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
 }
 
-// Parse une date locale depuis 'YYYY-MM-DD' sans décalage UTC
 function parseLocalDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
   return new Date(y, m - 1, d);
@@ -86,7 +87,6 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
       offer:       'offre',
       archived:    'archive',
     };
-    // Sera potentiellement modifié en 'en_cours' pour les jobs sans interview planifiée
     let evType: CalEvent['type'] = typeMap[job.status] ?? 'envie';
 
     let date: Date;
@@ -98,7 +98,6 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
     const subStatus = (job as any).sub_status as string | null;
     const stepDates = (job as any).step_dates as Record<string, string> | null;
 
-    // Helper pour extraire l'heure depuis interview_time
     function extractHour(): { h: number; m: number } | null {
       const t = (job as any).interview_time as string | null;
       if (!t) return null;
@@ -114,9 +113,6 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
           || null;
       }
 
-      // ✅ Calcul de la date : on prend la PLUS RÉCENTE entre interview_at et step_dates
-      // → step_dates April 9 Maison Lenôtre (futur) > interview_at April 4 → April 9 ✓
-      // → interview_at April 4 ESCP > step_dates April 3 (échange) → April 4 ✓
       const stepDateStr = subStatus && stepDates && stepDates[subStatus] ? stepDates[subStatus] : null;
       const stepDateObj = stepDateStr ? parseLocalDate(stepDateStr) : null;
       const interviewAtStr = (job as any).interview_at as string | null;
@@ -125,10 +121,9 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
         : null;
 
       const hasAnyDate = stepDateObj || interviewAtObj;
-      const hasInterview = hasAnyDate; // pour la couleur
+      const hasInterview = hasAnyDate;
 
       if (hasAnyDate) {
-        // Utilise la date la plus récente des deux
         if (stepDateObj && interviewAtObj) {
           date = stepDateObj > interviewAtObj ? stepDateObj : interviewAtObj;
         } else {
@@ -142,8 +137,6 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
         dateField = 'created_at';
       }
 
-      // ✅ Couleur : rouge (entretien) seulement si une date d'interview existe
-      // Sans date = amber "En cours" pour ne pas confondre avec un vrai entretien planifié
       if (!hasInterview) {
         evType = 'en_cours';
       }
@@ -204,21 +197,22 @@ function EventCard({
 }) {
   const isArchived = ev.type === 'archive';
   const isDeadline = ev.type === 'deadline';
+  const isAction   = ev.type === 'action';
   const timeLabel = ev.hour !== undefined ? formatTime(ev.hour, ev.minutes || 0) : undefined;
 
   return (
     <div
-      draggable={!isArchived && !isDeadline}
-      onDragStart={e => !isArchived && !isDeadline && onDragStart(e, ev)}
-      onClick={e => { e.stopPropagation(); onJobClick(ev.jobId); }}
-      title={`${isDeadline ? '⏰ ' + (ev.deadlineLabel || 'Deadline') + ' — ' : ''}${ev.title} — ${ev.company}`}
+      draggable={!isArchived && !isDeadline && !isAction}
+      onDragStart={e => !isArchived && !isDeadline && !isAction && onDragStart(e, ev)}
+      onClick={e => { e.stopPropagation(); if (!isAction) onJobClick(ev.jobId); }}
+      title={`${isDeadline ? '⏰ ' + (ev.deadlineLabel || 'Deadline') + ' — ' : ''}${isAction ? '⚡ Action — ' : ''}${ev.title} — ${ev.company}`}
       style={{
         ...EV_STYLE[ev.type],
         borderRadius: 5, padding: '5px 8px', marginBottom: 3,
-        cursor: 'pointer',
+        cursor: isAction ? 'default' : 'pointer',
         fontFamily: 'Montserrat,sans-serif', overflow: 'hidden',
         userSelect: 'none', opacity: isArchived ? 0.65 : 1,
-        border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : 'none',
+        border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(255,255,255,0.3)' : 'none',
       }}
     >
       {isDeadline && (
@@ -226,15 +220,23 @@ function EventCard({
           ⏰ {ev.deadlineLabel || 'Deadline'}
         </div>
       )}
-      {timeLabel && !isDeadline && (
+      {isAction && (
+        <div style={{ fontSize: 10, opacity: .9, fontWeight: 800, lineHeight: 1.3 }}>
+          ⚡ {ev.company || 'Action'}
+        </div>
+      )}
+      {timeLabel && !isDeadline && !isAction && (
         <div style={{ fontSize: 11, opacity: .9, fontWeight: 700, lineHeight: 1.3 }}>{timeLabel}</div>
+      )}
+      {timeLabel && isAction && (
+        <div style={{ fontSize: 10, opacity: .8, fontWeight: 600, lineHeight: 1.3 }}>{timeLabel}</div>
       )}
       <div style={{
         fontSize: 12, fontWeight: 800, lineHeight: 1.4,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         textDecoration: isArchived ? 'line-through' : 'none',
       }}>{ev.title}</div>
-      {ev.company && (
+      {ev.company && !isAction && (
         <div style={{
           fontSize: 11, fontWeight: 600, opacity: .85,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3,
@@ -258,15 +260,19 @@ export default function DashboardCalendar({
   const [visible, setVisible]   = useState(true);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [deadlineEvents, setDeadlineEvents] = useState<CalEvent[]>([]);
+  const [actionEvents, setActionEvents]     = useState<CalEvent[]>([]);
   const dragEvRef = useRef<CalEvent | null>(null);
 
   const today = new Date();
   const jobEvents = jobsToEvents(jobs, stagesLabelMap);
 
   useEffect(() => {
-    if (!jobs.length) return;
-    loadDeadlines();
+    if (jobs.length) loadDeadlines();
   }, [jobs]);
+
+  useEffect(() => {
+    loadActions();
+  }, []);
 
   async function loadDeadlines() {
     const supabase = createClient();
@@ -302,7 +308,38 @@ export default function DashboardCalendar({
     setDeadlineEvents(evs);
   }
 
-  const allEvents = [...jobEvents, ...deadlineEvents];
+  async function loadActions() {
+    try {
+      const token = (window as any).__jfmj_token;
+      const res = await fetch('/api/actions', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const evs: CalEvent[] = (data || []).map((action: any) => {
+        const date = new Date(action.date_debut);
+        const hour = date.getHours();
+        const minutes = date.getMinutes();
+        return {
+          jobId: action.id,
+          date,
+          dateField: 'action' as CalEvent['dateField'],
+          title: action.nom,
+          company: action.organisateur || action.categorie || '',
+          type: 'action' as CalEvent['type'],
+          hour: hour > 0 || minutes > 0 ? hour : undefined,
+          minutes: hour > 0 || minutes > 0 ? minutes : undefined,
+        };
+      });
+
+      setActionEvents(evs);
+    } catch (err) {
+      console.error('Erreur chargement actions calendrier:', err);
+    }
+  }
+
+  const allEvents = [...jobEvents, ...deadlineEvents, ...actionEvents];
 
   function handleDragStart(e: React.DragEvent, ev: CalEvent) {
     dragEvRef.current = ev;
@@ -315,7 +352,7 @@ export default function DashboardCalendar({
     if (!dragEvRef.current) return;
     const ev = dragEvRef.current;
     dragEvRef.current = null;
-    if (ev.type === 'deadline') return;
+    if (ev.type === 'deadline' || ev.type === 'action') return;
 
     const newDate = new Date(targetDate);
     if (targetHour !== undefined) {
@@ -413,11 +450,20 @@ export default function DashboardCalendar({
                 const key = cellKey(d, h);
                 const cellEvs = allEvents.filter(e =>
                   sameDay(e.date, d) && (
-                    e.type === 'deadline'
+                    e.type === 'deadline' || e.type === 'action'
                       ? h === 8
                       : e.hour !== undefined ? e.hour === h : h === 8
                   )
                 );
+                // Pour les actions avec heure, on les place à la bonne heure
+                const cellEvsFiltered = allEvents.filter(e => {
+                  if (!sameDay(e.date, d)) return false;
+                  if (e.type === 'action') {
+                    return e.hour !== undefined ? e.hour === h : h === 8;
+                  }
+                  if (e.type === 'deadline') return h === 8;
+                  return e.hour !== undefined ? e.hour === h : h === 8;
+                });
                 return (
                   <div
                     key={`${h}-${di}`}
@@ -433,7 +479,7 @@ export default function DashboardCalendar({
                       ...dropStyle(key),
                     }}
                   >
-                    {cellEvs.map((ev, ei) => (
+                    {cellEvsFiltered.map((ev, ei) => (
                       <EventCard key={ei} ev={ev} onJobClick={onJobClick} onDragStart={handleDragStart} />
                     ))}
                   </div>
