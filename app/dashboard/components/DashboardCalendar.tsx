@@ -126,10 +126,12 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
       const hasInterview = hasAnyDate;
 
       if (hasAnyDate) {
-        if (stepDateObj && interviewAtObj) {
-          date = stepDateObj > interviewAtObj ? stepDateObj : interviewAtObj;
+        // interview_at prime : c'est la date réelle planifiée de l'entretien
+        // step_dates = quand l'étape a été cochée (pas la date de l'entretien)
+        if (interviewAtObj) {
+          date = interviewAtObj;
         } else {
-          date = (stepDateObj || interviewAtObj)!;
+          date = stepDateObj!;
         }
         dateField = 'interview_at';
         const hm = extractHour();
