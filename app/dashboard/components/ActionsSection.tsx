@@ -28,6 +28,7 @@ export default function ActionsSection() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedAction, setSelectedAction] = useState<Action | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Action | null>(null)
 
   const fetchActions = async () => {
     try {
@@ -49,13 +50,13 @@ export default function ActionsSection() {
   useEffect(() => { fetchActions() }, [])
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer cette action ?')) return
     try {
       const token = (window as any).__jfmj_token
       await fetch(`/api/actions?id=${id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
+      setDeleteTarget(null)
       fetchActions()
     } catch (err) {
       console.error('Erreur suppression:', err)
@@ -127,7 +128,7 @@ export default function ActionsSection() {
                     action={action}
                     formatDate={formatDate}
                     onEdit={() => { setSelectedAction(action); setModalOpen(true) }}
-                    onDelete={() => handleDelete(action.id)}
+                    onDelete={() => setDeleteTarget(action)}
                     past={false}
                   />
                 ))}
@@ -144,7 +145,7 @@ export default function ActionsSection() {
                     action={action}
                     formatDate={formatDate}
                     onEdit={() => { setSelectedAction(action); setModalOpen(true) }}
-                    onDelete={() => handleDelete(action.id)}
+                    onDelete={() => setDeleteTarget(action)}
                     past={true}
                   />
                 ))}
@@ -153,6 +154,24 @@ export default function ActionsSection() {
           </div>
         )}
       </div>
+
+      {/* Modale de confirmation suppression */}
+      {deleteTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
+          <div style={{ background: '#fff', border: '2px solid #E8151B', borderRadius: 12, boxShadow: '4px 4px 0 #E8151B', padding: 28, maxWidth: 420, width: '100%', fontFamily: 'Montserrat, sans-serif' }}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>⚠️</div>
+              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#E8151B', margin: '0 0 8px' }}>Supprimer cette action ?</h3>
+              <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.6 }}><strong>{deleteTarget.nom}</strong></p>
+              {deleteTarget.organisateur && <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0' }}>{deleteTarget.organisateur}</p>}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setDeleteTarget(null)} style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 700, background: '#fff', border: '2px solid #ccc', borderRadius: 8, cursor: 'pointer', fontFamily: 'Montserrat, sans-serif' }}>Annuler</button>
+              <button onClick={() => handleDelete(deleteTarget.id)} style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 800, background: '#E8151B', color: '#fff', border: '2px solid #E8151B', borderRadius: 8, cursor: 'pointer', fontFamily: 'Montserrat, sans-serif' }}>Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ActionModal
         isOpen={modalOpen}
