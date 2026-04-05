@@ -44,8 +44,8 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
       setNom(action.nom || '')
       setOrganisateur(action.organisateur || '')
       setCategorie(action.categorie || '')
-      setDateDebut(action.date_debut ? action.date_debut.slice(0, 16) : '')
-      setDateFin(action.date_fin ? action.date_fin.slice(0, 16) : '')
+      const toLocalInput = (s: string) => { const d = new Date(s); const off = d.getTimezoneOffset(); return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16); }; setDateDebut(action.date_debut ? toLocalInput(action.date_debut) : '')
+      setDateFin(action.date_fin ? toLocalInput(action.date_fin) : '')
       setNote(action.note || '')
     } else {
       setNom('')
