@@ -70,7 +70,8 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
     try {
       const token = (window as any).__jfmj_token
       const method = action?.id ? 'PUT' : 'POST'
-      const body: any = { nom, organisateur, categorie, date_debut: dateDebut, date_fin: dateFin || null, note }
+      const toISO = (val: string) => val ? new Date(val).toISOString() : null
+      const body: any = { nom, organisateur, categorie, date_debut: toISO(dateDebut), date_fin: dateFin ? toISO(dateFin) : null, note }
       if (action?.id) body.id = action.id
 
       const res = await fetch('/api/actions', {
