@@ -219,7 +219,9 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
           <label className="fl">Parcours</label>
 
           {/* Bandeau d'alerte si parcours non renseigné (ajout direct en "En cours") */}
-          {(job as any).status === 'in_progress' && (!rawSubStatus || rawSubStatus === job.status) && (
+          {/* Bandeau visible si en cours MAIS aucune étape validée depuis la fiche (step_dates vide) */}
+          {(job as any).status === 'in_progress' &&
+           !Object.keys((job as any).step_dates || {}).length && (
             <div style={{
               background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8,
               padding: '12px 14px', marginBottom: 10,
