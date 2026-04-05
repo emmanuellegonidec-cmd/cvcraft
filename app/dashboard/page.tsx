@@ -14,6 +14,7 @@ import JobDetailPanel from './components/JobDetailPanel';
 import JobModal from './components/JobModal';
 import { SettingsModal } from './components/Modals';
 import DashboardCalendar from './components/DashboardCalendar';
+import ActionsSection from './components/ActionsSection';
 
 import {
   View, Stage, NewJobState,
@@ -55,7 +56,7 @@ export default function DashboardPage() {
   const [newStageName, setNewStageName]   = useState('');
   const [newStageColor, setNewStageColor] = useState('#E8151B');
   const [newStagePosition, setNewStagePosition] = useState(3);
-const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, string>>({});
+  const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, string>>({});
   const newJobRef = useRef<NewJobState>({ ...EMPTY_JOB });
 
   useEffect(() => {
@@ -125,26 +126,25 @@ const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, string>>({})
       setContacts(cd.contacts || []);
 
       const { data: customStages } = await supabase
-  .from('pipeline_stages').select('*')
-  .eq('user_id', session.user.id).is('job_id', null).order('position');
+        .from('pipeline_stages').select('*')
+        .eq('user_id', session.user.id).is('job_id', null).order('position');
 
-if (customStages && customStages.length > 0) {
-  const all = [
-    ...DEFAULT_STAGES,
-    ...customStages.map((s: any) => ({ id: s.id, label: s.label, color: s.color, position: s.position, is_default: false })),
-  ].sort((a, b) => a.position - b.position);
-  setStages(all);
-}
+      if (customStages && customStages.length > 0) {
+        const all = [
+          ...DEFAULT_STAGES,
+          ...customStages.map((s: any) => ({ id: s.id, label: s.label, color: s.color, position: s.position, is_default: false })),
+        ].sort((a, b) => a.position - b.position);
+        setStages(all);
+      }
 
-// Charge TOUTES les étapes (y compris par offre) pour afficher les labels sur les cartes
-const { data: allPipelineStages } = await supabase
-  .from('pipeline_stages').select('id, label')
-  .eq('user_id', session.user.id);
-if (allPipelineStages) {
-  const map: Record<string, string> = {};
-  allPipelineStages.forEach((s: any) => { map[s.id] = s.label; });
-  setStagesLabelMap(map);
-}
+      const { data: allPipelineStages } = await supabase
+        .from('pipeline_stages').select('id, label')
+        .eq('user_id', session.user.id);
+      if (allPipelineStages) {
+        const map: Record<string, string> = {};
+        allPipelineStages.forEach((s: any) => { map[s.id] = s.label; });
+        setStagesLabelMap(map);
+      }
       setLoading(false);
     }
     load();
@@ -278,7 +278,6 @@ if (allPipelineStages) {
       const data = await res.json();
       if (!res.ok || !data.success) { setImportError(true); return; }
 
-      // ✅ L'offre est déjà sauvegardée par l'API — on recharge et on redirige directement
       if (data.savedJobId) {
         if (accessToken) await fetchJobs(accessToken);
         setShowAddJob(false);
@@ -287,7 +286,6 @@ if (allPipelineStages) {
         return;
       }
 
-      // Fallback si pas de savedJobId
       const job = data.job || {};
       const description = (job.description && job.description.length > 150)
         ? job.description : (job.raw_text || job.description || '');
@@ -327,6 +325,13 @@ if (allPipelineStages) {
     setStages(prev => prev.filter(s => s.id !== stageId));
   }
 
+  // Label du bouton principal selon la vue active
+  function getMainButtonLabel() {
+    if (view === 'contacts') return '+ Ajouter un contact';
+    if (view === 'actions') return null; // Le bouton est dans ActionsSection
+    return '+ Ajouter une offre';
+  }
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Montserrat,sans-serif' }}>
       <div style={{ textAlign: 'center' }}>
@@ -335,6 +340,8 @@ if (allPipelineStages) {
       </div>
     </div>
   );
+
+  const mainButtonLabel = getMainButtonLabel();
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: "'Montserrat', sans-serif" }}>
@@ -355,9 +362,11 @@ if (allPipelineStages) {
               Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
             </div>
           </div>
-          <button className="btn-main" onClick={() => view === 'contacts' ? setTriggerAddContact(n => n + 1) : openAddJobModal()}>
-            {view === 'contacts' ? '+ Ajouter un contact' : '+ Ajouter une offre'}
-          </button>
+          {mainButtonLabel && (
+            <button className="btn-main" onClick={() => view === 'contacts' ? setTriggerAddContact(n => n + 1) : openAddJobModal()}>
+              {mainButtonLabel}
+            </button>
+          )}
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
@@ -388,11 +397,11 @@ if (allPipelineStages) {
 
           {['kanban', 'list'].includes(view) && (
             <DashboardCalendar
-  jobs={jobs}
-  stagesLabelMap={stagesLabelMap}
-  onJobClick={handleCalendarJobClick}
-  onDateChange={handleCalendarDateChange}
-/>
+              jobs={jobs}
+              stagesLabelMap={stagesLabelMap}
+              onJobClick={handleCalendarJobClick}
+              onDateChange={handleCalendarDateChange}
+            />
           )}
 
           {view === 'kanban' && (
@@ -410,12 +419,12 @@ if (allPipelineStages) {
 
           {view === 'kanban' && (
             <KanbanView
-  jobs={jobs} stages={stages}
-  stagesLabelMap={stagesLabelMap}
-  onJobClick={setSelectedJob} onAddJob={openAddJobModal}
-  onOpenSettings={() => setShowSettings(true)}
-  onRefresh={handleRefresh} onStatusChange={updateJobStatus}
-/>
+              jobs={jobs} stages={stages}
+              stagesLabelMap={stagesLabelMap}
+              onJobClick={setSelectedJob} onAddJob={openAddJobModal}
+              onOpenSettings={() => setShowSettings(true)}
+              onRefresh={handleRefresh} onStatusChange={updateJobStatus}
+            />
           )}
           {view === 'list' && (
             <ListView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onDeleteJob={deleteJob} onAddJob={openAddJobModal} />
@@ -428,6 +437,9 @@ if (allPipelineStages) {
           )}
           {view === 'stats' && (
             <StatsView jobs={jobs} stages={stages} contactCount={contacts.length} />
+          )}
+          {view === 'actions' && (
+            <ActionsSection />
           )}
         </div>
       </main>

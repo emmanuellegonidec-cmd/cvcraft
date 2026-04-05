@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 
-type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats';
+type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats' | 'actions';
 
 interface SidebarProps {
   view: View;
@@ -21,6 +21,7 @@ const RECHERCHE_ITEMS: { id: View; label: string }[] = [
   { id: 'list',     label: 'Candidatures'    },
   { id: 'contacts', label: 'Contacts'        },
   { id: 'agenda',   label: 'Entretiens'      },
+  { id: 'actions',  label: 'Actions'         },
   { id: 'stats',    label: 'Statistiques'    },
 ];
 
