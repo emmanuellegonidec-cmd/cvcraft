@@ -219,7 +219,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
           <label className="fl">Parcours</label>
 
           {/* Bandeau d'alerte si parcours non renseigné (ajout direct en "En cours") */}
-          {job.status === 'in_progress' && (!rawSubStatus || rawSubStatus === job.status) && (
+          {(job as any).status === 'in_progress' && (!rawSubStatus || rawSubStatus === job.status) && (
             <div style={{
               background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8,
               padding: '12px 14px', marginBottom: 10,
