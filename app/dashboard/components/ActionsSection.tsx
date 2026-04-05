@@ -79,12 +79,13 @@ export default function ActionsSection({ triggerOpen = 0 }: { triggerOpen?: numb
   const past = actions.filter(a => isPast(a.date_debut))
 
   return (
-    <div style={{ border: '2px solid #111', marginBottom: 24, background: '#fff' }}>
+    <div style={{ border: '2px solid #111', marginBottom: 24, background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '10px 16px',
         borderBottom: '2px solid #111',
+        background: '#FAFAFA',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 16 }}>⚡</span>

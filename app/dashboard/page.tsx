@@ -363,22 +363,15 @@ export default function DashboardPage() {
               Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            {view === 'kanban' && (
-              <button className="btn-main" style={{ background: '#7C3AED', boxShadow: '2px 2px 0 #111' }} onClick={() => setTriggerAddAction(n => n + 1)}>
-                + Ajouter une action
-              </button>
-            )}
-            {mainButtonLabel && (
-              <button className="btn-main" onClick={() => {
-                if (view === 'contacts') setTriggerAddContact(n => n + 1);
-                else if (view === 'actions') setTriggerAddAction(n => n + 1);
-                else openAddJobModal();
-              }}>
-                {mainButtonLabel}
-              </button>
-            )}
-          </div>
+          {mainButtonLabel && (
+            <button className="btn-main" onClick={() => {
+              if (view === 'contacts') setTriggerAddContact(n => n + 1);
+              else if (view === 'actions') setTriggerAddAction(n => n + 1);
+              else openAddJobModal();
+            }}>
+              {mainButtonLabel}
+            </button>
+          )}
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
