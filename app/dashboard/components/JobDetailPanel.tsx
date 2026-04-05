@@ -48,6 +48,8 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
   const [uploadingCv, setUploadingCv] = useState(false);
   const [uploadingLm, setUploadingLm] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  // ✅ NOUVEAU — stages custom spécifiques à CE job, chargés depuis pipeline_stages
+  const [jobCustomStages, setJobCustomStages] = useState<Stage[]>([]);
 
   const isInterview = isInterviewStage(job.status, stages);
   const isSpontaneous = (job as any).source_platform === 'spontaneous';
@@ -60,23 +62,52 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
       .catch(() => {});
   }, [isInterview]);
 
-  // ✅ FIX 1 — Étapes masquées pour cette offre (ex: hr_interview supprimé pour ESCP)
+  // ✅ Charge les pipeline_stages spécifiques à ce job (stages custom avec job_id)
+  // → permet de résoudre le label "Entretien DRH" à partir de son UUID
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('pipeline_stages')
+      .select('*')
+      .eq('job_id', job.id)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setJobCustomStages(data.map((s: any) => ({
+            id: s.id,
+            label: s.label,
+            color: s.color || '#B8900A',
+            position: s.position ?? 3,
+            is_default: false,
+            global_status: 'in_progress',
+          })));
+        }
+      })
+      .catch(() => {});
+  }, [job.id]);
+
+  // Étapes masquées pour cette offre (ex: hr_interview supprimé pour ESCP)
   const hiddenSteps = Array.isArray((job as any).hidden_steps)
     ? (job as any).hidden_steps as string[]
     : [];
 
-  // Étapes custom (pipeline_stages de l'utilisateur)
-  const customStages: Stage[] = stages.filter(s => !s.is_default).map(s => ({ ...s, global_status: 'in_progress' }));
+  // Stages custom depuis la prop (stages globaux non-default)
+  const customFromProp: Stage[] = stages.filter(s => !s.is_default).map(s => ({ ...s, global_status: 'in_progress' }));
 
-  // ✅ Build detailStages en excluant les étapes masquées pour cette offre
+  // ✅ Fusion : stages custom prop + stages custom du job depuis BDD (sans doublons)
+  const allCustomStages: Stage[] = [
+    ...customFromProp,
+    ...jobCustomStages.filter(jc => !customFromProp.find(cp => cp.id === jc.id)),
+  ];
+
+  // Build detailStages en excluant les étapes masquées
   let detailStages: Stage[] = [
     ...DETAIL_STAGES.filter(s => !['offer', 'archived'].includes(s.id) && !hiddenSteps.includes(s.id)),
-    ...customStages,
+    ...allCustomStages,
     DETAIL_STAGES.find(s => s.id === 'offer')!,
     DETAIL_STAGES.find(s => s.id === 'archived')!,
   ].filter(Boolean) as Stage[];
 
-  // ✅ FIX 2 — Résolution du sub_status courant
+  // Résolution du sub_status courant
   const rawSubStatus = (job as any).sub_status as string | null | undefined;
   const currentSubStatus = (rawSubStatus && rawSubStatus !== job.status)
     ? rawSubStatus
@@ -84,14 +115,14 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
 
   let stageIndex = detailStages.findIndex(s => s.id === currentSubStatus);
 
-  // ✅ FIX 3 — Si UUID de stage custom absent de detailStages (non chargé dans stages prop),
-  // on l'insère dynamiquement après "Postulé"
+  // Sécurité : si UUID toujours introuvable (données pas encore chargées ou stage supprimé),
+  // on insère un placeholder dynamique après "Postulé"
   if (stageIndex === -1 && rawSubStatus && rawSubStatus !== job.status) {
-    const foundInProp = stages.find(s => s.id === rawSubStatus);
+    const found = allCustomStages.find(s => s.id === rawSubStatus);
     const dynamicEntry: Stage = {
       id: rawSubStatus,
-      label: foundInProp?.label || 'En cours',
-      color: foundInProp?.color || '#B8900A',
+      label: found?.label || 'En cours',
+      color: found?.color || '#B8900A',
       position: 3,
       global_status: 'in_progress',
     };
