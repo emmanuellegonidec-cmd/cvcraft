@@ -24,7 +24,7 @@ type CalEvent = {
   dateField: 'interview_at' | 'applied_at' | 'created_at' | 'deadline';
   title: string;
   company: string;
-  type: 'envie' | 'postule' | 'entretien' | 'offre' | 'archive' | 'deadline';
+  type: 'envie' | 'postule' | 'entretien' | 'en_cours' | 'offre' | 'archive' | 'deadline';
   hour?: number;
   minutes?: number;
   deadlineLabel?: string;
@@ -34,6 +34,7 @@ const EV_STYLE: Record<CalEvent['type'], React.CSSProperties> = {
   envie:     { background: '#1C1C1E', color: '#fff' },
   postule:   { background: '#1A4A8A', color: '#fff' },
   entretien: { background: '#E8151B', color: '#fff' },
+  en_cours:  { background: '#B8900A', color: '#fff' },
   offre:     { background: '#1A7A4A', color: '#fff' },
   archive:   { background: '#999', color: '#fff' },
   deadline:  { background: '#D97706', color: '#fff' },
@@ -43,6 +44,7 @@ const EV_LABEL: Record<CalEvent['type'], string> = {
   envie:     'Envie de postuler',
   postule:   'Postulé',
   entretien: 'Entretien',
+  en_cours:  'En cours',
   offre:     'Offre reçue',
   archive:   'Archivé',
   deadline:  'Deadline',
@@ -84,7 +86,8 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
       offer:       'offre',
       archived:    'archive',
     };
-    const evType: CalEvent['type'] = typeMap[job.status] ?? 'envie';
+    // Sera potentiellement modifié en 'en_cours' pour les jobs sans interview planifiée
+    let evType: CalEvent['type'] = typeMap[job.status] ?? 'envie';
 
     let date: Date;
     let dateField: CalEvent['dateField'] = 'created_at';
@@ -111,26 +114,38 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
           || null;
       }
 
-      // PRIORITÉ 1 : date de l'étape courante dans step_dates
-      // (date issue des échanges enregistrés = date réelle de l'étape en cours)
-      if (subStatus && stepDates && stepDates[subStatus]) {
-        date = parseLocalDate(stepDates[subStatus]);
+      // ✅ Calcul de la date : on prend la PLUS RÉCENTE entre interview_at et step_dates
+      // → step_dates April 9 Maison Lenôtre (futur) > interview_at April 4 → April 9 ✓
+      // → interview_at April 4 ESCP > step_dates April 3 (échange) → April 4 ✓
+      const stepDateStr = subStatus && stepDates && stepDates[subStatus] ? stepDates[subStatus] : null;
+      const stepDateObj = stepDateStr ? parseLocalDate(stepDateStr) : null;
+      const interviewAtStr = (job as any).interview_at as string | null;
+      const interviewAtObj = interviewAtStr
+        ? (interviewAtStr.length === 10 ? parseLocalDate(interviewAtStr) : new Date(interviewAtStr))
+        : null;
+
+      const hasAnyDate = stepDateObj || interviewAtObj;
+      const hasInterview = hasAnyDate; // pour la couleur
+
+      if (hasAnyDate) {
+        // Utilise la date la plus récente des deux
+        if (stepDateObj && interviewAtObj) {
+          date = stepDateObj > interviewAtObj ? stepDateObj : interviewAtObj;
+        } else {
+          date = (stepDateObj || interviewAtObj)!;
+        }
         dateField = 'interview_at';
         const hm = extractHour();
         if (hm) { hour = hm.h; minutes = hm.m; }
-      }
-      // PRIORITÉ 2 : interview_at (fallback si pas encore d'échange enregistré)
-      else if ((job as any).interview_at) {
-        const raw = (job as any).interview_at as string;
-        date = raw.length === 10 ? parseLocalDate(raw) : new Date(raw);
-        dateField = 'interview_at';
-        const hm = extractHour();
-        if (hm) { hour = hm.h; minutes = hm.m; }
-      }
-      // PRIORITÉ 3 : created_at
-      else {
+      } else {
         date = new Date(job.created_at);
         dateField = 'created_at';
+      }
+
+      // ✅ Couleur : rouge (entretien) seulement si une date d'interview existe
+      // Sans date = amber "En cours" pour ne pas confondre avec un vrai entretien planifié
+      if (!hasInterview) {
+        evType = 'en_cours';
       }
 
     } else if (job.status === 'applied' && (job as any).applied_at) {
