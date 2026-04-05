@@ -32,7 +32,7 @@ const INTERVIEW_TYPES = [
   { id: 'presentiel', label: '🏢 Présentiel' },
 ];
 
-// Mapping status global → sub_status par défaut (quand sub_status est null ou égal au status)
+// Mapping status global → sub_status par défaut quand sub_status est null
 const STATUS_TO_SUBSTATUS: Record<string, string> = {
   'to_apply':    'to_apply',
   'applied':     'applied',
@@ -60,25 +60,52 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
       .catch(() => {});
   }, [isInterview]);
 
+  // ✅ FIX 1 — Étapes masquées pour cette offre (ex: hr_interview supprimé pour ESCP)
+  const hiddenSteps = Array.isArray((job as any).hidden_steps)
+    ? (job as any).hidden_steps as string[]
+    : [];
+
+  // Étapes custom (pipeline_stages de l'utilisateur)
   const customStages: Stage[] = stages.filter(s => !s.is_default).map(s => ({ ...s, global_status: 'in_progress' }));
 
-  const detailStages: Stage[] = [
-    ...DETAIL_STAGES.filter(s => !['offer', 'archived'].includes(s.id)),
+  // ✅ Build detailStages en excluant les étapes masquées pour cette offre
+  let detailStages: Stage[] = [
+    ...DETAIL_STAGES.filter(s => !['offer', 'archived'].includes(s.id) && !hiddenSteps.includes(s.id)),
     ...customStages,
     DETAIL_STAGES.find(s => s.id === 'offer')!,
     DETAIL_STAGES.find(s => s.id === 'archived')!,
-  ];
+  ].filter(Boolean) as Stage[];
 
-  // ✅ FIX : si sub_status est null ou identique au status global (ex: "in_progress"),
-  // on utilise le mapping STATUS_TO_SUBSTATUS pour trouver une étape détaillée valide.
+  // ✅ FIX 2 — Résolution du sub_status courant
   const rawSubStatus = (job as any).sub_status as string | null | undefined;
   const currentSubStatus = (rawSubStatus && rawSubStatus !== job.status)
     ? rawSubStatus
     : (STATUS_TO_SUBSTATUS[job.status] ?? 'to_apply');
 
-  const currentStageIndex = detailStages.findIndex(s => s.id === currentSubStatus);
-  // Sécurité : si toujours introuvable, on affiche au moins la 1ère étape
-  const effectiveIndex = currentStageIndex >= 0 ? currentStageIndex : 0;
+  let stageIndex = detailStages.findIndex(s => s.id === currentSubStatus);
+
+  // ✅ FIX 3 — Si UUID de stage custom absent de detailStages (non chargé dans stages prop),
+  // on l'insère dynamiquement après "Postulé"
+  if (stageIndex === -1 && rawSubStatus && rawSubStatus !== job.status) {
+    const foundInProp = stages.find(s => s.id === rawSubStatus);
+    const dynamicEntry: Stage = {
+      id: rawSubStatus,
+      label: foundInProp?.label || 'En cours',
+      color: foundInProp?.color || '#B8900A',
+      position: 3,
+      global_status: 'in_progress',
+    };
+    const appliedIdx = detailStages.findIndex(s => s.id === 'applied');
+    const insertAt = appliedIdx >= 0 ? appliedIdx + 1 : 2;
+    detailStages = [
+      ...detailStages.slice(0, insertAt),
+      dynamicEntry,
+      ...detailStages.slice(insertAt),
+    ];
+    stageIndex = insertAt;
+  }
+
+  const effectiveIndex = stageIndex >= 0 ? stageIndex : 0;
   const completedStages = detailStages.slice(0, effectiveIndex + 1);
 
   async function uploadDocument(file: File, type: 'cv' | 'lm') {
@@ -112,7 +139,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
             <div style={{ fontSize: 11, color: '#888', marginBottom: 3, fontWeight: 600 }}>{job.company}</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: 6 }}>{job.title}</div>
 
-            {/* ── Badge Candidature spontanée ── */}
+            {/* Badge Candidature spontanée */}
             {isSpontaneous && (
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -124,7 +151,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
               </div>
             )}
 
-            {/* ── Bouton Voir l'offre complète ── */}
+            {/* Bouton Voir l'offre complète */}
             <button
               onClick={() => router.push(`/dashboard/job/${job.id}`)}
               style={{

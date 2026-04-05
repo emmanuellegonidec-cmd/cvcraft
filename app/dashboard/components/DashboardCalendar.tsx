@@ -16,7 +16,7 @@ const DETAIL_STEP_LABELS: Record<string, string> = {
   hr_interview:      'Entretien RH',
   manager_interview: 'Entretien manager',
   offer:             'Offre reçue',
-}
+};
 
 type CalEvent = {
   jobId: string;
@@ -69,6 +69,22 @@ function formatTime(h: number, m: number) {
   return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
 }
 
+// Parse une date locale depuis une chaîne 'YYYY-MM-DD' (évite les décalages UTC)
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// Parse une date depuis un timestamp ISO ou une date simple
+function parseDate(dateStr: string): Date {
+  if (dateStr.length === 10) {
+    // Format date-only 'YYYY-MM-DD' → local midnight (pas UTC)
+    return parseLocalDate(dateStr);
+  }
+  // Format ISO complet → new Date() en UTC, mais getDate() retourne heure locale → OK
+  return new Date(dateStr);
+}
+
 function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}): CalEvent[] {
   return jobs.map(job => {
     const typeMap: Record<string, CalEvent['type']> = {
@@ -89,6 +105,15 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
     const subStatus = (job as any).sub_status as string | null;
     const stepDates = (job as any).step_dates as Record<string, string> | null;
 
+    // Helper pour extraire l'heure depuis interview_time
+    function extractHour(): { h: number; m: number } | null {
+      const t = (job as any).interview_time as string | null;
+      if (!t) return null;
+      const parts = t.split(':').map(Number);
+      if (parts[0] > 0 || parts[1] > 0) return { h: parts[0], m: parts[1] };
+      return null;
+    }
+
     if ((job as any).status === 'in_progress') {
       if (subStatus) {
         subStatusLabel = DETAIL_STEP_LABELS[subStatus]
@@ -96,31 +121,26 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
           || null;
       }
 
-      // Priorité 1 : date de l'étape courante dans step_dates
-      if (subStatus && stepDates && stepDates[subStatus]) {
-        const [y, m, d] = stepDates[subStatus].split('-').map(Number);
-        date = new Date(y, m - 1, d);
+      // ✅ PRIORITÉ 1 : interview_at (date saisie explicitement par l'utilisateur dans le panneau)
+      if ((job as any).interview_at) {
+        date = parseDate((job as any).interview_at as string);
         dateField = 'interview_at';
-        // Ajoute l'heure depuis interview_at si disponible (heure locale)
-        if ((job as any).interview_time) {
-  const [h, m] = ((job as any).interview_time as string).split(':').map(Number);
-  if (h > 0 || m > 0) { hour = h; minutes = m; }
-}
+        const hm = extractHour();
+        if (hm) { hour = hm.h; minutes = hm.m; }
       }
-      // Priorité 2 : interview_at
-      else if ((job as any).interview_at) {
-        date = new Date((job as any).interview_at);
-dateField = 'interview_at';
-if ((job as any).interview_time) {
-  const [h, m] = ((job as any).interview_time as string).split(':').map(Number);
-  if (h > 0 || m > 0) { hour = h; minutes = m; }
-}
+      // PRIORITÉ 2 : step_dates (date dérivée automatiquement des échanges)
+      else if (subStatus && stepDates && stepDates[subStatus]) {
+        date = parseLocalDate(stepDates[subStatus]);
+        dateField = 'interview_at';
+        const hm = extractHour();
+        if (hm) { hour = hm.h; minutes = hm.m; }
       }
-      // Priorité 3 : created_at
+      // PRIORITÉ 3 : created_at
       else {
         date = new Date(job.created_at);
         dateField = 'created_at';
       }
+
     } else if (job.status === 'applied' && (job as any).applied_at) {
       date = new Date((job as any).applied_at);
       dateField = 'applied_at';
@@ -259,8 +279,7 @@ export default function DashboardCalendar({
       .map((row: any) => {
         const job = jobs.find(j => j.id === row.job_id);
         if (!job) return null;
-        const [y, m, d] = row.deadline_date.split('-').map(Number);
-        const date = new Date(y, m - 1, d);
+        const date = parseLocalDate(row.deadline_date);
         return {
           jobId: row.job_id,
           date,
