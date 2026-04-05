@@ -419,83 +419,162 @@ export default function DashboardCalendar({
   }
 
   function WeekView() {
+    const HOUR_H = 60; // px par heure
+    const START_H = 8;
+    const totalH = HOURS.length * HOUR_H;
+
     const ws = getWeekStart(today, offset);
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(ws); d.setDate(d.getDate() + i); return d;
     });
     const periodLabel = `${days[0].getDate()} – ${days[6].getDate()} ${CAL_MONTHS[days[6].getMonth()]} ${days[6].getFullYear()}`;
 
+    function evTop(ev: CalEvent): number {
+      const h = ev.hour ?? START_H;
+      const m = ev.minutes ?? 0;
+      return (h - START_H) * HOUR_H + (m / 60) * HOUR_H;
+    }
+
+    function evHeight(ev: CalEvent): number {
+      if (ev.endHour !== undefined) {
+        const startMin = (ev.hour ?? START_H) * 60 + (ev.minutes ?? 0);
+        const endMin = ev.endHour * 60 + (ev.endMinutes ?? 0);
+        const dur = Math.max(endMin - startMin, 30);
+        return (dur / 60) * HOUR_H - 2;
+      }
+      return 44; // hauteur par défaut sans heure de fin
+    }
+
     return (
       <>
         <NavBar periodLabel={periodLabel} />
-        <div style={{ display: 'grid', gridTemplateColumns: `44px repeat(7, minmax(0, 1fr))`, border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={weekTh} />
-          {days.map((d, i) => {
-            const isTod = sameDay(d, today);
-            return (
-              <div key={i} style={{ ...weekTh, borderRight: i === 6 ? 'none' : '1px solid #E5E5E5', textAlign: 'center' }}>
-                <div style={{ fontSize: 10, color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>{CAL_DAYS[i]}</div>
-                <div style={{
-                  fontSize: 15, fontWeight: 900, color: isTod ? '#fff' : '#111',
-                  background: isTod ? '#111' : 'transparent',
-                  borderRadius: '50%', width: 26, height: 26,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '2px auto 0',
-                }}>{d.getDate()}</div>
-              </div>
-            );
-          })}
+        <div style={{ border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
+          {/* En-tête jours */}
+          <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
+            <div />
+            {days.map((d, i) => {
+              const isTod = sameDay(d, today);
+              return (
+                <div key={i} style={{ borderLeft: '1px solid #E5E5E5', textAlign: 'center', padding: '8px 4px' }}>
+                  <div style={{ fontSize: 10, color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>{CAL_DAYS[i]}</div>
+                  <div style={{
+                    fontSize: 15, fontWeight: 900, color: isTod ? '#fff' : '#111',
+                    background: isTod ? '#111' : 'transparent',
+                    borderRadius: '50%', width: 26, height: 26,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '2px auto 0',
+                  }}>{d.getDate()}</div>
+                </div>
+              );
+            })}
+          </div>
 
-          {HOURS.map(h => (
-            <>
-              <div key={`t${h}`} style={{
-                background: '#FAFAFA', borderRight: '1px solid #E5E5E5',
-                borderBottom: '1px solid #F0F0F0', height: 54,
-                display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
-                padding: '4px 6px 0', fontSize: 10, color: '#AAA', fontWeight: 600,
-              }}>{h}h</div>
-              {days.map((d, di) => {
-                const isTod = sameDay(d, today);
-                const key = cellKey(d, h);
-                const cellEvs = allEvents.filter(e =>
-                  sameDay(e.date, d) && (
-                    e.type === 'deadline' || e.type === 'action'
-                      ? h === 8
-                      : e.hour !== undefined ? e.hour === h : h === 8
-                  )
-                );
-                // Pour les actions avec heure, on les place à la bonne heure
-                const cellEvsFiltered = allEvents.filter(e => {
-                  if (!sameDay(e.date, d)) return false;
-                  if (e.type === 'action') {
-                    return e.hour !== undefined ? e.hour === h : h === 8;
-                  }
-                  if (e.type === 'deadline') return h === 8;
-                  return e.hour !== undefined ? e.hour === h : h === 8;
-                });
-                return (
-                  <div
-                    key={`${h}-${di}`}
-                    onDragOver={e => { e.preventDefault(); setDragOver(key); }}
-                    onDragLeave={() => setDragOver(null)}
-                    onDrop={e => handleDrop(e, d, h)}
-                    style={{
-                      height: 54,
-                      borderRight: di === 6 ? 'none' : '1px solid #F0F0F0',
-                      borderBottom: '1px solid #F0F0F0',
-                      background: isTod ? 'rgba(245,196,0,0.04)' : 'transparent',
-                      padding: '2px',
-                      ...dropStyle(key),
-                    }}
-                  >
-                    {cellEvsFiltered.map((ev, ei) => (
-                      <EventCard key={ei} ev={ev} onJobClick={onJobClick} onDragStart={handleDragStart} />
-                    ))}
-                  </div>
-                );
-              })}
-            </>
-          ))}
+          {/* Corps — lignes d'heures + colonnes */}
+          <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
+            {/* Colonne heures */}
+            <div style={{ background: '#FAFAFA', borderRight: '1px solid #E5E5E5', position: 'relative', height: totalH }}>
+              {HOURS.map(h => (
+                <div key={h} style={{
+                  position: 'absolute', top: (h - START_H) * HOUR_H,
+                  right: 6, fontSize: 10, color: '#AAA', fontWeight: 600, lineHeight: 1,
+                }}>{h}h</div>
+              ))}
+            </div>
+
+            {/* Colonnes jours */}
+            {days.map((d, di) => {
+              const isTod = sameDay(d, today);
+              const dayEvs = allEvents.filter(e => sameDay(e.date, d));
+              const key = cellKey(d);
+              return (
+                <div
+                  key={di}
+                  onDragOver={e => { e.preventDefault(); setDragOver(key); }}
+                  onDragLeave={() => setDragOver(null)}
+                  onDrop={e => handleDrop(e, d)}
+                  style={{
+                    position: 'relative',
+                    height: totalH,
+                    borderLeft: '1px solid #E5E5E5',
+                    background: isTod ? 'rgba(245,196,0,0.04)' : 'transparent',
+                    ...dropStyle(key),
+                  }}
+                >
+                  {/* Lignes d'heures */}
+                  {HOURS.map(h => (
+                    <div key={h} style={{
+                      position: 'absolute', top: (h - START_H) * HOUR_H,
+                      left: 0, right: 0, borderTop: '1px solid #F0F0F0',
+                    }} />
+                  ))}
+
+                  {/* Événements positionnés */}
+                  {dayEvs.map((ev, ei) => {
+                    const top = evTop(ev);
+                    const height = evHeight(ev);
+                    const isArchived = ev.type === 'archive';
+                    const isAction = ev.type === 'action';
+                    const isDeadline = ev.type === 'deadline';
+                    const timeLabel = ev.hour !== undefined ? formatTime(ev.hour, ev.minutes || 0) : undefined;
+                    const endLabel = ev.endHour !== undefined ? formatTime(ev.endHour, ev.endMinutes || 0) : undefined;
+
+                    return (
+                      <div
+                        key={ei}
+                        draggable={!isArchived && !isDeadline && !isAction}
+                        onDragStart={e => !isArchived && !isDeadline && !isAction && handleDragStart(e, ev)}
+                        onClick={e => { e.stopPropagation(); if (!isAction) onJobClick(ev.jobId); }}
+                        style={{
+                          position: 'absolute',
+                          top: top + 1,
+                          left: 2,
+                          right: 2,
+                          height: height,
+                          ...EV_STYLE[ev.type],
+                          borderRadius: 5,
+                          padding: '4px 7px',
+                          cursor: isAction ? 'default' : 'pointer',
+                          fontFamily: 'Montserrat,sans-serif',
+                          overflow: 'hidden',
+                          userSelect: 'none',
+                          opacity: isArchived ? 0.65 : 1,
+                          border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(255,255,255,0.3)' : 'none',
+                          zIndex: 1,
+                          boxSizing: 'border-box',
+                        }}
+                      >
+                        {timeLabel && (
+                          <div style={{ fontSize: 10, opacity: .9, fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+                            {timeLabel}{endLabel ? ` → ${endLabel}` : ''}
+                          </div>
+                        )}
+                        {isAction && (
+                          <div style={{ fontSize: 10, opacity: .85, fontWeight: 800, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+                            ⚡ {ev.company || 'Action'}
+                          </div>
+                        )}
+                        {isDeadline && (
+                          <div style={{ fontSize: 10, opacity: .85, fontWeight: 800, lineHeight: 1.3 }}>⏰ {ev.deadlineLabel}</div>
+                        )}
+                        <div style={{
+                          fontSize: 11, fontWeight: 800, lineHeight: 1.3,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          textDecoration: isArchived ? 'line-through' : 'none',
+                        }}>{ev.title}</div>
+                        {ev.company && !isAction && height > 40 && (
+                          <div style={{
+                            fontSize: 10, opacity: .85, lineHeight: 1.3,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            textDecoration: isArchived ? 'line-through' : 'none',
+                          }}>{ev.company}</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </>
     );
