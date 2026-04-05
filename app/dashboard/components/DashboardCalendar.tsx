@@ -69,20 +69,10 @@ function formatTime(h: number, m: number) {
   return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
 }
 
-// Parse une date locale depuis une chaîne 'YYYY-MM-DD' (évite les décalages UTC)
+// Parse une date locale depuis 'YYYY-MM-DD' sans décalage UTC
 function parseLocalDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
   return new Date(y, m - 1, d);
-}
-
-// Parse une date depuis un timestamp ISO ou une date simple
-function parseDate(dateStr: string): Date {
-  if (dateStr.length === 10) {
-    // Format date-only 'YYYY-MM-DD' → local midnight (pas UTC)
-    return parseLocalDate(dateStr);
-  }
-  // Format ISO complet → new Date() en UTC, mais getDate() retourne heure locale → OK
-  return new Date(dateStr);
 }
 
 function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}): CalEvent[] {
@@ -121,16 +111,18 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
           || null;
       }
 
-      // ✅ PRIORITÉ 1 : interview_at (date saisie explicitement par l'utilisateur dans le panneau)
-      if ((job as any).interview_at) {
-        date = parseDate((job as any).interview_at as string);
+      // PRIORITÉ 1 : date de l'étape courante dans step_dates
+      // (date issue des échanges enregistrés = date réelle de l'étape en cours)
+      if (subStatus && stepDates && stepDates[subStatus]) {
+        date = parseLocalDate(stepDates[subStatus]);
         dateField = 'interview_at';
         const hm = extractHour();
         if (hm) { hour = hm.h; minutes = hm.m; }
       }
-      // PRIORITÉ 2 : step_dates (date dérivée automatiquement des échanges)
-      else if (subStatus && stepDates && stepDates[subStatus]) {
-        date = parseLocalDate(stepDates[subStatus]);
+      // PRIORITÉ 2 : interview_at (fallback si pas encore d'échange enregistré)
+      else if ((job as any).interview_at) {
+        const raw = (job as any).interview_at as string;
+        date = raw.length === 10 ? parseLocalDate(raw) : new Date(raw);
         dateField = 'interview_at';
         const hm = extractHour();
         if (hm) { hour = hm.h; minutes = hm.m; }
