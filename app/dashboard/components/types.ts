@@ -1,6 +1,6 @@
 import { Job, Contact, JobStatus, JobType } from '@/lib/jobs';
 
-export type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats';
+export type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats' | 'actions';
 
 export type Stage = {
   id: string;
@@ -8,7 +8,7 @@ export type Stage = {
   color: string;
   position: number;
   is_default?: boolean;
-  global_status?: string; // pour les étapes personnalisées → quelle colonne globale
+  global_status?: string;
 };
 
 // ── Kanban global (5 grandes étapes) ──────────────────────────────────────────
@@ -31,7 +31,6 @@ export const DETAIL_STAGES: Stage[] = [
   { id: 'archived',           label: 'Archivé',                 color: '#aaa',    position: 99, global_status: 'archived' },
 ];
 
-// Retourne le status global correspondant à une sous-étape
 export function getGlobalStatus(subStatus: string, customStages: Stage[]): string {
   const detail = DETAIL_STAGES.find(s => s.id === subStatus);
   if (detail) return detail.global_status || 'in_progress';
@@ -39,7 +38,6 @@ export function getGlobalStatus(subStatus: string, customStages: Stage[]): strin
   return custom?.global_status || 'in_progress';
 }
 
-// Label court pour le badge sur la carte kanban
 export function getSubStatusLabel(subStatus: string | null, customStages: Stage[]): string | null {
   if (!subStatus) return null;
   const detail = DETAIL_STAGES.find(s => s.id === subStatus);
@@ -77,20 +75,16 @@ export function formatDate(dateStr: string | null) {
   });
 }
 
-// ✅ CORRIGÉ — compare les dates en "jour calendaire France" et non en millisecondes UTC
-// Exemple : une offre créée le 3 avril à 23h UTC = 3 avril en France (pas le 4)
 export function formatRelative(dateStr: string) {
   const TZ = 'Europe/Paris';
 
-  // Convertit une date en "YYYY-MM-DD" selon le fuseau France
   function toLocalDay(date: Date): string {
-    return date.toLocaleDateString('fr-CA', { timeZone: TZ }); // fr-CA = format YYYY-MM-DD
+    return date.toLocaleDateString('fr-CA', { timeZone: TZ });
   }
 
   const itemDay  = toLocalDay(new Date(dateStr));
   const todayDay = toLocalDay(new Date());
 
-  // Calcul de la différence en jours calendaires (pas en ms)
   const itemDate  = new Date(itemDay);
   const todayDate = new Date(todayDay);
   const diffDays  = Math.round((todayDate.getTime() - itemDate.getTime()) / 86400000);
