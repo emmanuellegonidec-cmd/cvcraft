@@ -12,7 +12,7 @@ import JobExchanges from './components/JobExchanges'
 import JobStepProgress from './components/JobStepProgress'
 import JobStepActions from './components/JobStepActions'
 import EditJobModal from './components/EditJobModal'
-
+import ParcoursBannerModal from './components/ParcoursBannerModal'
 const FONT = "'Montserrat', sans-serif"
 
 const BASE_STEPS = [
@@ -663,7 +663,13 @@ useEffect(() => {
 
         <JobCompanySection job={job} expanded={companyExpanded} onToggle={() => setCompanyExpanded(v => !v)} />
       </div>
-
+{job && (
+  <ParcoursBannerModal
+    jobId={jobId}
+    status={job.status}
+    stepDates={mergedStepDates}
+  />
+)}
       {showEditModal && (
         <EditJobModal editForm={editForm} onChange={(field, value) => setEditForm(p => ({ ...p, [field]: value }))} onSave={saveEdit} onClose={() => setShowEditModal(false)} />
       )}
