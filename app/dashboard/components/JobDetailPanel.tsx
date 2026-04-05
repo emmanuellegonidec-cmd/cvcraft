@@ -65,12 +65,13 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
   // ✅ Charge les pipeline_stages spécifiques à ce job (stages custom avec job_id)
   // → permet de résoudre le label "Entretien DRH" à partir de son UUID
   useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from('pipeline_stages')
-      .select('*')
-      .eq('job_id', job.id)
-      .then(({ data }) => {
+    async function loadJobStages() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('pipeline_stages')
+          .select('*')
+          .eq('job_id', job.id);
         if (data && data.length > 0) {
           setJobCustomStages(data.map((s: any) => ({
             id: s.id,
@@ -81,8 +82,9 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
             global_status: 'in_progress',
           })));
         }
-      })
-      .catch(() => {});
+      } catch {}
+    }
+    loadJobStages();
   }, [job.id]);
 
   // Étapes masquées pour cette offre (ex: hr_interview supprimé pour ESCP)
