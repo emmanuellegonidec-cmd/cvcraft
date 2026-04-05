@@ -23,7 +23,7 @@ const CATEGORIE_COLORS: Record<string, string> = {
   'Autre': '#888',
 }
 
-export default function ActionsSection() {
+export default function ActionsSection({ triggerOpen = 0 }: { triggerOpen?: number }) {
   const [actions, setActions] = useState<Action[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -48,6 +48,10 @@ export default function ActionsSection() {
   }
 
   useEffect(() => { fetchActions() }, [])
+
+  useEffect(() => {
+    if (triggerOpen > 0) { setSelectedAction(null); setModalOpen(true); }
+  }, [triggerOpen])
 
   const handleDelete = async (id: string) => {
     try {

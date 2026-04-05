@@ -46,6 +46,7 @@ export default function DashboardPage() {
   const [showAddJob, setShowAddJob]       = useState(false);
   const [showSettings, setShowSettings]   = useState(false);
   const [triggerAddContact, setTriggerAddContact] = useState(0);
+  const [triggerAddAction, setTriggerAddAction] = useState(0);
   const [newJob, setNewJob]               = useState<NewJobState>({ ...EMPTY_JOB });
   const [editingJobId, setEditingJobId]   = useState<string | null>(null);
   const [addJobMode, setAddJobMode]       = useState<null | 'url' | 'manual' | 'file' | 'spontaneous'>(null);
@@ -328,7 +329,7 @@ export default function DashboardPage() {
   // Label du bouton principal selon la vue active
   function getMainButtonLabel() {
     if (view === 'contacts') return '+ Ajouter un contact';
-    if (view === 'actions') return null; // Le bouton est dans ActionsSection
+    if (view === 'actions') return '+ Ajouter une action';
     return '+ Ajouter une offre';
   }
 
@@ -363,7 +364,11 @@ export default function DashboardPage() {
             </div>
           </div>
           {mainButtonLabel && (
-            <button className="btn-main" onClick={() => view === 'contacts' ? setTriggerAddContact(n => n + 1) : openAddJobModal()}>
+            <button className="btn-main" onClick={() => {
+              if (view === 'contacts') setTriggerAddContact(n => n + 1);
+              else if (view === 'actions') setTriggerAddAction(n => n + 1);
+              else openAddJobModal();
+            }}>
               {mainButtonLabel}
             </button>
           )}
@@ -438,8 +443,11 @@ export default function DashboardPage() {
           {view === 'stats' && (
             <StatsView jobs={jobs} stages={stages} contactCount={contacts.length} />
           )}
+          {view === 'kanban' && (
+            <ActionsSection triggerOpen={view === 'kanban' ? 0 : triggerAddAction} />
+          )}
           {view === 'actions' && (
-            <ActionsSection />
+            <ActionsSection triggerOpen={triggerAddAction} />
           )}
         </div>
       </main>
