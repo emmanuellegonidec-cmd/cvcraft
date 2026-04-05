@@ -217,6 +217,35 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
         {/* ── PARCOURS ── */}
         <div style={{ marginBottom: '1rem' }}>
           <label className="fl">Parcours</label>
+
+          {/* Bandeau d'alerte si parcours non renseigné (ajout direct en "En cours") */}
+          {job.status === 'in_progress' && (!rawSubStatus || rawSubStatus === job.status) && (
+            <div style={{
+              background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8,
+              padding: '12px 14px', marginBottom: 10,
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#92400E', marginBottom: 6 }}>
+                👋 Le parcours n&apos;est pas encore renseigné
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#555', lineHeight: 1.6, marginBottom: 10 }}>
+                Pour que Jean vous accompagne vraiment, il faut repartir du début et valider chaque étape
+                dans la fiche complète : <em>Envie de postuler → Postulé → étape en cours</em>.
+              </div>
+              <button
+                onClick={() => router.push(`/dashboard/job/${job.id}`)}
+                style={{
+                  fontSize: 11, fontWeight: 800, color: '#111',
+                  background: '#F5C400', border: '2px solid #111',
+                  borderRadius: 6, padding: '5px 14px', cursor: 'pointer',
+                  fontFamily: 'Montserrat,sans-serif', boxShadow: '2px 2px 0 #111',
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                Mettre à jour le parcours →
+              </button>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {completedStages.map((s, i) => {
               const isLast = i === completedStages.length - 1;
