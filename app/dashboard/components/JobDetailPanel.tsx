@@ -32,6 +32,15 @@ const INTERVIEW_TYPES = [
   { id: 'presentiel', label: '🏢 Présentiel' },
 ];
 
+// Mapping status global → sub_status par défaut (quand sub_status est null ou égal au status)
+const STATUS_TO_SUBSTATUS: Record<string, string> = {
+  'to_apply':    'to_apply',
+  'applied':     'applied',
+  'in_progress': 'phone_interview',
+  'offer':       'offer',
+  'archived':    'archived',
+};
+
 export default function JobDetailPanel({ job, stages, userId, accessToken, onClose, onStatusChange, onFieldUpdate, onEdit, onDelete }: Props) {
   const router = useRouter();
   const cvInputRef = useRef<HTMLInputElement>(null);
@@ -60,9 +69,17 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
     DETAIL_STAGES.find(s => s.id === 'archived')!,
   ];
 
-  const currentSubStatus  = (job as any).sub_status || job.status;
+  // ✅ FIX : si sub_status est null ou identique au status global (ex: "in_progress"),
+  // on utilise le mapping STATUS_TO_SUBSTATUS pour trouver une étape détaillée valide.
+  const rawSubStatus = (job as any).sub_status as string | null | undefined;
+  const currentSubStatus = (rawSubStatus && rawSubStatus !== job.status)
+    ? rawSubStatus
+    : (STATUS_TO_SUBSTATUS[job.status] ?? 'to_apply');
+
   const currentStageIndex = detailStages.findIndex(s => s.id === currentSubStatus);
-  const completedStages   = detailStages.slice(0, currentStageIndex + 1);
+  // Sécurité : si toujours introuvable, on affiche au moins la 1ère étape
+  const effectiveIndex = currentStageIndex >= 0 ? currentStageIndex : 0;
+  const completedStages = detailStages.slice(0, effectiveIndex + 1);
 
   async function uploadDocument(file: File, type: 'cv' | 'lm') {
     if (!userId || !accessToken) return;
@@ -131,7 +148,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
         {/* Pills localisation + salaire */}
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: '0.75rem' }}>
           {job.location && <span className="pill" style={{ background: '#F4F4F4', color: '#888', border: '1px solid #E0E0E0' }}>{job.location}</span>}
-          {(job as any).salary_text && <span className="pill" style={{ background: '#E8F5EE', color: '#1A7A4A', border: '1px solid #1A7A4A' }}>💰 {(job as any).salary_text}</span>}
+          {(job as any).salary_text && <span className="pill" style={{ background: '#E8F5EE', color: '#1A7A4A', border: '1px solid #1A7A4A' }}>💶 {(job as any).salary_text}</span>}
         </div>
 
         {(job as any).favorite > 0 && <div style={{ marginBottom: '0.75rem' }}><HeartDisplay value={(job as any).favorite} /></div>}
@@ -264,12 +281,12 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div className={'check-box' + ((job as any).cv_sent ? ' checked' : '')} onClick={() => onFieldUpdate(job.id, 'cv_sent', !(job as any).cv_sent)}>
-                  {(job as any).cv_sent && '✓'}
+                  {(job as any).cv_sent && '✔'}
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 700 }}>CV</span>
                 <button className={'doc-btn' + ((job as any).cv_url ? ' done' : '')}
                   onClick={() => { if ((job as any).cv_url) window.open((job as any).cv_url); else cvInputRef.current?.click(); }}>
-                  {(job as any).cv_url ? '📎 Voir' : '📎 Joindre'}
+                  {(job as any).cv_url ? '📄 Voir' : '📄 Joindre'}
                 </button>
                 <input ref={cvInputRef} type="file" accept=".pdf" style={{ display: 'none' }}
                   onChange={async e => { const f = e.target.files?.[0]; if (f) { setUploadingCv(true); await uploadDocument(f, 'cv'); setUploadingCv(false); } }} />
@@ -278,12 +295,12 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
               <div style={{ width: 1, background: '#E0E0E0' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div className={'check-box' + ((job as any).cover_letter_sent ? ' checked' : '')} onClick={() => onFieldUpdate(job.id, 'cover_letter_sent', !(job as any).cover_letter_sent)}>
-                  {(job as any).cover_letter_sent && '✓'}
+                  {(job as any).cover_letter_sent && '✔'}
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 700 }}>LM</span>
                 <button className={'doc-btn' + ((job as any).cover_letter_url ? ' done' : '')}
                   onClick={() => { if ((job as any).cover_letter_url) window.open((job as any).cover_letter_url); else lmInputRef.current?.click(); }}>
-                  {(job as any).cover_letter_url ? '📎 Voir' : '📎 Joindre'}
+                  {(job as any).cover_letter_url ? '📄 Voir' : '📄 Joindre'}
                 </button>
                 <input ref={lmInputRef} type="file" accept=".pdf" style={{ display: 'none' }}
                   onChange={async e => { const f = e.target.files?.[0]; if (f) { setUploadingLm(true); await uploadDocument(f, 'lm'); setUploadingLm(false); } }} />
