@@ -141,6 +141,11 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
   const effectiveIndex = stageIndex >= 0 ? stageIndex : 0;
   const completedStages = detailStages.slice(0, effectiveIndex + 1);
 
+  // ✅ Bandeau actif = job en cours sans aucune étape validée → on masque les étapes pré-remplies
+  const showAlertBanner =
+    (job as any).status === 'in_progress' &&
+    !Object.keys((job as any).step_dates || {}).length;
+
   async function uploadDocument(file: File, type: 'cv' | 'lm') {
     if (!userId || !accessToken) return;
     const supabase = createClient();
@@ -220,8 +225,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
 
           {/* Bandeau d'alerte si parcours non renseigné (ajout direct en "En cours") */}
           {/* Bandeau visible si en cours MAIS aucune étape validée depuis la fiche (step_dates vide) */}
-          {(job as any).status === 'in_progress' &&
-           !Object.keys((job as any).step_dates || {}).length && (
+          {showAlertBanner && (
             <div style={{
               background: '#FEF9E0', border: '2px solid #F5C400', borderRadius: 8,
               padding: '12px 14px', marginBottom: 10,
@@ -248,6 +252,8 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
             </div>
           )}
 
+          {/* N'affiche les étapes que si le parcours a été défini (pas de faux pré-remplissage) */}
+          {!showAlertBanner && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {completedStages.map((s, i) => {
               const isLast = i === completedStages.length - 1;
@@ -280,6 +286,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
               );
             })}
           </div>
+          )}
         </div>
 
         {/* ── SECTION ENTRETIEN ── */}
