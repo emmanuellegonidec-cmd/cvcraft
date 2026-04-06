@@ -142,7 +142,7 @@ export default async function LandingPage() {
           </span>
         </Link>
         <div className="nav-desktop" style={{ display:'flex',gap:'2rem',alignItems:'center' }}>
-          {[['#fonctionnalites','Fonctionnalités'],['#cv','CV Creator'],['#comment','Comment ça marche'],['#faq','FAQ']].map(([h,l]) => (
+          {[['#cv','CV Creator'],['#fonctionnalites','Fonctionnalités'],['#comment','Comment ça marche'],['#faq','FAQ']].map(([h,l]) => (
             <a key={h} href={h} style={{ fontFamily:"'Montserrat', sans-serif",fontSize:13,color:'#111',textDecoration:'none',fontWeight:700,letterSpacing:'0.02em',textTransform:'uppercase' }}>{l}</a>
           ))}
         </div>
