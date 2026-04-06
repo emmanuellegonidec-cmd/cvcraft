@@ -74,6 +74,12 @@ export default function DashboardPage() {
   useEffect(() => { newJobRef.current = newJob; }, [newJob]);
   useEffect(() => { if (accessToken) (window as any).__jfmj_token = accessToken; }, [accessToken]);
 
+  // Reset du trigger action à chaque changement de vue
+  // Evite que le modal s'ouvre automatiquement quand on revient sur le tableau de bord
+  useEffect(() => {
+    setTriggerAddAction(0);
+  }, [view]);
+
   const today = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     timeZone: 'Europe/Paris',
@@ -259,7 +265,6 @@ export default function DashboardPage() {
     if (job) setSelectedJob(job);
   }
 
-  // Ouvre la modale custom au lieu du confirm() natif
   function deleteJob(id: string) {
     const job = jobs.find(j => j.id === id);
     if (job) setDeleteJobTarget(job);
@@ -355,7 +360,6 @@ export default function DashboardPage() {
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        {/* Header sans borderBottom, Hello agrandi */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
@@ -369,7 +373,6 @@ export default function DashboardPage() {
                 className="btn-main"
                 style={{ background: '#7C3AED', boxShadow: '2px 2px 0 #111' }}
                 onClick={() => {
-                  // On ouvre la section si elle est fermée, puis on déclenche le modal
                   setActionsVisible(true);
                   setTimeout(() => setTriggerAddAction(n => n + 1), 50);
                 }}
@@ -391,7 +394,6 @@ export default function DashboardPage() {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
 
-          {/* Statistiques */}
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
               <div style={{ padding: '10px 16px', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
@@ -416,7 +418,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Calendrier */}
           {['kanban', 'list'].includes(view) && (
             <DashboardCalendar
               jobs={jobs}
@@ -426,7 +427,6 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* Candidatures + Kanban dans un seul bloc */}
           {view === 'kanban' && (
             <div style={{ marginBottom: '0.75rem', marginTop: '0.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#FAFAFA', borderBottom: '2px solid #111' }}>
@@ -460,7 +460,6 @@ export default function DashboardPage() {
             <StatsView jobs={jobs} stages={stages} contactCount={contacts.length} />
           )}
 
-          {/* Actions collapsible — header unique avec badge nombre */}
           {view === 'kanban' && (
             <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
               <div style={{
@@ -528,7 +527,6 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Modale suppression offre — style coherent avec le reste de l'app */}
       {deleteJobTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 30, width: '100%', maxWidth: 420, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B', fontFamily: FONT }}>
@@ -561,9 +559,8 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-    {/* Onboarding première connexion */}
-      <OnboardingModal onAddJob={() => setAddJobMode('url')} />
 
+      <OnboardingModal onAddJob={() => setAddJobMode('url')} />
     </div>
   );
 }
