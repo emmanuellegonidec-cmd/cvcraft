@@ -161,11 +161,12 @@ export default function HelpPage() {
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: FONT }}>
 
-      {/* Sidebar minimaliste sans logo */}
-      <div style={{ width: 200, background: '#111', display: 'flex', flexDirection: 'column', flexShrink: 0, padding: '24px 0' }}>
-        <div style={{ padding: '0 16px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: 16 }}>
-          <div style={{ color: '#F5C400', fontWeight: 900, fontSize: 16, fontFamily: FONT, letterSpacing: 1 }}>JEAN</div>
-          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' as const, fontFamily: FONT }}>Find My Job</div>
+     {/* Sidebar — même style que le dashboard */}
+      <div style={{ width: 200, background: '#111', display: 'flex', flexDirection: 'column', flexShrink: 0, padding: '20px 0' }}>
+        <div style={{ padding: '0 16px 24px' }}>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: FONT, lineHeight: 1.3 }}>
+            Jean find my Job
+          </div>
         </div>
         <button
           onClick={() => router.push('/dashboard')}
@@ -191,7 +192,7 @@ export default function HelpPage() {
               Help me, help me...
             </div>
             <div style={{ fontSize: 13, color: '#aaa', fontFamily: FONT }}>
-              Tout ce qu'il faut savoir pour bien utiliser Jean Find My Job.
+              Tout ce qu'il faut savoir pour bien utiliser Jean find my Job.
             </div>
           </div>
 
