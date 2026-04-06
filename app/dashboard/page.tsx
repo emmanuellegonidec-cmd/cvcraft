@@ -326,7 +326,6 @@ export default function DashboardPage() {
     setStages(prev => prev.filter(s => s.id !== stageId));
   }
 
-  // Label du bouton principal selon la vue active
   function getMainButtonLabel() {
     if (view === 'contacts') return '+ Ajouter un contact';
     if (view === 'actions') return '+ Ajouter une action';
@@ -356,7 +355,8 @@ export default function DashboardPage() {
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', borderBottom: '2px solid #111', flexShrink: 0 }}>
+        {/* FIX 1 : suppression de borderBottom */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
             <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#111' }}>
@@ -383,10 +383,11 @@ export default function DashboardPage() {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
 
+          {/* FIX 2 : fontSize 16 (était 14) pour STATISTIQUES */}
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
               <div style={{ padding: '10px 16px', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
-                <span style={{ fontSize: 14, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
                   📊 Statistiques
                 </span>
               </div>
@@ -416,9 +417,10 @@ export default function DashboardPage() {
             />
           )}
 
+          {/* FIX 3 : CANDIDATURES + KanbanView dans un seul bloc */}
           {view === 'kanban' && (
             <div style={{ marginBottom: '0.75rem', marginTop: '0.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#FAFAFA' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#FAFAFA', borderBottom: '2px solid #111' }}>
                 <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
                   📋 Candidatures
                 </span>
@@ -426,18 +428,16 @@ export default function DashboardPage() {
                   {jobs.length} offre{jobs.length > 1 ? 's' : ''}
                 </span>
               </div>
+              <KanbanView
+                jobs={jobs} stages={stages}
+                stagesLabelMap={stagesLabelMap}
+                onJobClick={setSelectedJob} onAddJob={openAddJobModal}
+                onOpenSettings={() => setShowSettings(true)}
+                onRefresh={handleRefresh} onStatusChange={updateJobStatus}
+              />
             </div>
           )}
 
-          {view === 'kanban' && (
-            <KanbanView
-              jobs={jobs} stages={stages}
-              stagesLabelMap={stagesLabelMap}
-              onJobClick={setSelectedJob} onAddJob={openAddJobModal}
-              onOpenSettings={() => setShowSettings(true)}
-              onRefresh={handleRefresh} onStatusChange={updateJobStatus}
-            />
-          )}
           {view === 'list' && (
             <ListView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onDeleteJob={deleteJob} onAddJob={openAddJobModal} />
           )}

@@ -269,7 +269,7 @@ export default function DashboardCalendar({
 }) {
   const [calView, setCalView]   = useState<'week' | 'month'>('week');
   const [offset, setOffset]     = useState(0);
-  const [visible, setVisible]   = useState(true);
+  const [visible, setVisible]   = useState(false);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [deadlineEvents, setDeadlineEvents] = useState<CalEvent[]>([]);
   const [actionEvents, setActionEvents]     = useState<CalEvent[]>([]);
