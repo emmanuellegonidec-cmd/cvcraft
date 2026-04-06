@@ -1,4 +1,5 @@
 'use client';
+import OnboardingModal from './components/OnboardingModal';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -552,6 +553,9 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+    {/* Onboarding première connexion */}
+      <OnboardingModal onAddJob={() => setAddJobMode('url')} />
+
     </div>
   );
 }
