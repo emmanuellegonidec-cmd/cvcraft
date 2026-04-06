@@ -30,6 +30,8 @@ const STATUS_TO_SUB: Record<string, string> = {
   archived:    'archived',
 };
 
+const FONT = "'Montserrat', sans-serif";
+
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -63,6 +65,10 @@ export default function DashboardPage() {
   // Actions collapsible ferme par defaut + compteur
   const [actionsVisible, setActionsVisible] = useState(false);
   const [actionsCount, setActionsCount] = useState(0);
+
+  // Modale suppression offre custom
+  const [deleteJobTarget, setDeleteJobTarget] = useState<Job | null>(null);
+  const [deleteJobLoading, setDeleteJobLoading] = useState(false);
 
   useEffect(() => { newJobRef.current = newJob; }, [newJob]);
   useEffect(() => { if (accessToken) (window as any).__jfmj_token = accessToken; }, [accessToken]);
@@ -252,11 +258,20 @@ export default function DashboardPage() {
     if (job) setSelectedJob(job);
   }
 
-  async function deleteJob(id: string) {
-    if (!confirm('Supprimer cette offre ?')) return;
-    await authFetch('/api/jobs?id=' + id, { method: 'DELETE' });
-    setJobs(prev => prev.filter(j => j.id !== id));
-    setSelectedJob(null);
+  // Ouvre la modale custom au lieu du confirm() natif
+  function deleteJob(id: string) {
+    const job = jobs.find(j => j.id === id);
+    if (job) setDeleteJobTarget(job);
+  }
+
+  async function confirmDeleteJob() {
+    if (!deleteJobTarget) return;
+    setDeleteJobLoading(true);
+    await authFetch('/api/jobs?id=' + deleteJobTarget.id, { method: 'DELETE' });
+    setJobs(prev => prev.filter(j => j.id !== deleteJobTarget.id));
+    if (selectedJob?.id === deleteJobTarget.id) setSelectedJob(null);
+    setDeleteJobTarget(null);
+    setDeleteJobLoading(false);
   }
 
   async function importJobFromUrl(url: string) {
@@ -317,7 +332,7 @@ export default function DashboardPage() {
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Montserrat,sans-serif' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: FONT }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 32 }}>⚡</div>
         <div style={{ fontWeight: 700, color: '#888' }}>Chargement...</div>
@@ -328,7 +343,7 @@ export default function DashboardPage() {
   const mainButtonLabel = getMainButtonLabel();
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: "'Montserrat', sans-serif" }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: FONT }}>
       <style>{GLOBAL_STYLES}</style>
 
       <Sidebar
@@ -371,7 +386,7 @@ export default function DashboardPage() {
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
               <div style={{ padding: '10px 16px', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
                   📊 Statistiques
                 </span>
               </div>
@@ -406,7 +421,7 @@ export default function DashboardPage() {
           {view === 'kanban' && (
             <div style={{ marginBottom: '0.75rem', marginTop: '0.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#FAFAFA', borderBottom: '2px solid #111' }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
                   📋 Candidatures
                 </span>
                 <span style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>
@@ -446,7 +461,7 @@ export default function DashboardPage() {
                 background: '#FAFAFA',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
                     ⚡ Actions
                   </span>
                   {actionsCount > 0 && (
@@ -457,16 +472,13 @@ export default function DashboardPage() {
                 </div>
                 <button
                   onClick={() => setActionsVisible(v => !v)}
-                  style={{ fontSize: 11, fontWeight: 800, fontFamily: 'Montserrat,sans-serif', background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}
+                  style={{ fontSize: 11, fontWeight: 800, fontFamily: FONT, background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}
                 >
                   {actionsVisible ? 'Masquer' : 'Afficher'}
                 </button>
               </div>
               {actionsVisible && (
-                <ActionsSection
-                  triggerOpen={triggerAddAction}
-                  onCountChange={setActionsCount}
-                />
+                <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} />
               )}
             </div>
           )}
@@ -505,6 +517,40 @@ export default function DashboardPage() {
           onAddStage={addCustomStage} onDeleteStage={deleteCustomStage}
           onClose={() => setShowSettings(false)}
         />
+      )}
+
+      {/* Modale suppression offre — style coherent avec le reste de l'app */}
+      {deleteJobTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 30, width: '100%', maxWidth: 420, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B', fontFamily: FONT }}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+              <h3 style={{ fontSize: 18, fontWeight: 900, color: '#E8151B', margin: '0 0 8px', fontFamily: FONT }}>Supprimer cette offre ?</h3>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>
+                Cette action est <strong>irréversible</strong>.<br />Toutes les données seront supprimées.
+              </p>
+            </div>
+            <div style={{ background: '#FEF2F2', borderRadius: 8, padding: '12px 14px', marginBottom: 20 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#111', margin: '0 0 2px', fontFamily: FONT }}>{deleteJobTarget.title}</p>
+              <p style={{ fontSize: 12, color: '#888', margin: 0, fontFamily: FONT }}>{deleteJobTarget.company}</p>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setDeleteJobTarget(null)}
+                style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmDeleteJob}
+                disabled={deleteJobLoading}
+                style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: FONT, opacity: deleteJobLoading ? 0.7 : 1 }}
+              >
+                {deleteJobLoading ? '…' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
