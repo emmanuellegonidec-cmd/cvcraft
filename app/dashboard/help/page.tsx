@@ -164,10 +164,12 @@ export default function HelpPage() {
      {/* Sidebar — même style que le dashboard */}
       <div style={{ width: 200, background: '#111', display: 'flex', flexDirection: 'column', flexShrink: 0, padding: '20px 0' }}>
         <div style={{ padding: '0 16px 24px' }}>
-          <div style={{ color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: FONT, lineHeight: 1.3 }}>
-            Jean find my Job
-          </div>
-        </div>
+  <div style={{ fontWeight: 900, fontSize: 14, fontFamily: FONT, lineHeight: 1.4 }}>
+    <span style={{ color: '#ffffff' }}>Jean</span>
+    <br />
+    <span style={{ color: '#F5C400' }}>find my Job</span>
+  </div>
+</div>
         <button
           onClick={() => router.push('/dashboard')}
           style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 'none', padding: '10px 16px', cursor: 'pointer', color: '#ccc', fontFamily: FONT, fontSize: 12, fontWeight: 700, textAlign: 'left' as const }}
