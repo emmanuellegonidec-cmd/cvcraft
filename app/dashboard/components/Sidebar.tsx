@@ -137,6 +137,18 @@ export default function Sidebar({
         >
           <span style={{ color: '#555' }}>+</span> CV Creator
         </button>
+        <button
+  onClick={() => router.push('/dashboard/help')}
+  style={{
+    display: 'flex', alignItems: 'center', gap: 10,
+    width: '100%', background: 'none', border: 'none',
+    padding: '8px 16px', cursor: 'pointer', textAlign: 'left',
+    color: '#ccc', fontFamily: "'Montserrat', sans-serif",
+    fontSize: 13, fontWeight: 600,
+  }}
+>
+  ❓ Help
+</button>
       </div>
 
       {/* ── Profil + déconnexion ── */}
