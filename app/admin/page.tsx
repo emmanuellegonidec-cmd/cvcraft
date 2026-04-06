@@ -11,6 +11,7 @@ type Stats = {
   newJobsThisMonth: number
   activationRate: number
   publishedArticles: number
+  newsletterSubscribers: number
   recentUsers: { id: string; email: string; first_name?: string; last_name?: string; created_at: string }[]
 }
 
@@ -30,7 +31,6 @@ export default function AdminDashboard() {
         return
       }
 
-      // Vérifie si admin
       const { data: adminUser } = await supabase
         .from('admin_users')
         .select('email')
@@ -44,7 +44,6 @@ export default function AdminDashboard() {
 
       setAuthorized(true)
 
-      // Charge les stats via l'API
       try {
         const res = await fetch('/api/admin/stats', {
           headers: {
@@ -78,6 +77,7 @@ export default function AdminDashboard() {
     { label: 'Offres créées', value: stats?.totalJobs ?? 0, sub: `+${stats?.newJobsThisMonth ?? 0} ce mois`, color: '#E8151B', icon: '💼' },
     { label: "Taux d'activation", value: `${stats?.activationRate ?? 0}%`, sub: 'Inscrits avec ≥1 offre', color: '#22c55e', icon: '🚀' },
     { label: 'Articles publiés', value: stats?.publishedArticles ?? 0, sub: 'Sur la landing page', color: '#6366f1', icon: '✍️' },
+    { label: 'Abonnés newsletter', value: stats?.newsletterSubscribers ?? 0, sub: 'Total inscrits', color: '#F5C400', icon: '📧' },
   ]
 
   return (
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
       <p className="text-gray-500 mb-8 text-sm font-medium">Vue d'ensemble de Jean Find My Job</p>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-3 gap-4 mb-10">
         {statCards.map((card) => (
           <div key={card.label} className="bg-white p-6 rounded" style={{ border: '2px solid #111', boxShadow: '4px 4px 0px #111' }}>
             <div className="flex items-center justify-between mb-3">
