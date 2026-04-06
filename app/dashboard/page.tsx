@@ -60,8 +60,9 @@ export default function DashboardPage() {
   const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, string>>({});
   const newJobRef = useRef<NewJobState>({ ...EMPTY_JOB });
 
-  // Actions collapsible, ferme par defaut
+  // Actions collapsible ferme par defaut + compteur
   const [actionsVisible, setActionsVisible] = useState(false);
+  const [actionsCount, setActionsCount] = useState(0);
 
   useEffect(() => { newJobRef.current = newJob; }, [newJob]);
   useEffect(() => { if (accessToken) (window as any).__jfmj_token = accessToken; }, [accessToken]);
@@ -338,11 +339,10 @@ export default function DashboardPage() {
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        {/* Header sans borderBottom */}
+        {/* Header sans borderBottom, Hello agrandi */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
-            {/* FIX : Hello agrandi 1.4rem → 2rem */}
             <div style={{ fontSize: '2rem', fontWeight: 900, color: '#111' }}>
               Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
             </div>
@@ -367,7 +367,7 @@ export default function DashboardPage() {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
 
-          {/* Statistiques — fontSize 16 */}
+          {/* Statistiques */}
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
               <div style={{ padding: '10px 16px', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
@@ -436,7 +436,7 @@ export default function DashboardPage() {
             <StatsView jobs={jobs} stages={stages} contactCount={contacts.length} />
           )}
 
-          {/* FIX Actions : bloc collapsible ferme par defaut, meme style que Calendrier */}
+          {/* Actions collapsible — header unique avec badge nombre */}
           {view === 'kanban' && (
             <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
               <div style={{
@@ -445,9 +445,16 @@ export default function DashboardPage() {
                 borderBottom: actionsVisible ? '2px solid #111' : 'none',
                 background: '#FAFAFA',
               }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
-                  ⚡ Actions
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
+                    ⚡ Actions
+                  </span>
+                  {actionsCount > 0 && (
+                    <span style={{ background: '#111', color: '#fff', fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 10 }}>
+                      {actionsCount}
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={() => setActionsVisible(v => !v)}
                   style={{ fontSize: 11, fontWeight: 800, fontFamily: 'Montserrat,sans-serif', background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}
@@ -456,13 +463,16 @@ export default function DashboardPage() {
                 </button>
               </div>
               {actionsVisible && (
-                <ActionsSection triggerOpen={triggerAddAction} />
+                <ActionsSection
+                  triggerOpen={triggerAddAction}
+                  onCountChange={setActionsCount}
+                />
               )}
             </div>
           )}
 
           {view === 'actions' && (
-            <ActionsSection triggerOpen={triggerAddAction} />
+            <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} />
           )}
         </div>
       </main>

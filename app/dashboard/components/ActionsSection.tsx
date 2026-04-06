@@ -23,7 +23,13 @@ const CATEGORIE_COLORS: Record<string, string> = {
   'Autre': '#888',
 }
 
-export default function ActionsSection({ triggerOpen = 0 }: { triggerOpen?: number }) {
+export default function ActionsSection({
+  triggerOpen = 0,
+  onCountChange,
+}: {
+  triggerOpen?: number
+  onCountChange?: (count: number) => void
+}) {
   const [actions, setActions] = useState<Action[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -39,6 +45,7 @@ export default function ActionsSection({ triggerOpen = 0 }: { triggerOpen?: numb
       if (res.ok) {
         const data = await res.json()
         setActions(data)
+        onCountChange?.(data.length)
       }
     } catch (err) {
       console.error('Erreur chargement actions:', err)
@@ -50,7 +57,7 @@ export default function ActionsSection({ triggerOpen = 0 }: { triggerOpen?: numb
   useEffect(() => { fetchActions() }, [])
 
   useEffect(() => {
-    if (triggerOpen > 0) { setSelectedAction(null); setModalOpen(true); }
+    if (triggerOpen > 0) { setSelectedAction(null); setModalOpen(true) }
   }, [triggerOpen])
 
   const handleDelete = async (id: string) => {
@@ -79,78 +86,48 @@ export default function ActionsSection({ triggerOpen = 0 }: { triggerOpen?: numb
   const past = actions.filter(a => isPast(a.date_debut))
 
   return (
-    <div style={{ border: '2px solid #111', marginBottom: 24, background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 16px',
-        borderBottom: '2px solid #111',
-        background: '#FAFAFA',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 16 }}>⚡</span>
-          <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-            Actions
-          </span>
-          <span style={{
-            background: '#111', color: '#fff',
-            fontSize: 11, fontWeight: 700,
-            padding: '1px 7px', borderRadius: 10,
-          }}>
-            {actions.length}
-          </span>
+    <div style={{ padding: 16 }}>
+      {loading ? (
+        <p style={{ fontSize: 13, color: '#888', fontFamily: 'Montserrat, sans-serif' }}>Chargement...</p>
+      ) : actions.length === 0 ? (
+        <p style={{ fontSize: 13, color: '#888', fontFamily: 'Montserrat, sans-serif', textAlign: 'center', padding: '20px 0' }}>
+          Aucune action pour le moment. Ajoutez vos ateliers, formations, rendez-vous...
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {upcoming.length > 0 && (
+            <>
+              <p style={{ fontSize: 10, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'Montserrat, sans-serif', marginBottom: 4 }}>À venir</p>
+              {upcoming.map(action => (
+                <ActionCard
+                  key={action.id}
+                  action={action}
+                  formatDate={formatDate}
+                  onEdit={() => { setSelectedAction(action); setModalOpen(true) }}
+                  onDelete={() => setDeleteTarget(action)}
+                  past={false}
+                />
+              ))}
+            </>
+          )}
+          {past.length > 0 && (
+            <>
+              <p style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'Montserrat, sans-serif', marginTop: 8, marginBottom: 4 }}>Passées</p>
+              {past.map(action => (
+                <ActionCard
+                  key={action.id}
+                  action={action}
+                  formatDate={formatDate}
+                  onEdit={() => { setSelectedAction(action); setModalOpen(true) }}
+                  onDelete={() => setDeleteTarget(action)}
+                  past={true}
+                />
+              ))}
+            </>
+          )}
         </div>
+      )}
 
-      </div>
-
-      {/* Content */}
-      <div style={{ padding: 16 }}>
-        {loading ? (
-          <p style={{ fontSize: 13, color: '#888', fontFamily: 'Montserrat, sans-serif' }}>Chargement...</p>
-        ) : actions.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#888', fontFamily: 'Montserrat, sans-serif', textAlign: 'center', padding: '20px 0' }}>
-            Aucune action pour le moment. Ajoutez vos ateliers, formations, rendez-vous...
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {/* À venir */}
-            {upcoming.length > 0 && (
-              <>
-                <p style={{ fontSize: 10, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'Montserrat, sans-serif', marginBottom: 4 }}>À venir</p>
-                {upcoming.map(action => (
-                  <ActionCard
-                    key={action.id}
-                    action={action}
-                    formatDate={formatDate}
-                    onEdit={() => { setSelectedAction(action); setModalOpen(true) }}
-                    onDelete={() => setDeleteTarget(action)}
-                    past={false}
-                  />
-                ))}
-              </>
-            )}
-
-            {/* Passées */}
-            {past.length > 0 && (
-              <>
-                <p style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'Montserrat, sans-serif', marginTop: 8, marginBottom: 4 }}>Passées</p>
-                {past.map(action => (
-                  <ActionCard
-                    key={action.id}
-                    action={action}
-                    formatDate={formatDate}
-                    onEdit={() => { setSelectedAction(action); setModalOpen(true) }}
-                    onDelete={() => setDeleteTarget(action)}
-                    past={true}
-                  />
-                ))}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Modale de confirmation suppression */}
       {deleteTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
           <div style={{ background: '#fff', border: '2px solid #E8151B', borderRadius: 12, boxShadow: '4px 4px 0 #E8151B', padding: 28, maxWidth: 420, width: '100%', fontFamily: 'Montserrat, sans-serif' }}>
@@ -205,24 +182,17 @@ function ActionCard({ action, formatDate, onEdit, onDelete, past }: {
             {action.nom}
           </span>
           {action.categorie && (
-            <span style={{
-              background: color, color: '#111',
-              fontSize: 10, fontWeight: 700,
-              padding: '2px 8px', border: '1px solid #111',
-            }}>
+            <span style={{ background: color, color: '#111', fontSize: 10, fontWeight: 700, padding: '2px 8px', border: '1px solid #111' }}>
               {action.categorie}
             </span>
           )}
         </div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {action.organisateur && (
-            <span style={{ fontSize: 11, color: '#555', fontFamily: 'Montserrat, sans-serif' }}>
-              📍 {action.organisateur}
-            </span>
+            <span style={{ fontSize: 11, color: '#555', fontFamily: 'Montserrat, sans-serif' }}>📍 {action.organisateur}</span>
           )}
           <span style={{ fontSize: 11, color: '#555', fontFamily: 'Montserrat, sans-serif' }}>
-            📅 {formatDate(action.date_debut)}
-            {action.date_fin && ` → ${formatDate(action.date_fin)}`}
+            📅 {formatDate(action.date_debut)}{action.date_fin && ` → ${formatDate(action.date_fin)}`}
           </span>
         </div>
         {action.note && (
@@ -230,18 +200,8 @@ function ActionCard({ action, formatDate, onEdit, onDelete, past }: {
         )}
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        <button
-          onClick={onEdit}
-          style={{ background: 'none', border: '1.5px solid #111', padding: '4px 10px', cursor: 'pointer', fontSize: 11, fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
-        >
-          ✏️
-        </button>
-        <button
-          onClick={onDelete}
-          style={{ background: 'none', border: '1.5px solid #E8151B', padding: '4px 10px', cursor: 'pointer', fontSize: 11, color: '#E8151B' }}
-        >
-          🗑
-        </button>
+        <button onClick={onEdit} style={{ background: 'none', border: '1.5px solid #111', padding: '4px 10px', cursor: 'pointer', fontSize: 11, fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>✏️</button>
+        <button onClick={onDelete} style={{ background: 'none', border: '1.5px solid #E8151B', padding: '4px 10px', cursor: 'pointer', fontSize: 11, color: '#E8151B' }}>🗑</button>
       </div>
     </div>
   )
