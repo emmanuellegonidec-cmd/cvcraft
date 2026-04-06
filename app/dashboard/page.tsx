@@ -365,7 +365,15 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {view === 'kanban' && (
-              <button className="btn-main" style={{ background: '#7C3AED', boxShadow: '2px 2px 0 #111' }} onClick={() => setTriggerAddAction(n => n + 1)}>
+              <button
+                className="btn-main"
+                style={{ background: '#7C3AED', boxShadow: '2px 2px 0 #111' }}
+                onClick={() => {
+                  // On ouvre la section si elle est fermée, puis on déclenche le modal
+                  setActionsVisible(true);
+                  setTimeout(() => setTriggerAddAction(n => n + 1), 50);
+                }}
+              >
                 + Ajouter une action
               </button>
             )}
