@@ -60,13 +60,11 @@ export default function DashboardPage() {
   const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, string>>({});
   const newJobRef = useRef<NewJobState>({ ...EMPTY_JOB });
 
-  useEffect(() => {
-    newJobRef.current = newJob;
-  }, [newJob]);
+  // Actions collapsible, ferme par defaut
+  const [actionsVisible, setActionsVisible] = useState(false);
 
-  useEffect(() => {
-    if (accessToken) (window as any).__jfmj_token = accessToken;
-  }, [accessToken]);
+  useEffect(() => { newJobRef.current = newJob; }, [newJob]);
+  useEffect(() => { if (accessToken) (window as any).__jfmj_token = accessToken; }, [accessToken]);
 
   const today = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -129,7 +127,6 @@ export default function DashboardPage() {
       const { data: customStages } = await supabase
         .from('pipeline_stages').select('*')
         .eq('user_id', session.user.id).is('job_id', null).order('position');
-
       if (customStages && customStages.length > 0) {
         const all = [
           ...DEFAULT_STAGES,
@@ -184,9 +181,7 @@ export default function DashboardPage() {
   async function saveJob() {
     const job = newJobRef.current;
     if (!job.title || !job.company) return;
-
     const extras = extraJobFields.current || {};
-
     const payload = {
       title: job.title, company: job.company,
       location: job.location || '', description: job.description || '',
@@ -199,11 +194,8 @@ export default function DashboardPage() {
       company_description: extras.company_description || (job as any).company_description || '',
       company_website:     extras.company_website     || (job as any).company_website     || '',
       company_size:        extras.company_size        || (job as any).company_size        || '',
-      ...((job as any).transmitted_by_contact_id
-        ? { transmitted_by_contact_id: (job as any).transmitted_by_contact_id }
-        : {}),
+      ...((job as any).transmitted_by_contact_id ? { transmitted_by_contact_id: (job as any).transmitted_by_contact_id } : {}),
     };
-
     if (!payload.company_description) delete (payload as any).company_description;
     if (!payload.company_website)     delete (payload as any).company_website;
     if (!payload.company_size)        delete (payload as any).company_size;
@@ -223,14 +215,9 @@ export default function DashboardPage() {
 
   async function updateJobStatus(id: string, newStatus: string) {
     const subStatus = STATUS_TO_SUB[newStatus] ?? newStatus;
-
     setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus as JobStatus, sub_status: subStatus } as any : j));
     if (selectedJob?.id === id) setSelectedJob(prev => prev ? { ...prev, status: newStatus as JobStatus } : prev);
-
-    const res = await authFetch(`/api/jobs?id=${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status: newStatus, sub_status: subStatus }),
-    });
+    const res = await authFetch(`/api/jobs?id=${id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus, sub_status: subStatus }) });
     const data = await res.json();
     if (data.job) {
       setJobs(prev => prev.map(j => j.id === id ? data.job : j));
@@ -278,15 +265,11 @@ export default function DashboardPage() {
       const res = await authFetch('/api/jobs/import', { method: 'POST', body: JSON.stringify({ url }) });
       const data = await res.json();
       if (!res.ok || !data.success) { setImportError(true); return; }
-
       if (data.savedJobId) {
         if (accessToken) await fetchJobs(accessToken);
-        setShowAddJob(false);
-        setNewJob({ ...EMPTY_JOB });
-        router.push(`/dashboard/job/${data.savedJobId}`);
-        return;
+        setShowAddJob(false); setNewJob({ ...EMPTY_JOB });
+        router.push(`/dashboard/job/${data.savedJobId}`); return;
       }
-
       const job = data.job || {};
       const description = (job.description && job.description.length > 150)
         ? job.description : (job.raw_text || job.description || '');
@@ -355,11 +338,12 @@ export default function DashboardPage() {
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        {/* FIX 1 : suppression de borderBottom */}
+        {/* Header sans borderBottom */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#111' }}>
+            {/* FIX : Hello agrandi 1.4rem → 2rem */}
+            <div style={{ fontSize: '2rem', fontWeight: 900, color: '#111' }}>
               Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
             </div>
           </div>
@@ -383,7 +367,7 @@ export default function DashboardPage() {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
 
-          {/* FIX 2 : fontSize 16 (était 14) pour STATISTIQUES */}
+          {/* Statistiques — fontSize 16 */}
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
               <div style={{ padding: '10px 16px', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
@@ -408,6 +392,7 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Calendrier */}
           {['kanban', 'list'].includes(view) && (
             <DashboardCalendar
               jobs={jobs}
@@ -417,7 +402,7 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* FIX 3 : CANDIDATURES + KanbanView dans un seul bloc */}
+          {/* Candidatures + Kanban dans un seul bloc */}
           {view === 'kanban' && (
             <div style={{ marginBottom: '0.75rem', marginTop: '0.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#FAFAFA', borderBottom: '2px solid #111' }}>
@@ -450,9 +435,32 @@ export default function DashboardPage() {
           {view === 'stats' && (
             <StatsView jobs={jobs} stages={stages} contactCount={contacts.length} />
           )}
+
+          {/* FIX Actions : bloc collapsible ferme par defaut, meme style que Calendrier */}
           {view === 'kanban' && (
-            <ActionsSection triggerOpen={triggerAddAction} />
+            <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 16px',
+                borderBottom: actionsVisible ? '2px solid #111' : 'none',
+                background: '#FAFAFA',
+              }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Montserrat,sans-serif' }}>
+                  ⚡ Actions
+                </span>
+                <button
+                  onClick={() => setActionsVisible(v => !v)}
+                  style={{ fontSize: 11, fontWeight: 800, fontFamily: 'Montserrat,sans-serif', background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}
+                >
+                  {actionsVisible ? 'Masquer' : 'Afficher'}
+                </button>
+              </div>
+              {actionsVisible && (
+                <ActionsSection triggerOpen={triggerAddAction} />
+              )}
+            </div>
           )}
+
           {view === 'actions' && (
             <ActionsSection triggerOpen={triggerAddAction} />
           )}
