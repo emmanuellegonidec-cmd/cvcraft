@@ -6,7 +6,6 @@ const FONT = "'Montserrat', sans-serif";
 
 const SCREENS = [
   {
-    emoji: '👋',
     title: 'Bienvenue sur Jean Find My Job',
     content: (
       <div>
@@ -20,7 +19,6 @@ const SCREENS = [
     ),
   },
   {
-    emoji: '📋',
     title: 'Ajouter une offre',
     content: (
       <div>
@@ -49,27 +47,23 @@ const SCREENS = [
     ),
   },
   {
-    emoji: '🗂️',
     title: 'Le tableau de bord Kanban',
     content: (
       <div>
-        <p style={{ margin: '0 0 12px', fontFamily: FONT }}>
+        <p style={{ margin: '0 0 14px', fontFamily: FONT }}>
           Tes offres sont organisées en <strong>5 étapes</strong>. Glisse une carte d'une colonne à l'autre dès que ta situation évolue.
         </p>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 5 }}>
           {[
-            { bg: '#888888', label: 'Envie de postuler', cards: 1 },
-            { bg: '#1A6FDB', label: 'Postulé', cards: 2 },
-            { bg: '#B8900A', label: 'En cours', cards: 1 },
-            { bg: '#1A7A4A', label: 'Offre reçue', cards: 0 },
-            { bg: '#AAAAAA', label: 'Archivé', cards: 0 },
+            { bg: '#888888', label: 'Envie de postuler' },
+            { bg: '#1A6FDB', label: 'Postulé' },
+            { bg: '#B8900A', label: 'En cours' },
+            { bg: '#1A7A4A', label: 'Offre reçue' },
+            { bg: '#AAAAAA', label: 'Archivé' },
           ].map((col) => (
-            <div key={col.label} style={{ flex: 1 }}>
-              <div style={{ backgroundColor: col.bg, color: '#fff', fontSize: 9, fontWeight: 700, padding: '5px 4px', textAlign: 'center' as const, border: '1.5px solid #111', borderBottom: 'none', lineHeight: 1.3, fontFamily: FONT }}>{col.label}</div>
-              <div style={{ border: '1.5px solid #111', borderTop: 'none', height: 60, backgroundColor: '#fafafa', padding: 3 }}>
-                {Array.from({ length: col.cards }).map((_, i) => (
-                  <div key={i} style={{ backgroundColor: '#fff', border: '1.5px solid #111', height: 20, marginBottom: 3, boxShadow: '1px 1px 0 #111' }} />
-                ))}
+            <div key={col.label} style={{ flex: 1, border: '2px solid #111', borderRadius: 6, overflow: 'hidden', boxShadow: '2px 2px 0 #111' }}>
+              <div style={{ backgroundColor: col.bg, color: '#fff', fontSize: 9, fontWeight: 800, padding: '10px 4px', textAlign: 'center' as const, lineHeight: 1.3, fontFamily: FONT, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {col.label}
               </div>
             </div>
           ))}
@@ -78,7 +72,6 @@ const SCREENS = [
     ),
   },
   {
-    emoji: '📁',
     title: 'Chaque offre a son dossier',
     content: (
       <div>
@@ -97,7 +90,6 @@ const SCREENS = [
     ),
   },
   {
-    emoji: '📅',
     title: 'Calendrier',
     content: (
       <div>
@@ -130,7 +122,6 @@ const SCREENS = [
     ),
   },
   {
-    emoji: '⚡',
     title: 'Actions',
     content: (
       <div>
@@ -149,7 +140,6 @@ const SCREENS = [
     ),
   },
   {
-    emoji: '🚀',
     title: "C'est parti !",
     content: (
       <div>
@@ -203,16 +193,17 @@ export default function OnboardingModal({ onAddJob }: { onAddJob: () => void }) 
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: FONT }}>
       <div style={{ background: '#fff', border: '3px solid #111', boxShadow: '6px 6px 0 #111', borderRadius: 12, width: '100%', maxWidth: 500, overflow: 'hidden' }}>
 
-        {/* HEADER BLANC avec logo */}
+        {/* HEADER blanc — logo + titre, sans emoji */}
         <div style={{ background: '#fff', borderBottom: '3px solid #111', padding: '16px 22px 14px', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
           <img
             src="/logo.png"
             alt="Jean Find My Job"
-            style={{ height: 70, width: 'auto', display: 'block' }}
+            style={{ height: 80, width: 'auto', display: 'block' }}
           />
           <button onClick={close} style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: '#aaa', fontSize: 20, cursor: 'pointer', padding: 0 }}>✕</button>
-          <div style={{ fontSize: 26, marginTop: 8, lineHeight: 1 }}>{screen.emoji}</div>
-          <div style={{ color: '#111', fontWeight: 900, fontSize: 17, marginTop: 5, lineHeight: 1.25, fontFamily: FONT }}>{screen.title}</div>
+          <div style={{ color: '#111', fontWeight: 900, fontSize: 17, marginTop: 10, lineHeight: 1.25, fontFamily: FONT }}>
+            {screen.title}
+          </div>
         </div>
 
         {/* BODY */}
@@ -241,6 +232,7 @@ export default function OnboardingModal({ onAddJob }: { onAddJob: () => void }) 
             Passer l'introduction
           </div>
         </div>
+
       </div>
     </div>
   );
