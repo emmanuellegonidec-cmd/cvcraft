@@ -62,9 +62,20 @@ const SCREENS = [
             { bg: '#AAAAAA', label: 'Archivé' },
           ].map((col) => (
             <div key={col.label} style={{ flex: 1, border: '2px solid #111', borderRadius: 6, overflow: 'hidden', boxShadow: '2px 2px 0 #111' }}>
-              <div style={{ backgroundColor: col.bg, color: '#fff', fontSize: 9, fontWeight: 800, padding: '10px 4px', textAlign: 'center' as const, lineHeight: 1.3, fontFamily: FONT, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{
+                backgroundColor: col.bg,
+                color: '#fff',
+                fontSize: 9,
+                fontWeight: 800,
+                padding: '8px 4px',
+                textAlign: 'center' as const,
+                lineHeight: 1.3,
+                fontFamily: FONT,
+              }}>
                 {col.label}
               </div>
+              {/* Corps vide de la colonne */}
+              <div style={{ backgroundColor: '#fafafa', height: 48 }} />
             </div>
           ))}
         </div>
@@ -193,13 +204,9 @@ export default function OnboardingModal({ onAddJob }: { onAddJob: () => void }) 
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: FONT }}>
       <div style={{ background: '#fff', border: '3px solid #111', boxShadow: '6px 6px 0 #111', borderRadius: 12, width: '100%', maxWidth: 500, overflow: 'hidden' }}>
 
-        {/* HEADER blanc — logo + titre, sans emoji */}
+        {/* HEADER blanc avec logo */}
         <div style={{ background: '#fff', borderBottom: '3px solid #111', padding: '16px 22px 14px', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          <img
-            src="/logo.png"
-            alt="Jean Find My Job"
-            style={{ height: 80, width: 'auto', display: 'block' }}
-          />
+          <img src="/logo.png" alt="Jean Find My Job" style={{ height: 80, width: 'auto', display: 'block' }} />
           <button onClick={close} style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: '#aaa', fontSize: 20, cursor: 'pointer', padding: 0 }}>✕</button>
           <div style={{ color: '#111', fontWeight: 900, fontSize: 17, marginTop: 10, lineHeight: 1.25, fontFamily: FONT }}>
             {screen.title}
@@ -232,7 +239,6 @@ export default function OnboardingModal({ onAddJob }: { onAddJob: () => void }) 
             Passer l'introduction
           </div>
         </div>
-
       </div>
     </div>
   );
