@@ -65,21 +65,10 @@ const SCREENS = [
             { bg: '#AAAAAA', label: 'Archivé', cards: 0 },
           ].map((col) => (
             <div key={col.label} style={{ flex: 1 }}>
-              <div style={{
-                backgroundColor: col.bg,
-                color: '#ffffff',
-                fontSize: 9,
-                fontWeight: 700,
-                padding: '5px 4px',
-                textAlign: 'center' as const,
-                border: '1.5px solid #111',
-                borderBottom: 'none',
-                lineHeight: 1.3,
-                fontFamily: FONT,
-              }}>{col.label}</div>
+              <div style={{ backgroundColor: col.bg, color: '#fff', fontSize: 9, fontWeight: 700, padding: '5px 4px', textAlign: 'center' as const, border: '1.5px solid #111', borderBottom: 'none', lineHeight: 1.3, fontFamily: FONT }}>{col.label}</div>
               <div style={{ border: '1.5px solid #111', borderTop: 'none', height: 60, backgroundColor: '#fafafa', padding: 3 }}>
                 {Array.from({ length: col.cards }).map((_, i) => (
-                  <div key={i} style={{ backgroundColor: '#ffffff', border: '1.5px solid #111', height: 20, marginBottom: 3, boxShadow: '1px 1px 0 #111' }} />
+                  <div key={i} style={{ backgroundColor: '#fff', border: '1.5px solid #111', height: 20, marginBottom: 3, boxShadow: '1px 1px 0 #111' }} />
                 ))}
               </div>
             </div>
@@ -130,7 +119,7 @@ const SCREENS = [
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12, marginTop: 10, fontSize: 11, color: '#555', fontFamily: FONT }}>
-          {[['#E8151B', 'Entretien'], ['#7C3AED', 'Action'], ['#F5C400', 'Offre reçue']] .map(([c, l]) => (
+          {[['#E8151B', 'Entretien'], ['#7C3AED', 'Action'], ['#F5C400', 'Offre reçue']].map(([c, l]) => (
             <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 10, height: 10, backgroundColor: c, borderRadius: 2, display: 'inline-block', border: c === '#F5C400' ? '1px solid #ccc' : 'none' }} />
               {l}
@@ -167,12 +156,12 @@ const SCREENS = [
         <p style={{ margin: '0 0 16px', fontFamily: FONT }}>
           Ta recherche mérite d'être bien organisée. Commence dès maintenant en ajoutant ta première offre.
         </p>
-        <div style={{ border: '2px solid #111', borderRadius: 12, padding: '20px 16px', background: '#FFFDE7', boxShadow: '3px 3px 0 #111', textAlign: 'center' }}>
+        <div style={{ border: '2px solid #111', borderRadius: 12, padding: '20px 16px', background: '#FFFDE7', boxShadow: '3px 3px 0 #111', textAlign: 'center' as const }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>🎯</div>
           <div style={{ fontWeight: 900, fontSize: 16, color: '#111', fontFamily: FONT, marginBottom: 4 }}>Jean Find My Job</div>
           <div style={{ fontSize: 12, color: '#555', fontFamily: FONT }}>Ton allié pour une recherche organisée</div>
         </div>
-        <p style={{ margin: '14px 0 0', fontSize: 11, color: '#888', textAlign: 'center', fontFamily: FONT }}>
+        <p style={{ margin: '14px 0 0', fontSize: 11, color: '#888', textAlign: 'center' as const, fontFamily: FONT }}>
           Des questions ? <strong style={{ color: '#111' }}>hello@jeanfindmyjob.fr</strong>
         </p>
       </div>
@@ -214,15 +203,16 @@ export default function OnboardingModal({ onAddJob }: { onAddJob: () => void }) 
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: FONT }}>
       <div style={{ background: '#fff', border: '3px solid #111', boxShadow: '6px 6px 0 #111', borderRadius: 12, width: '100%', maxWidth: 500, overflow: 'hidden' }}>
 
-        {/* HEADER */}
-        <div style={{ background: '#111', padding: '18px 22px 16px', position: 'relative', borderRadius: '9px 9px 0 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ background: '#F5C400', color: '#111', fontWeight: 900, fontSize: 15, padding: '3px 9px', border: '2px solid #F5C400', letterSpacing: 1, borderRadius: 4, fontFamily: FONT }}>JEAN</span>
-            <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 700, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' as const, fontFamily: FONT }}>Find My Job</span>
-          </div>
-          <button onClick={close} style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 20, cursor: 'pointer', padding: 0, fontFamily: FONT }}>✕</button>
-          <div style={{ fontSize: 28, marginTop: 12, lineHeight: 1 }}>{screen.emoji}</div>
-          <div style={{ color: '#F5C400', fontWeight: 900, fontSize: 18, marginTop: 5, lineHeight: 1.25, fontFamily: FONT }}>{screen.title}</div>
+        {/* HEADER BLANC avec logo */}
+        <div style={{ background: '#fff', borderBottom: '3px solid #111', padding: '16px 22px 14px', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          <img
+            src="/logo.png"
+            alt="Jean Find My Job"
+            style={{ height: 70, width: 'auto', display: 'block' }}
+          />
+          <button onClick={close} style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: '#aaa', fontSize: 20, cursor: 'pointer', padding: 0 }}>✕</button>
+          <div style={{ fontSize: 26, marginTop: 8, lineHeight: 1 }}>{screen.emoji}</div>
+          <div style={{ color: '#111', fontWeight: 900, fontSize: 17, marginTop: 5, lineHeight: 1.25, fontFamily: FONT }}>{screen.title}</div>
         </div>
 
         {/* BODY */}
