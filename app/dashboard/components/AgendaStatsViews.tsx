@@ -54,7 +54,7 @@ function getEffectiveDate(job: Job): Date | null {
   const stepDates = (job as any).step_dates as Record<string, string> | null;
   const interviewAt = (job as any).interview_at as string | null;
 
-  if (job.status === 'in_progress' && subStatus && stepDates?.[subStatus]) {
+  if ((job.status as string) === 'in_progress' && subStatus && stepDates?.[subStatus]) {
     const stepDate = parseLocalDate(stepDates[subStatus]);
     const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
     if (stepDate >= todayMidnight) return stepDate; // future → prochaine étape
