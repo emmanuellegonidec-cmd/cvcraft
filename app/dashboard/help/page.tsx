@@ -15,7 +15,7 @@ const TOPICS = [
           Clique sur <strong style={{ background: '#F5C400', padding: '1px 6px', border: '1.5px solid #111' }}>+ Ajouter une offre</strong> en haut du tableau de bord. 4 façons d'ajouter :
         </p>
         {[
-          { icon: '🔗', label: 'Coller une URL', sub: 'LinkedIn, Indeed, Welcome to the Jungle… Jean analyse automatiquement' },
+          { icon: '🔗', label: 'Coller une URL', sub: 'Ajoute une url… Jean analyse automatiquement et complète par ce qui manque' },
           { icon: '📄', label: 'Importer un fichier', sub: "PDF, Word, image — l'IA extrait les infos" },
           { icon: '✏️', label: 'Saisir à la main', sub: 'Si tu as déjà toutes les infos' },
           { icon: '⭐', label: 'Candidature spontanée', sub: 'Tu cibles une entreprise sans offre publiée', yellow: true },
