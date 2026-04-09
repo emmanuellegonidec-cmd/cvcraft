@@ -160,7 +160,6 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
         display: 'block', fontFamily: FONT,
         textDecoration: action.is_done ? 'line-through' : 'none',
         marginBottom: 3, lineHeight: 1.3,
-        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         {action.title}
         {action.type === 'included' && !action.is_done && <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>✓</span>}
