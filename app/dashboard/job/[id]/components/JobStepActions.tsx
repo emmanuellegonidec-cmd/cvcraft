@@ -81,7 +81,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
   },
 }
 
-const DATE_ACTION_TITLES = ['Fixer une deadline', 'Ajouter un rappel', 'Date de prise de poste']
+const DATE_ACTION_TITLES = ['Fixer une deadline', 'Ajouter un rappel','Programmer une relance', 'Date de prise de poste']
 
 interface StepActionRow {
   id: string; title: string; icon: string; sub: string; position: number
