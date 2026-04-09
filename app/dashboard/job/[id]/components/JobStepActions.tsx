@@ -32,14 +32,13 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     ],
   },
   phone_interview: {
-    desc: "Prépare un pitch de 2 minutes et tes questions. CV et LM sont déjà transmis.",
+    desc: "L'entretien téléphonique peut être une simple prise de rendez-vous ou un pré-entretien de qualification. Prépare-toi à répondre à des questions très factuelles (situation actuelle, disponibilité, prétention salariale, pitch).",
     actions: [
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
       { icon: '🎯', title: 'Préparer mon pitch', sub: '2 min chrono', type: 'action' },
       { icon: '⏰', title: 'Mes questions', sub: 'À poser au recruteur', type: 'action' },
       { icon: '📅', title: 'Ajouter un rappel', sub: "Date & heure de l'appel", type: 'action' },
-      { icon: '🔔', title: 'Note de remerciement', sub: 'Email post-entretien', type: 'new' },
     ],
   },
   hr_interview: {
