@@ -27,8 +27,9 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     desc: "Ton dossier est envoyé. Garde une trace et programme une relance.",
     actions: [
       { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'action' },
-      { icon: '🔔', title: 'Programmer une relance', sub: 'Dans 7 à 10 jours', type: 'action' },
       { icon: '📋', title: 'Confirmer la réception', sub: 'Email de confirmation reçu ?', type: 'action' },
+      { icon: '🔔', title: 'Programmer une relance', sub: 'Dans 7 à 10 jours', type: 'action' },
+      
     ],
   },
   phone_interview: {
@@ -46,7 +47,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     actions: [
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '⭐', title: 'Méthode STAR', sub: 'Préparer mes exemples', type: 'action' },
-      { icon: '🧠', title: 'Questions RH types', sub: 'Points forts, faiblesse...', type: 'action' },
+      { icon: '🧠', title: 'Questions RH types', sub: 'Se présenter, motivations, enjeux du poste...', type: 'action' },
       { icon: '🏢', title: "Connaître l'entreprise", sub: 'Valeurs, actualités, équipe', type: 'action' },
       { icon: '⏰', title: 'Mes questions RH', sub: 'Culture, équipe, mobilité', type: 'action' },
       { icon: '📝', title: "Synthèse de l'entretien", sub: 'Email post-entretien (sous 48h), enjeux du poste, points clés', type: 'action' },
@@ -63,7 +64,8 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
       { icon: '🔧', title: 'Analyse du poste', sub: 'Enjeux, priorités, KPIs', type: 'new' },
       { icon: '👤', title: 'Références professionnelles', sub: 'Prévenir ses contacts', type: 'new' },
       { icon: '⏰', title: 'Mes questions manager', sub: 'Équipe, objectifs, style', type: 'action' },
-      { icon: '🔔', title: 'Note de remerciement', sub: 'Email post-entretien', type: 'new' },
+      { icon: '📝', title: "Synthèse de l'entretien", sub: 'Email post-entretien (sous 48h), enjeux du poste, points clés', type: 'action' },
+      { icon: '🔔', title: 'Programmer une relance', sub: 'Si pas de retour sous 10 jours', type: 'new' },
     ],
   },
   offer: {
