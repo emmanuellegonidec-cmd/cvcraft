@@ -24,7 +24,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     ],
   },
   applied: {
-    desc: "Votre dossier est envoyé. Gardez une trace et programmez une relance.",
+    desc: "Ton dossier est envoyé. Garde une trace et programme une relance.",
     actions: [
       { icon: '📄', title: 'CV', sub: 'Envoyé à cette étape', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Envoyée à cette étape', type: 'included' },
@@ -33,7 +33,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     ],
   },
   phone_interview: {
-    desc: "Préparez un pitch de 2 minutes et vos questions. CV et LM sont déjà transmis.",
+    desc: "Prépare un pitch de 2 minutes et tes questions. CV et LM sont déjà transmis.",
     actions: [
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
@@ -44,7 +44,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     ],
   },
   hr_interview: {
-    desc: "L'entretien RH explore votre personnalité et vos motivations. Préparez des exemples avec la méthode STAR.",
+    desc: "L'entretien RH explore ta personnalité et tes motivations. Prépare des exemples avec la méthode STAR.",
     actions: [
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
@@ -56,7 +56,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     ],
   },
   manager_interview: {
-    desc: "L'entretien manager est plus technique. Montrez votre expertise métier et votre compréhension des enjeux.",
+    desc: "L'entretien manager est plus technique. Montre ton expertise métier et ta compréhension des enjeux.",
     actions: [
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
@@ -68,7 +68,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     ],
   },
   offer: {
-    desc: "Félicitations ! Prenez le temps d'analyser l'offre avant de répondre. Négociez si nécessaire.",
+    desc: "Félicitations ! Prends le temps d'analyser l'offre avant de répondre. Négocie si nécessaire.",
     actions: [
       { icon: '📋', title: 'Analyser le contrat', sub: 'Salaire, avantages, conditions', type: 'new' },
       { icon: '⚖️', title: 'Comparer les offres', sub: 'Si vous avez plusieurs pistes', type: 'new' },
@@ -99,7 +99,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
   const [localDate, setLocalDate] = useState(action.deadline_date || '')
   const isDateCard = DATE_ACTION_TITLES.includes(action.title)
 
-  const borderColor = action.is_done ? '#A5D6A7' : action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#EBEBEB'
+  const borderColor = action.is_done ? '#A5D6A7' : action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#BBBBBB'
   const bgColor = action.is_done ? '#F1F8E9' : action.type === 'included' ? '#F1F8E9' : '#fff'
 
   function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -129,7 +129,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
 
   return (
     <div ref={setNodeRef} style={{
-      background: bgColor, border: `1.5px solid ${isDragging ? '#F5C400' : borderColor}`,
+      background: bgColor, border: `2px solid ${isDragging ? '#F5C400' : borderColor}`,
       borderRadius: 10, padding: '10px 12px 12px',
       cursor: isDragging ? 'grabbing' : 'grab',
       opacity: isDragging ? 0.5 : 1,
