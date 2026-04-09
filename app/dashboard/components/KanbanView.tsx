@@ -11,6 +11,8 @@ import { Job } from '@/lib/jobs';
 import { Stage, formatRelative, getSubStatusLabel } from './types';
 import { HeartDisplay } from './HeartComponents';
 
+const FONT = "'Montserrat', sans-serif"
+
 const SOURCE_MAP: Record<string, { bg: string; color: string; label: string }> = {
   'linkedin':              { bg: '#0A66C2', color: '#fff',    label: 'LinkedIn' },
   'indeed':                { bg: '#003A9B', color: '#fff',    label: 'Indeed' },
@@ -29,6 +31,17 @@ const SOURCE_MAP: Record<string, { bg: string; color: string; label: string }> =
   'spontaneous':           { bg: '#F5C400', color: '#92400E', label: '📨 Spontanée' },
   'autre':                 { bg: '#888',    color: '#fff',    label: 'Autre' },
 };
+
+// Ordre des colonnes pour détecter les déplacements en arrière
+const COLUMN_ORDER = ['to_apply', 'applied', 'in_progress', 'offer', 'archived']
+
+const COLUMN_LABELS: Record<string, string> = {
+  to_apply:    'Envie de postuler',
+  applied:     'Postulé',
+  in_progress: 'En cours',
+  offer:       'Offre reçue',
+  archived:    'Archivé',
+}
 
 function getSourceBadge(source?: string) {
   if (!source || source === 'file') return null;
@@ -191,6 +204,76 @@ function GhostCard({ job }: { job: Job }) {
   );
 }
 
+// ─── Modale confirmation déplacement en arrière ───────────────────────────────
+function BackwardMoveModal({ job, fromCol, toCol, onConfirm, onCancel }: {
+  job: Job; fromCol: string; toCol: string;
+  onConfirm: () => void; onCancel: () => void;
+}) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 2000, padding: '0 20px', fontFamily: FONT,
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: 12, padding: 28,
+        width: '100%', maxWidth: 460,
+        border: '2px solid #F5C400', boxShadow: '4px 4px 0 #111',
+      }}>
+        {/* Titre */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <span style={{ fontSize: 28 }}>⚠️</span>
+          <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: 0, fontFamily: FONT }}>
+            Déplacer cette offre en arrière ?
+          </h3>
+        </div>
+
+        {/* Offre concernée */}
+        <div style={{ background: '#F9F9F7', border: '1.5px solid #E0E0E0', borderRadius: 8, padding: '10px 14px', marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#111', fontFamily: FONT }}>{job.title}</div>
+          <div style={{ fontSize: 12, color: '#666', fontWeight: 500, fontFamily: FONT }}>{job.company}</div>
+        </div>
+
+        {/* Flèche mouvement */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
+          <span style={{ fontSize: 12, fontWeight: 800, padding: '4px 12px', borderRadius: 20, background: '#E8F0FE', color: '#1A6FDB', fontFamily: FONT }}>
+            {COLUMN_LABELS[fromCol]}
+          </span>
+          <span style={{ fontSize: 18, color: '#E8151B', fontWeight: 900 }}>←</span>
+          <span style={{ fontSize: 12, fontWeight: 800, padding: '4px 12px', borderRadius: 20, background: '#FFF8E1', color: '#B8900A', fontFamily: FONT }}>
+            {COLUMN_LABELS[toCol]}
+          </span>
+        </div>
+
+        {/* Message d'avertissement */}
+        <div style={{ background: '#FFF8E1', border: '1.5px solid #F5C400', borderRadius: 8, padding: '12px 14px', marginBottom: 20 }}>
+          <p style={{ fontSize: 13, color: '#111', margin: '0 0 8px', fontWeight: 700, fontFamily: FONT }}>
+            ℹ️ Vos données ne sont pas perdues
+          </p>
+          <p style={{ fontSize: 12, color: '#555', margin: '0 0 6px', lineHeight: 1.6, fontFamily: FONT }}>
+            Tous vos échanges, actions et documents restent intacts dans le dossier de l&apos;offre.
+          </p>
+          <p style={{ fontSize: 12, color: '#B8900A', margin: 0, lineHeight: 1.6, fontWeight: 600, fontFamily: FONT }}>
+            En revanche, l&apos;étape active dans le parcours détaillé sera modifiée. Vous devrez rouvrir le dossier de l&apos;offre et remettre le parcours à l&apos;étape en cours.
+          </p>
+        </div>
+
+        {/* Boutons */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onCancel}
+            style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
+            Annuler
+          </button>
+          <button onClick={onConfirm}
+            style={{ flex: 1, background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #E8151B' }}>
+            Déplacer quand même →
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Composant principal ───────────────────────────────────────────────────────
 type Props = {
   jobs: Job[]; stages: Stage[];
@@ -204,6 +287,9 @@ export default function KanbanView({ jobs, stages, stagesLabelMap, onJobClick, o
   const router = useRouter();
   const [activeJob, setActiveJob] = useState<Job | null>(null);
   const [overColId, setOverColId] = useState<string | null>(null);
+
+  // Modale confirmation déplacement en arrière
+  const [pendingMove, setPendingMove] = useState<{ job: Job; fromCol: string; toCol: string } | null>(null)
 
   useEffect(() => {
     const handleVisibility = () => { if (document.visibilityState === 'visible') onRefresh(); };
@@ -233,22 +319,52 @@ export default function KanbanView({ jobs, stages, stagesLabelMap, onJobClick, o
     const fromColId = (active.data.current as any)?.fromColId as string;
     const toColId = over.id as string;
     if (!job || fromColId === toColId) return;
-    onStatusChange(job.id, toColId);
+
+    // Détecter si c'est un déplacement en arrière
+    const fromIndex = COLUMN_ORDER.indexOf(fromColId)
+    const toIndex = COLUMN_ORDER.indexOf(toColId)
+    const isBackward = toIndex < fromIndex
+
+    if (isBackward) {
+      // Bloquer et afficher la modale de confirmation
+      setPendingMove({ job, fromCol: fromColId, toCol: toColId })
+    } else {
+      // Déplacement en avant : instantané, pas de confirmation
+      onStatusChange(job.id, toColId);
+    }
+  }
+
+  function confirmMove() {
+    if (!pendingMove) return
+    onStatusChange(pendingMove.job.id, pendingMove.toCol)
+    setPendingMove(null)
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'start', width: '100%', height: '100%' }}>
-        {stages.map(col => (
-          <DroppableColumn
-            key={col.id} col={col} jobs={jobsByStatus(col.id)} stages={stages}
-            stagesLabelMap={stagesLabelMap}
-            onCardClick={job => router.push(`/dashboard/job/${job.id}`)}
-            onAddJob={onAddJob} isDragOver={overColId === col.id}
-          />
-        ))}
-      </div>
-      <DragOverlay>{activeJob ? <GhostCard job={activeJob} /> : null}</DragOverlay>
-    </DndContext>
+    <>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'start', width: '100%', height: '100%' }}>
+          {stages.map(col => (
+            <DroppableColumn
+              key={col.id} col={col} jobs={jobsByStatus(col.id)} stages={stages}
+              stagesLabelMap={stagesLabelMap}
+              onCardClick={job => router.push(`/dashboard/job/${job.id}`)}
+              onAddJob={onAddJob} isDragOver={overColId === col.id}
+            />
+          ))}
+        </div>
+        <DragOverlay>{activeJob ? <GhostCard job={activeJob} /> : null}</DragOverlay>
+      </DndContext>
+
+      {pendingMove && (
+        <BackwardMoveModal
+          job={pendingMove.job}
+          fromCol={pendingMove.fromCol}
+          toCol={pendingMove.toCol}
+          onConfirm={confirmMove}
+          onCancel={() => setPendingMove(null)}
+        />
+      )}
+    </>
   );
 }
