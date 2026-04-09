@@ -72,6 +72,7 @@ interface Job {
   interview_location: string | null; interview_link: string | null; interview_phone: string | null
   company_description: string | null; company_website: string | null
   company_size: string | null; department: string | null; source_platform: string | null
+  recruitment_process: string | null
   hidden_steps: string[] | null
   step_dates: Record<string, string> | null
 }
@@ -173,10 +174,11 @@ export default function JobDetailPage() {
   const coverLetterInputRef = useRef<HTMLInputElement>(null)
 
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editForm, setEditForm] = useState({
+ const [editForm, setEditForm] = useState({
     title: '', company: '', location: '', job_type: 'CDI',
     salary_text: '', description: '',
     company_description: '', company_website: '', company_size: '',
+    recruitment_process: '',
   })
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
@@ -417,6 +419,7 @@ export default function JobDetailPage() {
       job_type: job.job_type || 'CDI', salary_text: job.salary_text || '',
       description: job.description || '', company_description: job.company_description || '',
       company_website: job.company_website || '', company_size: job.company_size || '',
+      recruitment_process: job.recruitment_process || '',
     })
     setShowEditModal(true)
   }
@@ -686,6 +689,15 @@ export default function JobDetailPage() {
             {descExpanded ? 'Réduire ↑' : 'Lire la description complète ↓'}
           </button>
         </div>
+
+        {(job.recruitment_process) && (
+          <div style={card}>
+            <span style={sectionLabel}>Processus de recrutement</span>
+            <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500, whiteSpace: 'pre-wrap' }}>
+              {job.recruitment_process}
+            </div>
+          </div>
+        )}
 
         <JobCompanySection job={job} expanded={companyExpanded} onToggle={() => setCompanyExpanded(v => !v)} />
       </div>

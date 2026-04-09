@@ -37,6 +37,7 @@ export type NormalizedJobOffer = {
   description: string | null
   requirements: string | null
   benefits: string | null
+  recruitment_process: string | null
   posted_at_text: string | null
   raw_text: string | null
   import_status: ImportStatus

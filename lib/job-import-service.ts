@@ -136,8 +136,8 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant o
   "description": "description complète du POSTE telle qu'elle apparaît dans l'offre ou null",
   "company_description": "description de l'ENTREPRISE telle qu'elle apparaît dans l'offre ou null",
   "salary_text": "fourchette salariale ou null",
+  "recruitment_process": "description du processus de recrutement si mentionné dans l'offre (étapes, entretiens, délais...), sinon null",
   "external_job_id": ${jobId ? `"${jobId}"` : 'null'}
-}`
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -302,6 +302,7 @@ function buildMinimalJobFromUrl(
     description: claudeData?.description ?? null,
     requirements: null,
     benefits: null,
+    recruitment_process: claudeData?.recruitment_process ?? null,
     posted_at_text: null,
     raw_text: null,
     import_status: 'needs_review',

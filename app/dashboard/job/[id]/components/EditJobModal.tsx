@@ -9,9 +9,10 @@ interface EditForm {
   job_type: string
   salary_text: string
   description: string
-  company_description: string
+ company_description: string
   company_website: string
   company_size: string
+  recruitment_process: string
 }
 
 interface Props {
@@ -62,6 +63,11 @@ export default function EditJobModal({ editForm, onChange, onSave, onClose }: Pr
             <label className="fl">🏢 À propos de l&apos;entreprise</label>
             <textarea className="fi" value={editForm.company_description} onChange={e => onChange('company_description', e.target.value)}
               rows={3} style={{ resize: 'vertical', marginBottom: 0 }} placeholder="Secteur d'activité, valeurs, taille, histoire..." />
+          </div>
+          <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
+            <label className="fl">🗂️ Processus de recrutement</label>
+            <textarea className="fi" value={editForm.recruitment_process} onChange={e => onChange('recruitment_process', e.target.value)}
+              rows={3} style={{ resize: 'vertical', marginBottom: 0 }} placeholder="Ex : 1 entretien RH, test technique, 1 entretien manager..." />
           </div>
           <div style={{ marginBottom: 14 }}>
             <label className="fl">Site web entreprise</label>
