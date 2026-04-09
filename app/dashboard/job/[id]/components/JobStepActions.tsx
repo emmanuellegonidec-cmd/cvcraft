@@ -38,19 +38,20 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
       { icon: '🎯', title: 'Préparer mon pitch', sub: '2 min chrono', type: 'action' },
       { icon: '⏰', title: 'Mes questions', sub: 'À poser au recruteur', type: 'action' },
-      { icon: '📅', title: 'Ajouter un rappel', sub: "Date & heure de l'appel", type: 'action' },
+      
     ],
   },
   hr_interview: {
     desc: "L'entretien RH explore ta personnalité et tes motivations. Prépare des exemples avec la méthode STAR.",
     actions: [
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
-      { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
-      { icon: '⭐', title: 'Méthode STAR', sub: 'Préparer mes exemples', type: 'new' },
-      { icon: '🧠', title: 'Questions RH types', sub: 'Points forts, faiblesse...', type: 'new' },
+      { icon: '⭐', title: 'Méthode STAR', sub: 'Préparer mes exemples', type: 'action' },
+      { icon: '🧠', title: 'Questions RH types', sub: 'Points forts, faiblesse...', type: 'action' },
       { icon: '🏢', title: "Connaître l'entreprise", sub: 'Valeurs, actualités, équipe', type: 'action' },
       { icon: '⏰', title: 'Mes questions RH', sub: 'Culture, équipe, mobilité', type: 'action' },
-      { icon: '🔔', title: 'Note de remerciement', sub: 'Email post-entretien', type: 'new' },
+      { icon: '📝', title: "Synthèse de l'entretien", sub: 'Email post-entretien (sous 48h), enjeux du poste, points clés', type: 'action' },
+      { icon: '🔔', title: 'Programmer une relance', sub: 'Si pas de retour sous 10 jours', type: 'action' },
+      
     ],
   },
   manager_interview: {
