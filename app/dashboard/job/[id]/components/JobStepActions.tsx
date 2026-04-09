@@ -158,7 +158,6 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
         fontSize: 12, fontWeight: 800,
         color: action.is_done ? '#2E7D32' : action.type === 'included' ? '#2E7D32' : '#111',
         display: 'block', fontFamily: FONT,
-        textDecoration: action.is_done ? 'line-through' : 'none',
         marginBottom: 3, lineHeight: 1.3,
       }}>
         {action.title}
@@ -369,7 +368,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
 
   return (
     <>
-      <div style={{ background: '#FFFDE7', borderRadius: 12, padding: '18px 22px', marginBottom: 14, border: '1.5px solid #F5C400' }}>
+      <div style={{ background: '#fff', borderRadius: 12, padding: '18px 22px', marginBottom: 14, border: '1.5px solid #E5E5E5' }}>
 
         {/* ── En-tête : badge étape + bouton unifié à droite ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
