@@ -23,6 +23,7 @@ type CompanyExtras = {
   company_description?: string;
   company_website?: string;
   company_size?: string;
+  recruitment_process?: string;
 };
 
 type Props = {
@@ -176,6 +177,14 @@ export default function ManualFormMode({
               onChange={e => updateCompanyExtra('company_description', e.target.value)}
               placeholder="Secteur d'activité, valeurs, taille, histoire de l'entreprise..."
               rows={3} style={{ resize: 'vertical' }} />
+          </div>
+          <div style={{ marginBottom: 14, gridColumn: '1 / -1' }}>
+            <label className="fl">🗂️ Processus de recrutement</label>
+            <textarea className="fi"
+              value={companyExtras.recruitment_process || ''}
+              onChange={e => updateCompanyExtra('recruitment_process', e.target.value)}
+              placeholder="Ex : 1 entretien RH, test technique, 1 entretien manager..."
+              rows={2} style={{ resize: 'vertical' }} />
           </div>
           <div style={{ marginBottom: 14 }}>
             <label className="fl">Site web entreprise</label>

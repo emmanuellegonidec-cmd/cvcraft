@@ -208,11 +208,13 @@ export default function DashboardPage() {
       company_description: extras.company_description || (job as any).company_description || '',
       company_website:     extras.company_website     || (job as any).company_website     || '',
       company_size:        extras.company_size        || (job as any).company_size        || '',
+      recruitment_process: extras.recruitment_process || (job as any).recruitment_process || '',
       ...((job as any).transmitted_by_contact_id ? { transmitted_by_contact_id: (job as any).transmitted_by_contact_id } : {}),
     };
     if (!payload.company_description) delete (payload as any).company_description;
     if (!payload.company_website)     delete (payload as any).company_website;
     if (!payload.company_size)        delete (payload as any).company_size;
+    if (!(payload as any).recruitment_process) delete (payload as any).recruitment_process;
 
     if (editingJobId) {
       const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: editingJobId, ...payload }) });
