@@ -163,6 +163,7 @@ export default function JobDetailPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [descExpanded, setDescExpanded] = useState(false)
+  const [recruitmentExpanded, setRecruitmentExpanded] = useState(false)
   const [companyExpanded, setCompanyExpanded] = useState(true)
   const [notes, setNotes] = useState('')
   const [contacts, setContacts] = useState<ContactMin[]>([])
@@ -685,17 +686,23 @@ export default function JobDetailPage() {
             />
             {!descExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(transparent, #fff)' }} />}
           </div>
-          <button onClick={() => setDescExpanded(v => !v)} style={{ background: '#111', color: '#F5C400', fontSize: 13, fontWeight: 800, border: 'none', borderRadius: 9, padding: '9px 18px', cursor: 'pointer', marginTop: 12, fontFamily: FONT, boxShadow: '2px 2px 0 #E8151B' }}>
-            {descExpanded ? 'Réduire ↑' : 'Lire la description complète ↓'}
-          </button>
+          <span onClick={() => setDescExpanded(v => !v)} style={{ fontSize: 13, fontWeight: 700, color: '#111', textDecoration: 'underline', cursor: 'pointer', marginTop: 12, display: 'inline-block', fontFamily: FONT }}>
+            {descExpanded ? 'Réduire ↑' : 'Lire la suite →'}
+          </span>
         </div>
 
         {(job.recruitment_process) && (
           <div style={card}>
             <span style={sectionLabel}>Processus de recrutement</span>
-            <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500, whiteSpace: 'pre-wrap' }}>
-              {job.recruitment_process}
+            <div style={{ position: 'relative', maxHeight: recruitmentExpanded ? 'none' : 120, overflow: 'hidden' }}>
+              <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500, whiteSpace: 'pre-wrap' }}>
+                {job.recruitment_process}
+              </div>
+              {!recruitmentExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, background: 'linear-gradient(transparent, #fff)' }} />}
             </div>
+            <span onClick={() => setRecruitmentExpanded(v => !v)} style={{ fontSize: 13, fontWeight: 700, color: '#111', textDecoration: 'underline', cursor: 'pointer', marginTop: 10, display: 'inline-block', fontFamily: FONT }}>
+              {recruitmentExpanded ? 'Réduire ↑' : 'Lire la suite →'}
+            </span>
           </div>
         )}
 

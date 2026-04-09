@@ -14,7 +14,7 @@ const ICON_CHOICES = ['⭐','📄','✉️','🎯','🔍','📅','🔔','📋','
 
 const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; title: string; sub: string; type: 'included' | 'action' | 'new' }[] }> = {
   to_apply: {
-    desc: "Vous avez repéré cette offre. Vérifiez votre compatibilité et préparez vos documents avant de postuler.",
+    desc: "Tu as repéré cette offre. Vérifie ta compatibilité et prépare tes documents avant de postuler.",
     actions: [
       { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'action' },
       { icon: '📄', title: 'Préparer mon CV', sub: 'Adapté à ce poste', type: 'action' },
