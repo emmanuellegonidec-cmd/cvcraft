@@ -99,10 +99,18 @@ function extractTransmittedBy(notes: string | null): string | null {
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect: (id: string) => void }) {
   const [jobs, setJobs] = useState<Job[]>([])
+  const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, string>>({})
   useEffect(() => {
     const supabase = createClient()
     supabase.from('jobs').select('*').order('created_at', { ascending: false }).then(({ data }) => {
       if (data) setJobs(data)
+    })
+    supabase.from('pipeline_stages').select('id, label').then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {}
+        data.forEach((s: any) => { map[s.id] = s.label })
+        setStagesLabelMap(map)
+      }
     })
   }, [])
   return (
@@ -117,7 +125,9 @@ function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect
         {jobs.map(job => {
           const isActive = job.id === currentJobId
           const statusColor = STATUS_COLORS[job.status] ?? STATUS_COLORS['to_apply']
-          const stepLabel = job.sub_status ? (SUB_STATUS_LABELS[job.sub_status] ?? STATUS_LABELS[job.status]) : STATUS_LABELS[job.status]
+          const stepLabel = job.sub_status
+  ? (SUB_STATUS_LABELS[job.sub_status] ?? stagesLabelMap[job.sub_status] ?? STATUS_LABELS[job.status])
+  : STATUS_LABELS[job.status]
           const dateRef = job.applied_at || job.created_at
           return (
             <div key={job.id} onClick={() => onSelect(job.id)}
