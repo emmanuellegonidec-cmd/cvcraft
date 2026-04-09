@@ -190,9 +190,6 @@ export default function HelpPage() {
             <div style={{ fontSize: 32, fontWeight: 900, color: '#111', fontFamily: FONT, lineHeight: 1.15, marginBottom: 10 }}>
               Won't you please,<br />please, help me?
             </div>
-            <div style={{ fontSize: 14, color: '#888', fontFamily: FONT, fontStyle: 'italic', marginBottom: 4 }}>
-              Help me, help me...
-            </div>
             <div style={{ fontSize: 13, color: '#aaa', fontFamily: FONT }}>
               Tout ce qu'il faut savoir pour bien utiliser Jean find my Job.
             </div>
