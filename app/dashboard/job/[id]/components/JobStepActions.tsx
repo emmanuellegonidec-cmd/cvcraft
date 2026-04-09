@@ -7,6 +7,7 @@ import {
   useDraggable, useDroppable,
 } from '@dnd-kit/core'
 import { createClient } from '@/lib/supabase'
+import ATSScoreModal from './ATSScoreModal'
 
 const FONT = "'Montserrat', sans-serif"
 
@@ -16,10 +17,10 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
   to_apply: {
     desc: "Tu as repéré cette offre. Vérifie ta compatibilité et prépare tes documents avant de postuler.",
     actions: [
-      { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'action' },
       { icon: '🔧', title: 'Analyse du poste', sub: 'Missions, hard-skills, soft-skills', type: 'action' },
        { icon: '🔍', title: "Rechercher l'entreprise", sub: 'Actualités, culture, équipe', type: 'action' },
        { icon: '📄', title: 'Préparer mon CV', sub: 'Adapté à ce poste', type: 'action' },
+      { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'action' },
       { icon: '✉️', title: 'Rédiger ma LM', sub: 'Personnalisée pour cette offre', type: 'action' },
       { icon: '📅', title: 'Fixer une deadline', sub: 'Date limite de candidature', type: 'action' },
     ],
@@ -83,6 +84,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
 }
 
 const DATE_ACTION_TITLES = ['Fixer une deadline', 'Ajouter un rappel','Programmer une relance', 'Date de prise de poste']
+const ATS_CARD_TITLE = 'Vérifier le score ATS'
 
 interface StepActionRow {
   id: string; title: string; icon: string; sub: string; position: number
@@ -90,16 +92,19 @@ interface StepActionRow {
   deadline_date?: string | null
 }
 
-function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlineSave }: {
+function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlineSave, onATSClick, atsScore }: {
   action: StepActionRow
   dragId: string
   onDelete: (id: string, title: string) => void
   onToggleDone: (id: string, value: boolean) => void
   onDeadlineSave: (id: string, date: string) => void
+  onATSClick?: () => void
+  atsScore?: number | null
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId })
   const [localDate, setLocalDate] = useState(action.deadline_date || '')
   const isDateCard = DATE_ACTION_TITLES.includes(action.title)
+  const isATSCard = action.title === ATS_CARD_TITLE
 
   const borderColor = action.is_done ? '#A5D6A7' : action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#BBBBBB'
   const bgColor = action.is_done ? '#F1F8E9' : action.type === 'included' ? '#F1F8E9' : '#fff'
@@ -129,23 +134,30 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
 
   const deadlineStatus = isDateCard ? getDeadlineStatus(localDate) : null
 
+  // Couleur du score ATS sur la carte
+  function atsScoreColor(score: number) {
+    if (score >= 75) return '#22a322'
+    if (score >= 50) return '#cc9900'
+    return '#E8151B'
+  }
+
   return (
     <div ref={setNodeRef} style={{
       background: bgColor, border: `2px solid ${isDragging ? '#F5C400' : borderColor}`,
       borderRadius: 10, padding: '10px 12px 12px',
-      cursor: isDragging ? 'grabbing' : 'grab',
+      cursor: isATSCard ? 'default' : (isDragging ? 'grabbing' : 'grab'),
       opacity: isDragging ? 0.5 : 1,
       transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
       zIndex: isDragging ? 50 : 1, position: 'relative',
       touchAction: 'none', userSelect: 'none',
       width: '100%', boxSizing: 'border-box',
       display: 'flex', flexDirection: 'column', height: '100%',
-    }} {...listeners} {...attributes}>
+    }} {...(isATSCard ? {} : { ...listeners, ...attributes })}>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4, marginBottom: 6 }}>
         <span style={{ fontSize: 18 }}>{action.icon}</span>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: '#bbb', cursor: 'grab', lineHeight: 1 }}>⠿</span>
+          {!isATSCard && <span style={{ fontSize: 11, color: '#bbb', cursor: 'grab', lineHeight: 1 }}>⠿</span>}
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
@@ -168,6 +180,38 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
       </span>
 
       <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: isDateCard ? 8 : 10, flex: isDateCard ? 'none' : 1 }}>{action.sub}</span>
+
+      {/* Badge score ATS si déjà analysé */}
+      {isATSCard && atsScore != null && (
+        <div
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onATSClick?.() }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: '#111', borderRadius: 8, padding: '5px 10px',
+            cursor: 'pointer', marginBottom: 8,
+          }}>
+          <span style={{ fontSize: 18, fontWeight: 900, color: atsScoreColor(atsScore), fontFamily: FONT, lineHeight: 1 }}>{atsScore}</span>
+          <div>
+            <span style={{ fontSize: 9, color: '#F5C400', fontWeight: 800, display: 'block', fontFamily: FONT, lineHeight: 1 }}>/ 100</span>
+            <span style={{ fontSize: 9, color: '#aaa', fontFamily: FONT, lineHeight: 1 }}>Voir le détail →</span>
+          </div>
+        </div>
+      )}
+
+      {/* Bouton Analyser si pas encore de score */}
+      {isATSCard && atsScore == null && (
+        <div
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onATSClick?.() }}
+          style={{
+            background: '#F5C400', border: '1.5px solid #111',
+            borderRadius: 6, padding: '5px 8px',
+            cursor: 'pointer', marginBottom: 8, textAlign: 'center',
+          }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: '#111', fontFamily: FONT }}>Analyser →</span>
+        </div>
+      )}
 
       {isDateCard && (
         <div onPointerDown={e => e.stopPropagation()} style={{ marginBottom: 8 }}>
@@ -215,15 +259,20 @@ interface Props {
   currentStepId: string
   currentStepLabel: string
   currentStepIndex: number
+  jobTitle?: string
 }
 
-export default function JobStepActions({ jobId, userId, currentStepId, currentStepLabel, currentStepIndex }: Props) {
+export default function JobStepActions({ jobId, userId, currentStepId, currentStepLabel, currentStepIndex, jobTitle = '' }: Props) {
   const [stepActions, setStepActions] = useState<StepActionRow[]>([])
   const [loading, setLoading] = useState(false)
   const [cvSent, setCvSent] = useState<boolean>(false)
   const [lmSent, setLmSent] = useState<boolean>(false)
   const [activeActionId, setActiveActionId] = useState<string | null>(null)
   const [overActionZone, setOverActionZone] = useState<string | null>(null)
+
+  // ATS
+  const [atsModalOpen, setAtsModalOpen] = useState(false)
+  const [atsResult, setAtsResult] = useState<any | null>(null)
 
   // Panneau unifié
   const [showPanel, setShowPanel] = useState(false)
@@ -257,10 +306,15 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
 
   async function loadJobDocStatus() {
     const supabase = createClient()
-    const { data } = await supabase.from('jobs').select('cv_sent, cover_letter_sent, cv_url, cover_letter_url').eq('id', jobId).single()
+    const { data } = await supabase
+      .from('jobs')
+      .select('cv_sent, cover_letter_sent, cv_url, cover_letter_url, ats_result')
+      .eq('id', jobId)
+      .single()
     if (data) {
       setCvSent(!!(data.cv_sent || data.cv_url))
       setLmSent(!!(data.cover_letter_sent || data.cover_letter_url))
+      if (data.ats_result) setAtsResult(data.ats_result)
     }
   }
 
@@ -372,7 +426,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
     <>
       <div style={{ background: '#fff', borderRadius: 12, padding: '18px 22px', marginBottom: 14, border: '1.5px solid #E5E5E5' }}>
 
-        {/* ── En-tête : badge étape + bouton unifié à droite ── */}
+        {/* ── En-tête ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
             <span style={{ background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '3px 11px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONT }}>
@@ -381,7 +435,6 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
             <span style={{ fontSize: 15, fontWeight: 800, color: '#111', fontFamily: FONT }}>{currentStepLabel}</span>
           </div>
 
-          {/* Bouton standard */}
           <button
             onClick={() => { setShowPanel(v => !v); setPanelView('add') }}
             style={{
@@ -424,6 +477,8 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
                       onDelete={(id, title) => setActionToDelete({ id, title })}
                       onToggleDone={handleToggleDone}
                       onDeadlineSave={handleDeadlineSave}
+                      onATSClick={action.title === ATS_CARD_TITLE ? () => setAtsModalOpen(true) : undefined}
+                      atsScore={action.title === ATS_CARD_TITLE && atsResult ? atsResult.score_global : null}
                     />
                   </div>
                 </div>
@@ -446,7 +501,6 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
         {showPanel && (
           <div style={{ marginTop: 16, borderTop: '1.5px solid #F5C400', paddingTop: 16 }}>
 
-            {/* Onglets */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               {(['add', 'remove'] as const).map(tab => (
                 <button key={tab} onClick={() => setPanelView(tab)} style={{
@@ -462,7 +516,6 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
               ))}
             </div>
 
-            {/* Vue : Ajouter */}
             {panelView === 'add' && (
               <div style={{ background: '#fff', border: '1.5px solid #F5C400', borderRadius: 10, padding: '14px 16px' }}>
                 <div style={{ marginBottom: 10 }}>
@@ -507,7 +560,6 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
               </div>
             )}
 
-            {/* Vue : Supprimer */}
             {panelView === 'remove' && (
               <div>
                 <p style={{ fontSize: 12, color: '#999', fontWeight: 600, marginBottom: 12, fontFamily: FONT }}>
@@ -553,6 +605,16 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
           </div>
         </div>
       )}
+
+      {/* ── Modale ATS ── */}
+      <ATSScoreModal
+        isOpen={atsModalOpen}
+        onClose={() => setAtsModalOpen(false)}
+        jobId={jobId}
+        jobTitle={jobTitle}
+        existingResult={atsResult}
+        onResultSaved={(result) => setAtsResult(result)}
+      />
     </>
   )
 }

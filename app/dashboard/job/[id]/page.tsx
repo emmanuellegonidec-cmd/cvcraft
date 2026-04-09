@@ -623,13 +623,14 @@ export default function JobDetailPage() {
           onDelete={deleteExchange}
         />
 
-        <JobStepActions
-          jobId={jobId}
-          userId={userId}
-          currentStepId={currentStepId}
-          currentStepLabel={currentStepLabel}
-          currentStepIndex={currentStepIndex}
-        />
+       <JobStepActions
+  jobId={jobId}
+  userId={userId}
+  currentStepId={currentStepId}
+  currentStepLabel={currentStepLabel}
+  currentStepIndex={currentStepIndex}
+  jobTitle={job.title}
+/>
 
         {isInterviewStep && (
           <JobInterviewDetails
