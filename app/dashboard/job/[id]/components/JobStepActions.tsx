@@ -26,8 +26,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
   applied: {
     desc: "Ton dossier est envoyé. Garde une trace et programme une relance.",
     actions: [
-      { icon: '📄', title: 'CV', sub: 'Envoyé à cette étape', type: 'included' },
-      { icon: '✉️', title: 'LM', sub: 'Envoyée à cette étape', type: 'included' },
+      { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'action' },
       { icon: '🔔', title: 'Programmer une relance', sub: 'Dans 7 à 10 jours', type: 'action' },
       { icon: '📋', title: 'Confirmer la réception', sub: 'Email de confirmation reçu ?', type: 'action' },
     ],
