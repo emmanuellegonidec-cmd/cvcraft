@@ -116,28 +116,27 @@ async function extractJobWithClaude(
   const jobIdMatch = url.match(/\/jobs\/view\/(?:[^/]*?-)?(\d{6,})\/?/)
   const jobId = jobIdMatch?.[1] ?? null
 
-  const prompt = `Tu es un assistant spécialisé dans l'extraction d'offres d'emploi.
+  const externalIdJson = jobId ? '"' + jobId + '"' : 'null'
 
-Accède à cette page et extrais les informations directement depuis son contenu : ${url}
-
-IMPORTANT — deux champs distincts à extraire depuis la page de l'offre :
-- "description" = le descriptif du POSTE uniquement (missions, responsabilités, profil recherché, compétences requises). Retourne le texte intégral tel qu'il apparaît dans l'offre.
-- "company_description" = le descriptif de l'ENTREPRISE uniquement (activité, secteur, valeurs, taille, chiffres clés). Ce texte peut figurer n'importe où dans la page sous n'importe quel titre. Extrais-le tel quel depuis la page.
-
-Ne cherche pas d'informations sur d'autres sites. Extrais uniquement ce qui est présent dans la page de l'offre.
-
-Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après :
-{
-  "title": "titre exact du poste ou null",
-  "company_name": "nom de l'entreprise ou null",
-  "location_text": "ville et mode de travail (ex: Paris · Hybride) ou null",
-  "employment_type": "CDI ou CDD ou Stage ou Alternance ou Freelance ou null",
-  "seniority_level": "niveau hiérarchique ou null",
-  "description": "description complète du POSTE telle qu'elle apparaît dans l'offre ou null",
-  "company_description": "description de l'ENTREPRISE telle qu'elle apparaît dans l'offre ou null",
-  "salary_text": "fourchette salariale ou null",
-  "recruitment_process": "description du processus de recrutement si mentionné dans l'offre (étapes, entretiens, délais...), sinon null",
-  "external_job_id": ${jobId ? `"${jobId}"` : 'null'}
+  const prompt = 'Tu es un assistant spécialisé dans l\'extraction d\'offres d\'emploi.\n\n'
+    + 'Accède à cette page et extrais les informations directement depuis son contenu : ' + url + '\n\n'
+    + 'IMPORTANT — deux champs distincts à extraire depuis la page de l\'offre :\n'
+    + '- "description" = le descriptif du POSTE uniquement (missions, responsabilités, profil recherché, compétences requises).\n'
+    + '- "company_description" = le descriptif de l\'ENTREPRISE uniquement (activité, secteur, valeurs, taille, chiffres clés).\n\n'
+    + 'Ne cherche pas d\'informations sur d\'autres sites. Extrais uniquement ce qui est présent dans la page de l\'offre.\n\n'
+    + 'Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après :\n'
+    + '{\n'
+    + '  "title": "titre exact du poste ou null",\n'
+    + '  "company_name": "nom de l\'entreprise ou null",\n'
+    + '  "location_text": "ville et mode de travail (ex: Paris · Hybride) ou null",\n'
+    + '  "employment_type": "CDI ou CDD ou Stage ou Alternance ou Freelance ou null",\n'
+    + '  "seniority_level": "niveau hiérarchique ou null",\n'
+    + '  "description": "description complète du POSTE telle qu\'elle apparaît dans l\'offre ou null",\n'
+    + '  "company_description": "description de l\'ENTREPRISE telle qu\'elle apparaît dans l\'offre ou null",\n'
+    + '  "salary_text": "fourchette salariale ou null",\n'
+    + '  "recruitment_process": "description du processus de recrutement si mentionné dans l\'offre (étapes, entretiens, délais...), sinon null",\n'
+    + '  "external_job_id": ' + externalIdJson + '\n'
+    + '}'
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
