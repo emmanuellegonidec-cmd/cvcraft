@@ -148,7 +148,6 @@ export default function JobDetailPage() {
   const [exchanges, setExchanges] = useState<JobExchange[]>([])
   const [customSteps, setCustomSteps] = useState<CustomStep[]>([])
   const [hiddenSteps, setHiddenSteps] = useState<string[]>([])
-  // MODIF 1 : état pour les dates des étapes
   const [stepDates, setStepDates] = useState<Record<string, string>>({})
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -158,7 +157,7 @@ export default function JobDetailPage() {
   const [contacts, setContacts] = useState<ContactMin[]>([])
   const [showCoverLetter, setShowCoverLetter] = useState(true)
   const notesTimer = useRef<NodeJS.Timeout | null>(null)
-const savedExchangeDatesRef = useRef<string>('')
+  const savedExchangeDatesRef = useRef<string>('')
   const [uploadingDoc, setUploadingDoc] = useState<'cv' | 'cover_letter' | null>(null)
   const cvInputRef = useRef<HTMLInputElement>(null)
   const coverLetterInputRef = useRef<HTMLInputElement>(null)
@@ -197,7 +196,6 @@ const savedExchangeDatesRef = useRef<string>('')
       setJob(data)
       setNotes(data.notes ?? '')
       setHiddenSteps(data.hidden_steps ?? [])
-      // MODIF 2 : charger les dates sauvegardées
       setStepDates(data.step_dates ?? {})
     }
   }, [jobId])
@@ -232,15 +230,16 @@ const savedExchangeDatesRef = useRef<string>('')
     setShowCoverLetter(data === null || data.length > 0)
   }, [jobId])
 
- useEffect(() => {
+  useEffect(() => {
     loadJob().then(() => {
       Promise.all([loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
     })
   }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
+
   useEffect(() => { if (userId) loadContacts() }, [userId])
-useEffect(() => {
+
+  useEffect(() => {
     if (!exchanges.length) return
-    // Reconstruit le mapping label → id sans dépendre de allSteps
     const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
     const stepsByLabel: Record<string, string> = {}
     for (const s of visibleBase) stepsByLabel[s.label] = s.id
@@ -270,6 +269,7 @@ useEffect(() => {
       body: JSON.stringify({ step_dates: merged }),
     })
   }, [exchanges.length, customSteps.length, hiddenSteps.length])
+
   // ─── Construction de allSteps ──────────────────────────────────────────────
   const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
 
@@ -280,8 +280,6 @@ useEffect(() => {
 
   const allSteps = allStepsMerged.map((s, i) => ({ id: s.id, label: s.label, num: i + 1 }))
 
-  // Dates dérivées des échanges — priorité sur les dates manuelles
-  // Pour chaque étape, on prend la date la plus ancienne parmi ses échanges
   const stepDatesFromExchanges: Record<string, string> = {}
   for (const exchange of exchanges) {
     if (!exchange.step_label || !exchange.exchange_date) continue
@@ -291,7 +289,6 @@ useEffect(() => {
       stepDatesFromExchanges[step.id] = exchange.exchange_date
     }
   }
-  // Les dates d'échanges écrasent les dates manuelles pour les étapes concernées
   const mergedStepDates = { ...stepDates, ...stepDatesFromExchanges }
 
   const currentStepId = job?.sub_status || job?.status || 'to_apply'
@@ -305,13 +302,34 @@ useEffect(() => {
     if (currentStepId) loadCoverLetterVisibility(currentStepId)
   }, [currentStepId, loadCoverLetterVisibility])
 
+  // ─── FIX : handleStepClick avec refresh session + filet de sécurité API ───
   const handleStepClick = async (stepId: string) => {
     if (!job) return
     const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
     const patch = { sub_status: stepId, status: globalStatus, updated_at: new Date().toISOString() }
+
+    // Mise à jour optimiste de l'UI immédiatement
     setJob(prev => prev ? { ...prev, ...patch } : prev)
+
+    // 1. Rafraîchir la session pour éviter les échecs silencieux à la réouverture
     const supabase = createClient()
-    await supabase.from('jobs').update(patch).eq('id', jobId)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session && typeof window !== 'undefined') {
+      (window as any).__jfmj_token = session.access_token
+    }
+
+    // 2. Sauvegarde directe Supabase
+    const { error } = await supabase.from('jobs').update(patch).eq('id', jobId)
+
+    // 3. Si la sauvegarde directe échoue → filet de sécurité via API
+    if (error) {
+      console.error('Erreur sauvegarde étape (direct Supabase):', error)
+      await fetch(`/api/jobs?id=${jobId}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ sub_status: stepId, status: globalStatus }),
+      })
+    }
   }
 
   const handleHideBaseStep = useCallback(async (stepId: string) => {
@@ -324,7 +342,6 @@ useEffect(() => {
     })
   }, [hiddenSteps, jobId])
 
-  // MODIF 3 : sauvegarder les dates des étapes
   const handleStepDatesChange = useCallback(async (dates: Record<string, string>) => {
     setStepDates(dates)
     await fetch(`/api/jobs?id=${jobId}`, {
@@ -429,7 +446,7 @@ useEffect(() => {
     await fetch(`/api/jobs/exchanges?id=${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }) })
   }
 
- const deleteExchange = async (id: string) => {
+  const deleteExchange = async (id: string) => {
     await fetch(`/api/jobs/exchanges?id=${id}`, { method: 'DELETE', headers: authHeaders() })
     setExchanges(prev => prev.filter(e => e.id !== id))
   }
@@ -570,7 +587,6 @@ useEffect(() => {
           </div>
         )}
 
-        {/* MODIF 4 : ajout des props stepDates et onStepDatesChange */}
         <JobStepProgress
           jobId={jobId}
           userId={userId}
@@ -663,13 +679,15 @@ useEffect(() => {
 
         <JobCompanySection job={job} expanded={companyExpanded} onToggle={() => setCompanyExpanded(v => !v)} />
       </div>
-{job && (
-  <ParcoursBannerModal
-    jobId={jobId}
-    status={job.status}
-    stepDates={mergedStepDates}
-  />
-)}
+
+      {job && (
+        <ParcoursBannerModal
+          jobId={jobId}
+          status={job.status}
+          stepDates={mergedStepDates}
+        />
+      )}
+
       {showEditModal && (
         <EditJobModal editForm={editForm} onChange={(field, value) => setEditForm(p => ({ ...p, [field]: value }))} onSave={saveEdit} onClose={() => setShowEditModal(false)} />
       )}
