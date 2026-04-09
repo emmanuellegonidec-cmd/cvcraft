@@ -78,10 +78,10 @@ export async function POST(
 
     const jobId = params.id
 
-    // Récupérer le job avec sa description
+    // Récupérer le job avec sa description et le chemin du CV
     const { data: job, error: jobError } = await supabase
       .from('jobs')
-      .select('id, title, company, description, user_id')
+      .select('id, title, company, description, user_id, cv_url')
       .eq('id', jobId)
       .eq('user_id', user.id)
       .single()
@@ -90,31 +90,20 @@ export async function POST(
       return NextResponse.json({ error: 'Offre introuvable' }, { status: 404 })
     }
 
-    // Récupérer le CV depuis job_documents
-    const { data: docs } = await supabase
-      .from('job_documents')
-      .select('file_path, file_name, type')
-      .eq('job_id', jobId)
-      .eq('user_id', user.id)
-      .in('type', ['cv', 'CV'])
-      .limit(1)
-
-    if (!docs || docs.length === 0) {
+    if (!job.cv_url) {
       return NextResponse.json(
         { error: 'Aucun CV trouvé pour cette offre. Veuillez d\'abord uploader votre CV dans la section Documents.' },
         { status: 400 }
       )
     }
 
-    const cvDoc = docs[0]
-
-    // Télécharger le fichier CV depuis Supabase Storage
+    // Télécharger le CV depuis Supabase Storage (bucket job-documents)
     const { data: fileData, error: fileError } = await supabase.storage
       .from('job-documents')
-      .download(cvDoc.file_path)
+      .download(job.cv_url)
 
     if (fileError || !fileData) {
-      return NextResponse.json({ error: 'Impossible de lire le CV' }, { status: 500 })
+      return NextResponse.json({ error: 'Impossible de lire le CV : ' + fileError?.message }, { status: 500 })
     }
 
     // Convertir en base64
