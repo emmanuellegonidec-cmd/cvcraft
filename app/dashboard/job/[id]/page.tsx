@@ -616,23 +616,7 @@ export default function JobDetailPage() {
           onStepDatesChange={handleStepDatesChange}
         />
 
-        <JobExchanges
-          exchanges={exchanges}
-          onAdd={addExchange}
-          onUpdate={updateExchange}
-          onDelete={deleteExchange}
-        />
-
-       <JobStepActions
-  jobId={jobId}
-  userId={userId}
-  currentStepId={currentStepId}
-  currentStepLabel={currentStepLabel}
-  currentStepIndex={currentStepIndex}
-  jobTitle={job.title}
-/>
-
-        {isInterviewStep && (
+       {isInterviewStep && (
           <JobInterviewDetails
             job={job}
             contacts={contacts}
@@ -643,6 +627,22 @@ export default function JobDetailPage() {
             currentStepLabel={currentStepLabel}
           />
         )}
+
+        <JobStepActions
+          jobId={jobId}
+          userId={userId}
+          currentStepId={currentStepId}
+          currentStepLabel={currentStepLabel}
+          currentStepIndex={currentStepIndex}
+          jobTitle={job.title}
+        />
+
+        <JobExchanges
+          exchanges={exchanges}
+          onAdd={addExchange}
+          onUpdate={updateExchange}
+          onDelete={deleteExchange}
+        />
 
         <div className="jfmj-docs-grid">
           <div style={{ ...card, marginBottom: 0 }}>
