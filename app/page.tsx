@@ -235,46 +235,32 @@ export default async function LandingPage() {
 
       <div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
 
-      {/* FEATURE 2 */}
+      {/* FEATURE 2 — Parcours par offre */}
       <section id="cv" className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
         <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
-          <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'12px 16px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>CV Creator — Aperçu</div>
-          <div style={{ padding:16,display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
-            <div>
-              {['Prénom & Nom','Poste visé','Expériences','Compétences'].map(f => (
-                <div key={f} style={{ fontFamily:"'Montserrat', sans-serif",background:'#F4F4F4',border:'1.5px solid #E0E0E0',borderRadius:5,padding:'6px 8px',fontSize:10,color:'#888',marginBottom:5,fontWeight:600 }}>{f}</div>
-              ))}
-              <div style={{ fontFamily:"'Montserrat', sans-serif",marginTop:10,background:'#111',color:'#F5C400',borderRadius:6,padding:7,textAlign:'center',fontSize:10,fontWeight:800,boxShadow:'2px 2px 0 #E8151B' }}>Générer avec Claude →</div>
-            </div>
-            <div>
-              <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:14,fontWeight:900,marginBottom:2 }}>Joséphine B.</div>
-              <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:11,color:'#E8151B',marginBottom:8,fontWeight:700 }}>Responsable Marketing</div>
-              {['Expériences','Formation','Compétences'].map(s => (
-                <div key={s}>
-                  <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:9,fontWeight:800,textTransform:'uppercase',color:'#888',borderBottom:'2px solid #111',paddingBottom:3,margin:'8px 0 5px' }}>{s}</div>
-                  <div style={{ height:7,background:'#F4F4F4',borderRadius:3,marginBottom:4,width:'90%' }} />
-                  <div style={{ height:7,background:'#F4F4F4',borderRadius:3,marginBottom:4,width:'70%' }} />
-                </div>
-              ))}
-            </div>
-          </div>
+          <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>🗂️ Parcours de candidature — Vue détaillée</div>
+          <img src="/parcours-candidature.png" alt="Parcours de candidature Jean find my Job" style={{ width:'100%',display:'block',maxHeight:400,objectFit:'cover',objectPosition:'top center' }} />
         </div>
         <div>
           <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>02</div>
-          <div style={{ fontFamily:"'Montserrat', sans-serif",display:'inline-block',background:'#FDEAEA',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>✦ CV Creator IA</div>
-          <h3 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Un CV percutant<br />en 30 secondes</h3>
-          <p style={{ fontFamily:"'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Importez votre profil LinkedIn, choisissez un template et laissez Claude AI rédiger votre CV optimisé pour chaque poste.</p>
+          <div style={{ fontFamily:"'Montserrat', sans-serif",display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>🗂️ Parcours par offre</div>
+          <h3 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Chaque candidature<br />a son propre<br />parcours</h3>
+          <p style={{ fontFamily:"'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Fini les étapes génériques. Pour chaque offre, vous construisez votre parcours sur mesure — avec les vraies étapes vécues, les vraies dates, et rien de superflu.</p>
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
-            {['Import automatique depuis LinkedIn PDF','3 templates visuels professionnels','Optimisation par poste visé','Export PDF en un clic'].map(item => (
+            {[
+              'Étapes standards incluses : entretien tél, RH, manager, offre',
+              'Ajoutez vos propres étapes : Entretien DRH, cas pratique, etc.',
+              'CV, comptes-rendus, notes et contacts : tout est stocké par candidature',
+              'Conseils et actions suggérés à chaque étape pour ne rien rater',
+            ].map(item => (
               <li key={item} style={{ display:'flex',gap:10,fontSize:14,fontWeight:600,fontFamily:"'Montserrat', sans-serif" }}>
                 <span style={{ color:'#E8151B',fontWeight:900,flexShrink:0,fontSize:16 }}>✓</span>{item}
               </li>
             ))}
           </ul>
-          <Link href="/auth/signup" className="btn-blue" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Créer mon CV →</Link>
+          <Link href="/auth/signup" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Suivre mes candidatures →</Link>
         </div>
       </section>
-<div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
 
 {/* FEATURE 3 — Score ATS */}
       <section className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
