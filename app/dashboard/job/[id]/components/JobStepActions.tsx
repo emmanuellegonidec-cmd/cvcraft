@@ -129,12 +129,6 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
     return 'ok'
   }
 
-  function atsScoreColor(score: number) {
-    if (score >= 75) return '#22a322'
-    if (score >= 50) return '#cc9900'
-    return '#E8151B'
-  }
-
   const deadlineStatus = isDateCard ? getDeadlineStatus(localDate) : null
 
   return (
@@ -176,30 +170,30 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
 
       <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: isDateCard ? 8 : 10, flex: isDateCard ? 'none' : 1 }}>{action.sub}</span>
 
-      {/* Cercle score ATS si déjà analysé */}
+      {/* Cercle score ATS — style jaune/noir, pas de fond */}
       {isATSCard && atsScore != null && (
         <div
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onATSClick?.() }}
-          style={{ cursor: 'pointer', marginBottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: '#111', borderRadius: 8, padding: '8px 6px' }}
+          style={{ cursor: 'pointer', marginBottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}
         >
-          <div style={{ position: 'relative', width: 56, height: 56 }}>
-            <svg viewBox="0 0 56 56" style={{ width: 56, height: 56, transform: 'rotate(-90deg)' }}>
-              <circle cx="28" cy="28" r="22" fill="none" stroke="#333" strokeWidth="5" />
-              <circle cx="28" cy="28" r="22" fill="none"
-                stroke={atsScoreColor(atsScore)}
-                strokeWidth="5"
-                strokeDasharray="138.2"
-                strokeDashoffset={138.2 - (atsScore / 100) * 138.2}
+          <div style={{ position: 'relative', width: 60, height: 60 }}>
+            <svg viewBox="0 0 60 60" style={{ width: 60, height: 60, transform: 'rotate(-90deg)' }}>
+              <circle cx="30" cy="30" r="24" fill="#F5C400" stroke="#111" strokeWidth="2.5" />
+              <circle cx="30" cy="30" r="24" fill="none"
+                stroke="#111"
+                strokeWidth="4"
+                strokeDasharray="150.8"
+                strokeDashoffset={150.8 - (atsScore / 100) * 150.8}
                 strokeLinecap="round"
               />
             </svg>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 14, fontWeight: 900, color: atsScoreColor(atsScore), lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
-              <span style={{ fontSize: 7, color: '#aaa', fontWeight: 600 }}>/100</span>
+              <span style={{ fontSize: 15, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
+              <span style={{ fontSize: 7, color: '#111', fontWeight: 700 }}>/100</span>
             </div>
           </div>
-          <span style={{ fontSize: 9, color: '#F5C400', fontFamily: FONT, fontWeight: 700 }}>Voir le détail →</span>
+          <span style={{ fontSize: 9, color: '#888', fontFamily: FONT }}>Voir le détail →</span>
         </div>
       )}
 
