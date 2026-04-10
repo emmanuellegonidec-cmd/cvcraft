@@ -329,17 +329,18 @@ export default async function LandingPage() {
             <p style={{ fontFamily:"'Montserrat', sans-serif",color:'#888',marginTop:'0.5rem',fontWeight:500 }}>Une plateforme complète pour votre recherche d&apos;emploi</p>
           </div>
           <div className="feats-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1.5rem' }}>
-            {[
-              { icon:'📊',title:'Tableau de bord',desc:"5 grandes étapes pour visualiser toutes vos candidatures d'un coup d'œil." },
-              { icon:'🗂️',title:'Votre parcours par candidature',desc:'Un parcours de candidature entièrement personnalisable pour chaque offre : étapes, entretiens, documents, contacts, notes. Tout au même endroit.' },
-              { icon:'🤖',title:'CV Creator IA',desc:'Claude AI rédige votre CV avec des formulations percutantes, adapté à chaque poste.' },
-              { icon:'📊',title:'Score ATS',desc:"Jean analyse votre CV et vous donne un score de compatibilité avec l'offre pour maximiser vos chances de passer les filtres automatiques." },
-              { icon:'🔗',title:'Import LinkedIn',desc:'Exportez votre profil LinkedIn en PDF et Jean find my Job remplit automatiquement toutes vos informations.' },
-              { icon:'👥',title:'Suivi des contacts',desc:'Gardez une trace de tous les recruteurs et managers. Ne perdez plus aucune relation clé.' },
-              { icon:'📅',title:'Gestion des entretiens',desc:'Planifiez et préparez vos entretiens. Stockez les questions, réponses et retours.' },
-              { icon:'📈',title:'Statistiques',desc:"Taux de réponse, délais moyens, canaux efficaces. Optimisez votre stratégie avec les données." },
-              { icon:'📥',title:'Export PDF',desc:'Téléchargez votre CV en PDF professionnel prêt à envoyer, en un seul clic.' },
+           {[
+              { icon:'📊',title:'Tableau de bord kanban',desc:'5 colonnes pour visualiser toutes vos candidatures d\'un coup d\'œil — de l\'envie de postuler à l\'offre reçue.' },
+              { icon:'🗂️',title:'Parcours par candidature',desc:'Étapes, dates, notes, contacts et documents : tout est centralisé par offre en un seul endroit.' },
+              { icon:'🎯',title:'Score ATS',desc:'Analysez votre CV face à la description du poste et maximisez vos chances de passer les filtres automatiques.' },
+              { icon:'🔗',title:'Import depuis une URL',desc:'Importez une offre automatiquement depuis n\'importe quel jobboard en un clic.' },
+              { icon:'📄',title:'Import de fichier',desc:'PDF, Word, image — Jean analyse le document et remplit tout automatiquement par IA.' },
+              { icon:'📨',title:'Candidature spontanée',desc:'Contactez une entreprise sans offre publiée et suivez votre démarche comme n\'importe quelle candidature.' },
+              { icon:'📅',title:'Calendrier intégré',desc:'Visualisez vos entretiens et relances à venir en vue semaine ou mois.' },
+              { icon:'⚡',title:'Actions à faire',desc:'Relances, deadlines, documents : ne ratez plus aucune étape importante.' },
+              { icon:'📈',title:'Statistiques',desc:'Taux de réponse, entretiens, propositions : pilotez votre recherche avec les données.' },
             ].map(f => (
+              
               <div key={f.title} className="feat-card">
                 <div style={{ fontSize:24,marginBottom:12 }}>{f.icon}</div>
                 <h4 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:15,fontWeight:800,marginBottom:6 }}>{f.title}</h4>
