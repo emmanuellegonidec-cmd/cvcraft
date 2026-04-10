@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 const createAuthedClient = () =>
@@ -8,10 +8,24 @@ const createAuthedClient = () =>
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+async function getAuth(req: NextRequest) {
+  const authHeader = req.headers.get("authorization");
+  const token = authHeader?.replace("Bearer ", "").trim();
+
+  if (token) {
+    const admin = createAuthedClient();
+    const { data: { user } } = await admin.auth.getUser(token);
+    if (user) return user;
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user ?? null;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuth(req);
 
     if (!user) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -31,10 +45,10 @@ export async function POST(req: NextRequest) {
 
     if (dbError) throw dbError;
 
-    const resendRes = await fetch("https://api.resend.com/emails", {
+    await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -51,10 +65,6 @@ export async function POST(req: NextRequest) {
         `,
       }),
     });
-
-    if (!resendRes.ok) {
-      console.error("Resend error:", await resendRes.text());
-    }
 
     return NextResponse.json({ success: true });
   } catch (err) {

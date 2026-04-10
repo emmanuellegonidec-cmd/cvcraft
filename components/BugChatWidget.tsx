@@ -45,9 +45,12 @@ export default function BugChatWidget() {
       setLoading(true);
       try {
         await fetch("/api/bug-report", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${(window as any).__jfmj_token ?? ""}`,
+  },
+  body: JSON.stringify({
             page: newAnswers[0],
             what_happened: newAnswers[1],
             expected: newAnswers[2],
