@@ -227,25 +227,8 @@ export default async function LandingPage() {
           <Link href="/auth/signup" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Organiser ma recherche →</Link>
         </div>
         <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
-          <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'12px 16px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>Tableau de bord — Semaine 12</div>
-          <div style={{ padding:16 }}>
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12 }}>
-              <div style={{ background:'#FDEAEA',borderRadius:8,padding:10,border:'2px solid #E8151B' }}>
-                <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:10,color:'#E8151B',fontWeight:800,marginBottom:2,textTransform:'uppercase' }}>Candidatures</div>
-                <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:20,fontWeight:900,color:'#E8151B' }}>12</div>
-              </div>
-              <div style={{ background:'#FEF9E0',borderRadius:8,padding:10,border:'2px solid #F5C400' }}>
-                <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:10,color:'#B8900A',fontWeight:800,marginBottom:2,textTransform:'uppercase' }}>Entretiens</div>
-                <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:20,fontWeight:900,color:'#B8900A' }}>3</div>
-              </div>
-            </div>
-            {[['📨','BNP Paribas','Entretien RH — parcours à jour'],['⭐','Sanofi','Offre reçue !'],['📋','Decathlon','Entretien manager demain']].map(([ic,co,msg]) => (
-              <div key={co as string} style={{ display:'flex',alignItems:'center',gap:8,padding:7,background:'#F4F4F4',borderRadius:6,marginBottom:5,border:'1.5px solid #E0E0E0' }}>
-                <span style={{ fontSize:12 }}>{ic as string}</span>
-                <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:10,fontWeight:600 }}><b>{co as string}</b> — {msg as string}</div>
-              </div>
-            ))}
-          </div>
+          <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>📋 Tableau de bord — Vue Kanban</div>
+          <img src="/kanban-dashboard.png" alt="Tableau de bord kanban Jean find my Job" style={{ width:'100%',display:'block',maxHeight:400,objectFit:'cover',objectPosition:'top center' }} />
         </div>
       </section>
 
