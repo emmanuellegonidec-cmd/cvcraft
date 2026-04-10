@@ -18,8 +18,8 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     desc: "Tu as repéré cette offre. Vérifie ta compatibilité et prépare tes documents avant de postuler.",
     actions: [
       { icon: '🔧', title: 'Analyse du poste', sub: 'Missions, hard-skills, soft-skills', type: 'action' },
-       { icon: '🔍', title: "Rechercher l'entreprise", sub: 'Actualités, culture, équipe', type: 'action' },
-       { icon: '📄', title: 'Préparer mon CV', sub: 'Adapté à ce poste', type: 'action' },
+      { icon: '🔍', title: "Rechercher l'entreprise", sub: 'Actualités, culture, équipe', type: 'action' },
+      { icon: '📄', title: 'Préparer mon CV', sub: 'Adapté à ce poste', type: 'action' },
       { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'action' },
       { icon: '✉️', title: 'Rédiger ma LM', sub: 'Personnalisée pour cette offre', type: 'action' },
       { icon: '📅', title: 'Fixer une deadline', sub: 'Date limite de candidature', type: 'action' },
@@ -31,7 +31,6 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
       { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'action' },
       { icon: '📋', title: 'Confirmer la réception', sub: 'Email de confirmation reçu ?', type: 'action' },
       { icon: '🔔', title: 'Programmer une relance', sub: 'Dans 7 à 10 jours', type: 'action' },
-      
     ],
   },
   phone_interview: {
@@ -41,7 +40,6 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
       { icon: '🎯', title: 'Préparer mon pitch', sub: '2 min chrono', type: 'action' },
       { icon: '⏰', title: 'Mes questions', sub: 'À poser au recruteur', type: 'action' },
-      
     ],
   },
   hr_interview: {
@@ -54,7 +52,6 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
       { icon: '⏰', title: 'Mes questions RH', sub: 'Culture, équipe, mobilité', type: 'action' },
       { icon: '📝', title: "Synthèse de l'entretien", sub: 'Email post-entretien (sous 48h), enjeux du poste, points clés', type: 'action' },
       { icon: '🔔', title: 'Programmer une relance', sub: 'Si pas de retour sous 10 jours', type: 'action' },
-      
     ],
   },
   manager_interview: {
@@ -63,10 +60,10 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
       { icon: '🔧', title: 'Analyse du poste', sub: 'Enjeux, priorités, KPIs', type: 'action' },
-     { icon: '📊', title: 'Portfolio / cas pratique', sub: 'Exemples chiffrés', type: 'action' },
+      { icon: '📊', title: 'Portfolio / cas pratique', sub: 'Exemples chiffrés', type: 'action' },
       { icon: '⏰', title: 'Mes questions manager', sub: 'Équipe, objectifs, style', type: 'action' },
-       { icon: '👤', title: 'Références professionnelles', sub: 'Prévenir ses contacts', type: 'action' },
-       { icon: '📝', title: "Synthèse de l'entretien", sub: 'Email post-entretien (sous 48h), enjeux du poste, points clés', type: 'action' },
+      { icon: '👤', title: 'Références professionnelles', sub: 'Prévenir ses contacts', type: 'action' },
+      { icon: '📝', title: "Synthèse de l'entretien", sub: 'Email post-entretien (sous 48h), enjeux du poste, points clés', type: 'action' },
       { icon: '🔔', title: 'Programmer une relance', sub: 'Si pas de retour sous 10 jours', type: 'action' },
     ],
   },
@@ -83,7 +80,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
   },
 }
 
-const DATE_ACTION_TITLES = ['Fixer une deadline', 'Ajouter un rappel','Programmer une relance', 'Date de prise de poste']
+const DATE_ACTION_TITLES = ['Fixer une deadline', 'Ajouter un rappel', 'Programmer une relance', 'Date de prise de poste']
 const ATS_CARD_TITLE = 'Vérifier le score ATS'
 
 interface StepActionRow {
@@ -132,14 +129,13 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
     return 'ok'
   }
 
-  const deadlineStatus = isDateCard ? getDeadlineStatus(localDate) : null
-
-  // Couleur du score ATS sur la carte
   function atsScoreColor(score: number) {
     if (score >= 75) return '#22a322'
     if (score >= 50) return '#cc9900'
     return '#E8151B'
   }
+
+  const deadlineStatus = isDateCard ? getDeadlineStatus(localDate) : null
 
   return (
     <div ref={setNodeRef} style={{
@@ -171,8 +167,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
       <span style={{
         fontSize: 12, fontWeight: 800,
         color: action.is_done ? '#2E7D32' : action.type === 'included' ? '#2E7D32' : '#111',
-        display: 'block', fontFamily: FONT,
-        marginBottom: 3, lineHeight: 1.3,
+        display: 'block', fontFamily: FONT, marginBottom: 3, lineHeight: 1.3,
       }}>
         {action.title}
         {action.type === 'included' && !action.is_done && <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>✓</span>}
@@ -181,21 +176,30 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
 
       <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: isDateCard ? 8 : 10, flex: isDateCard ? 'none' : 1 }}>{action.sub}</span>
 
-      {/* Badge score ATS si déjà analysé */}
+      {/* Cercle score ATS si déjà analysé */}
       {isATSCard && atsScore != null && (
         <div
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onATSClick?.() }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: '#111', borderRadius: 8, padding: '5px 10px',
-            cursor: 'pointer', marginBottom: 8,
-          }}>
-          <span style={{ fontSize: 18, fontWeight: 900, color: atsScoreColor(atsScore), fontFamily: FONT, lineHeight: 1 }}>{atsScore}</span>
-          <div>
-            <span style={{ fontSize: 9, color: '#F5C400', fontWeight: 800, display: 'block', fontFamily: FONT, lineHeight: 1 }}>/ 100</span>
-            <span style={{ fontSize: 9, color: '#aaa', fontFamily: FONT, lineHeight: 1 }}>Voir le détail →</span>
+          style={{ cursor: 'pointer', marginBottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
+        >
+          <div style={{ position: 'relative', width: 56, height: 56 }}>
+            <svg viewBox="0 0 56 56" style={{ width: 56, height: 56, transform: 'rotate(-90deg)' }}>
+              <circle cx="28" cy="28" r="22" fill="none" stroke="#e0e0e0" strokeWidth="5" />
+              <circle cx="28" cy="28" r="22" fill="none"
+                stroke={atsScoreColor(atsScore)}
+                strokeWidth="5"
+                strokeDasharray="138.2"
+                strokeDashoffset={138.2 - (atsScore / 100) * 138.2}
+                strokeLinecap="round"
+              />
+            </svg>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 14, fontWeight: 900, color: atsScoreColor(atsScore), lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
+              <span style={{ fontSize: 7, color: '#aaa', fontWeight: 600 }}>/100</span>
+            </div>
           </div>
+          <span style={{ fontSize: 9, color: '#888', fontFamily: FONT }}>Voir le détail →</span>
         </div>
       )}
 
@@ -273,6 +277,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
   // ATS
   const [atsModalOpen, setAtsModalOpen] = useState(false)
   const [atsResult, setAtsResult] = useState<any | null>(null)
+  const [atsCount, setAtsCount] = useState(0)
 
   // Panneau unifié
   const [showPanel, setShowPanel] = useState(false)
@@ -308,13 +313,14 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
     const supabase = createClient()
     const { data } = await supabase
       .from('jobs')
-      .select('cv_sent, cover_letter_sent, cv_url, cover_letter_url, ats_result')
+      .select('cv_sent, cover_letter_sent, cv_url, cover_letter_url, ats_result, ats_analysis_count')
       .eq('id', jobId)
       .single()
     if (data) {
       setCvSent(!!(data.cv_sent || data.cv_url))
       setLmSent(!!(data.cover_letter_sent || data.cover_letter_url))
       if (data.ats_result) setAtsResult(data.ats_result)
+      if (data.ats_analysis_count) setAtsCount(data.ats_analysis_count)
     }
   }
 
@@ -426,7 +432,6 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
     <>
       <div style={{ background: '#fff', borderRadius: 12, padding: '18px 22px', marginBottom: 14, border: '1.5px solid #E5E5E5' }}>
 
-        {/* ── En-tête ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
             <span style={{ background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '3px 11px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONT }}>
@@ -458,7 +463,6 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
 
         <p style={{ fontSize: 13, color: '#555', marginBottom: 14, lineHeight: 1.6, fontFamily: FONT }}>{stepData.desc}</p>
 
-        {/* ── Cartes actions ── */}
         {loading ? (
           <p style={{ fontSize: 12, color: '#bbb', fontWeight: 600, fontFamily: FONT }}>Chargement des actions…</p>
         ) : (
@@ -497,10 +501,8 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
           </DndContext>
         )}
 
-        {/* ── Panneau unifié inline ── */}
         {showPanel && (
           <div style={{ marginTop: 16, borderTop: '1.5px solid #F5C400', paddingTop: 16 }}>
-
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               {(['add', 'remove'] as const).map(tab => (
                 <button key={tab} onClick={() => setPanelView(tab)} style={{
@@ -590,7 +592,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
         )}
       </div>
 
-      {/* ── Modale confirmation suppression ── */}
+      {/* Modale confirmation suppression */}
       {actionToDelete && (
         <div style={{ background: 'rgba(0,0,0,0.6)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 400, border: '2px solid #111', boxShadow: '4px 4px 0 #E8151B', margin: '0 20px' }}>
@@ -606,14 +608,18 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
         </div>
       )}
 
-      {/* ── Modale ATS ── */}
+      {/* Modale ATS */}
       <ATSScoreModal
         isOpen={atsModalOpen}
         onClose={() => setAtsModalOpen(false)}
         jobId={jobId}
         jobTitle={jobTitle}
         existingResult={atsResult}
-        onResultSaved={(result) => setAtsResult(result)}
+        analysisCount={atsCount}
+        onResultSaved={(result, newCount) => {
+          setAtsResult(result)
+          setAtsCount(newCount)
+        }}
       />
     </>
   )
