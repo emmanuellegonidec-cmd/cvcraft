@@ -64,7 +64,7 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 24px', cursor: 'pointer',
-          background: sectionOpen ? '#fff' : '#F9F9F7',
+          background: '#fff',
           borderBottom: sectionOpen ? '1.5px solid #EBEBEB' : 'none',
         }}
       >

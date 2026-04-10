@@ -39,7 +39,7 @@ export default function JobInterviewDetails({ job, contacts, onPatch, onJobChang
   const selectedContact = contacts.find(c => c.id === job.interview_contact_id)
 
   return (
-    <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '1.5px solid #111', overflow: 'hidden' }}>
+    <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, overflow: 'hidden' }}>
 
       {/* Header cliquable */}
       <div
