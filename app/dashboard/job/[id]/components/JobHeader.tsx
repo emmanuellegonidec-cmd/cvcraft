@@ -1,5 +1,8 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase'
+
 const FONT = "'Montserrat', sans-serif"
 
 function formatDate(iso: string) {
@@ -28,6 +31,15 @@ interface Props {
 }
 
 export default function JobHeader({ job, onBack, onEdit, onDelete, onGenerateCV }: Props) {
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      setIsAdmin(data.user?.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID)
+    })
+  }, [])
+
   const salaryDisplay = job.salary_text
     ? job.salary_text
     : job.salary_min && job.salary_max
@@ -69,10 +81,12 @@ export default function JobHeader({ job, onBack, onEdit, onDelete, onGenerateCV 
             Voir l&apos;offre ↗
           </button>
         )}
-        <button onClick={onGenerateCV}
-          style={{ background: '#F5C400', color: '#111', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #111', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' }}>
-          Générer un CV
-        </button>
+        {isAdmin && (
+          <button onClick={onGenerateCV}
+            style={{ background: '#F5C400', color: '#111', fontSize: 13, fontWeight: 800, padding: '10px 18px', borderRadius: 9, border: '2px solid #111', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' }}>
+            Générer un CV
+          </button>
+        )}
         <div style={{ display: 'flex', gap: 6 }}>
           <button className="btn-edit" onClick={onEdit}>✏️ Modifier</button>
           <button className="btn-delete" onClick={onDelete}>🗑️ Supprimer</button>

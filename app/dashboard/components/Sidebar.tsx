@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
 
 type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats' | 'actions';
 
@@ -30,6 +31,14 @@ export default function Sidebar({
   jobCount, contactCount, interviewCount, onSettings,
 }: SidebarProps) {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setIsAdmin(data.user?.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID);
+    });
+  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -117,38 +126,43 @@ export default function Sidebar({
           );
         })}
 
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>
-          Outils
-        </div>
+        {isAdmin && (
+          <>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>
+              Outils
+            </div>
+            <button
+              onClick={() => router.push('/dashboard/editor')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '9px 12px',
+                border: 'none', borderLeft: '3px solid transparent', borderRadius: 0,
+                background: 'transparent', color: '#888',
+                fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14,
+                cursor: 'pointer', textAlign: 'left', width: '100%',
+                transition: 'all 0.12s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#ccc'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+            >
+              <span style={{ color: '#555' }}>+</span> CV Creator
+            </button>
+          </>
+        )}
 
         <button
-          onClick={() => router.push('/dashboard/editor')}
+          onClick={() => router.push('/dashboard/help')}
           style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '9px 12px',
-            border: 'none', borderLeft: '3px solid transparent', borderRadius: 0,
-            background: 'transparent', color: '#888',
-            fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14,
-            cursor: 'pointer', textAlign: 'left', width: '100%',
-            transition: 'all 0.12s',
+            display: 'flex', alignItems: 'center', gap: 10,
+            width: '100%', background: 'none', border: 'none',
+            padding: '8px 16px', cursor: 'pointer', textAlign: 'left',
+            color: '#ccc', fontFamily: "'Montserrat', sans-serif",
+            fontSize: 13, fontWeight: 600,
+            marginTop: isAdmin ? 0 : 16,
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#ccc'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
         >
-          <span style={{ color: '#555' }}>+</span> CV Creator
+          ❓ Help
         </button>
-        <button
-  onClick={() => router.push('/dashboard/help')}
-  style={{
-    display: 'flex', alignItems: 'center', gap: 10,
-    width: '100%', background: 'none', border: 'none',
-    padding: '8px 16px', cursor: 'pointer', textAlign: 'left',
-    color: '#ccc', fontFamily: "'Montserrat', sans-serif",
-    fontSize: 13, fontWeight: 600,
-  }}
->
-  ❓ Help
-</button>
       </div>
 
       {/* ── Profil + déconnexion ── */}
