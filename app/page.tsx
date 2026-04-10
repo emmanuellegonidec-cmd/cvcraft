@@ -262,6 +262,8 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      <div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
+
 {/* FEATURE 3 — Score ATS */}
       <section className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
         <div>
