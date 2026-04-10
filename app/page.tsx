@@ -46,50 +46,51 @@ async function getPublishedArticles(): Promise<Article[]> {
 export default async function LandingPage() {
   const articles = await getPublishedArticles()
 
-  const jsonLdApp = {
+ const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Jean Find My Job",
-    "url": "https://jeanfindmyjob.fr",
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
-    "description": "Jean Find My Job centralise votre recherche d'emploi : tableau de bord Kanban, pipeline de candidature, relances, entretiens et score ATS pour optimiser vos candidatures.",
-    "inLanguage": "fr",
-    "author": { "@type": "Organization", "name": "Jean Find My Job", "url": "https://jeanfindmyjob.fr" }
-  }
-
-  const jsonLdFaq = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
+    "@graph": [
       {
-        "@type": "Question",
-        "name": "Jean Find My Job est-il gratuit ?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Oui, Jean Find My Job est gratuit. Créez votre compte et commencez à suivre vos candidatures immédiatement." }
+        "@type": "SoftwareApplication",
+        "name": "Jean Find My Job",
+        "url": "https://jeanfindmyjob.fr",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "description": "Jean Find My Job centralise votre recherche d'emploi : tableau de bord Kanban, pipeline de candidature, relances, entretiens et score ATS pour optimiser vos candidatures.",
+        "inLanguage": "fr",
+        "author": { "@type": "Organization", "name": "Jean Find My Job", "url": "https://jeanfindmyjob.fr" }
       },
       {
-        "@type": "Question",
-        "name": "Comment fonctionne le score ATS ?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Le score ATS analyse votre CV par rapport à la description du poste et vous donne un score global, des points forts, des points faibles et des recommandations pour maximiser vos chances de passer les filtres automatiques des recruteurs." }
-      },
-      {
-        "@type": "Question",
-        "name": "Puis-je importer des offres d'emploi directement depuis les jobboards ?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Oui, Jean Find My Job permet d'importer une offre en collant simplement son URL. L'IA extrait automatiquement le titre, l'entreprise, la description et les informations clés." }
-      },
-      {
-        "@type": "Question",
-        "name": "Jean Find My Job est-il adapté aux seniors en reconversion ?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Absolument. Jean Find My Job a été pensé pour tous les chercheurs d'emploi, avec une attention particulière pour les profils seniors en transition professionnelle qui ont besoin d'un outil simple et complet pour organiser leur recherche." }
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Jean Find My Job est-il gratuit ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Oui, Jean Find My Job est gratuit. Creez votre compte et commencez a suivre vos candidatures immediatement." }
+          },
+          {
+            "@type": "Question",
+            "name": "Comment fonctionne le score ATS ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Le score ATS analyse votre CV par rapport a la description du poste et vous donne un score global, des points forts, des points faibles et des recommandations pour maximiser vos chances de passer les filtres automatiques des recruteurs." }
+          },
+          {
+            "@type": "Question",
+            "name": "Puis-je importer des offres d'emploi directement depuis les jobboards ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Oui, Jean Find My Job permet d'importer une offre en collant simplement son URL. L'IA extrait automatiquement le titre, l'entreprise, la description et les informations cles." }
+          },
+          {
+            "@type": "Question",
+            "name": "Jean Find My Job est-il adapte aux seniors en reconversion ?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Absolument. Jean Find My Job a ete pense pour tous les chercheurs d'emploi, avec une attention particuliere pour les profils seniors en transition professionnelle qui ont besoin d'un outil simple et complet pour organiser leur recherche." }
+          }
+        ]
       }
     ]
-  }
+  } 
 
   return (
     <>
-      <script key="schema-app" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdApp) }} />
-<script key="schema-faq" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }} />
+      <script key="schema-jfmj" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div style={{ fontFamily: "'Montserrat', sans-serif", background: '#FFFFFF', color: '#111111', lineHeight: '1.6' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap');
