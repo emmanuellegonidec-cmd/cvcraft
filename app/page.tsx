@@ -274,7 +274,37 @@ export default async function LandingPage() {
           <Link href="/auth/signup" className="btn-blue" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Créer mon CV →</Link>
         </div>
       </section>
+<div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
 
+      {/* FEATURE 3 — Score ATS */}
+      <section className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
+        <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
+          <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#111',fontSize:12,fontWeight:800,color:'#F5C400',textTransform:'uppercase',letterSpacing:'0.04em' }}>🎯 Score ATS — Résultat en direct</div>
+          <img src="/score-ats.png" alt="Score ATS Jean find my Job" style={{ width:'100%',display:'block',maxHeight:400,objectFit:'cover',objectPosition:'top center' }} />
+        </div>
+        <div>
+          <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>03</div>
+          <div style={{ fontFamily:"'Montserrat', sans-serif",display:'inline-block',background:'#FDEAEA',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>🎯 Score ATS</div>
+          <h3 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Votre CV passe-t-il<br />les filtres<br />automatiques ?</h3>
+          <p style={{ fontFamily:"'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>70% des CVs sont éliminés avant d&apos;atteindre un recruteur. Jean analyse votre CV face à la description du poste et vous dit exactement où améliorer vos chances.</p>
+          <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
+            {[
+              'Score global sur 100 : format, lisibilité, structure, matching',
+              'Mots-clés présents et manquants identifiés',
+              'Points forts et points faibles détaillés',
+              'Recommandations concrètes pour améliorer votre score',
+            ].map(item => (
+              <li key={item} style={{ display:'flex',gap:10,fontSize:14,fontWeight:600,fontFamily:"'Montserrat', sans-serif" }}>
+                <span style={{ color:'#E8151B',fontWeight:900,flexShrink:0,fontSize:16 }}>✓</span>{item}
+              </li>
+            ))}
+          </ul>
+          <Link href="/auth/signup" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Tester mon CV →</Link>
+        </div>
+      </section>
+
+      <div style={{ height:'2.5px',background:'#111' }} />
+      
       {/* HOW IT WORKS */}
       <section id="comment" style={{ background:'#111',borderTop:'2.5px solid #111',borderBottom:'2.5px solid #111',padding:'5rem 2rem' }}>
         <div style={{ maxWidth:1400,margin:'0 auto',textAlign:'center' }}>
