@@ -214,10 +214,11 @@ export default async function LandingPage() {
           <p style={{ fontFamily:"'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Fini les tableurs Excel. Jean find my Job centralise toutes vos candidatures dans un tableau de bord visuel avec un parcours de candidature détaillé pour chaque offre.</p>
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
             {[
-              'Vue globale : 5 grandes étapes claires',
-              'Parcours de candidature par offre : entretien tél, RH, manager…',
-              'Étapes personnalisables selon votre process',
+              'Vue globale : 5 grandes étapes claires, de l\'envie de postuler à l\'offre reçue',
               'Statistiques de votre recherche en temps réel',
+              'Calendrier intégré : visualisez vos relances et entretiens à venir…',
+              'Actions à faire : ne ratez plus aucune étape importante',
+              
             ].map(item => (
               <li key={item} style={{ display:'flex',gap:10,fontSize:14,fontWeight:600,fontFamily:"'Montserrat', sans-serif" }}>
                 <span style={{ color:'#E8151B',fontWeight:900,flexShrink:0,fontSize:16 }}>✓</span>{item}
