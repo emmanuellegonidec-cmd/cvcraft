@@ -35,9 +35,11 @@ export default function Sidebar({
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data }) => {
+   supabase.auth.getSession().then(({ data }) => {
+      console.log('USER ID:', data.session?.user?.id)
+      console.log('ADMIN ID:', process.env.NEXT_PUBLIC_ADMIN_USER_ID)
       setIsAdmin(data.session?.user?.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID)
-    });
+    }) ;
   }, []);
 
   const handleLogout = async () => {
