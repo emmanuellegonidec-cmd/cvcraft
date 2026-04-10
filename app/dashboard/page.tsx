@@ -373,7 +373,7 @@ export default function DashboardPage() {
             {view === 'kanban' && (
               <button
                 className="btn-main"
-                style={{ background: '#7C3AED', boxShadow: '2px 2px 0 #111' }}
+                style={{ background: '#1B4F72', boxShadow: '2px 2px 0 #111' }}
                 onClick={() => {
                   setActionsVisible(true);
                   setTimeout(() => setTriggerAddAction(n => n + 1), 50);
