@@ -54,14 +54,14 @@ export default function JobInterviewDetails({ job, contacts, onPatch, onJobChang
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 26, height: 26, borderRadius: '50%',
-            background: '#F5C400', border: '2px solid #111',
+            background: '#111', border: '2px solid #111',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 900, color: '#111', flexShrink: 0, fontFamily: FONT,
+            fontSize: 11, fontWeight: 900, color: '#F5C400', flexShrink: 0, fontFamily: FONT,
           }}>
             {currentStepNum}
           </div>
           <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#111', fontFamily: FONT }}>
-            📅 Détails de l&apos;entretien
+           Détails de l&apos;entretien
           </span>
           <span style={{ fontSize: 11, fontWeight: 700, color: '#888', fontFamily: FONT }}>
             — {currentStepLabel}
