@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase'
+import Image from 'next/image'
 
 const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false })
 
@@ -156,14 +157,23 @@ export default function AdminNewArticlePage() {
           <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Extrait (affiché sur la landing page)</label>
           <textarea name="excerpt" value={form.excerpt} onChange={handleChange} rows={2} placeholder="Résumé court affiché sous le titre..." className="w-full px-4 py-3 rounded text-sm font-medium outline-none resize-none" style={{ border: '2px solid #111' }} />
         </div>
-
+<div style={{ backgroundColor: '#fffbe6', border: '2px solid #F5C400', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12, fontFamily: 'Montserrat, sans-serif' }}>
+  <div style={{ fontWeight: 800, color: '#111', marginBottom: 4 }}>📐 Règles pour les images du blog</div>
+  <ul style={{ margin: 0, paddingLeft: 16, color: '#555', lineHeight: 1.8 }}>
+    <li><strong>Dimensions :</strong> 1200 × 630 px (format 16/9 recommandé)</li>
+    <li><strong>Poids max :</strong> 2 MB</li>
+    <li><strong>Formats acceptés :</strong> WebP (idéal), JPG, PNG</li>
+    <li><strong>Conseil :</strong> utilise <a href="https://squoosh.app" target="_blank" rel="noreferrer" style={{ color: '#E8151B', fontWeight: 700 }}>squoosh.app</a> pour compresser gratuitement avant d'uploader</li>
+  </ul>
+</div>
+<div className="flex items-center gap-3 mb-3">
         {/* Image de couverture */}
         <div>
           <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
             🖼️ Image de couverture
             <span className="ml-2 text-xs font-normal text-gray-400">1200×630px · JPG/PNG/WebP · max 5MB</span>
           </label>
-          <div className="flex items-center gap-3 mb-3">
+          
             <label className="px-4 py-2 rounded text-sm font-black cursor-pointer" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: uploadingCover ? '#f3f4f6' : '#111', color: uploadingCover ? '#888' : '#F5C400', border: '2px solid #111', boxShadow: uploadingCover ? 'none' : '3px 3px 0 #E8151B' }}>
               {uploadingCover ? '⏳ Upload...' : '📁 Uploader une image'}
               <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={handleCoverUpload} style={{ display: 'none' }} disabled={uploadingCover || !tokenReady} />
@@ -177,7 +187,7 @@ export default function AdminNewArticlePage() {
           </div>
           {form.cover_image_url && (
             <div className="mt-3 relative">
-              <img src={form.cover_image_url} alt={form.cover_image_alt || form.title} className="rounded" style={{ maxHeight: 200, objectFit: 'cover', border: '2px solid #111', boxShadow: '3px 3px 0 #111', width: '100%' }} />
+              <Image src={form.cover_image_url} alt={form.cover_image_alt || form.title} width={1200} height={200} className="rounded" style={{ objectFit: 'cover', border: '2px solid #111', boxShadow: '3px 3px 0 #111', width: '100%', height: 'auto', maxHeight: 200 }} />
               <button type="button" onClick={() => setForm(f => ({ ...f, cover_image_url: '', cover_image_alt: '' }))} className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black" style={{ backgroundColor: '#E8151B', color: '#fff', border: '2px solid #fff' }}>✕</button>
             </div>
           )}
