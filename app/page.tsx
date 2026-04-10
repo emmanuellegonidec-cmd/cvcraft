@@ -142,7 +142,7 @@ export default async function LandingPage() {
           </span>
         </Link>
         <div className="nav-desktop" style={{ display:'flex',gap:'2rem',alignItems:'center' }}>
-         {[['#comment','Comment ça marche'],['#fonctionnalites','Fonctionnalités'],['#faq','FAQ']].map(([h,l]) => (
+         {[['#score-ats','Score ATS'],['#comment','Comment ça marche'],['#fonctionnalites','Fonctionnalités'],['#faq','FAQ']].map(([h,l]) => (
             <a key={h} href={h} style={{ fontFamily:"'Montserrat', sans-serif",fontSize:13,color:'#111',textDecoration:'none',fontWeight:700,letterSpacing:'0.02em',textTransform:'uppercase' }}>{l}</a>
           ))}
         </div>
@@ -265,7 +265,7 @@ export default async function LandingPage() {
       <div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
 
 {/* FEATURE 3 — Score ATS */}
-      <section className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
+<section id="score-ats" className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>      
         <div>
           <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>03</div>
           <div style={{ fontFamily:"'Montserrat', sans-serif",display:'inline-block',background:'#FDEAEA',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>🎯 Score ATS</div>
