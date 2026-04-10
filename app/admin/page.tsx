@@ -12,6 +12,7 @@ type Stats = {
   activationRate: number
   publishedArticles: number
   newsletterSubscribers: number
+  bugReports: number
   recentUsers: { id: string; email: string; first_name?: string; last_name?: string; created_at: string }[]
 }
 
@@ -77,7 +78,8 @@ export default function AdminDashboard() {
     { label: 'Offres créées', value: stats?.totalJobs ?? 0, sub: `+${stats?.newJobsThisMonth ?? 0} ce mois`, color: '#E8151B', icon: '💼' },
     { label: "Taux d'activation", value: `${stats?.activationRate ?? 0}%`, sub: 'Inscrits avec ≥1 offre', color: '#22c55e', icon: '🚀' },
     { label: 'Articles publiés', value: stats?.publishedArticles ?? 0, sub: 'Sur la landing page', color: '#6366f1', icon: '✍️' },
-    { label: 'Abonnés newsletter', value: stats?.newsletterSubscribers ?? 0, sub: 'Total inscrits', color: '#F5C400', icon: '📧' },
+   { label: 'Abonnés newsletter', value: stats?.newsletterSubscribers ?? 0, sub: 'Total inscrits', color: '#F5C400', icon: '📧' },
+    { label: 'Bugs signalés', value: stats?.bugReports ?? 0, sub: 'Via le chatbot', color: '#E8151B', icon: '🐛', href: '/admin/bugs' },
   ]
 
   return (

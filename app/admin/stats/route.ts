@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
     { count: publishedArticles },
     { count: newsletterSubscribers },
     { data: recentUsers },
+    { count: bugReports },
   ] = await Promise.all([
     supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }),
     supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', firstDayOfMonth),
@@ -44,7 +45,8 @@ export async function GET(req: NextRequest) {
     ),
     supabaseAdmin.from('articles').select('*', { count: 'exact', head: true }).eq('published', true),
     supabaseAdmin.from('newsletter_subscribers').select('*', { count: 'exact', head: true }),
-    supabaseAdmin.from('profiles').select('id, email, first_name, last_name, created_at').order('created_at', { ascending: false }).limit(10),
+   supabaseAdmin.from('profiles').select('id, email, first_name, last_name, created_at').order('created_at', { ascending: false }).limit(10),
+    supabaseAdmin.from('bug_reports').select('*', { count: 'exact', head: true }),
   ])
 
   const activationRate = totalUsers ? Math.round(((usersWithJobs ?? 0) / totalUsers) * 100) : 0
@@ -57,6 +59,7 @@ export async function GET(req: NextRequest) {
     activationRate,
     publishedArticles: publishedArticles ?? 0,
     newsletterSubscribers: newsletterSubscribers ?? 0,
+    bugReports: bugReports ?? 0,
     recentUsers: recentUsers ?? [],
   })
 }

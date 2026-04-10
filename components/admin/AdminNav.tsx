@@ -7,6 +7,7 @@ const navItems = [
   { href: '/admin', label: '📊 Dashboard', exact: true },
   { href: '/admin/users', label: '👥 Utilisateurs' },
   { href: '/admin/articles', label: '✍️ Articles' },
+  { href: "/admin/bugs", label: "🐛 Bugs", emoji: "🐛" },
   { href: '/admin/communication', label: '📣 Communication' },
 ]
 
