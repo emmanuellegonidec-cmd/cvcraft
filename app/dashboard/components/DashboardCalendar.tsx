@@ -40,7 +40,7 @@ const EV_STYLE: Record<CalEvent['type'], React.CSSProperties> = {
   offre:     { background: '#1A7A4A', color: '#fff' },
   archive:   { background: '#999', color: '#fff' },
   deadline:  { background: '#D97706', color: '#fff' },
-  action:    { background: '#7C3AED', color: '#fff' },
+  action:    { background: '#1B4F72', color: '#fff' },
 };
 
 const EV_LABEL: Record<CalEvent['type'], string> = {
