@@ -197,6 +197,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
   </div>
 )}
 
+
       {/* Bouton Analyser si pas encore de score */}
       {isATSCard && atsScore == null && (
         <div

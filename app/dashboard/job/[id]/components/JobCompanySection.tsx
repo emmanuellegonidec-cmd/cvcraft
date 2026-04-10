@@ -1,6 +1,9 @@
 'use client'
 
+import { useState } from 'react'
+
 const FONT = "'Montserrat', sans-serif"
+          
 
 interface Job {
   company: string
@@ -17,6 +20,7 @@ interface Props {
 }
 
 export default function JobCompanySection({ job, expanded, onToggle }: Props) {
+  const [companyDescExpanded, setCompanyDescExpanded] = useState(false)
   const sectionLabel: React.CSSProperties = {
     fontSize: 12,
     fontWeight: 800,
@@ -45,7 +49,7 @@ export default function JobCompanySection({ job, expanded, onToggle }: Props) {
           color: '#555',
         }}
       >
-        <span style={sectionLabel}>🏢 À propos de {job.company}</span>
+        <span style={sectionLabel}>À propos de {job.company}</span>
         <span style={{
           fontSize: 12,
           color: '#bbb',
@@ -58,9 +62,18 @@ export default function JobCompanySection({ job, expanded, onToggle }: Props) {
       {expanded && (
         <>
           {job.company_description ? (
-            <p style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontWeight: 500, margin: '0 0 14px', fontFamily: FONT }}>
-              {job.company_description}
-            </p>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ position: 'relative', maxHeight: companyDescExpanded ? 'none' : 100, overflow: 'hidden' }}>
+                <p style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontWeight: 500, margin: 0, fontFamily: FONT }}>
+                  {job.company_description}
+                </p>
+                {!companyDescExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, background: 'linear-gradient(transparent, #fff)' }} />}
+              </div>
+              <span onClick={() => setCompanyDescExpanded(v => !v)} style={{ fontSize: 13, fontWeight: 700, color: '#111', textDecoration: 'underline', cursor: 'pointer', marginTop: 8, display: 'inline-block', fontFamily: FONT }}>
+                {companyDescExpanded ? 'Réduire ↑' : 'Lire la suite →'}
+              </span>
+            </div>
+          
           ) : (
             <p style={{ fontSize: 13, color: '#bbb', fontStyle: 'italic', marginBottom: 14, fontFamily: FONT }}>
               Aucune description — cliquez sur ✏️ Modifier pour en ajouter une.
