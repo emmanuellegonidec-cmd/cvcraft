@@ -189,7 +189,7 @@ export default async function LandingPage() {
               Jean find my Job centralise votre recherche d&apos;emploi — tableau de bord, suivi de candidatures, CV personnalisé par IA. Tout au même endroit, enfin.
             </p>
             <div className="fade4" style={{ display:'flex',gap:12,flexWrap:'wrap',alignItems:'center' }}>
-              <Link href="/auth/signup" className="btn-black" style={{ fontSize:15,padding:'14px 32px' }}>Commencer gratuitement →</Link>
+              <CTAButton href="/auth/signup" label="Commencer gratuitement →" eventName="cta_hero" className="btn-black" style={{ fontSize:15,padding:'14px 32px' }} />
             </div>
             <div style={{ marginTop:'1.5rem',fontSize:13,color:'#888',display:'flex',alignItems:'center',gap:8,fontWeight:600,fontFamily:"'Montserrat', sans-serif" }}>
               <span style={{ color:'#E8151B' }}>★★★★★</span>
@@ -246,7 +246,7 @@ export default async function LandingPage() {
               </li>
             ))}
           </ul>
-          <Link href="/auth/signup" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Organiser ma recherche →</Link>
+        <CTAButton href="/auth/signup" label="Organiser ma recherche →" eventName="cta_section" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }} />
         </div>
         <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>📋 Tableau de bord — Vue Kanban</div>
@@ -279,7 +279,7 @@ export default async function LandingPage() {
               </li>
             ))}
           </ul>
-          <Link href="/auth/signup" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Suivre mes candidatures →</Link>
+          <CTAButton href="/auth/signup" label="Suivre mes candidatures →" eventName="cta_suivre" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }} />
         </div>
       </section>
 
@@ -304,7 +304,7 @@ export default async function LandingPage() {
               </li>
             ))}
           </ul>
-          <Link href="/auth/signup" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Tester mon CV →</Link>
+         <CTAButton href="/auth/signup" label="Tester mon CV →" eventName="cta_tester_cv" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }} />
         </div>
         <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#111',fontSize:12,fontWeight:800,color:'#F5C400',textTransform:'uppercase',letterSpacing:'0.04em' }}>🎯 Score ATS — Résultat en direct</div>
