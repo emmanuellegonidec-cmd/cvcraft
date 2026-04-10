@@ -39,7 +39,7 @@ export default function JobInterviewDetails({ job, contacts, onPatch, onJobChang
   const selectedContact = contacts.find(c => c.id === job.interview_contact_id)
 
   return (
-    <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '2px solid #F5C400', overflow: 'hidden' }}>
+    <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '2px solid #111', overflow: 'hidden' }}>
 
       {/* Header cliquable */}
       <div
@@ -47,8 +47,8 @@ export default function JobInterviewDetails({ job, contacts, onPatch, onJobChang
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '14px 24px', cursor: 'pointer',
-          background: open ? '#FEF9E0' : '#FFFDE7',
-          borderBottom: open ? '1.5px solid #F5C400' : 'none',
+          background: '#fff',
+          borderBottom: open ? '1.5px solid #eee' : 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -60,7 +60,7 @@ export default function JobInterviewDetails({ job, contacts, onPatch, onJobChang
           }}>
             {currentStepNum}
           </div>
-          <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#B8900A', fontFamily: FONT }}>
+          <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#111', fontFamily: FONT }}>
             📅 Détails de l&apos;entretien
           </span>
           <span style={{ fontSize: 11, fontWeight: 700, color: '#888', fontFamily: FONT }}>
@@ -75,7 +75,7 @@ export default function JobInterviewDetails({ job, contacts, onPatch, onJobChang
       </div>
 
       {open && (
-        <div style={{ padding: '20px 24px', background: '#FEF9E0' }}>
+        <div style={{ padding: '20px 24px', background: '#fff' }}>
 
           {/* Date / Heure */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
