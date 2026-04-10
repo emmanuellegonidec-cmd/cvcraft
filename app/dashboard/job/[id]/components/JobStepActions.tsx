@@ -171,24 +171,31 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
       <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: isDateCard ? 8 : 10, flex: isDateCard ? 'none' : 1 }}>{action.sub}</span>
 
       {/* Cercle score ATS — style jaune/noir, pas de fond */}
-      {isATSCard && atsScore != null && (
-        <div
-          onPointerDown={e => e.stopPropagation()}
-          onClick={e => { e.stopPropagation(); onATSClick?.() }}
-          style={{ cursor: 'pointer', marginBottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}
-        >
-         <div style={{
-  width: 60, height: 60, borderRadius: '50%',
-  background: '#F5C400', border: '3px solid #111',
-  display: 'flex', flexDirection: 'column',
-  alignItems: 'center', justifyContent: 'center',
-}}>
-  <span style={{ fontSize: 18, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
-  <span style={{ fontSize: 8, color: '#111', fontWeight: 700 }}>/100</span>
-</div>
-          <span style={{ fontSize: 9, color: '#888', fontFamily: FONT }}>Voir le détail →</span>
-        </div>
-      )}
+{isATSCard && atsScore != null && (
+  <div
+    onPointerDown={e => e.stopPropagation()}
+    onClick={e => { e.stopPropagation(); onATSClick?.() }}
+    style={{ cursor: 'pointer', marginBottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}
+  >
+    <div style={{ position: 'relative', width: 64, height: 64 }}>
+      <svg viewBox="0 0 64 64" style={{ width: 64, height: 64, transform: 'rotate(-90deg)' }}>
+        <circle cx="32" cy="32" r="27" fill="#F5C400" stroke="#F5C400" strokeWidth="6" />
+        <circle cx="32" cy="32" r="27" fill="none"
+          stroke="#111"
+          strokeWidth="6"
+          strokeDasharray="169.6"
+          strokeDashoffset={169.6 - (atsScore / 100) * 169.6}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 16, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
+        <span style={{ fontSize: 7, color: '#111', fontWeight: 700 }}>/100</span>
+      </div>
+    </div>
+    <span style={{ fontSize: 9, color: '#888', fontFamily: FONT }}>Voir le détail →</span>
+  </div>
+)}
 
       {/* Bouton Analyser si pas encore de score */}
       {isATSCard && atsScore == null && (
