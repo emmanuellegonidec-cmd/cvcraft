@@ -211,7 +211,7 @@ export default async function LandingPage() {
           <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>01</div>
           <div style={{ fontFamily:"'Montserrat', sans-serif",display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>📋 Tableau de bord</div>
           <h3 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Votre recherche,<br />enfin organisée</h3>
-          <p style={{ fontFamily:"'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Fini les tableurs Excel. Jean find my Job centralise toutes vos candidatures dans un tableau de bord visuel avec un parcours de candidature détaillé pour chaque offre.</p>
+          <p style={{ fontFamily:"'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Fini les Post-it et les tableurs. Toutes vos candidatures dans un seul tableau de bord visuel — vous savez exactement où vous en êtes, à chaque instant..</p>
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
             {[
               'Vue globale : 5 grandes étapes claires, de l\'envie de postuler à l\'offre reçue',
