@@ -59,31 +59,6 @@ export default async function LandingPage() {
         "description": "Jean Find My Job centralise votre recherche d'emploi : tableau de bord Kanban, pipeline de candidature, relances, entretiens et score ATS pour optimiser vos candidatures.",
         "inLanguage": "fr",
         "author": { "@type": "Organization", "name": "Jean Find My Job", "url": "https://jeanfindmyjob.fr" }
-      },
-      {
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "Jean Find My Job est-il gratuit ?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Oui, Jean Find My Job est gratuit. Creez votre compte et commencez a suivre vos candidatures immediatement." }
-          },
-          {
-            "@type": "Question",
-            "name": "Comment fonctionne le score ATS ?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Le score ATS analyse votre CV par rapport a la description du poste et vous donne un score global, des points forts, des points faibles et des recommandations pour maximiser vos chances de passer les filtres automatiques des recruteurs." }
-          },
-          {
-            "@type": "Question",
-            "name": "Puis-je importer des offres d'emploi directement depuis les jobboards ?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Oui, Jean Find My Job permet d'importer une offre en collant simplement son URL. L'IA extrait automatiquement le titre, l'entreprise, la description et les informations cles." }
-          },
-          {
-            "@type": "Question",
-            "name": "Jean Find My Job est-il adapte aux seniors en reconversion ?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Absolument. Jean Find My Job a ete pense pour tous les chercheurs d'emploi, avec une attention particuliere pour les profils seniors en transition professionnelle qui ont besoin d'un outil simple et complet pour organiser leur recherche." }
-          }
-        ]
       }
     ]
   } 
