@@ -78,7 +78,7 @@ export async function POST(
 
     const jobId = params.id
 
-    // Récupérer le job avec sa description et le chemin du CV
+    // Récupérer le job avec sa description et l'URL du CV
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .select('id, title, company, description, user_id, cv_url')
@@ -97,17 +97,13 @@ export async function POST(
       )
     }
 
-    // Télécharger le CV depuis Supabase Storage (bucket job-documents)
-    const { data: fileData, error: fileError } = await supabase.storage
-      .from('job-documents')
-      .download(job.cv_url)
-
-    if (fileError || !fileData) {
-      return NextResponse.json({ error: 'Impossible de lire le CV : ' + fileError?.message }, { status: 500 })
+    // Télécharger le CV via son URL complète
+    const cvResponse = await fetch(job.cv_url)
+    if (!cvResponse.ok) {
+      return NextResponse.json({ error: 'Impossible de télécharger le CV' }, { status: 500 })
     }
 
-    // Convertir en base64
-    const arrayBuffer = await fileData.arrayBuffer()
+    const arrayBuffer = await cvResponse.arrayBuffer()
     const base64 = Buffer.from(arrayBuffer).toString('base64')
 
     // Construire le prompt avec la description du poste
