@@ -66,8 +66,8 @@ export async function GET(req: NextRequest) {
     .from('bug_reports')
     .select('*', { count: 'exact', head: true })
 
-  const { data: recentUsers } = await adminClient
-    .from('profiles')
+ const { data: recentUsers } = await adminClient
+    .from('user_profiles')
     .select('id, email, first_name, last_name, created_at')
     .order('created_at', { ascending: false })
     .limit(10)
