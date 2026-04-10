@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect  } from 'react'
 
 interface ATSResult {
   score_global: number
@@ -44,7 +44,12 @@ export default function ATSScoreModal({
 }: ATSScoreModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<ATSResult | null>(existingResult)
+const [result, setResult] = useState<ATSResult | null>(existingResult)
+
+useEffect(() => {
+  setResult(existingResult)
+}, [existingResult, isOpen])
+
   const [progress, setProgress] = useState(0)
   const [progressMsg, setProgressMsg] = useState('Lecture du CV...')
 
