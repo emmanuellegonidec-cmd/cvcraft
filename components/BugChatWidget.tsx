@@ -9,21 +9,30 @@ const STEPS = [
   { question: "Qu'est-ce qui aurait dû se passer normalement ?", placeholder: "Le résultat que tu attendais..." },
 ];
 
+const INITIAL_MESSAGES: Message[] = [
+  { role: "bot", text: "Tu as rencontré un bug ? Je suis là 👀" },
+  { role: "bot", text: STEPS[0].question },
+];
+
 export default function BugChatWidget() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [answers, setAnswers] = useState<string[]>([]);
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "bot", text: "Tu as rencontré un bug ? Je suis là 👀" },
-    { role: "bot", text: STEPS[0].question },
-  ]);
+  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const handleReset = () => {
+    setStep(0);
+    setAnswers([]);
+    setInput("");
+    setMessages(INITIAL_MESSAGES);
+  };
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -45,12 +54,12 @@ export default function BugChatWidget() {
       setLoading(true);
       try {
         await fetch("/api/bug-report", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${(window as any).__jfmj_token ?? ""}`,
-  },
-  body: JSON.stringify({
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${(window as any).__jfmj_token ?? ""}`,
+          },
+          body: JSON.stringify({
             page: newAnswers[0],
             what_happened: newAnswers[1],
             expected: newAnswers[2],
@@ -219,22 +228,41 @@ export default function BugChatWidget() {
                 color: "#111",
               }}
             />
-            <button
-              onClick={handleSend}
-              disabled={isDone || loading}
-              style={{
-                padding: "0 16px",
-                background: "#F5C400",
-                border: "none",
-                borderLeft: "2px solid #111",
-                fontSize: 16,
-                fontWeight: 900,
-                cursor: isDone ? "default" : "pointer",
-                color: "#111",
-              }}
-            >
-              →
-            </button>
+            {isDone ? (
+              <button
+                onClick={handleReset}
+                style={{
+                  padding: "0 12px",
+                  background: "#111",
+                  border: "none",
+                  borderLeft: "2px solid #111",
+                  fontSize: 10,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  color: "#F5C400",
+                  fontFamily: "'Montserrat', sans-serif",
+                }}
+              >
+                + Nouveau
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={loading}
+                style={{
+                  padding: "0 16px",
+                  background: "#F5C400",
+                  border: "none",
+                  borderLeft: "2px solid #111",
+                  fontSize: 16,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  color: "#111",
+                }}
+              >
+                →
+              </button>
+            )}
           </div>
         </div>
       )}
