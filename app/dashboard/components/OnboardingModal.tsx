@@ -206,7 +206,7 @@ export default function OnboardingModal({ onAddJob }: { onAddJob: () => void }) 
 
         {/* HEADER blanc avec logo */}
         <div style={{ background: '#fff', borderBottom: '3px solid #111', padding: '16px 22px 14px', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          <img src="/logo.png" alt="Jean Find My Job" style={{ height: 80, width: 'auto', display: 'block' }} />
+          <img src="/logojeanfindmyjob.webp" alt="Jean Find My Job" style={{ height: 80, width: 'auto', display: 'block' }} />
           <button onClick={close} style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: '#aaa', fontSize: 20, cursor: 'pointer', padding: 0 }}>✕</button>
           <div style={{ color: '#111', fontWeight: 900, fontSize: 17, marginTop: 10, lineHeight: 1.25, fontFamily: FONT }}>
             {screen.title}

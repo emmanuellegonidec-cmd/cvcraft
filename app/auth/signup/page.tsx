@@ -50,7 +50,7 @@ export default function SignupPage() {
 
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 2.5rem', background: '#fff', borderBottom: '2.5px solid #111' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <img src="/logo.png" alt="Jean Find My Job" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
+          <img src="/logojeanfindmyjob.webp" alt="Jean Find My Job" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
           <span style={{ fontFamily: 'Montserrat,sans-serif', fontSize: '1rem', fontWeight: 900, color: '#111', letterSpacing: '-0.01em' }}>
             Jean <span style={{ color: '#E8151B' }}>Find My Job</span>
           </span>
@@ -65,7 +65,7 @@ export default function SignupPage() {
         <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '2.5rem 2rem', width: '100%', maxWidth: 460, boxShadow: '4px 4px 0 #111' }}>
 
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-            <img src="/logo.png" alt="Jean Find My Job" style={{ height: 90, width: 'auto', objectFit: 'contain' }} />
+            <img src="/logojeanfindmyjob.webp" alt="Jean Find My Job" style={{ height: 90, width: 'auto', objectFit: 'contain' }} />
           </div>
 
           <h1 style={{ fontSize: '1.6rem', fontWeight: 900, textAlign: 'center', marginBottom: '0.25rem', letterSpacing: '-0.02em', color: '#111' }}>Créer un compte</h1>
