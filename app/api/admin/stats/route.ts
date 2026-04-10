@@ -7,7 +7,6 @@ function getAdminClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 }
-
 async function checkAdmin(req: NextRequest): Promise<boolean> {
   const authHeader = req.headers.get('authorization')
   if (!authHeader?.startsWith('Bearer ')) return false
