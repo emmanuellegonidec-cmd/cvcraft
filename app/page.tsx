@@ -3,6 +3,7 @@ import NewsletterForm from './NewsletterForm';
 import FaqSection from './FaqSection';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import Image from 'next/image'
+import CTAButton from '@/components/landing/CTAButton'
 
 type Article = {
   id: string
