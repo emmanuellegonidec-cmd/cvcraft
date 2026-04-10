@@ -181,11 +181,11 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
         <div
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onATSClick?.() }}
-          style={{ cursor: 'pointer', marginBottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
+          style={{ cursor: 'pointer', marginBottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: '#111', borderRadius: 8, padding: '8px 6px' }}
         >
           <div style={{ position: 'relative', width: 56, height: 56 }}>
             <svg viewBox="0 0 56 56" style={{ width: 56, height: 56, transform: 'rotate(-90deg)' }}>
-              <circle cx="28" cy="28" r="22" fill="none" stroke="#e0e0e0" strokeWidth="5" />
+              <circle cx="28" cy="28" r="22" fill="none" stroke="#333" strokeWidth="5" />
               <circle cx="28" cy="28" r="22" fill="none"
                 stroke={atsScoreColor(atsScore)}
                 strokeWidth="5"
@@ -199,7 +199,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
               <span style={{ fontSize: 7, color: '#aaa', fontWeight: 600 }}>/100</span>
             </div>
           </div>
-          <span style={{ fontSize: 9, color: '#888', fontFamily: FONT }}>Voir le détail →</span>
+          <span style={{ fontSize: 9, color: '#F5C400', fontFamily: FONT, fontWeight: 700 }}>Voir le détail →</span>
         </div>
       )}
 
