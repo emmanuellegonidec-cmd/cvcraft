@@ -276,12 +276,8 @@ export default async function LandingPage() {
       </section>
 <div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
 
-      {/* FEATURE 3 — Score ATS */}
+{/* FEATURE 3 — Score ATS */}
       <section className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
-        <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
-          <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#111',fontSize:12,fontWeight:800,color:'#F5C400',textTransform:'uppercase',letterSpacing:'0.04em' }}>🎯 Score ATS — Résultat en direct</div>
-          <img src="/score-ats.png" alt="Score ATS Jean find my Job" style={{ width:'100%',display:'block',maxHeight:400,objectFit:'cover',objectPosition:'top center' }} />
-        </div>
         <div>
           <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>03</div>
           <div style={{ fontFamily:"'Montserrat', sans-serif",display:'inline-block',background:'#FDEAEA',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>🎯 Score ATS</div>
@@ -301,10 +297,14 @@ export default async function LandingPage() {
           </ul>
           <Link href="/auth/signup" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }}>Tester mon CV →</Link>
         </div>
+        <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
+          <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#111',fontSize:12,fontWeight:800,color:'#F5C400',textTransform:'uppercase',letterSpacing:'0.04em' }}>🎯 Score ATS — Résultat en direct</div>
+          <img src="/score-ats.png" alt="Score ATS Jean find my Job" style={{ width:'100%',display:'block',maxHeight:400,objectFit:'cover',objectPosition:'top center' }} />
+        </div>
       </section>
 
       <div style={{ height:'2.5px',background:'#111' }} />
-      
+
       {/* HOW IT WORKS */}
       <section id="comment" style={{ background:'#111',borderTop:'2.5px solid #111',borderBottom:'2.5px solid #111',padding:'5rem 2rem' }}>
         <div style={{ maxWidth:1400,margin:'0 auto',textAlign:'center' }}>
