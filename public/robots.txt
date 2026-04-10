@@ -1,19 +1,10 @@
-User-agent: GPTBot
-Disallow: /
-
-User-agent: ClaudeBot
-Disallow: /
-
-User-agent: CCBot
-Disallow: /
-
-User-agent: PerplexityBot
-Disallow: /
-
-User-agent: Google-Extended
-Disallow: /
-
 User-agent: *
 Allow: /
+Allow: /blog/
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /api/
+Disallow: /test-import/
 
-Sitemap: https://cvcraft-five.vercel.app/sitemap.xml
+Sitemap: https://jeanfindmyjob.fr/sitemap.xml
