@@ -66,11 +66,16 @@ export async function GET(req: NextRequest) {
     .from('bug_reports')
     .select('*', { count: 'exact', head: true })
 
-  const { data: recentUsers } = await adminClient
-    .from('profiles')
-    .select('id, email, first_name, last_name, created_at')
-    .order('created_at', { ascending: false })
-    .limit(10)
+const recentUsers = allUsers
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 10)
+    .map(u => ({
+      id: u.id,
+      email: u.email ?? '',
+      first_name: u.user_metadata?.first_name ?? '',
+      last_name: u.user_metadata?.last_name ?? '',
+      created_at: u.created_at,
+    }))
 
   const activationRate = totalUsers ? Math.round((usersWithJobs / totalUsers) * 100) : 0
 
