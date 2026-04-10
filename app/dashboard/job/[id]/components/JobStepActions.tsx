@@ -177,22 +177,15 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
           onClick={e => { e.stopPropagation(); onATSClick?.() }}
           style={{ cursor: 'pointer', marginBottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}
         >
-          <div style={{ position: 'relative', width: 60, height: 60 }}>
-            <svg viewBox="0 0 60 60" style={{ width: 60, height: 60, transform: 'rotate(-90deg)' }}>
-              <circle cx="30" cy="30" r="24" fill="#F5C400" stroke="#111" strokeWidth="2.5" />
-              <circle cx="30" cy="30" r="24" fill="none"
-                stroke="#111"
-                strokeWidth="4"
-                strokeDasharray="150.8"
-                strokeDashoffset={150.8 - (atsScore / 100) * 150.8}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 15, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
-              <span style={{ fontSize: 7, color: '#111', fontWeight: 700 }}>/100</span>
-            </div>
-          </div>
+         <div style={{
+  width: 60, height: 60, borderRadius: '50%',
+  background: '#F5C400', border: '3px solid #111',
+  display: 'flex', flexDirection: 'column',
+  alignItems: 'center', justifyContent: 'center',
+}}>
+  <span style={{ fontSize: 18, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
+  <span style={{ fontSize: 8, color: '#111', fontWeight: 700 }}>/100</span>
+</div>
           <span style={{ fontSize: 9, color: '#888', fontFamily: FONT }}>Voir le détail →</span>
         </div>
       )}
