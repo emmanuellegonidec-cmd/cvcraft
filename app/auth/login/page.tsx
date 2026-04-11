@@ -16,13 +16,15 @@ export default function LoginPage() {
   const inputStyle: React.CSSProperties = { width: '100%', border: '2px solid #E0E0E0', borderRadius: 8, padding: '11px 14px', fontFamily: 'Montserrat, sans-serif', fontSize: 14, fontWeight: 500, outline: 'none', color: '#111', background: '#fff', boxSizing: 'border-box' };
   const labelStyle: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 };
 
-  async function handleSubmit(e: React.FormEvent) {
+async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
   setError('');
   setLoading(true);
   const supabase = createClient();
   const { error: err } = await supabase.auth.signInWithPassword({ email, password });
   if (err) { setLoading(false); setError('Email ou mot de passe incorrect.'); return; }
+  // On attend que le cookie soit bien écrit
+  await supabase.auth.getSession();
   window.location.replace('/dashboard');
 }
 
