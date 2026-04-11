@@ -22,14 +22,12 @@ function LoginForm() {
     const { error: err } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (err) { setError('Email ou mot de passe incorrect.'); return; }
-    // Redirige vers le paramètre ?next= ou /dashboard par défaut
     const next = searchParams.get('next') ?? '/dashboard';
-    router.refresh();
-router.push(next);
+    router.push(next);
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <div>
       {error && <div style={{ background: '#FDEAEA', border: '2px solid #E8151B', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#C01116', fontWeight: 600, marginBottom: 16 }}>{error}</div>}
 
       <div style={{ marginBottom: 14 }}>
@@ -50,7 +48,7 @@ router.push(next);
         </div>
       </div>
 
-      <button type="submit" disabled={loading} style={{ width: '100%', background: loading ? '#555' : '#111', color: '#F5C400', border: '2px solid #111', borderRadius: 8, padding: 13, fontFamily: 'Montserrat,sans-serif', fontSize: 14, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #E8151B', letterSpacing: '0.02em' }}>
+      <button onClick={handleSubmit} disabled={loading} style={{ width: '100%', background: loading ? '#555' : '#111', color: '#F5C400', border: '2px solid #111', borderRadius: 8, padding: 13, fontFamily: 'Montserrat,sans-serif', fontSize: 14, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #E8151B', letterSpacing: '0.02em' }}>
         {loading ? 'Connexion...' : 'Se connecter →'}
       </button>
 
@@ -58,7 +56,7 @@ router.push(next);
         Pas encore de compte ?{' '}
         <Link href="/auth/signup" style={{ color: '#E8151B', fontWeight: 700, textDecoration: 'none' }}>Créer un compte gratuit</Link>
       </p>
-    </form>
+    </div>
   );
 }
 
