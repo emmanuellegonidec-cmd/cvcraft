@@ -1,25 +1,15 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { updateSession } from '@/lib/supabase/proxy'
 
 const ALLOWED_BOTS = [
-  'googlebot',
-  'bingbot',
-  'slurp',
-  'duckduckbot',
-  'baiduspider',
-  'yandexbot',
-  'facebot',
-  'ia_archiver',
-  'ahrefsbot',
-  'semrushbot',
+  'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
+  'yandexbot', 'facebot', 'ia_archiver', 'ahrefsbot', 'semrushbot',
 ]
 
 export async function middleware(request: NextRequest) {
   const userAgent = request.headers.get('user-agent')?.toLowerCase() || ''
-
-  const isSearchBot = ALLOWED_BOTS.some((bot) => userAgent.includes(bot))
-  if (isSearchBot) {
+  if (ALLOWED_BOTS.some((bot) => userAgent.includes(bot))) {
     return NextResponse.next()
   }
 
@@ -28,9 +18,7 @@ export async function middleware(request: NextRequest) {
   const isPublic =
     pathname === '/' ||
     pathname.startsWith('/blog') ||
-    pathname.startsWith('/auth/login') ||
-pathname.startsWith('/auth/signup') ||
-pathname.startsWith('/auth/') ||
+    pathname.startsWith('/auth/') ||
     pathname.startsWith('/api/newsletter') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
@@ -41,23 +29,19 @@ pathname.startsWith('/auth/') ||
     return NextResponse.next()
   }
 
-  const supabaseResponse = NextResponse.next({ request })
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
+  const response = await updateSession(request)
+
+  // Vérifie si l'utilisateur est connecté
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const { createServerClient } = await import('@supabase/ssr')
+
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() { return request.cookies.getAll() },
+      setAll() {},
+    },
+  })
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -65,7 +49,7 @@ pathname.startsWith('/auth/') ||
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  return supabaseResponse
+  return response
 }
 
 export const config = {
