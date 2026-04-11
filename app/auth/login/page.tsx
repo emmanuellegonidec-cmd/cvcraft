@@ -24,8 +24,7 @@ export default function LoginPage() {
     const { error: err } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (err) { setError('Erreur : ' + err.message); return; }
-setError('Connexion réussie ! Redirection...');
-router.push('/dashboard');
+window.location.href = '/dashboard';
   }
 
   return (
