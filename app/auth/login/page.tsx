@@ -13,6 +13,9 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const inputStyle: React.CSSProperties = { width: '100%', border: '2px solid #E0E0E0', borderRadius: 8, padding: '11px 14px', fontFamily: 'Montserrat, sans-serif', fontSize: 14, fontWeight: 500, outline: 'none', color: '#111', background: '#fff', boxSizing: 'border-box' };
+  const labelStyle: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -25,19 +28,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ fontFamily: "'Montserrat', sans-serif", minHeight: '100vh', background: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
-        * { box-sizing: border-box; }
-        .auth-input { width: 100%; border: 2px solid #E0E0E0; border-radius: 8px; padding: 11px 14px; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 500; outline: none; color: #111; background: #fff; transition: border-color 0.15s; }
-        .auth-input:focus { border-color: #111; box-shadow: 0 0 0 3px rgba(17,17,17,0.06); }
-        .auth-label { display: block; font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
-      `}</style>
-
+    <div style={{ fontFamily: 'Montserrat, sans-serif', minHeight: '100vh', background: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 2.5rem', background: '#fff', borderBottom: '2.5px solid #111' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <img src="/logojeanfindmyjob.webp" alt="Jean Find My Job" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
-          <span style={{ fontFamily: 'Montserrat,sans-serif', fontSize: '1rem', fontWeight: 900, color: '#111', letterSpacing: '-0.01em' }}>
+          <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '1rem', fontWeight: 900, color: '#111' }}>
             Jean <span style={{ color: '#E8151B' }}>Find My Job</span>
           </span>
         </Link>
@@ -56,27 +51,31 @@ export default function LoginPage() {
           <p style={{ textAlign: 'center', fontSize: 13, color: '#888', fontWeight: 500, marginBottom: '1.75rem' }}>Bienvenue ! Connectez-vous à votre espace.</p>
 
           <form onSubmit={handleSubmit}>
-            {error && <div style={{ background: '#FDEAEA', border: '2px solid #E8151B', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#C01116', fontWeight: 600, marginBottom: 16 }}>{error}</div>}
+            {error && (
+              <div style={{ background: '#FDEAEA', border: '2px solid #E8151B', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#C01116', fontWeight: 600, marginBottom: 16 }}>
+                {error}
+              </div>
+            )}
 
             <div style={{ marginBottom: 14 }}>
-              <label className="auth-label">Email</label>
-              <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vous@email.com" required />
+              <label style={labelStyle}>Email</label>
+              <input style={inputStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vous@email.com" required />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                <label className="auth-label" style={{ marginBottom: 0 }}>Mot de passe</label>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Mot de passe</label>
                 <span style={{ fontSize: 12, color: '#E8151B', fontWeight: 700, cursor: 'pointer' }}>Mot de passe oublié ?</span>
               </div>
               <div style={{ position: 'relative' }}>
-                <input className="auth-input" type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Votre mot de passe" required style={{ paddingRight: 44 }} />
+                <input style={{ ...inputStyle, paddingRight: 44 }} type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Votre mot de passe" required />
                 <button type="button" onClick={() => setShowPwd(!showPwd)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#888', padding: 4 }}>
                   {showPwd ? '🙈' : '👁'}
                 </button>
               </div>
             </div>
 
-            <button type="submit" disabled={loading} style={{ width: '100%', background: loading ? '#555' : '#111', color: '#F5C400', border: '2px solid #111', borderRadius: 8, padding: 13, fontFamily: 'Montserrat,sans-serif', fontSize: 14, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #E8151B', letterSpacing: '0.02em' }}>
+            <button type="submit" disabled={loading} style={{ width: '100%', background: loading ? '#555' : '#111', color: '#F5C400', border: '2px solid #111', borderRadius: 8, padding: 13, fontFamily: 'Montserrat, sans-serif', fontSize: 14, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #E8151B', letterSpacing: '0.02em' }}>
               {loading ? 'Connexion...' : 'Se connecter →'}
             </button>
 

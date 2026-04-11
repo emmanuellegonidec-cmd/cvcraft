@@ -3,9 +3,9 @@ import './globals.css';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: "Jean Find My Job — Suivez et optimisez vos candidatures",
+  title: "Jean find my Job — Suivez et optimisez vos candidatures",
   description:
-    "Jean Find My Job centralise votre recherche d'emploi : tableau de bord Kanban, pipeline de candidature, relances, entretiens et score ATS pour optimiser vos candidatures face aux recruteurs.",
+    "Jean find my Job centralise votre recherche d'emploi : tableau de bord Kanban, pipeline de candidature, relances, entretiens et score ATS pour optimiser vos candidatures face aux recruteurs.",
   keywords: [
     "suivi candidatures",
     "recherche emploi",
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     "ATS recrutement",
   ],
   openGraph: {
-    title: "Jean Find My Job — Suivez et optimisez vos candidatures",
+    title: "Jean find my Job — Suivez et optimisez vos candidatures",
     description:
       "Organisez votre recherche d'emploi avec un tableau de bord Kanban, un suivi étape par étape, des rappels automatiques et un score ATS pour maximiser vos candidatures.",
     url: "https://jeanfindmyjob.fr",
