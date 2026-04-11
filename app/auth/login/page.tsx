@@ -23,8 +23,9 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error: err } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (err) { setError('Email ou mot de passe incorrect.'); return; }
-    router.push('/dashboard');
+    if (err) { setError('Erreur : ' + err.message); return; }
+setError('Connexion réussie ! Redirection...');
+router.push('/dashboard');
   }
 
   return (
