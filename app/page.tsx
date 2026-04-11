@@ -212,7 +212,7 @@ export default async function LandingPage() {
             {[
               ['Gratuit','candidatures illimitées','version Bêta'],
               ['1 parcours','par candidature','entièrement personnalisable'],
-              ['30s','pour un score ATS','généré par IA'],
+              ['20s','pour un score ATS','généré par IA'],
               ['4,9★','Satisfaction','utilisateurs'],
             ].map(([n,l,s]) => (
               <div key={l} style={{ textAlign:'center' }}>
