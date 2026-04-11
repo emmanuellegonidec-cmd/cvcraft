@@ -17,15 +17,14 @@ export default function LoginPage() {
   const labelStyle: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 };
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    const supabase = createClient();
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (err) { setError('Erreur : ' + err.message); return; }
-window.location.href = '/dashboard';
-  }
+  e.preventDefault();
+  setError('');
+  setLoading(true);
+  const supabase = createClient();
+  const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+  if (err) { setLoading(false); setError('Email ou mot de passe incorrect.'); return; }
+  window.location.replace('/dashboard');
+}
 
   return (
     <div style={{ fontFamily: 'Montserrat, sans-serif', minHeight: '100vh', background: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
