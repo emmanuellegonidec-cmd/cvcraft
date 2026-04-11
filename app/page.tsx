@@ -197,7 +197,7 @@ export default async function LandingPage() {
             </div>
           </div>
           <div className="hero-logo-wrap" style={{ display:'flex',alignItems:'center',justifyContent:'center' }}>
-            <img src="/logojeanfindmyjob.webp" alt="Jean find my Job" className="hero-logo-img" style={{ width:'100%',maxWidth:680,height:'auto',objectFit:'contain' }} />
+          <Image src="/logojeanfindmyjob.webp" alt="Jean find my Job" className="hero-logo-img" width={680} height={400} style={{ width:'100%',maxWidth:680,height:'auto',objectFit:'contain' }} priority />  
           </div>
         </div>
       </section>
