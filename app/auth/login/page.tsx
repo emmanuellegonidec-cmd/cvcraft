@@ -24,7 +24,7 @@ function LoginForm() {
     if (err) { setError('Email ou mot de passe incorrect.'); return; }
     // Redirige vers le paramètre ?next= ou /dashboard par défaut
     const next = searchParams.get('next') ?? '/dashboard';
-    router.push(next);
+    window.location.href = next;
   }
 
   return (
