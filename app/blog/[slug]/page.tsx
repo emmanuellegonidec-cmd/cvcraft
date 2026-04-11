@@ -1,7 +1,45 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
+import { createClient as createSupabasePublic } from '@supabase/supabase-js'
 
+const supabasePublic = createSupabasePublic(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export async function generateMetadata(
+  { params }: { params: { slug: string } }
+): Promise<Metadata> {
+  const { data: article } = await supabasePublic
+    .from('articles')
+    .select('title, excerpt, cover_image_url')
+    .eq('slug', params.slug)
+    .single()
+
+  if (!article) {
+    return {
+      title: 'Article — Jean Find My Job',
+      description: 'Conseils et ressources pour votre recherche d\'emploi.',
+    }
+  }
+
+  return {
+    title: `${article.title} — Jean Find My Job`,
+    description: article.excerpt || 'Conseils et ressources pour votre recherche d\'emploi.',
+    alternates: {
+      canonical: `https://www.jeanfindmyjob.fr/blog/${params.slug}`,
+    },
+    openGraph: {
+      title: article.title,
+      description: article.excerpt || '',
+      url: `https://www.jeanfindmyjob.fr/blog/${params.slug}`,
+      images: article.cover_image_url ? [{ url: article.cover_image_url }] : [],
+      type: 'article',
+    },
+  }
+}
 type Article = {
   id: string
   title: string
