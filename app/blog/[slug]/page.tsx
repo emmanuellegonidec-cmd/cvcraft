@@ -29,12 +29,12 @@ export async function generateMetadata(
     title: `${article.title} — Jean Find My Job`,
     description: article.excerpt || 'Conseils et ressources pour votre recherche d\'emploi.',
     alternates: {
-      canonical: `https://www.jeanfindmyjob.fr/blog/${params.slug}`,
+      canonical: `https://jeanfindmyjob.fr/blog/${params.slug}`,
     },
     openGraph: {
       title: article.title,
       description: article.excerpt || '',
-      url: `https://www.jeanfindmyjob.fr/blog/${params.slug}`,
+      url: `https://jeanfindmyjob.fr/blog/${params.slug}`,
       images: article.cover_image_url ? [{ url: article.cover_image_url }] : [],
       type: 'article',
     },
