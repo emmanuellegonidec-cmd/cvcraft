@@ -3,6 +3,7 @@ import './globals.css';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://jeanfindmyjob.fr'),
   title: "Jean find my Job — Suivez et optimisez vos candidatures",
   description:
     "Jean find my Job centralise votre recherche d'emploi : tableau de bord Kanban, pipeline de candidature, relances, entretiens et score ATS pour optimiser vos candidatures face aux recruteurs.",
@@ -24,9 +25,16 @@ export const metadata: Metadata = {
     siteName: "Jean Find My Job",
     locale: "fr_FR",
     type: "website",
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Jean Find My Job — Suivez et optimisez vos candidatures',
+      },
+    ],
   },
 };
-
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
