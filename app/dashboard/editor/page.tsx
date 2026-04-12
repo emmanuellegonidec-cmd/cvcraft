@@ -11,7 +11,17 @@ import { CVPdf } from "@/lib/pdf-generator";
 const FONT = 'Montserrat, sans-serif';
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
-
+function renderMarkdown(text: string): string {
+  return text
+    .split('\n').map(line => {
+      if (/^## (.+)/.test(line)) return `<h2 style="font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid #111;padding-bottom:4px;margin:20px 0 8px;">${line.replace(/^## /, '')}</h2>`;
+      if (/^### (.+)/.test(line)) return `<h3 style="font-size:13px;font-weight:800;margin:10px 0 3px;">${line.replace(/^### /, '')}</h3>`;
+      if (line.trim() === '') return '<br/>';
+      return `<p style="margin:2px 0;font-size:13px;line-height:1.7;">${line}</p>`;
+    }).join('')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em style="color:#555;">$1</em>');
+}
 function EditorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -427,7 +437,7 @@ function EditorContent() {
                   </div>
                 )}
                 {generatedCV && !isGenerating && (
-                  <pre style={{ whiteSpace: 'pre-wrap', fontFamily: FONT, fontSize: 14, lineHeight: 1.8, color: '#111', margin: 0 }}>{generatedCV}</pre>
+                  <div style={{ fontFamily: FONT, color: '#111' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(generatedCV) }} />
                 )}
               </div>
             </div>
