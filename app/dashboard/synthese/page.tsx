@@ -36,7 +36,7 @@ const PIPELINE_STEPS: { key: string; label: string }[] = [
 
 function getStepInfo(sub_status: string, customSteps: Record<string, { label: string; position: number }>) {
   const idx = PIPELINE_STEPS.findIndex(s => s.key === sub_status);
-  if (idx >= 0) return { label: PIPELINE_STEPS[idx].label, step: idx + 1, total: PIPELINE_STEPS.length };
+  if (idx >= 0) return { label: PIPELINE_STEPS[idx].label, step: idx + 1, total: 8 };
   if (customSteps[sub_status]) return { label: customSteps[sub_status].label, step: customSteps[sub_status].position, total: '?' };
   return { label: sub_status || '—', step: null, total: null };
 }
@@ -89,9 +89,11 @@ export default function SynthesePage() {
         const { data: actionsData, error: actionsError } = await supabase
           .from('job_step_actions')
           .select('job_id, label, is_done, due_date')
-          .in('job_id', jobIds);
+          .in('job_id', jobIds)
+          .order('created_at', { ascending: true });
 
         if (actionsError) console.error('actions error', actionsError);
+
         (actionsData || []).forEach((a: { job_id: string; label: string; is_done: boolean; due_date: string | null }) => {
           if (!actionsMap[a.job_id]) actionsMap[a.job_id] = [];
           actionsMap[a.job_id].push({ label: a.label, is_done: a.is_done, due_date: a.due_date });
@@ -206,13 +208,13 @@ export default function SynthesePage() {
             <p style={{ fontSize: 14, color: '#888', marginTop: 4 }}>Exportez un bilan complet de votre recherche d'emploi</p>
           </div>
 
-          {/* Filtres */}
+          {/* Filtres — tout sur une ligne */}
           <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#fff', border: '2px solid #111', borderRadius: 8, padding: '14px 18px', marginBottom: 24, boxShadow: '4px 4px 0 #111' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Du</span>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-            <span style={{ color: '#888' }}>→</span>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>Du</span>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ flex: 1, minWidth: 130 }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>Au</span>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ flex: 1, minWidth: 130 }} />
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ flex: 1, minWidth: 160 }}>
               <option value="all">Tous les statuts</option>
               <option value="to_apply">À postuler</option>
               <option value="applied">Postulé</option>
@@ -220,7 +222,7 @@ export default function SynthesePage() {
               <option value="offer_received">Offre reçue</option>
               <option value="archived">Archivé</option>
             </select>
-            <button className="btn-yellow" onClick={fetchData} style={{ marginLeft: 'auto' }}>Appliquer</button>
+            <button className="btn-yellow" onClick={fetchData}>Appliquer</button>
           </div>
 
           {/* Stats */}
@@ -251,12 +253,12 @@ export default function SynthesePage() {
             <div style={{ overflowX: 'auto' }}>
               <table>
                 <colgroup>
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '17%' }} />
+                  <col style={{ width: '13%' }} />
                   <col style={{ width: '11%' }} />
-                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '16%' }} />
                   <col style={{ width: '9%' }} />
-                  <col style={{ width: '30%' }} />
+                  <col style={{ width: '34%' }} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -300,38 +302,52 @@ export default function SynthesePage() {
                           </span>
                         </td>
                         <td>
-                          <div style={{ fontSize: 12, color: '#111', fontWeight: 500 }}>{stepInfo.label}</div>
+                          <div style={{ fontSize: 12, color: '#111', fontWeight: 600 }}>{stepInfo.label}</div>
                           {stepInfo.step && (
-                            <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>
+                            <div style={{ fontSize: 10, color: '#888', marginTop: 2, fontWeight: 500 }}>
                               Étape {stepInfo.step}/{stepInfo.total}
                             </div>
                           )}
                         </td>
                         <td style={{ color: '#888', fontSize: 12 }}>{formatDate(job.created_at)}</td>
                         <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: job.actions.length > 0 ? 6 : 0 }}>
+                          {/* Actions */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             {job.actions.length === 0 && (
-                              <span style={{ fontSize: 11, color: '#ccc' }}>Aucune action</span>
+                              <span style={{ fontSize: 11, color: '#ccc', fontStyle: 'italic' }}>Aucune action</span>
                             )}
                             {job.actions.map((a, i) => (
-                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-                                <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: a.is_done ? '#639922' : '#EF9F27' }} />
-                                <span style={{ color: a.is_done ? '#3B6D11' : '#854F0B', textDecoration: a.is_done ? 'line-through' : 'none' }}>
-                                  {a.label}
-                                </span>
-                                {a.due_date && (
-                                  <span style={{ color: '#aaa', fontSize: 10 }}>
-                                    — {new Date(a.due_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11 }}>
+                                <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, marginTop: 3, background: a.is_done ? '#639922' : '#EF9F27' }} />
+                                <div>
+                                  <span style={{ color: a.is_done ? '#3B6D11' : '#854F0B', textDecoration: a.is_done ? 'line-through' : 'none' }}>
+                                    {a.label}
                                   </span>
-                                )}
+                                  {a.due_date && (
+                                    <span style={{ color: '#aaa', fontSize: 10, marginLeft: 4 }}>
+                                      — {new Date(a.due_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>
+                          {/* Note éditable */}
                           <div
                             contentEditable
                             suppressContentEditableWarning
                             className="note-editable"
-                            style={{ fontSize: 11, color: '#888', outline: 'none', borderTop: job.actions.length > 0 ? '1px dashed #e5e5e5' : 'none', paddingTop: job.actions.length > 0 ? 4 : 0, minHeight: 18, cursor: 'text' }}
+                            style={{
+                              marginTop: 8,
+                              fontSize: 11,
+                              color: '#555',
+                              outline: 'none',
+                              borderTop: '1px dashed #ddd',
+                              paddingTop: 6,
+                              minHeight: 22,
+                              cursor: 'text',
+                              lineHeight: 1.5,
+                            }}
                             onBlur={e => updateJob(job.id, 'note', e.currentTarget.textContent || '')}
                           />
                         </td>
