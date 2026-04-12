@@ -39,7 +39,9 @@ function EditorContent() {
   const [importStatus, setImportStatus] = useState<{ type: string; msg: string } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [copied, setCopied] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [photo, setPhoto] = useState<string>('');
+const photoRef = useRef<HTMLInputElement>(null);
+const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -142,13 +144,15 @@ function EditorContent() {
     finally { setIsSaving(false); }
   }
 
-  async function downloadPdf() {
-    const blob = await pdf(<CVPdf content={generatedCV} />).toBlob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `${cvTitle}.pdf`; a.click();
-    URL.revokeObjectURL(url);
-  }
+ async function downloadPdf() {
+  const blob = await pdf(
+    <CVPdf content={generatedCV} template={template} photo={photo || undefined} formData={form} />
+  ).toBlob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${cvTitle}.pdf`; a.click();
+  URL.revokeObjectURL(url);
+}
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '8px 10px', fontSize: 13, fontFamily: FONT,
@@ -310,6 +314,34 @@ function EditorContent() {
                         <Field label="Ville"><input style={inputStyle} value={form.city} onChange={e => setField('city', e.target.value)} placeholder="Paris" /></Field>
                         <Field label="LinkedIn"><input style={inputStyle} value={form.linkedin} onChange={e => setField('linkedin', e.target.value)} placeholder="linkedin.com/in/..." /></Field>
                       </Row2>
+                      <Field label="Photo (optionnel)">
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    {photo
+      ? <img src={photo} style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid #111', objectFit: 'cover' }} />
+      : <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid #111', background: '#E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 16, color: '#fff', flexShrink: 0 }}>
+          {(form.firstName?.[0] || '') + (form.lastName?.[0] || '') || '?'}
+        </div>
+    }
+    <button onClick={() => photoRef.current?.click()}
+      style={{ fontSize: 12, fontWeight: 700, fontFamily: FONT, padding: '6px 12px', border: '2px solid #111', borderRadius: 6, background: '#F7F6F3', cursor: 'pointer', boxShadow: '2px 2px 0 #111' }}>
+      {photo ? 'Changer la photo' : 'Ajouter une photo'}
+    </button>
+    {photo && (
+      <button onClick={() => setPhoto('')}
+        style={{ fontSize: 11, fontWeight: 700, color: '#E8151B', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>
+        ✕
+      </button>
+    )}
+    <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }}
+      onChange={e => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = ev => setPhoto(ev.target?.result as string);
+        reader.readAsDataURL(f);
+      }} />
+  </div>
+</Field>
                     </Section>
 
                     <Section title="Résumé">
