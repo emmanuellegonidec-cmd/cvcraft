@@ -28,7 +28,7 @@ export default function ConfidentialitePage() {
         <div style={{ marginBottom: '2.5rem' }}>
           <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 800, color: '#111', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Légal</div>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Politique de confidentialité</h1>
-          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : avril 2026</p>
+          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 10 avril 2026</p>
         </div>
 
         {[
