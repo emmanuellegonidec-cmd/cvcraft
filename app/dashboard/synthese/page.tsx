@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
 
 const STATUS_LABELS: Record<string, string> = {
   to_apply: 'À postuler',
@@ -22,8 +23,8 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 interface Action { label: string; is_done: boolean; due_date: string | null; }
 interface Job {
   id: string; title: string; company: string; status: string;
-  sub_status: string; created_at: string; location?: string;
-  salary?: string; actions: Action[]; note?: string;
+  sub_status: string; created_at: string;
+  actions: Action[]; note?: string;
 }
 
 export default function SynthesePage() {
@@ -43,13 +44,38 @@ export default function SynthesePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = (window as Window & { __jfmj_token?: string }).__jfmj_token || '';
-      const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo, status: statusFilter });
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch(`/api/synthese?${params}`, { headers });
-      const data = await res.json();
-      setJobs((data.jobs || []).map((j: Job) => ({ ...j, note: '' })));
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push('/auth/login'); return; }
+
+      let query = supabase
+        .from('jobs')
+        .select('id, title, company, status, sub_status, created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', dateFrom)
+        .lte('created_at', dateTo + 'T23:59:59')
+        .order('created_at', { ascending: false });
+
+      if (statusFilter !== 'all') query = query.eq('status', statusFilter);
+
+      const { data: jobsData } = await query;
+      const jobList = jobsData || [];
+      const jobIds = jobList.map((j: { id: string }) => j.id);
+
+      let actionsMap: Record<string, Action[]> = {};
+      if (jobIds.length > 0) {
+        const { data: actionsData } = await supabase
+          .from('job_step_actions')
+          .select('job_id, label, is_done, due_date')
+          .in('job_id', jobIds);
+
+        (actionsData || []).forEach((a: { job_id: string; label: string; is_done: boolean; due_date: string | null }) => {
+          if (!actionsMap[a.job_id]) actionsMap[a.job_id] = [];
+          actionsMap[a.job_id].push({ label: a.label, is_done: a.is_done, due_date: a.due_date });
+        });
+      }
+
+      setJobs(jobList.map((j: { id: string; title: string; company: string; status: string; sub_status: string; created_at: string }) => ({ ...j, actions: actionsMap[j.id] || [], note: '' })));
     } finally {
       setLoading(false);
     }
@@ -62,18 +88,16 @@ export default function SynthesePage() {
     interviews: jobs.filter(j => j.status === 'in_progress').length,
     offers: jobs.filter(j => j.status === 'offer_received').length,
     tauxReponse: jobs.length > 0
-      ? Math.round((jobs.filter(j => ['in_progress','offer_received','archived'].includes(j.status)).length / jobs.length) * 100)
+      ? Math.round((jobs.filter(j => ['in_progress', 'offer_received', 'archived'].includes(j.status)).length / jobs.length) * 100)
       : 0,
   };
 
-  const updateJob = (id: string, field: keyof Job, value: string) => {
+  const updateJob = (id: string, field: 'title' | 'company' | 'note', value: string) => {
     setJobs(prev => prev.map(j => j.id === id ? { ...j, [field]: value } : j));
   };
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-
-  const handlePrint = () => window.print();
 
   return (
     <>
@@ -82,10 +106,10 @@ export default function SynthesePage() {
         * { box-sizing: border-box; }
         .synthese-page { font-family: 'Montserrat', sans-serif; display: flex; min-height: 100vh; background: #f5f5f0; }
         .synthese-sidebar { width: 200px; min-width: 200px; background: #0f0f0f; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; border-right: 1px solid #1e1e1e; }
-        .synthese-content { flex: 1; padding: 36px 44px; max-width: 1100px; }
+        .synthese-content { flex: 1; padding: 36px 44px; }
         .section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
         .stat-card { background: #fff; border: 2px solid #111; border-radius: 8px; padding: 16px 18px; box-shadow: 4px 4px 0 #111; }
-        table { width: 100%; border-collapse: collapse; background: #fff; border: 2px solid #111; border-radius: 8px; overflow: hidden; table-layout: fixed; }
+        table { width: 100%; border-collapse: collapse; background: #fff; border: 2px solid #111; overflow: hidden; table-layout: fixed; }
         th { background: #111; color: #fff; text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; font-family: 'Montserrat', sans-serif; }
         td { padding: 10px 12px; border-bottom: 1px solid #e5e5e5; font-size: 12px; font-family: 'Montserrat', sans-serif; color: #111; vertical-align: top; }
         tr:last-child td { border-bottom: none; }
@@ -95,6 +119,9 @@ export default function SynthesePage() {
         .btn-red { background: #E8151B; border: 2px solid #111; border-radius: 4px; padding: 9px 20px; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: 4px 4px 0 #111; font-family: 'Montserrat', sans-serif; }
         input[type=date], select { border: 2px solid #111; border-radius: 4px; padding: 7px 10px; font-size: 13px; font-family: 'Montserrat', sans-serif; background: #fff; color: #111; }
         textarea { width: 100%; min-height: 60px; border: 2px solid #111; border-radius: 6px; padding: 10px 12px; font-size: 13px; font-family: 'Montserrat', sans-serif; resize: vertical; color: #111; background: #fff; }
+        .nav-btn { display: flex; align-items: center; padding: 9px 12px; border: none; border-left: 3px solid transparent; background: transparent; color: #888; font-family: Montserrat,sans-serif; font-weight: 500; font-size: 14px; cursor: pointer; text-align: left; width: 100%; transition: all 0.12s; }
+        .nav-btn:hover { background: #161616; color: #ccc; }
+        .nav-btn.active { border-left: 3px solid #E8151B; background: #1c1c1c; color: #fff; font-weight: 700; }
         @media print {
           .no-print { display: none !important; }
           .synthese-sidebar { display: none !important; }
@@ -106,59 +133,40 @@ export default function SynthesePage() {
       `}</style>
 
       <div className="synthese-page">
-        {/* Sidebar */}
         <aside className="synthese-sidebar no-print">
-          <div onClick={() => router.push('/')} style={{ padding: '18px 16px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer' }}>
+          <div onClick={() => router.push('/')} style={{ padding: '18px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#F5C400' }}>find my Job</span>
           </div>
-          <div style={{ flex: 1, padding: '14px 10px' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 10px' }}>Recherche</div>
-            {[
-              { label: 'Tableau de bord', path: '/dashboard' },
-              { label: 'Candidatures', path: '/dashboard' },
-              { label: 'Contacts', path: '/dashboard' },
-              { label: 'Entretiens', path: '/dashboard' },
-              { label: 'Actions', path: '/dashboard' },
-              { label: 'Statistiques', path: '/dashboard' },
-            ].map(item => (
-              <button key={item.label} onClick={() => router.push(item.path)}
-                style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#ccc'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
-              >{item.label}</button>
+          <div style={{ flex: 1, padding: '14px 10px', overflowY: 'auto' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>Recherche</div>
+            {['Tableau de bord','Candidatures','Contacts','Entretiens','Actions','Statistiques'].map(label => (
+              <button key={label} className="nav-btn" onClick={() => router.push('/dashboard')}>{label}</button>
             ))}
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 10px' }}>Outils</div>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', border: 'none', borderLeft: '3px solid #E8151B', borderRadius: 0, background: '#1c1c1c', color: '#fff', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-              <span style={{ fontSize: 16 }}>📊</span> Synthèse
-            </button>
-            <button onClick={() => router.push('/dashboard/help')}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#ccc'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
-            >❓ Help</button>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>Outils</div>
+            <button className="nav-btn active">📊 Synthèse</button>
+            <button className="nav-btn" onClick={() => router.push('/dashboard/help')}>❓ Help</button>
           </div>
           <div style={{ borderTop: '1px solid #1e1e1e', padding: '10px' }}>
             <button onClick={() => router.push('/dashboard')}
-              style={{ width: '100%', padding: '9px 12px', border: '1px solid #242424', borderRadius: 8, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontSize: 13, cursor: 'pointer' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#F5C400'; e.currentTarget.style.borderColor = '#F5C400'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#242424'; }}
+              style={{ width: '100%', padding: '9px 12px', border: '1px solid #242424', borderRadius: 8, background: 'transparent', color: '#888', fontFamily: 'Montserrat,sans-serif', fontSize: 13, cursor: 'pointer' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#F5C400'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#F5C400'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#888'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#242424'; }}
             >← Retour au dashboard</button>
           </div>
         </aside>
 
-        {/* Contenu */}
         <div className="synthese-content">
           <div className="no-print" style={{ marginBottom: 28 }}>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#111', margin: 0 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#111', margin: 0, fontFamily: 'Montserrat,sans-serif' }}>
               Synthèse <span style={{ color: '#E8151B' }}>de mes candidatures</span>
             </h1>
-            <p style={{ fontSize: 14, color: '#888', marginTop: 4 }}>Exportez un bilan complet de votre recherche d'emploi</p>
+            <p style={{ fontSize: 14, color: '#888', marginTop: 4, fontFamily: 'Montserrat,sans-serif' }}>Exportez un bilan complet de votre recherche d'emploi</p>
           </div>
 
           {/* Filtres */}
           <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#fff', border: '2px solid #111', borderRadius: 8, padding: '14px 18px', marginBottom: 24, boxShadow: '4px 4px 0 #111' }}>
-            <span className="section-label" style={{ margin: 0 }}>Du</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Du</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
             <span style={{ color: '#888' }}>→</span>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
@@ -182,7 +190,7 @@ export default function SynthesePage() {
               { label: 'Taux de réponse', value: `${stats.tauxReponse}%` },
             ].map(s => (
               <div key={s.label} className="stat-card">
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#111' }}>{s.value}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#111', fontFamily: 'Montserrat,sans-serif' }}>{s.value}</div>
                 <div style={{ fontSize: 11, color: '#888', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
               </div>
             ))}
@@ -206,7 +214,7 @@ export default function SynthesePage() {
                   <col style={{ width: '10%' }} /><col style={{ width: '28%' }} />
                 </colgroup>
                 <thead>
-                  <tr>{['Poste', 'Entreprise', 'Statut', 'Étape pipeline', 'Date', 'Actions & notes'].map(h => <th key={h}>{h}</th>)}</tr>
+                  <tr>{['Poste','Entreprise','Statut','Étape pipeline','Date','Actions & notes'].map(h => <th key={h}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {jobs.length === 0 && (
@@ -244,7 +252,6 @@ export default function SynthesePage() {
                         <div contentEditable suppressContentEditableWarning
                           style={{ marginTop: 6, fontSize: 11, color: '#888', outline: 'none', borderTop: '1px dashed #e5e5e5', paddingTop: 4, minHeight: 16 }}
                           onBlur={e => updateJob(job.id, 'note', e.currentTarget.textContent || '')}>
-                          {job.note || <span style={{ color: '#ccc' }}>Ajouter une note...</span>}
                         </div>
                       </td>
                     </tr>
@@ -254,9 +261,8 @@ export default function SynthesePage() {
             </div>
           </div>
 
-          {/* Export */}
-          <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-            <button className="btn-red" onClick={handlePrint}>Exporter en PDF</button>
+          <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="btn-red" onClick={() => window.print()}>Exporter en PDF</button>
           </div>
         </div>
       </div>
