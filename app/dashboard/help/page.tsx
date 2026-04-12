@@ -141,7 +141,7 @@ const TOPICS = [
           { label: 'Filtrer par période et statut', sub: 'Choisis la plage de dates et les candidatures à inclure' },
           { label: 'Modifier avant export', sub: 'Poste, entreprise, notes — tout est éditable directement dans le tableau' },
           { label: 'Supprimer des lignes', sub: 'Retire les candidatures que tu ne veux pas faire apparaître' },
-          { label: 'Exporter en PDF', sub: 'Clique sur "Exporter en PDF" — utile pour ton conseiller emploi ou Pôle Emploi' },
+          { label: 'Exporter en PDF', sub: 'Clique sur "Exporter en PDF" — utile pour ton conseiller emploi ou France Travail' },
         ].map((item) => (
           <div key={item.label} style={{ border: '2px solid #111', padding: '10px 14px', marginBottom: 8, boxShadow: '2px 2px 0 #111', background: '#fff', borderRadius: 8 }}>
             <div style={{ fontSize: 13, fontWeight: 800, fontFamily: FONT, color: '#111' }}>{item.label}</div>
