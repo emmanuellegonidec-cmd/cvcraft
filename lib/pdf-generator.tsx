@@ -15,6 +15,7 @@ const styles = StyleSheet.create({
 function parseLine(line: string) {
   // Retire les marqueurs markdown résiduels pour le PDF
   return line
+    .replace(/=[^\x00-\x7F]/g, '')   // supprime les artefacts =ç =ñ =Í (icônes LinkedIn)
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/\*(.+?)\*/g, '$1')
     .replace(/^[-•]\s*/, '')
