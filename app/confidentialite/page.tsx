@@ -50,18 +50,27 @@ export default function ConfidentialitePage() {
 - Faire fonctionner votre tableau de bord de candidatures
 - Générer votre score ATS via l'IA (vos données ne sont pas utilisées pour entraîner des modèles)
 - Vous envoyer la newsletter si vous y avez souscrit
-- Améliorer le service de manière anonymisée`
+- Améliorer le service de manière anonymisée
+
+🔒 Engagement ferme : Jean find my Job ne vend, ne loue, ne cède et ne communique jamais vos données personnelles à des tiers, partenaires commerciaux ou annonceurs. Vos données vous appartiennent. Elles ne sont pas une marchandise. Cet engagement est conforme à l'Article 5(1)(b) du RGPD (principe de limitation des finalités) et à l'Article 44 du RGPD (interdiction de transfert sans garanties adéquates).`
           },
           {
-            title: '4. Hébergement et sous-traitants',
-            content: `• Supabase (base de données et authentification) — hébergement EU
-- Vercel (hébergement web) — hébergement EU
-- Anthropic Claude (analyse IA) — traitement ponctuel sans stockage
-- Resend (envoi d'emails) — conforme RGPD`
+            title: '4. Hébergement, sécurité et sous-traitants',
+            content: `Vos CVs et documents sont stockés de manière chiffrée et sécurisée. L'accès est strictement limité à votre compte personnel — aucun autre utilisateur, aucun employeur, aucun recruteur ne peut y accéder.
+
+Nos sous-traitants techniques sont soigneusement sélectionnés et liés par des obligations contractuelles de confidentialité (Article 28 du RGPD) :
+- Supabase (base de données, authentification, stockage des fichiers) — chiffrement AES-256, hébergement EU
+- Vercel (hébergement web) — infrastructure sécurisée, hébergement EU
+- Anthropic Claude (analyse IA du score ATS) — traitement ponctuel, sans stockage de vos données
+- Resend (envoi d'emails transactionnels) — conforme RGPD
+
+Aucun de ces sous-traitants n'est autorisé à utiliser vos données à ses propres fins commerciales.`
           },
           {
-            title: '5. Durée de conservation',
-            content: `Vos données sont conservées tant que votre compte est actif. En cas de suppression de compte, toutes vos données sont effacées dans un délai de 30 jours.`
+           title: '5. Durée de conservation',
+            content: `Vos données sont conservées tant que votre compte est actif, et au maximum 2 ans après votre dernière connexion, conformément aux recommandations de la CNIL sur la conservation des données de candidature (délibération CNIL n°2002-017 et lignes directrices RGPD — Article 5(1)(e) du Règlement UE 2016/679).
+
+En cas de suppression de compte, toutes vos données (candidatures, CV, notes, contacts) sont définitivement effacées dans un délai de 30 jours. Vous pouvez demander la suppression immédiate à tout moment en contactant : hello@jeanfindmyjob.fr` 
           },
           {
             title: '6. Vos droits (RGPD)',
