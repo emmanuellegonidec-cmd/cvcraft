@@ -42,7 +42,11 @@ export default async function BlogPage() {
 
   return (
     <div style={{ fontFamily: "'Montserrat', sans-serif", background: '#fff', color: '#111', minHeight: '100vh' }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+        .blog-card-link { text-decoration:none;color:#111;display:block;background:#fff;border:2.5px solid #111;border-radius:12px;overflow:hidden;box-shadow:4px 4px 0 #111;transition:all 0.2s; }
+        .blog-card-link:hover { transform:translate(-2px,-2px);box-shadow:6px 6px 0 #E8151B; }
+      `}</style>
 
       {/* NAV */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: '#fff', borderBottom: '2.5px solid #111', position: 'sticky', top: 0, zIndex: 100 }}>
@@ -78,10 +82,7 @@ export default async function BlogPage() {
                 ? new Date(article.published_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
                 : ''
               return (
-                <Link key={article.id} href={`/blog/${article.slug}`} style={{ textDecoration: 'none', color: '#111', display: 'block', background: '#fff', border: '2.5px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '4px 4px 0 #111', transition: 'all 0.2s' }}
-                  onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'translate(-2px,-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '6px 6px 0 #E8151B'; }}
-                  onMouseOut={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '4px 4px 0 #111'; }}
-                >
+               <Link key={article.id} href={`/blog/${article.slug}`} className="blog-card-link">
                   {/* IMAGE */}
                   <div style={{ height: 240, background: article.cover_image_url ? 'transparent' : `linear-gradient(135deg,${catColor} 0%,${catColor}cc 100%)`, position: 'relative', overflow: 'hidden' }}>
                     {article.cover_image_url ? (
