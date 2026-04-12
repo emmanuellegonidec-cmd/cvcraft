@@ -3,10 +3,18 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Blog — Jean Find My Job',
+  title: 'Blog — Jean find my Job',
   description: 'Conseils, ressources et guides pour optimiser votre recherche d\'emploi.',
   alternates: {
     canonical: 'https://jeanfindmyjob.fr/blog',
+  },
+  openGraph: {
+    title: 'Blog — Jean find my Job',
+    description: 'Conseils, ressources et guides pour optimiser votre recherche d\'emploi.',
+    url: 'https://jeanfindmyjob.fr/blog',
+    siteName: 'Jean find my Job',
+    locale: 'fr_FR',
+    type: 'website',
   },
 }
 
