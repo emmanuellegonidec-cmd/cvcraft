@@ -69,7 +69,7 @@ const TOPICS = [
           { color: '#1A6FDB', label: 'Échanges', sub: "Notes d'entretien, questions, réponses, prochaine étape" },
           { color: '#F5C400', label: 'Actions par étape', sub: 'Deadline, rappel, CV envoyé, lettre de motivation' },
         ].map((item) => (
-          <div key={item.label} style={{ borderLeft: `4px solid ${item.color}`, padding: '10px 14px', background: '#fafafa', marginBottom: 8, border: '1px solid #eee', borderLeftWidth: 4, borderLeftColor: item.color, borderLeftStyle: 'solid', borderRadius: '0 8px 8px 0' }}>
+          <div key={item.label} style={{ padding: '10px 14px', background: '#fafafa', marginBottom: 8, border: '1px solid #eee', borderLeftWidth: 4, borderLeftColor: item.color, borderLeftStyle: 'solid', borderRadius: '0 8px 8px 0' }}>
             <strong style={{ fontSize: 13, display: 'block', fontFamily: FONT, color: '#111' }}>{item.label}</strong>
             <span style={{ fontSize: 12, color: '#666', fontFamily: FONT }}>{item.sub}</span>
           </div>
@@ -130,6 +130,31 @@ const TOPICS = [
     ),
   },
   {
+    icon: '📊',
+    title: 'Synthèse & export',
+    content: (
+      <div>
+        <p style={{ margin: '0 0 14px', fontSize: 13, color: '#555', fontFamily: FONT, lineHeight: 1.6 }}>
+          La page <strong style={{ color: '#111' }}>Synthèse</strong> te permet de générer un bilan complet de ta recherche d'emploi, exportable en PDF.
+        </p>
+        {[
+          { label: 'Filtrer par période et statut', sub: 'Choisis la plage de dates et les candidatures à inclure' },
+          { label: 'Modifier avant export', sub: 'Poste, entreprise, notes — tout est éditable directement dans le tableau' },
+          { label: 'Supprimer des lignes', sub: 'Retire les candidatures que tu ne veux pas faire apparaître' },
+          { label: 'Exporter en PDF', sub: 'Clique sur "Exporter en PDF" — utile pour ton conseiller emploi ou Pôle Emploi' },
+        ].map((item) => (
+          <div key={item.label} style={{ border: '2px solid #111', padding: '10px 14px', marginBottom: 8, boxShadow: '2px 2px 0 #111', background: '#fff', borderRadius: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, fontFamily: FONT, color: '#111' }}>{item.label}</div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 2, fontFamily: FONT }}>{item.sub}</div>
+          </div>
+        ))}
+        <p style={{ margin: '12px 0 0', fontSize: 12, color: '#888', fontFamily: FONT }}>
+          Accessible depuis la sidebar → section <strong>Outils</strong> → Synthèse
+        </p>
+      </div>
+    ),
+  },
+  {
     icon: '👤',
     title: 'Contacts',
     content: (
@@ -176,96 +201,99 @@ export default function HelpPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: FONT }}>
+    <>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap');`}</style>
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: FONT }}>
 
-      {/* Sidebar */}
-      <aside style={{ width: 200, minWidth: 200, background: '#0f0f0f', display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0, borderRight: '1px solid #1e1e1e', overflow: 'hidden' }}>
+        {/* Sidebar */}
+        <aside style={{ width: 200, minWidth: 200, background: '#0f0f0f', display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0, borderRight: '1px solid #1e1e1e', overflow: 'hidden' }}>
 
-        <div onClick={() => router.push('/')} style={{ padding: '18px 16px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer', flexShrink: 0 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#F5C400' }}>find my Job</span>
-        </div>
+          <div onClick={() => router.push('/')} style={{ padding: '18px 16px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer', flexShrink: 0 }}>
+            <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: '#F5C400' }}>find my Job</span>
+          </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>Recherche</div>
-          {['Tableau de bord','Candidatures','Contacts','Entretiens','Actions','Statistiques'].map(label => (
-            <button key={label} style={navBtnBase} onClick={() => router.push('/dashboard')}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>Recherche</div>
+            {['Tableau de bord','Candidatures','Contacts','Entretiens','Actions','Statistiques'].map(label => (
+              <button key={label} style={navBtnBase} onClick={() => router.push('/dashboard')}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
+              >{label}</button>
+            ))}
+
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>Outils</div>
+            <button style={navBtnBase} onClick={() => router.push('/dashboard/synthese')}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
-            >{label}</button>
-          ))}
-
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>Outils</div>
-          <button style={navBtnBase} onClick={() => router.push('/dashboard/synthese')}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
-          >Synthèse</button>
-          <button style={{ ...navBtnBase, borderLeft: '3px solid #E8151B', background: '#1c1c1c', color: '#fff', fontWeight: 700 }}>
-            Help
-          </button>
-        </div>
-
-        <div style={{ borderTop: '1px solid #1e1e1e', padding: '10px 10px 8px', flexShrink: 0 }}>
-          <button
-            onClick={() => router.push('/dashboard/profile')}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', border: '1px solid #242424', borderRadius: 8, background: 'transparent', cursor: 'pointer', fontFamily: FONT, transition: 'all 0.12s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#F5C400'; (e.currentTarget as HTMLButtonElement).style.background = '#161616'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#242424'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-          >
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#fff', flexShrink: 0 }}>E</div>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Mon profil</div>
-            </div>
-          </button>
-          <button
-            onClick={() => router.push('/dashboard')}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', marginTop: 2, border: 'none', borderRadius: 6, background: 'transparent', color: '#444', fontFamily: FONT, fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'color 0.12s' }}
-            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = '#E8151B'}
-            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = '#444'}
-          >⎋ Déconnexion</button>
-        </div>
-      </aside>
-
-      {/* Contenu principal */}
-      <main style={{ flex: 1, overflowY: 'auto', padding: '2.5rem 2rem' }}>
-        <div style={{ maxWidth: 700, margin: '0 auto' }}>
-
-          <div style={{ marginBottom: '2.5rem' }}>
-            <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', padding: '4px 14px', borderRadius: 6, fontSize: 11, fontWeight: 800, fontFamily: FONT, letterSpacing: 1, marginBottom: 14, boxShadow: '2px 2px 0 #111' }}>
-              CENTRE D'AIDE
-            </div>
-            <div style={{ fontSize: 32, fontWeight: 900, color: '#111', fontFamily: FONT, lineHeight: 1.15, marginBottom: 10 }}>
-              Won't you please,<br />please, help me?
-            </div>
-            <div style={{ fontSize: 13, color: '#aaa', fontFamily: FONT }}>
-              Tout ce qu'il faut savoir pour bien utiliser Jean find my Job.
-            </div>
+            >Synthèse</button>
+            <button style={{ ...navBtnBase, borderLeft: '3px solid #E8151B', background: '#1c1c1c', color: '#fff', fontWeight: 700 }}>
+              Help
+            </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {TOPICS.map((topic, i) => (
-              <div key={i} style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, boxShadow: openIndex === i ? '4px 4px 0 #F5C400' : '3px 3px 0 #111', overflow: 'hidden', transition: 'box-shadow 0.15s' }}>
-                <button
-                  onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: openIndex === i ? '#FAFAFA' : '#fff', border: 'none', cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 15, color: '#111', textAlign: 'left' as const, borderBottom: openIndex === i ? '2px solid #111' : 'none' }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontSize: 20 }}>{topic.icon}</span>
-                    {topic.title}
-                  </span>
-                  <span style={{ fontSize: 20, color: '#aaa', transform: openIndex === i ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', lineHeight: 1 }}>›</span>
-                </button>
-                {openIndex === i && (
-                  <div style={{ padding: '18px 20px' }}>
-                    {topic.content}
-                  </div>
-                )}
+          <div style={{ borderTop: '1px solid #1e1e1e', padding: '10px 10px 8px', flexShrink: 0 }}>
+            <button
+              onClick={() => router.push('/dashboard/profile')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', border: '1px solid #242424', borderRadius: 8, background: 'transparent', cursor: 'pointer', fontFamily: FONT, transition: 'all 0.12s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#F5C400'; (e.currentTarget as HTMLButtonElement).style.background = '#161616'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#242424'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+            >
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#fff', flexShrink: 0 }}>E</div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Mon profil</div>
               </div>
-            ))}
+            </button>
+            <button
+              onClick={() => router.push('/dashboard')}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', marginTop: 2, border: 'none', borderRadius: 6, background: 'transparent', color: '#444', fontFamily: FONT, fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'color 0.12s' }}
+              onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = '#E8151B'}
+              onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = '#444'}
+            >⎋ Déconnexion</button>
           </div>
+        </aside>
 
-        </div>
-      </main>
-    </div>
+        {/* Contenu principal */}
+        <main style={{ flex: 1, overflowY: 'auto', padding: '2.5rem 2rem' }}>
+          <div style={{ maxWidth: 700, margin: '0 auto' }}>
+
+            <div style={{ marginBottom: '2.5rem' }}>
+              <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', padding: '4px 14px', borderRadius: 6, fontSize: 11, fontWeight: 800, fontFamily: FONT, letterSpacing: 1, marginBottom: 14, boxShadow: '2px 2px 0 #111' }}>
+                CENTRE D'AIDE
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 900, color: '#111', fontFamily: FONT, lineHeight: 1.15, marginBottom: 10 }}>
+                Won't you please,<br />please, help me?
+              </div>
+              <div style={{ fontSize: 13, color: '#aaa', fontFamily: FONT }}>
+                Tout ce qu'il faut savoir pour bien utiliser Jean find my Job.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {TOPICS.map((topic, i) => (
+                <div key={i} style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, boxShadow: openIndex === i ? '4px 4px 0 #F5C400' : '3px 3px 0 #111', overflow: 'hidden', transition: 'box-shadow 0.15s' }}>
+                  <button
+                    onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: openIndex === i ? '#FAFAFA' : '#fff', border: 'none', cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 15, color: '#111', textAlign: 'left' as const, borderBottom: openIndex === i ? '2px solid #111' : 'none' }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 20 }}>{topic.icon}</span>
+                      {topic.title}
+                    </span>
+                    <span style={{ fontSize: 20, color: '#aaa', transform: openIndex === i ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', lineHeight: 1 }}>›</span>
+                  </button>
+                  {openIndex === i && (
+                    <div style={{ padding: '18px 20px' }}>
+                      {topic.content}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </main>
+      </div>
+    </>
   );
 }
