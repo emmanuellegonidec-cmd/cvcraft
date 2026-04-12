@@ -37,6 +37,16 @@ function getStepInfo(sub_status: string, pipelineStages: Record<string, string>)
   return { label: sub_status || '—', step: null, total: null };
 }
 
+function formatDateFr(d: string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function formatDateShort(d: string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 interface Job {
   id: string; title: string; company: string; status: string;
   sub_status: string; created_at: string; note: string;
@@ -64,7 +74,6 @@ export default function SynthesePage() {
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [noteLibre, setNoteLibre] = useState('');
   const [pipelineStages, setPipelineStages] = useState<Record<string, string>>({});
 
   const fetchData = async () => {
@@ -150,17 +159,10 @@ export default function SynthesePage() {
     setJobs(prev => prev.map(j => j.id === id ? { ...j, [field]: value } : j));
   };
 
-  const removeJob = (id: string) => {
-    setJobs(prev => prev.filter(j => j.id !== id));
-  };
+  const removeJob = (id: string) => setJobs(prev => prev.filter(j => j.id !== id));
 
   const updateActionNote = (id: string, value: string) => {
     setActions(prev => prev.map(a => a.id === id ? { ...a, note: value } : a));
-  };
-
-  const formatDate = (d: string | null) => {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
   return (
@@ -184,19 +186,24 @@ export default function SynthesePage() {
         .btn-delete { background: transparent; border: 1px solid #ddd; border-radius: 4px; padding: 3px 8px; font-size: 11px; color: #bbb; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.12s; }
         .btn-delete:hover { background: #FCEBEB; border-color: #E8151B; color: #E8151B; }
         input[type=date], select { border: 2px solid #111; border-radius: 4px; padding: 7px 10px; font-size: 13px; font-family: 'Montserrat', sans-serif; background: #fff; color: #111; }
-        textarea { width: 100%; min-height: 60px; border: 2px solid #111; border-radius: 6px; padding: 10px 12px; font-size: 13px; font-family: 'Montserrat', sans-serif; resize: vertical; color: #111; background: #fff; }
         .nav-btn { display: flex; align-items: center; padding: 9px 12px; border: none; border-left: 3px solid transparent; background: transparent; color: #888; font-family: Montserrat,sans-serif; font-weight: 500; font-size: 14px; cursor: pointer; text-align: left; width: 100%; transition: all 0.12s; }
         .nav-btn:hover { background: #161616; color: #ccc; }
         .nav-btn.active { border-left: 3px solid #E8151B; background: #1c1c1c; color: #fff; font-weight: 700; }
         .note-editable:empty:before { content: 'Écrire ici...'; color: #ccc; font-style: italic; }
+        .print-title { display: none; }
         @media print {
+          @page { margin: 1.5cm; }
           .no-print { display: none !important; }
           .synthese-sidebar { display: none !important; }
-          .synthese-content { padding: 20px !important; max-width: 100% !important; }
+          .synthese-content { padding: 0 !important; max-width: 100% !important; }
           .synthese-page { background: white !important; }
           th { background: #111 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .stat-card { box-shadow: none !important; border: 1px solid #ccc !important; }
           .btn-delete { display: none !important; }
+          .note-editable:empty:before { content: '' !important; }
+          .note-editable:empty { display: none !important; }
+          .print-title { display: block !important; margin-bottom: 20px; }
+          .screen-title { display: none !important; }
         }
       `}</style>
 
@@ -229,11 +236,23 @@ export default function SynthesePage() {
         {/* Contenu */}
         <div className="synthese-content">
 
-          <div className="no-print" style={{ marginBottom: 28 }}>
+          {/* Titre écran */}
+          <div className="screen-title no-print" style={{ marginBottom: 28 }}>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: '#111', margin: 0, fontFamily: 'Montserrat,sans-serif' }}>
               Synthèse <span style={{ color: '#E8151B' }}>de mes candidatures</span>
             </h1>
             <p style={{ fontSize: 14, color: '#888', marginTop: 4 }}>Exportez un bilan complet de votre recherche d'emploi</p>
+          </div>
+
+          {/* Titre PDF uniquement */}
+          <div className="print-title">
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111', margin: '0 0 4px 0', fontFamily: 'Montserrat,sans-serif' }}>
+              Bilan d'activité
+            </h1>
+            <p style={{ fontSize: 13, color: '#555', margin: 0, fontFamily: 'Montserrat,sans-serif' }}>
+              Période : {formatDateFr(dateFrom)} → {formatDateFr(dateTo)}
+            </p>
+            <div style={{ borderBottom: '3px solid #F5C400', marginTop: 12, marginBottom: 20 }} />
           </div>
 
           {/* Filtres */}
@@ -268,13 +287,6 @@ export default function SynthesePage() {
             ))}
           </div>
 
-          {/* Note libre */}
-          <div style={{ marginBottom: 24 }}>
-            <div className="section-label">Note libre (apparaît dans l'export)</div>
-            <textarea value={noteLibre} onChange={e => setNoteLibre(e.target.value)}
-              placeholder="Ex : Bilan de recherche janvier–avril 2026. Secteur ciblé : marketing digital, Paris IDF." />
-          </div>
-
           {/* Tableau candidatures */}
           <div style={{ marginBottom: 36 }}>
             <div className="section-label">Détail des candidatures {loading && '— chargement...'}</div>
@@ -302,7 +314,7 @@ export default function SynthesePage() {
                     const stepInfo = getStepInfo(job.sub_status, pipelineStages);
                     return (
                       <tr key={job.id}>
-                        <td style={{ color: '#888', fontSize: 11 }}>{formatDate(job.created_at)}</td>
+                        <td style={{ color: '#888', fontSize: 11 }}>{formatDateShort(job.created_at)}</td>
                         <td>
                           <div contentEditable suppressContentEditableWarning
                             style={{ fontWeight: 700, outline: 'none', cursor: 'text' }}
@@ -331,7 +343,7 @@ export default function SynthesePage() {
                             contentEditable
                             suppressContentEditableWarning
                             className="note-editable"
-                            style={{ fontSize: 12, color: '#333', outline: 'none', minHeight: 40, cursor: 'text', lineHeight: 1.6 }}
+                            style={{ fontSize: 12, color: '#333', outline: 'none', minHeight: 36, cursor: 'text', lineHeight: 1.6 }}
                             onBlur={e => updateJob(job.id, 'note', e.currentTarget.textContent || '')}
                           />
                         </td>
@@ -364,7 +376,7 @@ export default function SynthesePage() {
                 <tbody>
                   {exchanges.map(ex => (
                     <tr key={ex.id}>
-                      <td style={{ color: '#888', fontSize: 11 }}>{formatDate(ex.date)}</td>
+                      <td style={{ color: '#888', fontSize: 11 }}>{formatDateShort(ex.date)}</td>
                       <td style={{ fontWeight: 600 }}>{ex.job_title}</td>
                       <td>{ex.job_company}</td>
                       <td>
@@ -387,10 +399,10 @@ export default function SynthesePage() {
               <table>
                 <colgroup>
                   <col style={{ width: '10%' }} />
-                  <col style={{ width: '26%' }} />
+                  <col style={{ width: '25%' }} />
                   <col style={{ width: '16%' }} />
-                  <col style={{ width: '14%' }} />
-                  <col style={{ width: '27%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '29%' }} />
                   <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
@@ -399,7 +411,7 @@ export default function SynthesePage() {
                 <tbody>
                   {actions.map(a => (
                     <tr key={a.id}>
-                      <td style={{ color: '#888', fontSize: 11 }}>{formatDate(a.date_debut)}</td>
+                      <td style={{ color: '#888', fontSize: 11 }}>{formatDateShort(a.date_debut)}</td>
                       <td style={{ fontWeight: 600, fontSize: 12 }}>{a.nom}</td>
                       <td style={{ fontSize: 12 }}>{a.organisateur || '—'}</td>
                       <td>
