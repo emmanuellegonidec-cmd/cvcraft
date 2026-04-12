@@ -34,14 +34,14 @@ const PIPELINE_STEPS: { key: string; label: string }[] = [
   { key: 'offer',              label: 'Offre reçue' },
 ];
 
-function getStepInfo(sub_status: string, customSteps: Record<string, { label: string; position: number }>) {
+function getStepInfo(sub_status: string, pipelineStages: Record<string, string>) {
   const idx = PIPELINE_STEPS.findIndex(s => s.key === sub_status);
   if (idx >= 0) return { label: PIPELINE_STEPS[idx].label, step: idx + 1, total: 8 };
-  if (customSteps[sub_status]) return { label: customSteps[sub_status].label, step: customSteps[sub_status].position, total: '?' };
+  if (pipelineStages[sub_status]) return { label: pipelineStages[sub_status], step: null, total: null };
   return { label: sub_status || '—', step: null, total: null };
 }
 
-interface Action { label: string; is_done: boolean; due_date: string | null; }
+interface Action { title: string; is_done: boolean; deadline_date: string | null; }
 interface Job {
   id: string; title: string; company: string; status: string;
   sub_status: string; created_at: string;
@@ -57,7 +57,7 @@ export default function SynthesePage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [noteLibre, setNoteLibre] = useState('');
-  const [customSteps, setCustomSteps] = useState<Record<string, { label: string; position: number }>>({});
+  const [pipelineStages, setPipelineStages] = useState<Record<string, string>>({});
 
   const fetchData = async () => {
     setLoading(true);
@@ -66,6 +66,19 @@ export default function SynthesePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/auth/login'); return; }
 
+      // Charger les pipeline_stages custom
+      const { data: stagesData } = await supabase
+        .from('pipeline_stages')
+        .select('id, label')
+        .eq('user_id', user.id);
+
+      const stagesMap: Record<string, string> = {};
+      (stagesData || []).forEach((s: { id: string; label: string }) => {
+        stagesMap[s.id] = s.label;
+      });
+      setPipelineStages(stagesMap);
+
+      // Charger les jobs
       let query = supabase
         .from('jobs')
         .select('id, title, company, status, sub_status, created_at')
@@ -83,31 +96,21 @@ export default function SynthesePage() {
       const jobIds = jobList.map((j: { id: string }) => j.id);
 
       const actionsMap: Record<string, Action[]> = {};
-      const customMap: Record<string, { label: string; position: number }> = {};
 
       if (jobIds.length > 0) {
         const { data: actionsData, error: actionsError } = await supabase
           .from('job_step_actions')
-          .select('job_id, label, is_done, due_date')
+          .select('job_id, title, is_done, deadline_date, type')
           .in('job_id', jobIds)
-          .order('created_at', { ascending: true });
+          .eq('type', 'action')
+          .order('position', { ascending: true });
 
         if (actionsError) console.error('actions error', actionsError);
 
-        (actionsData || []).forEach((a: { job_id: string; label: string; is_done: boolean; due_date: string | null }) => {
+        (actionsData || []).forEach((a: { job_id: string; title: string; is_done: boolean; deadline_date: string | null }) => {
           if (!actionsMap[a.job_id]) actionsMap[a.job_id] = [];
-          actionsMap[a.job_id].push({ label: a.label, is_done: a.is_done, due_date: a.due_date });
+          actionsMap[a.job_id].push({ title: a.title, is_done: a.is_done, deadline_date: a.deadline_date });
         });
-
-        const { data: customData } = await supabase
-          .from('job_custom_steps')
-          .select('id, label, position')
-          .in('job_id', jobIds);
-
-        (customData || []).forEach((c: { id: string; label: string; position: number }) => {
-          customMap[c.id] = { label: c.label, position: c.position };
-        });
-        setCustomSteps(customMap);
       }
 
       setJobs(jobList.map((j: { id: string; title: string; company: string; status: string; sub_status: string; created_at: string }) => ({
@@ -174,7 +177,6 @@ export default function SynthesePage() {
 
       <div className="synthese-page">
 
-        {/* Sidebar */}
         <aside className="synthese-sidebar no-print">
           <div onClick={() => router.push('/')} style={{ padding: '18px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
@@ -198,7 +200,6 @@ export default function SynthesePage() {
           </div>
         </aside>
 
-        {/* Contenu */}
         <div className="synthese-content">
 
           <div className="no-print" style={{ marginBottom: 28 }}>
@@ -208,7 +209,7 @@ export default function SynthesePage() {
             <p style={{ fontSize: 14, color: '#888', marginTop: 4 }}>Exportez un bilan complet de votre recherche d'emploi</p>
           </div>
 
-          {/* Filtres — tout sur une ligne */}
+          {/* Filtres sur une ligne */}
           <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#fff', border: '2px solid #111', borderRadius: 8, padding: '14px 18px', marginBottom: 24, boxShadow: '4px 4px 0 #111' }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>Du</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ flex: 1, minWidth: 130 }} />
@@ -274,7 +275,7 @@ export default function SynthesePage() {
                     </td></tr>
                   )}
                   {jobs.map(job => {
-                    const stepInfo = getStepInfo(job.sub_status, customSteps);
+                    const stepInfo = getStepInfo(job.sub_status, pipelineStages);
                     return (
                       <tr key={job.id}>
                         <td>
@@ -312,7 +313,7 @@ export default function SynthesePage() {
                         <td style={{ color: '#888', fontSize: 12 }}>{formatDate(job.created_at)}</td>
                         <td>
                           {/* Actions */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
                             {job.actions.length === 0 && (
                               <span style={{ fontSize: 11, color: '#ccc', fontStyle: 'italic' }}>Aucune action</span>
                             )}
@@ -321,11 +322,11 @@ export default function SynthesePage() {
                                 <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, marginTop: 3, background: a.is_done ? '#639922' : '#EF9F27' }} />
                                 <div>
                                   <span style={{ color: a.is_done ? '#3B6D11' : '#854F0B', textDecoration: a.is_done ? 'line-through' : 'none' }}>
-                                    {a.label}
+                                    {a.title}
                                   </span>
-                                  {a.due_date && (
+                                  {a.deadline_date && (
                                     <span style={{ color: '#aaa', fontSize: 10, marginLeft: 4 }}>
-                                      — {new Date(a.due_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                                      — {new Date(a.deadline_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
                                     </span>
                                   )}
                                 </div>
@@ -338,7 +339,6 @@ export default function SynthesePage() {
                             suppressContentEditableWarning
                             className="note-editable"
                             style={{
-                              marginTop: 8,
                               fontSize: 11,
                               color: '#555',
                               outline: 'none',
@@ -362,7 +362,6 @@ export default function SynthesePage() {
           <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button className="btn-red" onClick={() => window.print()}>Exporter en PDF</button>
           </div>
-
         </div>
       </div>
     </>
