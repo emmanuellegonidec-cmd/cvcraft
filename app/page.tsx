@@ -47,46 +47,20 @@ async function getPublishedArticles(): Promise<Article[]> {
 export default async function LandingPage() {
   const articles = await getPublishedArticles()
 
- const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "Jean find my Job est-il vraiment gratuit ?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Oui, totalement gratuit, Jean find my Job est en phase bêta. Candidatures illimitées, toutes les fonctionnalités incluses — sans carte bancaire. Profitez-en !" }
-      },
-      {
-        "@type": "Question",
-        "name": "Comment fonctionne l'import d'offre d'emploi ?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Il vous suffit de coller l'URL d'une offre et Jean extrait automatiquement toutes les informations : poste, entreprise, description, compétences requises. En cas de non possibilité, un formulaire à compléter s'ouvre et vous pouvez compléter l'offre manuellement." }
-      },
-      {
-        "@type": "Question",
-        "name": "Mes données sont-elles sécurisées ?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Absolument. Vos données sont hébergées sur un serveur sécurisé (RGPD) et ne sont jamais partagées avec des tiers. Chaque utilisateur n'a accès qu'à ses propres candidatures." }
-      },
-      {
-        "@type": "Question",
-        "name": "Comment fonctionne le CV Creator IA ?",
-        "acceptedAnswer": { "@type": "Answer", "text": "En version bêta, importez votre profil LinkedIn en PDF, choisissez un template, et Claude AI rédige automatiquement des formulations percutantes pour chaque section de votre CV. Vous pouvez ensuite ajuster et exporter en PDF en un clic." }
-      },
-      {
-        "@type": "Question",
-        "name": "Puis-je suivre plusieurs candidatures en même temps ?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Oui, sans limite. Chaque candidature dispose de son propre parcours personnalisable avec des étapes, des contacts associés, des documents et des notes. Vous visualisez tout depuis le tableau de bord global." }
-      },
-      {
-        "@type": "Question",
-        "name": "Jean find my Job fonctionne-t-il sur mobile ?",
-        "acceptedAnswer": { "@type": "Answer", "text": "L'interface est responsive et fonctionne sur mobile. La visualisation est néanmoins plus pertinente sur votre ordinateur." }
-      }
-    ]
-  }
-
-  const jsonLd = {
+ const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Jean find my Job est-il vraiment gratuit ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, totalement gratuit, Jean find my Job est en phase bêta. Candidatures illimitées, toutes les fonctionnalités incluses — sans carte bancaire. Profitez-en !" } },
+          { "@type": "Question", "name": "Comment fonctionne l'import d'offre d'emploi ?", "acceptedAnswer": { "@type": "Answer", "text": "Il vous suffit de coller l'URL d'une offre et Jean extrait automatiquement toutes les informations : poste, entreprise, description, compétences requises. En cas de non possibilité, un formulaire à compléter s'ouvre et vous pouvez compléter l'offre manuellement." } },
+          { "@type": "Question", "name": "Mes données sont-elles sécurisées ?", "acceptedAnswer": { "@type": "Answer", "text": "Absolument. Vos données sont hébergées sur un serveur sécurisé (RGPD) et ne sont jamais partagées avec des tiers. Chaque utilisateur n'a accès qu'à ses propres candidatures." } },
+          { "@type": "Question", "name": "Comment fonctionne le CV Creator IA ?", "acceptedAnswer": { "@type": "Answer", "text": "En version bêta, importez votre profil LinkedIn en PDF, choisissez un template, et Claude AI rédige automatiquement des formulations percutantes pour chaque section de votre CV. Vous pouvez ensuite ajuster et exporter en PDF en un clic." } },
+          { "@type": "Question", "name": "Puis-je suivre plusieurs candidatures en même temps ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, sans limite. Chaque candidature dispose de son propre parcours personnalisable avec des étapes, des contacts associés, des documents et des notes. Vous visualisez tout depuis le tableau de bord global." } },
+          { "@type": "Question", "name": "Jean find my Job fonctionne-t-il sur mobile ?", "acceptedAnswer": { "@type": "Answer", "text": "L'interface est responsive et fonctionne sur mobile. La visualisation est néanmoins plus pertinente sur votre ordinateur." } }
+        ]
+      },
       {
         "@type": "SoftwareApplication",
         "name": "Jean Find My Job",
@@ -104,7 +78,7 @@ export default async function LandingPage() {
   return (
     <>
       <script key="schema-jfmj" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script key="schema-faq" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      
       <div style={{ fontFamily: "'Montserrat', sans-serif", background: '#FFFFFF', color: '#111111', lineHeight: '1.6' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap');
