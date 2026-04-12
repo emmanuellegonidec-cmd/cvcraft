@@ -12,26 +12,27 @@ function createAuthedClient(token: string) {
 
 export async function GET(req: NextRequest) {
   try {
+    let userId: string | null = null;
+    let supabase;
+
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
-
-    let userId: string | null = null;
 
     if (token) {
       const client = createAuthedClient(token);
       const { data } = await client.auth.getUser();
-      userId = data.user?.id ?? null;
+      if (data.user?.id) { userId = data.user.id; supabase = client; }
     }
 
     if (!userId) {
-     const serverClient = await createClient();
-const { data } = await serverClient.auth.getUser();
+      const serverClient = await createClient();
+      const { data } = await serverClient.auth.getUser();
       userId = data.user?.id ?? null;
+      supabase = serverClient;
     }
 
-    if (!userId) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    if (!userId || !supabase) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
 
-    const supabase = createAuthedClient(token || '');
     const { searchParams } = new URL(req.url);
     const dateFrom = searchParams.get('date_from');
     const dateTo = searchParams.get('date_to');
@@ -51,7 +52,7 @@ const { data } = await serverClient.auth.getUser();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     const jobIds = (jobs || []).map((j: { id: string }) => j.id);
-    let actions: Record<string, { label: string; is_done: boolean; due_date: string | null }[]> = {};
+    const actions: Record<string, { label: string; is_done: boolean; due_date: string | null }[]> = {};
 
     if (jobIds.length > 0) {
       const { data: actionsData } = await supabase
@@ -71,7 +72,7 @@ const { data } = await serverClient.auth.getUser();
     }));
 
     return NextResponse.json({ jobs: result });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
