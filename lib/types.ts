@@ -12,6 +12,7 @@ export interface CV {
 export interface CVFormData {
   firstName: string;
   lastName: string;
+  photo?: string;
   title: string;
   email: string;
   phone: string;
@@ -43,7 +44,7 @@ export interface Education {
 }
 
 export const defaultFormData: CVFormData = {
-  firstName: '', lastName: '', title: '', email: '',
+  firstName: '', lastName: '', photo: '', title: '', email: '',
   phone: '', city: '', linkedin: '', summary: '',
   skills: '', experiences: [], education: [],
   lang: 'français', tone: 'professionnel', targetJob: '',
