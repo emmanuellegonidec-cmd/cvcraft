@@ -469,8 +469,15 @@ const fileRef = useRef<HTMLInputElement>(null);
                   </div>
                 )}
                 {generatedCV && !isGenerating && (
-                  <div style={{ fontFamily: FONT, color: '#111' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(generatedCV) }} />
-                )}
+  <div style={{ fontFamily: FONT, color: '#111' }}>
+    {template === 'modern'
+      ? <ModernPreview form={form} photo={photo} />
+      : template === 'minimal'
+      ? <MinimalPreview form={form} photo={photo} />
+      : <ClassicPreview form={form} photo={photo} />
+    }
+  </div>
+)}
               </div>
             </div>
           </div>
@@ -509,7 +516,128 @@ function AddBtn({ onClick, children }: { onClick: () => void; children: React.Re
     </button>
   );
 }
+function Initials({ firstName, lastName, bg, size = 48 }: { firstName: string, lastName: string, bg: string, size?: number }) {
+  const txt = `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: size * 0.35, color: '#fff', flexShrink: 0 }}>
+      {txt || '?'}
+    </div>
+  );
+}
 
+function ClassicPreview({ form, photo }: { form: CVFormData, photo: string }) {
+  const contact = [form.email, form.phone, form.city, form.linkedin].filter(Boolean).join('  ·  ');
+  return (
+    <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 13 }}>
+      {/* Header */}
+      <div style={{ background: '#111', padding: '16px 20px', marginBottom: 14, borderRadius: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {photo
+            ? <img src={photo} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8151B' }} />
+            : <Initials firstName={form.firstName} lastName={form.lastName} bg="#E8151B" size={56} />
+          }
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: '#fff', marginBottom: 3 }}>{form.firstName} {form.lastName}</div>
+            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 6 }}>{form.title}</div>
+            <div style={{ height: 2, width: 50, background: '#F5C400', marginBottom: 5 }} />
+            <div style={{ fontSize: 11, color: '#ccc' }}>{contact}</div>
+          </div>
+        </div>
+      </div>
+      {form.summary && <><SectionTitle>Profil professionnel</SectionTitle><p style={{ fontSize: 12, lineHeight: 1.7, margin: '0 0 10px' }}>{form.summary}</p></>}
+      {form.experiences?.length > 0 && <><SectionTitle>Expériences</SectionTitle>{form.experiences.map((exp, i) => <ExpBlock key={i} exp={exp} accentColor="#F5C400" />)}</>}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 8 }}>
+        {form.education?.length > 0 && <div><SectionTitle>Formation</SectionTitle>{form.education.map((edu, i) => <div key={i} style={{ marginBottom: 6 }}><div style={{ fontWeight: 700, fontSize: 12 }}>{edu.degree}</div><div style={{ fontSize: 11, color: '#555' }}>{edu.school}</div><div style={{ fontSize: 11, color: '#888' }}>{edu.year}</div></div>)}</div>}
+        {form.skills && <div><SectionTitle>Compétences</SectionTitle><div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{form.skills.split(',').map((sk, i) => <span key={i} style={{ background: '#111', color: '#fff', fontSize: 11, padding: '3px 8px', borderRadius: 12 }}>{sk.trim()}</span>)}</div></div>}
+      </div>
+    </div>
+  );
+}
+
+function ModernPreview({ form, photo }: { form: CVFormData, photo: string }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', fontFamily: 'Montserrat, sans-serif', fontSize: 13, minHeight: 600 }}>
+      {/* Colonne gauche */}
+      <div style={{ background: '#1B4F72', padding: '20px 14px', color: '#fff' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          {photo
+            ? <img src={photo} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
+            : <Initials firstName={form.firstName} lastName={form.lastName} bg="#2980B9" size={64} />
+          }
+        </div>
+        <div style={{ fontWeight: 900, fontSize: 13, textAlign: 'center', marginBottom: 3 }}>{form.firstName} {form.lastName}</div>
+        <div style={{ fontSize: 10, color: '#9bc', textAlign: 'center', marginBottom: 8 }}>{form.title}</div>
+        <div style={{ height: 1.5, background: '#F5C400', marginBottom: 12 }} />
+        <LeftSection title="Contact">
+          {[form.email, form.phone, form.city, form.linkedin].filter(Boolean).map((v, i) => <div key={i} style={{ fontSize: 10, color: '#ccc', marginBottom: 3 }}>{v}</div>)}
+        </LeftSection>
+        {form.skills && <LeftSection title="Compétences">{form.skills.split(',').map((sk, i) => <div key={i} style={{ background: '#2980B9', fontSize: 10, padding: '2px 6px', borderRadius: 3, marginBottom: 3, color: '#fff' }}>{sk.trim()}</div>)}</LeftSection>}
+        {form.education?.length > 0 && <LeftSection title="Formation">{form.education.map((edu, i) => <div key={i} style={{ marginBottom: 6 }}><div style={{ fontSize: 10, fontWeight: 700 }}>{edu.degree}</div><div style={{ fontSize: 9, color: '#9bc' }}>{edu.school}</div><div style={{ fontSize: 9, color: '#F5C400' }}>{edu.year}</div></div>)}</LeftSection>}
+      </div>
+      {/* Colonne droite */}
+      <div style={{ padding: '20px 18px' }}>
+        {form.summary && <><ModernSectionTitle>Profil professionnel</ModernSectionTitle><p style={{ fontSize: 12, lineHeight: 1.7, margin: '0 0 10px', color: '#333' }}>{form.summary}</p></>}
+        {form.experiences?.length > 0 && <><ModernSectionTitle>Expériences</ModernSectionTitle>{form.experiences.map((exp, i) => <ExpBlock key={i} exp={exp} accentColor="#F5C400" modern />)}</>}
+      </div>
+    </div>
+  );
+}
+
+function MinimalPreview({ form, photo }: { form: CVFormData, photo: string }) {
+  const contact = [form.email, form.phone, form.city, form.linkedin].filter(Boolean).join('  ·  ');
+  return (
+    <div style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 13 }}>
+      <div style={{ height: 3, background: '#E8151B', marginBottom: 16, borderRadius: 2 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 10 }}>
+        {photo
+          ? <img src={photo} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover' }} />
+          : <Initials firstName={form.firstName} lastName={form.lastName} bg="#E8151B" size={60} />
+        }
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: '#111', marginBottom: 2 }}>{form.firstName} {form.lastName}</div>
+          <div style={{ fontSize: 12, color: '#E8151B', marginBottom: 3 }}>{form.title}</div>
+          <div style={{ fontSize: 11, color: '#888' }}>{contact}</div>
+        </div>
+      </div>
+      <div style={{ height: 0.5, background: '#ddd', margin: '10px 0' }} />
+      {form.summary && <p style={{ fontSize: 12, lineHeight: 1.7, color: '#333', margin: '0 0 10px' }}>{form.summary}</p>}
+      {form.experiences?.length > 0 && <><MinimalSectionTitle>— Expériences</MinimalSectionTitle>{form.experiences.map((exp, i) => <ExpBlock key={i} exp={exp} accentColor="#E8151B" minimal />)}</>}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 8 }}>
+        {form.education?.length > 0 && <div><MinimalSectionTitle>— Formation</MinimalSectionTitle>{form.education.map((edu, i) => <div key={i} style={{ marginBottom: 6 }}><div style={{ fontWeight: 700, fontSize: 12 }}>{edu.degree}</div><div style={{ fontSize: 11, color: '#555' }}>{edu.school}</div><div style={{ fontSize: 11, color: '#E8151B' }}>{edu.year}</div></div>)}</div>}
+        {form.skills && <div><MinimalSectionTitle>— Compétences</MinimalSectionTitle><div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{form.skills.split(',').map((sk, i) => <span key={i} style={{ background: '#111', color: '#fff', fontSize: 11, padding: '3px 8px', borderRadius: 12 }}>{sk.trim()}</span>)}</div></div>}
+      </div>
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1.5px solid #111', paddingBottom: 3, marginBottom: 8, marginTop: 14 }}>{children}</div>;
+}
+function ModernSectionTitle({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#1B4F72', borderBottom: '1.5px solid #1B4F72', paddingBottom: 3, marginBottom: 8, marginTop: 14 }}>{children}</div>;
+}
+function MinimalSectionTitle({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontSize: 11, fontWeight: 900, color: '#E8151B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, marginTop: 14 }}>{children}</div>;
+}
+function LeftSection({ title, children }: { title: string, children: React.ReactNode }) {
+  return <div style={{ marginTop: 12 }}><div style={{ fontSize: 9, fontWeight: 900, color: '#F5C400', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 }}>{title}</div>{children}</div>;
+}
+function ExpBlock({ exp, accentColor, modern, minimal }: { exp: any, accentColor: string, modern?: boolean, minimal?: boolean }) {
+  const lines = (exp.description || '').split('\n').filter((l: string) => l.trim()).map((l: string) => l.replace(/^[-•]\s*/, '').replace(/\*\*/g, ''));
+  return (
+    <div style={{ display: 'flex', gap: modern ? 8 : 0, marginBottom: 10 }}>
+      {modern && <div style={{ width: 3, background: accentColor, borderRadius: 2, flexShrink: 0 }} />}
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
+          <div style={{ fontWeight: 900, fontSize: 12 }}>{minimal ? `${exp.role} · ${exp.company}` : exp.role}</div>
+          <div style={{ fontSize: 11, color: '#888' }}>{exp.start}{exp.end ? ` – ${exp.end}` : ''}</div>
+        </div>
+        {!minimal && <div style={{ fontSize: 11, color: modern ? '#1B4F72' : '#555', marginBottom: 3 }}>{exp.company}</div>}
+        {lines.map((line: string, j: number) => <div key={j} style={{ fontSize: 11, marginLeft: 8, marginBottom: 2, lineHeight: 1.5, color: '#333' }}>• {line}</div>)}
+      </div>
+    </div>
+  );
+}
 export default function EditorPage() {
   return (
     <Suspense fallback={<div style={{ padding: '4rem', textAlign: 'center', color: '#111', fontFamily: 'Montserrat, sans-serif', fontWeight: 700 }}>Chargement...</div>}>
