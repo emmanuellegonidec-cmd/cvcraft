@@ -211,25 +211,61 @@ export default function SynthesePage() {
 
         {/* Sidebar */}
         <aside className="synthese-sidebar no-print">
-          <div onClick={() => router.push('/')} style={{ padding: '18px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer' }}>
+          <div onClick={() => router.push('/')} style={{ padding: '18px 16px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#F5C400' }}>find my Job</span>
           </div>
-          <div style={{ flex: 1, padding: '14px 10px', overflowY: 'auto' }}>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>Recherche</div>
-            {['Tableau de bord','Candidatures','Contacts','Entretiens','Actions','Statistiques'].map(label => (
-              <button key={label} className="nav-btn" onClick={() => router.push('/dashboard')}>{label}</button>
+            {[
+              { label: 'Tableau de bord' },
+              { label: 'Candidatures' },
+              { label: 'Contacts' },
+              { label: 'Entretiens' },
+              { label: 'Actions' },
+              { label: 'Statistiques' },
+            ].map(item => (
+              <button key={item.label}
+                onClick={() => router.push('/dashboard')}
+                style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
+              >{item.label}</button>
             ))}
+
             <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>Outils</div>
-            <button className="nav-btn active">Synthèse</button>
-            <button className="nav-btn" onClick={() => router.push('/dashboard/help')}>Help</button>
+
+            <button style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid #E8151B', borderRadius: 0, background: '#1c1c1c', color: '#fff', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+              Synthèse
+            </button>
+
+            <button
+              onClick={() => router.push('/dashboard/help')}
+              style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
+            >Help</button>
           </div>
-          <div style={{ borderTop: '1px solid #1e1e1e', padding: '10px' }}>
-            <button onClick={() => router.push('/dashboard')}
-              style={{ width: '100%', padding: '9px 12px', border: '1px solid #242424', borderRadius: 8, background: 'transparent', color: '#888', fontFamily: 'Montserrat,sans-serif', fontSize: 13, cursor: 'pointer' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#F5C400'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#F5C400'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#888'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#242424'; }}
-            >← Retour au dashboard</button>
+
+          <div style={{ borderTop: '1px solid #1e1e1e', padding: '10px 10px 8px', flexShrink: 0 }}>
+            <button
+              onClick={() => router.push('/dashboard/profile')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', border: '1px solid #242424', borderRadius: 8, background: 'transparent', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', transition: 'all 0.12s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#F5C400'; (e.currentTarget as HTMLButtonElement).style.background = '#161616'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#242424'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+            >
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#fff', flexShrink: 0 }}>E</div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Mon profil</div>
+              </div>
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', marginTop: 2, border: 'none', borderRadius: 6, background: 'transparent', color: '#444', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'color 0.12s' }}
+              onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = '#E8151B'}
+              onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = '#444'}
+            >⎋ Déconnexion</button>
           </div>
         </aside>
 
