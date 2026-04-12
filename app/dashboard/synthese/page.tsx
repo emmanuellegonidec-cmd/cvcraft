@@ -74,7 +74,6 @@ export default function SynthesePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/auth/login'); return; }
 
-      // Pipeline stages custom
       const { data: stagesData } = await supabase
         .from('pipeline_stages')
         .select('id, label')
@@ -83,7 +82,6 @@ export default function SynthesePage() {
       (stagesData || []).forEach((s: { id: string; label: string }) => { stagesMap[s.id] = s.label; });
       setPipelineStages(stagesMap);
 
-      // Jobs
       let query = supabase
         .from('jobs')
         .select('id, title, company, status, sub_status, created_at')
@@ -99,7 +97,6 @@ export default function SynthesePage() {
       const jobList = jobsData || [];
       const jobIds = jobList.map((j: { id: string }) => j.id);
 
-      // Job exchanges
       if (jobIds.length > 0) {
         const { data: exData } = await supabase
           .from('job_exchanges')
@@ -121,7 +118,6 @@ export default function SynthesePage() {
         setExchanges([]);
       }
 
-      // Actions
       const { data: actionsData } = await supabase
         .from('actions')
         .select('id, nom, organisateur, categorie, date_debut, date_fin, note')
@@ -154,6 +150,14 @@ export default function SynthesePage() {
     setJobs(prev => prev.map(j => j.id === id ? { ...j, [field]: value } : j));
   };
 
+  const removeJob = (id: string) => {
+    setJobs(prev => prev.filter(j => j.id !== id));
+  };
+
+  const updateActionNote = (id: string, value: string) => {
+    setActions(prev => prev.map(a => a.id === id ? { ...a, note: value } : a));
+  };
+
   const formatDate = (d: string | null) => {
     if (!d) return '—';
     return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -177,6 +181,8 @@ export default function SynthesePage() {
         [contenteditable]:focus { outline: 2px solid #F5C400; background: #fffde7 !important; border-radius: 2px; }
         .btn-yellow { background: #F5C400; border: 2px solid #111; border-radius: 4px; padding: 9px 20px; font-size: 13px; font-weight: 700; color: #111; cursor: pointer; box-shadow: 3px 3px 0 #111; font-family: 'Montserrat', sans-serif; }
         .btn-red { background: #E8151B; border: 2px solid #111; border-radius: 4px; padding: 9px 20px; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: 4px 4px 0 #111; font-family: 'Montserrat', sans-serif; }
+        .btn-delete { background: transparent; border: 1px solid #ddd; border-radius: 4px; padding: 3px 8px; font-size: 11px; color: #bbb; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.12s; }
+        .btn-delete:hover { background: #FCEBEB; border-color: #E8151B; color: #E8151B; }
         input[type=date], select { border: 2px solid #111; border-radius: 4px; padding: 7px 10px; font-size: 13px; font-family: 'Montserrat', sans-serif; background: #fff; color: #111; }
         textarea { width: 100%; min-height: 60px; border: 2px solid #111; border-radius: 6px; padding: 10px 12px; font-size: 13px; font-family: 'Montserrat', sans-serif; resize: vertical; color: #111; background: #fff; }
         .nav-btn { display: flex; align-items: center; padding: 9px 12px; border: none; border-left: 3px solid transparent; background: transparent; color: #888; font-family: Montserrat,sans-serif; font-weight: 500; font-size: 14px; cursor: pointer; text-align: left; width: 100%; transition: all 0.12s; }
@@ -190,6 +196,7 @@ export default function SynthesePage() {
           .synthese-page { background: white !important; }
           th { background: #111 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .stat-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+          .btn-delete { display: none !important; }
         }
       `}</style>
 
@@ -274,19 +281,20 @@ export default function SynthesePage() {
             <div style={{ overflowX: 'auto' }}>
               <table>
                 <colgroup>
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '14%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '17%' }} />
                   <col style={{ width: '9%' }} />
-                  <col style={{ width: '30%' }} />
+                  <col style={{ width: '17%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '27%' }} />
+                  <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
-                  <tr>{['Poste','Entreprise','Statut','Étape pipeline','Date','Notes libres'].map(h => <th key={h}>{h}</th>)}</tr>
+                  <tr>{['Date','Poste','Entreprise','Statut','Étape pipeline','Notes',''].map(h => <th key={h}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {jobs.length === 0 && (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', color: '#888', padding: 28, fontSize: 14 }}>
+                    <tr><td colSpan={7} style={{ textAlign: 'center', color: '#888', padding: 28, fontSize: 14 }}>
                       {loading ? 'Chargement...' : 'Aucune candidature sur cette période.'}
                     </td></tr>
                   )}
@@ -294,6 +302,7 @@ export default function SynthesePage() {
                     const stepInfo = getStepInfo(job.sub_status, pipelineStages);
                     return (
                       <tr key={job.id}>
+                        <td style={{ color: '#888', fontSize: 11 }}>{formatDate(job.created_at)}</td>
                         <td>
                           <div contentEditable suppressContentEditableWarning
                             style={{ fontWeight: 700, outline: 'none', cursor: 'text' }}
@@ -317,7 +326,6 @@ export default function SynthesePage() {
                           <div style={{ fontSize: 12, color: '#111', fontWeight: 600 }}>{stepInfo.label}</div>
                           {stepInfo.step && <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>Étape {stepInfo.step}/{stepInfo.total}</div>}
                         </td>
-                        <td style={{ color: '#888', fontSize: 12 }}>{formatDate(job.created_at)}</td>
                         <td>
                           <div
                             contentEditable
@@ -326,6 +334,9 @@ export default function SynthesePage() {
                             style={{ fontSize: 12, color: '#333', outline: 'none', minHeight: 40, cursor: 'text', lineHeight: 1.6 }}
                             onBlur={e => updateJob(job.id, 'note', e.currentTarget.textContent || '')}
                           />
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button className="btn-delete no-print" onClick={() => removeJob(job.id)}>✕</button>
                         </td>
                       </tr>
                     );
@@ -376,13 +387,14 @@ export default function SynthesePage() {
               <table>
                 <colgroup>
                   <col style={{ width: '10%' }} />
-                  <col style={{ width: '28%' }} />
-                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '26%' }} />
                   <col style={{ width: '16%' }} />
-                  <col style={{ width: '28%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '27%' }} />
+                  <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
-                  <tr>{['Date','Nom','Organisateur','Catégorie','Note'].map(h => <th key={h}>{h}</th>)}</tr>
+                  <tr>{['Date','Nom','Organisateur','Catégorie','Notes',''].map(h => <th key={h}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {actions.map(a => (
@@ -395,7 +407,20 @@ export default function SynthesePage() {
                           {a.categorie || '—'}
                         </span>
                       </td>
-                      <td style={{ fontSize: 12, color: '#555' }}>{a.note && a.note !== 'EMPTY' ? a.note : '—'}</td>
+                      <td>
+                        <div
+                          contentEditable
+                          suppressContentEditableWarning
+                          className="note-editable"
+                          style={{ fontSize: 12, color: '#333', outline: 'none', minHeight: 28, cursor: 'text', lineHeight: 1.6 }}
+                          onBlur={e => updateActionNote(a.id, e.currentTarget.textContent || '')}
+                        >
+                          {a.note && a.note !== 'EMPTY' ? a.note : ''}
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button className="btn-delete no-print" onClick={() => setActions(prev => prev.filter(x => x.id !== a.id))}>✕</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
