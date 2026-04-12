@@ -128,28 +128,44 @@ export default function Sidebar({
           );
         })}
 
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>
+          Outils
+        </div>
+
+        <button
+          onClick={() => router.push('/dashboard/synthese')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '9px 12px',
+            border: 'none', borderLeft: '3px solid transparent', borderRadius: 0,
+            background: 'transparent', color: '#888',
+            fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14,
+            cursor: 'pointer', textAlign: 'left', width: '100%',
+            transition: 'all 0.12s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#ccc'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+        >
+          <span style={{ color: '#F5C400' }}>📊</span> Synthèse
+        </button>
+
         {isAdmin && (
-          <>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>
-              Outils
-            </div>
-            <button
-              onClick={() => router.push('/dashboard/editor')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '9px 12px',
-                border: 'none', borderLeft: '3px solid transparent', borderRadius: 0,
-                background: 'transparent', color: '#888',
-                fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14,
-                cursor: 'pointer', textAlign: 'left', width: '100%',
-                transition: 'all 0.12s',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#ccc'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
-            >
-              <span style={{ color: '#555' }}>+</span> CV Creator
-            </button>
-          </>
+          <button
+            onClick={() => router.push('/dashboard/editor')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '9px 12px',
+              border: 'none', borderLeft: '3px solid transparent', borderRadius: 0,
+              background: 'transparent', color: '#888',
+              fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14,
+              cursor: 'pointer', textAlign: 'left', width: '100%',
+              transition: 'all 0.12s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#ccc'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+          >
+            <span style={{ color: '#555' }}>+</span> CV Creator
+          </button>
         )}
 
         <button
@@ -160,7 +176,7 @@ export default function Sidebar({
             padding: '8px 16px', cursor: 'pointer', textAlign: 'left',
             color: '#ccc', fontFamily: "'Montserrat', sans-serif",
             fontSize: 13, fontWeight: 600,
-            marginTop: isAdmin ? 0 : 16,
+            marginTop: 0,
           }}
         >
           ❓ Help
