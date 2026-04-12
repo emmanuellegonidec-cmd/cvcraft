@@ -91,7 +91,7 @@ export default function ActionsSection({
         <p style={{ fontSize: 13, color: '#888', fontFamily: 'Montserrat, sans-serif' }}>Chargement...</p>
       ) : actions.length === 0 ? (
         <p style={{ fontSize: 13, color: '#888', fontFamily: 'Montserrat, sans-serif', textAlign: 'center', padding: '20px 0' }}>
-          Aucune action pour le moment. Ajoutez vos ateliers, formations, rendez-vous...
+          Aucun événement pour le moment. Ajoutez vos ateliers, formations, rendez-vous...
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -133,7 +133,7 @@ export default function ActionsSection({
           <div style={{ background: '#fff', border: '2px solid #E8151B', borderRadius: 12, boxShadow: '4px 4px 0 #E8151B', padding: 28, maxWidth: 420, width: '100%', fontFamily: 'Montserrat, sans-serif' }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <div style={{ fontSize: 32, marginBottom: 10 }}>⚠️</div>
-              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#E8151B', margin: '0 0 8px' }}>Supprimer cette action ?</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#E8151B', margin: '0 0 8px' }}>Supprimer cet événement ?</h3>
               <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.6 }}><strong>{deleteTarget.nom}</strong></p>
               {deleteTarget.organisateur && <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0' }}>{deleteTarget.organisateur}</p>}
             </div>

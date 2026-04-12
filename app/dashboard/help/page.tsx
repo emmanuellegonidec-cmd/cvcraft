@@ -112,11 +112,11 @@ const TOPICS = [
   },
   {
     icon: '⚡',
-    title: 'Actions',
+    title: 'Événements',
     content: (
       <div>
         <p style={{ margin: '0 0 14px', fontSize: 13, color: '#555', fontFamily: FONT, lineHeight: 1.6 }}>
-          Ta recherche ne se résume pas aux candidatures. Suis tout ce qui gravite autour depuis la section <strong style={{ color: '#111' }}>Actions</strong>.
+          Ta recherche ne se résume pas aux candidatures. Suis tout ce qui gravite autour depuis la section <strong style={{ color: '#111' }}>Événements</strong>.
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
           {['🎓 Atelier CV / Formation', '🤝 Coaching / Bilan', '📡 Networking / Salon', '🏢 RDV France Travail'].map((item) => (
@@ -215,7 +215,7 @@ export default function HelpPage() {
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>Recherche</div>
-            {['Tableau de bord','Candidatures','Contacts','Entretiens','Actions','Statistiques'].map(label => (
+            {['Tableau de bord','Candidatures','Contacts','Entretiens','Événements','Statistiques'].map(label => (
               <button key={label} style={navBtnBase} onClick={() => router.push('/dashboard')}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}

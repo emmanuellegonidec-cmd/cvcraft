@@ -223,7 +223,7 @@ export default function SynthesePage() {
               { label: 'Candidatures' },
               { label: 'Contacts' },
               { label: 'Entretiens' },
-              { label: 'Actions' },
+              { label: 'Événements' },
               { label: 'Statistiques' },
             ].map(item => (
               <button key={item.label}
@@ -431,7 +431,7 @@ export default function SynthesePage() {
           {/* Tableau actions */}
           {actions.length > 0 && (
             <div style={{ marginBottom: 36 }}>
-              <div className="section-label">Actions & formations</div>
+              <div className="section-label">Événements & formations</div>
               <table>
                 <colgroup>
                   <col style={{ width: '10%' }} />

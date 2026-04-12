@@ -335,7 +335,7 @@ export default function DashboardPage() {
 
   function getMainButtonLabel() {
     if (view === 'contacts') return '+ Ajouter un contact';
-    if (view === 'actions') return '+ Ajouter une action';
+    if (view === 'actions') return '+ Ajouter un événement';
     return '+ Ajouter une offre';
   }
 
@@ -379,7 +379,7 @@ export default function DashboardPage() {
                   setTimeout(() => setTriggerAddAction(n => n + 1), 50);
                 }}
               >
-                + Ajouter une action
+                + Ajouter un événement
               </button>
             )}
             {mainButtonLabel && (
@@ -472,7 +472,7 @@ export default function DashboardPage() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
-                    ⚡ Actions
+                    ⚡ Événements
                   </span>
                   {actionsCount > 0 && (
                     <span style={{ background: '#111', color: '#fff', fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 10 }}>

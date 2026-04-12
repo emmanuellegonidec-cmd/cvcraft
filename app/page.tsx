@@ -225,7 +225,7 @@ export default async function LandingPage() {
               'Vue globale : 5 grandes étapes claires, de l\'envie de postuler à l\'offre reçue',
               'Statistiques de votre recherche en temps réel',
               'Calendrier intégré : visualisez vos relances et entretiens à venir…',
-              'Actions à faire : ne ratez plus aucune étape importante',
+              'Événements : ateliers, formations, RDV conseil — tout est dans le calendrier',
               
             ].map(item => (
               <li key={item} style={{ display:'flex',gap:10,fontSize:14,fontWeight:600,fontFamily:"'Montserrat', sans-serif" }}>
@@ -345,7 +345,7 @@ export default async function LandingPage() {
               { icon:'📋',title:'Synthèse & export PDF',desc:'Générez un bilan complet de votre recherche d\'emploi, exportable en PDF — idéal pour votre conseiller emploi.' },
               { icon:'📨',title:'Candidature spontanée',desc:'Contactez une entreprise sans offre publiée et suivez votre démarche comme n\'importe quelle candidature.' },
               { icon:'📅',title:'Calendrier intégré',desc:'Visualisez vos entretiens et relances à venir en vue semaine ou mois.' },
-              { icon:'⚡',title:'Actions à faire',desc:'Relances, deadlines, documents : ne ratez plus aucune étape importante.' },
+              { icon:'⚡',title:'Événements',desc:'Ateliers, formations, coaching, RDV conseil — suivez tout ce qui gravite autour de votre recherche.' },
               { icon:'📈',title:'Statistiques',desc:'Taux de réponse, entretiens, propositions : pilotez votre recherche avec les données.' },
             ].map(f => (
               
