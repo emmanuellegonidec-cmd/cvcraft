@@ -5,12 +5,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 
 const STATUS_LABELS: Record<string, string> = {
-  to_apply: 'À postuler',
-  applied: 'Postulé',
-  in_progress: 'En cours',
-  offer_received: 'Offre reçue',
-  offer: 'Offre reçue',
-  archived: 'Archivé',
+  to_apply: 'À postuler', applied: 'Postulé', in_progress: 'En cours',
+  offer_received: 'Offre reçue', offer: 'Offre reçue', archived: 'Archivé',
 };
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -41,11 +37,21 @@ function getStepInfo(sub_status: string, pipelineStages: Record<string, string>)
   return { label: sub_status || '—', step: null, total: null };
 }
 
-interface Action { title: string; is_done: boolean; deadline_date: string | null; }
 interface Job {
   id: string; title: string; company: string; status: string;
-  sub_status: string; created_at: string;
-  actions: Action[]; note: string;
+  sub_status: string; created_at: string; note: string;
+}
+
+interface Exchange {
+  id: string; job_id: string; date: string | null;
+  step_label: string; content: string | null;
+  job_title?: string; job_company?: string;
+}
+
+interface ActionItem {
+  id: string; nom: string; organisateur: string | null;
+  categorie: string | null; date_debut: string | null;
+  date_fin: string | null; note: string | null;
 }
 
 export default function SynthesePage() {
@@ -55,6 +61,8 @@ export default function SynthesePage() {
   const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [exchanges, setExchanges] = useState<Exchange[]>([]);
+  const [actions, setActions] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [noteLibre, setNoteLibre] = useState('');
   const [pipelineStages, setPipelineStages] = useState<Record<string, string>>({});
@@ -66,19 +74,16 @@ export default function SynthesePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/auth/login'); return; }
 
-      // Charger les pipeline_stages custom
+      // Pipeline stages custom
       const { data: stagesData } = await supabase
         .from('pipeline_stages')
         .select('id, label')
         .eq('user_id', user.id);
-
       const stagesMap: Record<string, string> = {};
-      (stagesData || []).forEach((s: { id: string; label: string }) => {
-        stagesMap[s.id] = s.label;
-      });
+      (stagesData || []).forEach((s: { id: string; label: string }) => { stagesMap[s.id] = s.label; });
       setPipelineStages(stagesMap);
 
-      // Charger les jobs
+      // Jobs
       let query = supabase
         .from('jobs')
         .select('id, title, company, status, sub_status, created_at')
@@ -86,7 +91,6 @@ export default function SynthesePage() {
         .gte('created_at', dateFrom)
         .lte('created_at', dateTo + 'T23:59:59')
         .order('created_at', { ascending: false });
-
       if (statusFilter !== 'all') query = query.eq('status', statusFilter);
 
       const { data: jobsData, error: jobsError } = await query;
@@ -95,28 +99,40 @@ export default function SynthesePage() {
       const jobList = jobsData || [];
       const jobIds = jobList.map((j: { id: string }) => j.id);
 
-      const actionsMap: Record<string, Action[]> = {};
-
+      // Job exchanges
       if (jobIds.length > 0) {
-        const { data: actionsData, error: actionsError } = await supabase
-          .from('job_step_actions')
-          .select('job_id, title, is_done, deadline_date, type')
+        const { data: exData } = await supabase
+          .from('job_exchanges')
+          .select('id, job_id, date, step_label, content')
           .in('job_id', jobIds)
-          .eq('type', 'action')
-          .order('position', { ascending: true });
+          .order('date', { ascending: false });
 
-        if (actionsError) console.error('actions error', actionsError);
-
-        (actionsData || []).forEach((a: { job_id: string; title: string; is_done: boolean; deadline_date: string | null }) => {
-          if (!actionsMap[a.job_id]) actionsMap[a.job_id] = [];
-          actionsMap[a.job_id].push({ title: a.title, is_done: a.is_done, deadline_date: a.deadline_date });
+        const jobMap: Record<string, { title: string; company: string }> = {};
+        jobList.forEach((j: { id: string; title: string; company: string }) => {
+          jobMap[j.id] = { title: j.title, company: j.company };
         });
+
+        setExchanges((exData || []).map((e: Exchange) => ({
+          ...e,
+          job_title: jobMap[e.job_id]?.title || '—',
+          job_company: jobMap[e.job_id]?.company || '—',
+        })));
+      } else {
+        setExchanges([]);
       }
 
+      // Actions
+      const { data: actionsData } = await supabase
+        .from('actions')
+        .select('id, nom, organisateur, categorie, date_debut, date_fin, note')
+        .eq('user_id', user.id)
+        .gte('date_debut', dateFrom)
+        .lte('date_debut', dateTo + 'T23:59:59')
+        .order('date_debut', { ascending: false });
+      setActions(actionsData || []);
+
       setJobs(jobList.map((j: { id: string; title: string; company: string; status: string; sub_status: string; created_at: string }) => ({
-        ...j,
-        actions: actionsMap[j.id] || [],
-        note: '',
+        ...j, note: '',
       })));
     } finally {
       setLoading(false);
@@ -138,8 +154,10 @@ export default function SynthesePage() {
     setJobs(prev => prev.map(j => j.id === id ? { ...j, [field]: value } : j));
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  const formatDate = (d: string | null) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   return (
     <>
@@ -164,7 +182,7 @@ export default function SynthesePage() {
         .nav-btn { display: flex; align-items: center; padding: 9px 12px; border: none; border-left: 3px solid transparent; background: transparent; color: #888; font-family: Montserrat,sans-serif; font-weight: 500; font-size: 14px; cursor: pointer; text-align: left; width: 100%; transition: all 0.12s; }
         .nav-btn:hover { background: #161616; color: #ccc; }
         .nav-btn.active { border-left: 3px solid #E8151B; background: #1c1c1c; color: #fff; font-weight: 700; }
-        .note-editable:empty:before { content: 'Ajouter une note...'; color: #ccc; font-style: italic; }
+        .note-editable:empty:before { content: 'Écrire ici...'; color: #ccc; font-style: italic; }
         @media print {
           .no-print { display: none !important; }
           .synthese-sidebar { display: none !important; }
@@ -177,6 +195,7 @@ export default function SynthesePage() {
 
       <div className="synthese-page">
 
+        {/* Sidebar */}
         <aside className="synthese-sidebar no-print">
           <div onClick={() => router.push('/')} style={{ padding: '18px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
@@ -200,6 +219,7 @@ export default function SynthesePage() {
           </div>
         </aside>
 
+        {/* Contenu */}
         <div className="synthese-content">
 
           <div className="no-print" style={{ marginBottom: 28 }}>
@@ -209,7 +229,7 @@ export default function SynthesePage() {
             <p style={{ fontSize: 14, color: '#888', marginTop: 4 }}>Exportez un bilan complet de votre recherche d'emploi</p>
           </div>
 
-          {/* Filtres sur une ligne */}
+          {/* Filtres */}
           <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#fff', border: '2px solid #111', borderRadius: 8, padding: '14px 18px', marginBottom: 24, boxShadow: '4px 4px 0 #111' }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>Du</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ flex: 1, minWidth: 130 }} />
@@ -248,25 +268,21 @@ export default function SynthesePage() {
               placeholder="Ex : Bilan de recherche janvier–avril 2026. Secteur ciblé : marketing digital, Paris IDF." />
           </div>
 
-          {/* Tableau */}
-          <div style={{ marginBottom: 28 }}>
+          {/* Tableau candidatures */}
+          <div style={{ marginBottom: 36 }}>
             <div className="section-label">Détail des candidatures {loading && '— chargement...'}</div>
             <div style={{ overflowX: 'auto' }}>
               <table>
                 <colgroup>
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '12%' }} />
                   <col style={{ width: '17%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '11%' }} />
-                  <col style={{ width: '16%' }} />
                   <col style={{ width: '9%' }} />
-                  <col style={{ width: '34%' }} />
+                  <col style={{ width: '30%' }} />
                 </colgroup>
                 <thead>
-                  <tr>
-                    {['Poste','Entreprise','Statut','Étape pipeline','Date','Actions & notes'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
+                  <tr>{['Poste','Entreprise','Statut','Étape pipeline','Date','Notes libres'].map(h => <th key={h}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {jobs.length === 0 && (
@@ -293,61 +309,21 @@ export default function SynthesePage() {
                           </div>
                         </td>
                         <td>
-                          <span style={{
-                            display: 'inline-block', fontSize: 10, fontWeight: 700,
-                            padding: '3px 8px', borderRadius: 99, border: '1px solid #111',
-                            background: STATUS_COLORS[job.status]?.bg || '#F1EFE8',
-                            color: STATUS_COLORS[job.status]?.color || '#5F5E5A',
-                          }}>
+                          <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 99, border: '1px solid #111', background: STATUS_COLORS[job.status]?.bg || '#F1EFE8', color: STATUS_COLORS[job.status]?.color || '#5F5E5A' }}>
                             {STATUS_LABELS[job.status] || job.status}
                           </span>
                         </td>
                         <td>
                           <div style={{ fontSize: 12, color: '#111', fontWeight: 600 }}>{stepInfo.label}</div>
-                          {stepInfo.step && (
-                            <div style={{ fontSize: 10, color: '#888', marginTop: 2, fontWeight: 500 }}>
-                              Étape {stepInfo.step}/{stepInfo.total}
-                            </div>
-                          )}
+                          {stepInfo.step && <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>Étape {stepInfo.step}/{stepInfo.total}</div>}
                         </td>
                         <td style={{ color: '#888', fontSize: 12 }}>{formatDate(job.created_at)}</td>
                         <td>
-                          {/* Actions */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 6 }}>
-                            {job.actions.length === 0 && (
-                              <span style={{ fontSize: 11, color: '#ccc', fontStyle: 'italic' }}>Aucune action</span>
-                            )}
-                            {job.actions.map((a, i) => (
-                              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11 }}>
-                                <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, marginTop: 3, background: a.is_done ? '#639922' : '#EF9F27' }} />
-                                <div>
-                                  <span style={{ color: a.is_done ? '#3B6D11' : '#854F0B', textDecoration: a.is_done ? 'line-through' : 'none' }}>
-                                    {a.title}
-                                  </span>
-                                  {a.deadline_date && (
-                                    <span style={{ color: '#aaa', fontSize: 10, marginLeft: 4 }}>
-                                      — {new Date(a.deadline_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          {/* Note éditable */}
                           <div
                             contentEditable
                             suppressContentEditableWarning
                             className="note-editable"
-                            style={{
-                              fontSize: 11,
-                              color: '#555',
-                              outline: 'none',
-                              borderTop: '1px dashed #ddd',
-                              paddingTop: 6,
-                              minHeight: 22,
-                              cursor: 'text',
-                              lineHeight: 1.5,
-                            }}
+                            style={{ fontSize: 12, color: '#333', outline: 'none', minHeight: 40, cursor: 'text', lineHeight: 1.6 }}
                             onBlur={e => updateJob(job.id, 'note', e.currentTarget.textContent || '')}
                           />
                         </td>
@@ -359,9 +335,78 @@ export default function SynthesePage() {
             </div>
           </div>
 
+          {/* Tableau échanges */}
+          {exchanges.length > 0 && (
+            <div style={{ marginBottom: 36 }}>
+              <div className="section-label">Échanges & entretiens</div>
+              <table>
+                <colgroup>
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '40%' }} />
+                </colgroup>
+                <thead>
+                  <tr>{['Date','Poste','Entreprise','Étape','Notes / contenu'].map(h => <th key={h}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {exchanges.map(ex => (
+                    <tr key={ex.id}>
+                      <td style={{ color: '#888', fontSize: 11 }}>{formatDate(ex.date)}</td>
+                      <td style={{ fontWeight: 600 }}>{ex.job_title}</td>
+                      <td>{ex.job_company}</td>
+                      <td>
+                        <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, border: '1px solid #ddd', background: '#f5f5f0', color: '#555' }}>
+                          {ex.step_label}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 12, color: '#555' }}>{ex.content || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Tableau actions */}
+          {actions.length > 0 && (
+            <div style={{ marginBottom: 36 }}>
+              <div className="section-label">Actions & formations</div>
+              <table>
+                <colgroup>
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '28%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '28%' }} />
+                </colgroup>
+                <thead>
+                  <tr>{['Date','Nom','Organisateur','Catégorie','Note'].map(h => <th key={h}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {actions.map(a => (
+                    <tr key={a.id}>
+                      <td style={{ color: '#888', fontSize: 11 }}>{formatDate(a.date_debut)}</td>
+                      <td style={{ fontWeight: 600, fontSize: 12 }}>{a.nom}</td>
+                      <td style={{ fontSize: 12 }}>{a.organisateur || '—'}</td>
+                      <td>
+                        <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, border: '1px solid #ddd', background: '#f5f5f0', color: '#555' }}>
+                          {a.categorie || '—'}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 12, color: '#555' }}>{a.note && a.note !== 'EMPTY' ? a.note : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button className="btn-red" onClick={() => window.print()}>Exporter en PDF</button>
           </div>
+
         </div>
       </div>
     </>
