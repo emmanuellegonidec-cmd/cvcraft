@@ -505,13 +505,13 @@ export default async function LandingPage() {
           </div>
           <div>
             <h5 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Ressources</h5>
-            {[['Guide de démarrage','#'],['Blog','#'],['FAQ','#faq'],['Conseils entretien','#'],['Chaîne YouTube','https://www.youtube.com/channel/UCDgezWysIr83yW5dUlkKbSg']].map(([label,href]) => (
+            {[['Guide de démarrage','#'],['Blog','/blog'],['FAQ','#faq'],['Conseils entretien','#'],['Chaîne YouTube','https://www.youtube.com/channel/UCDgezWysIr83yW5dUlkKbSg']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link" target={href.startsWith('http')?'_blank':undefined} rel={href.startsWith('http')?'noopener noreferrer':undefined}>{label}</a>
             ))}
           </div>
           <div>
             <h5 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Entreprise</h5>
-            {[['À propos','#'],['Tarifs','#'],['Contact','mailto:hello@jeanfindmyjob.fr'],['Confidentialité','#'],['CGU','#']].map(([label,href]) => (
+            {[['À propos','#'],['Tarifs','#'],['Contact','mailto:hello@jeanfindmyjob.fr'],['Confidentialité','/confidentialite'],['CGU','/cgu']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
           </div>
