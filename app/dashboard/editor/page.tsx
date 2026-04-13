@@ -179,12 +179,12 @@ function EditorContent() {
 
           {/* Header */}
           <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem', height: 54, flexShrink: 0, background: '#fff', borderBottom: '2px solid #111' }}>
-            <input
-              value={cvTitle}
-              onChange={e => setCvTitle(e.target.value)}
-              style={{ border: '2px solid #111', background: '#fff', fontSize: 14, fontWeight: 800, color: '#111', padding: '5px 10px', outline: 'none', width: 260, fontFamily: FONT, borderRadius: 6, boxShadow: '2px 2px 0 #111' }}
-              placeholder="Titre de mon CV"
-            />
+           <input
+  value={cvTitle}
+  onChange={e => setCvTitle(e.target.value)}
+  style={{ border: '2px solid #111', background: '#fff', fontSize: 14, fontWeight: 800, color: '#111', padding: '5px 14px', outline: 'none', width: 420, fontFamily: FONT, borderRadius: 6, boxShadow: '2px 2px 0 #111' }}
+  placeholder="Titre de mon CV"
+/> 
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               {saveMsg && <span style={{ fontSize: 12, fontWeight: 700, color: saveMsg.startsWith('✅') ? '#1A7A4A' : '#E8151B', fontFamily: FONT }}>{saveMsg}</span>}
             </div>
