@@ -193,11 +193,12 @@ if (session?.access_token) {
             background: '#fff', borderBottom: '2px solid #111',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-  <input
-    value={cvTitle}
-    onChange={e => setCvTitle(e.target.value)}
-    style={{ border: 'none', background: 'transparent', fontSize: 15, fontWeight: 800, color: '#111', padding: '4px 0', outline: 'none', width: 260, fontFamily: FONT }}
-  />
+ <input
+  value={cvTitle}
+  onChange={e => setCvTitle(e.target.value)}
+  style={{ border: '2px solid #111', background: '#fff', fontSize: 14, fontWeight: 800, color: '#111', padding: '5px 10px', outline: 'none', width: 260, fontFamily: FONT, borderRadius: 6, boxShadow: '2px 2px 0 #111' }}
+  placeholder="Titre de mon CV"
+/> 
 </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               {saveMsg && (
@@ -224,7 +225,7 @@ if (session?.access_token) {
   <div style={{ display: 'grid', gridTemplateColumns: '420px 1fr', gap: 0, height: '100%' }}>
     {/* Gauche — choix template */}
     <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto' }}>
-      <div style={{ fontSize: 13, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
+      <div style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
         Choisis ton modèle
       </div>
 
@@ -248,14 +249,14 @@ if (session?.access_token) {
               <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, borderBottom: `1px solid ${isSelected ? accentColor : '#eee'}` }}>
                 {t.preview}
               </div>
-              <div style={{ padding: '7px 8px' }}>
-                <div style={{ fontSize: 11, fontWeight: 900, color: '#111', fontFamily: FONT, marginBottom: 2 }}>{t.name}</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: t.atsLevel === 'excellent' ? '#155724' : '#856404', background: t.atsLevel === 'excellent' ? '#D4EDDA' : '#FFF3CD', padding: '1px 5px', borderRadius: 3, display: 'inline-block' }}>
-                  {t.atsLevel === 'excellent' ? '✅ Excellent ATS' : '✔ Bon ATS'}
-                </div>
-                <div style={{ fontSize: 10, color: '#555', fontFamily: FONT, marginTop: 3, fontWeight: 600 }}>{t.description}</div>
-                <div style={{ fontSize: 9, color: '#888', fontFamily: FONT, marginTop: 1 }}>{t.target}</div>
-              </div>
+              <div style={{ padding: '8px 10px' }}>
+  <div style={{ fontSize: 13, fontWeight: 900, color: '#111', fontFamily: FONT, marginBottom: 4 }}>{t.name}</div>
+  <div style={{ fontSize: 10, fontWeight: 700, color: t.atsLevel === 'excellent' ? '#155724' : '#856404', background: t.atsLevel === 'excellent' ? '#D4EDDA' : '#FFF3CD', padding: '2px 6px', borderRadius: 3, display: 'inline-block', marginBottom: 4 }}>
+    {t.atsLevel === 'excellent' ? '✅ Excellent ATS' : '✔ Bon ATS'}
+  </div>
+  <div style={{ fontSize: 11, color: '#111', fontFamily: FONT, marginTop: 2, fontWeight: 700 }}>{t.description}</div>
+  <div style={{ fontSize: 10, color: '#444', fontFamily: FONT, marginTop: 2, fontWeight: 500 }}>{t.target}</div>
+</div>
             </div>
           );
         })}
@@ -308,14 +309,16 @@ if (session?.access_token) {
           linkedin: 'linkedin.com/in/jeandoe',
           summary: 'Entrepreneur passionné par l\'emploi et la tech RH. Fondateur de Jean find my Job, plateforme de suivi de candidatures pour les chercheurs d\'emploi. 10 ans d\'expérience en Product Management.',
           experiences: [
-            { id: '1', role: 'CEO & Fondateur', company: 'Jean find my Job', start: '2023', end: 'Présent', description: 'Conception et développement de la plateforme\nAcquisition des 1 000 premiers utilisateurs en 3 mois' },
-            { id: '2', role: 'Head of Product', company: 'Jobteaser', start: '2019', end: '2023', description: 'Roadmap produit · Équipe de 8 personnes · 2M utilisateurs' },
-          ],
-          education: [
-            { id: '1', degree: 'MBA Entrepreneuriat', school: 'HEC Paris', year: '2019' },
-            { id: '2', degree: 'Programmation', school: 'École 42', year: '2015' },
-          ],
-          skills: 'Product, IA, No-Code, Growth, Next.js, Leadership, Strategy',
+  { id: '1', role: 'CEO & Fondateur', company: 'Jean find my Job', start: '2023', end: 'Présent', description: 'Conception et développement de la plateforme No-Code & IA\nAcquisition des 1 000 premiers utilisateurs en 3 mois\nLevée de fonds amorçage 500K€' },
+  { id: '2', role: 'Head of Product', company: 'Jobteaser', start: '2019', end: '2023', description: 'Pilotage roadmap produit · équipe de 8 personnes · 2M utilisateurs\nLancement de 3 nouvelles fonctionnalités clés en 12 mois\nOKR produit alignés avec la stratégie commerciale' },
+  { id: '3', role: 'Product Manager', company: 'Welcome to the Jungle', start: '2016', end: '2019', description: 'Refonte UX plateforme candidats · +40% taux de conversion\nGestion backlog Agile · sprints bimensuels' },
+],
+education: [
+  { id: '1', degree: 'MBA Entrepreneuriat', school: 'HEC Paris', year: '2019' },
+  { id: '2', degree: 'Programmation', school: 'École 42', year: '2015' },
+  { id: '3', degree: 'Master Marketing Digital', school: 'Sciences Po Paris', year: '2014' },
+],
+skills: 'Product Management, IA & No-Code, Growth Hacking, Next.js, Leadership, Agile/Scrum, Data Analytics, UX Design',
           targetJob: '',
           lang: 'français',
           tone: 'professionnel',
