@@ -41,6 +41,19 @@ const DEMO_FORM: Partial<CVFormData> = {
   tone: 'professionnel',
 };
 
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: 11, fontWeight: 700,
+  textTransform: 'uppercase', letterSpacing: '0.05em',
+  marginBottom: 5, color: '#111',
+};
+
+const fieldStyle: React.CSSProperties = {
+  width: '100%', padding: '8px 10px', fontSize: 13,
+  fontFamily: 'Montserrat, sans-serif', border: '2px solid #111',
+  borderRadius: 6, background: '#fff', color: '#111',
+  outline: 'none', boxSizing: 'border-box' as const,
+};
+
 function EditorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,7 +65,7 @@ function EditorContent() {
   const [accentColor, setAccentColor] = useState(DEFAULT_CV_CONFIG.accentColor);
   const [font, setFont] = useState<FontId>(DEFAULT_CV_CONFIG.font);
   const [photo, setPhoto] = useState('');
-  const [cvTitle, setCvTitle] = useState('Titre de mon CV');
+  const [cvTitle, setCvTitle] = useState('');
   const [generatedCV, setGeneratedCV] = useState('');
   const [saveMsg, setSaveMsg] = useState('');
 
@@ -93,7 +106,7 @@ function EditorContent() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${cvTitle.replace(/\s+/g, '_')}.pdf`;
+    a.download = `${(cvTitle || 'Mon_CV').replace(/\s+/g, '_')}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -179,12 +192,12 @@ function EditorContent() {
 
           {/* Header */}
           <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem', height: 54, flexShrink: 0, background: '#fff', borderBottom: '2px solid #111' }}>
-           <input
-  value={cvTitle}
-  onChange={e => setCvTitle(e.target.value)}
-  style={{ border: '2px solid #111', background: '#fff', fontSize: 14, fontWeight: 800, color: '#111', padding: '5px 14px', outline: 'none', width: 420, fontFamily: FONT, borderRadius: 6, boxShadow: '2px 2px 0 #111' }}
-  placeholder="Titre de mon CV"
-/> 
+            <input
+              value={cvTitle}
+              onChange={e => setCvTitle(e.target.value)}
+              style={{ border: '2px solid #111', background: '#fff', fontSize: 14, fontWeight: 800, color: '#111', padding: '5px 14px', outline: 'none', width: 420, fontFamily: FONT, borderRadius: 6, boxShadow: '2px 2px 0 #111' }}
+              placeholder="Titre de mon CV"
+            />
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               {saveMsg && <span style={{ fontSize: 12, fontWeight: 700, color: saveMsg.startsWith('✅') ? '#1A7A4A' : '#E8151B', fontFamily: FONT }}>{saveMsg}</span>}
             </div>
@@ -204,38 +217,20 @@ function EditorContent() {
               {/* ÉTAPE 1 */}
               {step === 1 && (
                 <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', height: '100%' }}>
-
-                  {/* Gauche */}
                   <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto', background: '#fff' }}>
                     <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
                       Choisis ton modèle
                     </div>
-
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
                       {CV_TEMPLATES.map(t => {
                         const isSelected = template === t.id;
                         return (
-                          <div
-                            key={t.id}
-                            onClick={() => setTemplate(t.id as TemplateId)}
-                            style={{
-                              border: `2px solid ${isSelected ? accentColor : '#111'}`,
-                              borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
-                              boxShadow: isSelected ? `2px 2px 0 ${accentColor}` : '2px 2px 0 #111',
-                              transition: 'all .15s',
-                              transform: isSelected ? 'translate(-1px,-1px)' : 'none',
-                              background: isSelected ? '#FFFBF0' : '#fff',
-                            }}
-                          >
+                          <div key={t.id} onClick={() => setTemplate(t.id as TemplateId)}
+                            style={{ border: `2px solid ${isSelected ? accentColor : '#111'}`, borderRadius: 8, overflow: 'hidden', cursor: 'pointer', boxShadow: isSelected ? `2px 2px 0 ${accentColor}` : '2px 2px 0 #111', transition: 'all .15s', transform: isSelected ? 'translate(-1px,-1px)' : 'none', background: isSelected ? '#FFFBF0' : '#fff' }}>
                             <div style={{ padding: '10px 12px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
                                 <div style={{ fontSize: 13, fontWeight: 900, color: '#111', fontFamily: FONT }}>{t.name}</div>
-                                <div style={{
-                                  fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
-                                  color: t.atsLevel === 'excellent' ? '#155724' : '#856404',
-                                  background: t.atsLevel === 'excellent' ? '#D4EDDA' : '#FFF3CD',
-                                  whiteSpace: 'nowrap' as const,
-                                }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, color: t.atsLevel === 'excellent' ? '#155724' : '#856404', background: t.atsLevel === 'excellent' ? '#D4EDDA' : '#FFF3CD', whiteSpace: 'nowrap' as const }}>
                                   {t.atsLevel === 'excellent' ? '✅ Excellent ATS' : '✔ Bon ATS'}
                                 </div>
                               </div>
@@ -246,8 +241,6 @@ function EditorContent() {
                         );
                       })}
                     </div>
-
-                    {/* Couleur */}
                     <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111', marginBottom: 10 }}>
                       <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT, color: '#111' }}>Couleur d'accent</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -260,8 +253,6 @@ function EditorContent() {
                         {CV_PALETTES.find(p => p.accent === accentColor)?.name} — la couleur n'affecte pas les ATS
                       </div>
                     </div>
-
-                    {/* Police */}
                     <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111', marginBottom: 16 }}>
                       <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT, color: '#111' }}>Police</div>
                       <select value={font} onChange={e => setFont(e.target.value as FontId)}
@@ -271,25 +262,16 @@ function EditorContent() {
                         ))}
                       </select>
                     </div>
-
                     <button onClick={next}
                       style={{ width: '100%', padding: '12px', background: '#111', color: '#fff', border: '2px solid #111', borderRadius: 8, fontSize: 13, fontWeight: 800, fontFamily: FONT, cursor: 'pointer', boxShadow: `3px 3px 0 ${accentColor}` }}>
                       Continuer →
                     </button>
                   </div>
-
-                  {/* Droite — aperçu */}
                   <div style={{ padding: '1.5rem', overflowY: 'auto', background: '#F7F6F3' }}>
                     <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
                       Aperçu du template
                     </div>
-                    <CVPreviewWrapper
-                      form={{ ...defaultFormData, ...DEMO_FORM }}
-                      photo=""
-                      template={template}
-                      accentColor={accentColor}
-                      font={font}
-                    />
+                    <CVPreviewWrapper form={{ ...defaultFormData, ...DEMO_FORM }} photo="" template={template} accentColor={accentColor} font={font} />
                   </div>
                 </div>
               )}
@@ -307,72 +289,72 @@ function EditorContent() {
 
               {/* ÉTAPE 3 */}
               {step === 3 && (
-  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
-    {/* ── PARAMÈTRES D'OPTIMISATION ── */}
-    <div style={{ padding: '14px 1.5rem', borderBottom: '2px solid #111', background: '#fff', flexShrink: 0 }}>
-      <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#111', fontFamily: FONT, marginBottom: 10 }}>
-        ⚡ Paramétrage de l'optimisation IA
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
-        <div>
-          <label style={{ display: 'block', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, color: '#111', fontFamily: FONT }}>Poste visé (optimise le CV)</label>
-          <input
-            style={{ width: '100%', padding: '7px 9px', fontSize: 12, fontFamily: FONT, border: '2px solid #111', borderRadius: 6, background: '#fff', color: '#111', outline: 'none', boxSizing: 'border-box' as const }}
-            value={form.targetJob || ''}
-            onChange={e => setForm({ ...form, targetJob: e.target.value })}
-            placeholder="Directrice Marketing dans une scale-up"
-          />
-        </div>
-        <div>
-          <label style={{ display: 'block', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, color: '#111', fontFamily: FONT }}>Langue du CV</label>
-          <select
-            style={{ width: '100%', padding: '7px 9px', fontSize: 12, fontFamily: FONT, border: '2px solid #111', borderRadius: 6, background: '#fff', color: '#111', outline: 'none' }}
-            value={form.lang || 'français'}
-            onChange={e => setForm({ ...form, lang: e.target.value })}
-          >
-            <option value="français">Français</option>
-            <option value="anglais">Anglais</option>
-            <option value="espagnol">Espagnol</option>
-            <option value="allemand">Allemand</option>
-          </select>
-        </div>
-        <div>
-          <label style={{ display: 'block', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, color: '#111', fontFamily: FONT }}>Ton</label>
-          <select
-            style={{ width: '100%', padding: '7px 9px', fontSize: 12, fontFamily: FONT, border: '2px solid #111', borderRadius: 6, background: '#fff', color: '#111', outline: 'none' }}
-            value={form.tone || 'professionnel'}
-            onChange={e => setForm({ ...form, tone: e.target.value })}
-          >
-            <option value="professionnel">Professionnel</option>
-            <option value="moderne et dynamique">Dynamique</option>
-            <option value="académique">Académique</option>
-            <option value="créatif">Créatif</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', flex: 1, overflow: 'hidden' }}>
-    <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto' }}>
-                
-                    <Step3Form
-                      form={form} photo={photo} template={template}
-                      accentColor={accentColor} font={font}
-                      onFormChange={setForm} onPhotoChange={setPhoto} onNext={next}
-                    />
-                  </div>
-                  <div style={{ padding: '1.5rem', overflowY: 'auto' }}>
-                    <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 12 }}>
-                      Aperçu live
+                  {/* ── BARRE PARAMÉTRAGE ── */}
+                  <div style={{ padding: '14px 1.5rem', borderBottom: '2px solid #111', background: '#fff', flexShrink: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#111', fontFamily: FONT, marginBottom: 12 }}>
+                      ⚡ Paramétrage de l'optimisation IA
                     </div>
-                    <CVPreviewWrapper form={form} photo={photo} template={template} accentColor={accentColor} font={font} />
-                 </div>
-            </div>
-            </div>
-          )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 14 }}>
+                      <div>
+                        <label style={{ ...labelStyle, fontFamily: FONT }}>Poste visé (optimise le CV)</label>
+                        <input
+                          style={{ ...fieldStyle, fontFamily: FONT }}
+                          value={form.targetJob || ''}
+                          onChange={e => setForm({ ...form, targetJob: e.target.value })}
+                          placeholder="Directrice Marketing dans une scale-up"
+                        />
+                      </div>
+                      <div>
+                        <label style={{ ...labelStyle, fontFamily: FONT }}>Langue du CV</label>
+                        <select
+                          style={{ ...fieldStyle, fontFamily: FONT }}
+                          value={form.lang || 'français'}
+                          onChange={e => setForm({ ...form, lang: e.target.value })}
+                        >
+                          <option value="français">Français</option>
+                          <option value="anglais">Anglais</option>
+                          <option value="espagnol">Espagnol</option>
+                          <option value="allemand">Allemand</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ ...labelStyle, fontFamily: FONT }}>Ton</label>
+                        <select
+                          style={{ ...fieldStyle, fontFamily: FONT }}
+                          value={form.tone || 'professionnel'}
+                          onChange={e => setForm({ ...form, tone: e.target.value })}
+                        >
+                          <option value="professionnel">Professionnel</option>
+                          <option value="moderne et dynamique">Dynamique</option>
+                          <option value="académique">Académique</option>
+                          <option value="créatif">Créatif</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
 
-          {/* ÉTAPE 4 */}
+                  {/* ── FORMULAIRE + APERÇU ── */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', flex: 1, overflow: 'hidden' }}>
+                    <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto' }}>
+                      <Step3Form
+                        form={form} photo={photo} template={template}
+                        accentColor={accentColor} font={font}
+                        onFormChange={setForm} onPhotoChange={setPhoto} onNext={next}
+                      />
+                    </div>
+                    <div style={{ padding: '1.5rem', overflowY: 'auto' }}>
+                      <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 12 }}>
+                        Aperçu live
+                      </div>
+                      <CVPreviewWrapper form={form} photo={photo} template={template} accentColor={accentColor} font={font} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ÉTAPE 4 */}
               {step === 4 && (
                 <div style={{ padding: '1.5rem' }}>
                   <Step4Generate form={form} onGenerated={setGeneratedCV} onNext={next} />
