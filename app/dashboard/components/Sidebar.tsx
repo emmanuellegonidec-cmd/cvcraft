@@ -139,13 +139,13 @@ export default function Sidebar({
   <>
     <button
       onClick={() => router.push('/dashboard/editor')}
-      style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', border: 'none', borderLeft: '3px solid #E8151B', borderRadius: 0, background: '#1c1c1c', color: '#fff', fontFamily: FONT, fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+      style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', border: 'none', borderLeft: '3px solid #E8151B', borderRadius: 0, background: '#1c1c1c', color: '#fff', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left', width: '100%' }}
     >
       CV Creator
     </button>
     <button
       onClick={() => router.push('/dashboard/cv-creator')}
-      style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 6px 22px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#666', fontFamily: FONT, fontWeight: 500, fontSize: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+      style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 6px 22px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#666', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}
       onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#F5C400'; }}
       onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#666'; }}
     >
