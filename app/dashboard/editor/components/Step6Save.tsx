@@ -29,25 +29,28 @@ export function Step6Save({
   const [saveMsg, setSaveMsg] = useState('');
   const [savedId, setSavedId] = useState(cvId || '');
 
-  async function saveCV() {
-    setIsSaving(true);
-    setSaveMsg('');
-    try {
-      const res = await fetch('/api/cvs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: savedId || undefined,
-          title: cvTitle,
-          template,
-          content: generatedCV,
-          form_data: {
-            ...form,
-            accentColor,
-            font,
-          },
-        }),
-      });
+ async function saveCV() {
+  setIsSaving(true);
+  setSaveMsg('');
+  try {
+    const res = await fetch('/api/cvs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: savedId || undefined,
+        title: cvTitle,
+        template,
+        content: generatedCV || '',
+        form_data: {
+          ...form,
+          experiences: form.experiences || [],
+          education: form.education || [],
+          skills: form.skills || '',
+          accentColor,
+          font,
+        },
+      }),
+    });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setSaveMsg('✅ Sauvegardé !');
