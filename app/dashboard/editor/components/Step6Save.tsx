@@ -166,9 +166,9 @@ export function Step6Save({
           <div style={{ width: 14, height: 14, borderRadius: '50%', background: accentColor, border: '1px solid #111', display: 'inline-block', marginLeft: 4 }} />
           <strong>{accentColor}</strong>
         </div>
-        <div>💼 {form.experiences?.length || 0} expérience(s)</div>
-        <div>🎓 {form.education?.length || 0} formation(s)</div>
-        {form.skills && <div>🛠 {form.skills.split(',').filter(Boolean).length} compétence(s)</div>}
+        <div>💼 {(form.experiences || []).length} expérience(s)</div>
+<div>🎓 {(form.education || []).length} formation(s)</div>
+        {form.skills && <div>🛠 {(form.skills || '').split(',').filter(Boolean).length} compétence(s)</div>}
       </div>
 
       {/* Actions secondaires */}
