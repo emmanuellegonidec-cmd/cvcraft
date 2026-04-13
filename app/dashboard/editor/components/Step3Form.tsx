@@ -307,29 +307,7 @@ export function Step3Form({
         </div>
       </div>
 
-      {/* ── POSTE VISÉ ── */}
-      <div style={sectionStyle}>
-        <div style={sectionLabelStyle}>Poste visé (optimise le CV)</div>
-        <input
-          style={inputStyle}
-          value={form.targetJob || ''}
-          onChange={e => setField('targetJob', e.target.value)}
-          placeholder="Directrice Marketing dans une scale-up"
-        />
-      </div>
 
-      {/* ── LANGUE + TON ── */}
-      <div style={{ ...sectionStyle, ...{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } }}>
-        <div>
-          <label style={fieldLabelStyle}>Langue du CV</label>
-          <select style={inputStyle} value={form.lang || 'français'} onChange={e => setField('lang', e.target.value)}>
-            <option value="français">Français</option>
-            <option value="anglais">Anglais</option>
-            <option value="espagnol">Espagnol</option>
-            <option value="allemand">Allemand</option>
-          </select>
-        </div>
-        <div>
           <label style={fieldLabelStyle}>Ton</label>
           <select style={inputStyle} value={form.tone || 'professionnel'} onChange={e => setField('tone', e.target.value)}>
             <option value="professionnel">Professionnel</option>

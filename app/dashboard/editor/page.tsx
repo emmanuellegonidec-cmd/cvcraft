@@ -307,8 +307,55 @@ function EditorContent() {
 
               {/* ÉTAPE 3 */}
               {step === 3 && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', height: '100%' }}>
-                  <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto' }}>
+  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+    {/* ── PARAMÈTRES D'OPTIMISATION ── */}
+    <div style={{ padding: '14px 1.5rem', borderBottom: '2px solid #111', background: '#fff', flexShrink: 0 }}>
+      <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#111', fontFamily: FONT, marginBottom: 10 }}>
+        ⚡ Paramétrage de l'optimisation IA
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, color: '#111', fontFamily: FONT }}>Poste visé (optimise le CV)</label>
+          <input
+            style={{ width: '100%', padding: '7px 9px', fontSize: 12, fontFamily: FONT, border: '2px solid #111', borderRadius: 6, background: '#fff', color: '#111', outline: 'none', boxSizing: 'border-box' as const }}
+            value={form.targetJob || ''}
+            onChange={e => setForm({ ...form, targetJob: e.target.value })}
+            placeholder="Directrice Marketing dans une scale-up"
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, color: '#111', fontFamily: FONT }}>Langue du CV</label>
+          <select
+            style={{ width: '100%', padding: '7px 9px', fontSize: 12, fontFamily: FONT, border: '2px solid #111', borderRadius: 6, background: '#fff', color: '#111', outline: 'none' }}
+            value={form.lang || 'français'}
+            onChange={e => setForm({ ...form, lang: e.target.value })}
+          >
+            <option value="français">Français</option>
+            <option value="anglais">Anglais</option>
+            <option value="espagnol">Espagnol</option>
+            <option value="allemand">Allemand</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, color: '#111', fontFamily: FONT }}>Ton</label>
+          <select
+            style={{ width: '100%', padding: '7px 9px', fontSize: 12, fontFamily: FONT, border: '2px solid #111', borderRadius: 6, background: '#fff', color: '#111', outline: 'none' }}
+            value={form.tone || 'professionnel'}
+            onChange={e => setForm({ ...form, tone: e.target.value })}
+          >
+            <option value="professionnel">Professionnel</option>
+            <option value="moderne et dynamique">Dynamique</option>
+            <option value="académique">Académique</option>
+            <option value="créatif">Créatif</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', flex: 1, overflow: 'hidden' }}>
+    <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto' }}>
+                
                     <Step3Form
                       form={form} photo={photo} template={template}
                       accentColor={accentColor} font={font}
@@ -320,11 +367,12 @@ function EditorContent() {
                       Aperçu live
                     </div>
                     <CVPreviewWrapper form={form} photo={photo} template={template} accentColor={accentColor} font={font} />
-                  </div>
-                </div>
-              )}
+                 </div>
+            </div>
+            </div>
+          )}
 
-              {/* ÉTAPE 4 */}
+          {/* ÉTAPE 4 */}
               {step === 4 && (
                 <div style={{ padding: '1.5rem' }}>
                   <Step4Generate form={form} onGenerated={setGeneratedCV} onNext={next} />
