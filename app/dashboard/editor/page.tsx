@@ -52,7 +52,7 @@ function EditorContent() {
   const [accentColor, setAccentColor] = useState(DEFAULT_CV_CONFIG.accentColor);
   const [font, setFont] = useState<FontId>(DEFAULT_CV_CONFIG.font);
   const [photo, setPhoto] = useState('');
-  const [cvTitle, setCvTitle] = useState('Mon CV');
+  const [cvTitle, setCvTitle] = useState('Titre de mon CV');
   const [generatedCV, setGeneratedCV] = useState('');
   const [saveMsg, setSaveMsg] = useState('');
 
