@@ -221,22 +221,23 @@ if (session?.access_token) {
       </div>
 
       {/* Grille compacte 3 colonnes */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, overflowX: 'auto', paddingBottom: 4 }}>
         {CV_TEMPLATES.map(t => {
           const isSelected = template === t.id;
           return (
-            <div
-              key={t.id}
-              onClick={() => setTemplate(t.id as TemplateId)}
-              style={{
-                border: `2px solid ${isSelected ? accentColor : '#111'}`,
-                borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
-                boxShadow: isSelected ? `2px 2px 0 ${accentColor}` : '2px 2px 0 #111',
-                transition: 'all .15s',
-                transform: isSelected ? 'translate(-1px,-1px)' : 'none',
-                background: isSelected ? '#FFF9E6' : '#fff',
-              }}
-            >
+           <div
+  key={t.id}
+  onClick={() => setTemplate(t.id as TemplateId)}
+  style={{
+    border: `2px solid ${isSelected ? accentColor : '#111'}`,
+    borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
+    boxShadow: isSelected ? `2px 2px 0 ${accentColor}` : '2px 2px 0 #111',
+    transition: 'all .15s',
+    transform: isSelected ? 'translate(-1px,-1px)' : 'none',
+    background: isSelected ? '#FFF9E6' : '#fff',
+    minWidth: 120, flexShrink: 0,
+  }}
+>
               <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, borderBottom: `1px solid ${isSelected ? accentColor : '#eee'}` }}>
                 {t.preview}
               </div>
