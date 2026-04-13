@@ -201,7 +201,7 @@ if (session?.access_token) {
           </header>
 
           {/* Corps — stepper + panneau */}
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '260px 1fr', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '300px 1fr', overflow: 'hidden' }}>
 
             {/* Stepper gauche */}
             <div style={{ borderRight: '2px solid #111', overflowY: 'auto', background: '#fff' }}>
