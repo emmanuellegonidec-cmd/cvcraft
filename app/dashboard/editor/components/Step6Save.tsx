@@ -33,10 +33,14 @@ export function Step6Save({
   setIsSaving(true);
   setSaveMsg('');
   try {
-    const res = await fetch('/api/cvs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const token = (window as any).__jfmj_token || '';
+const res = await fetch('/api/cvs', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  },
+  body: JSON.stringify({
         id: savedId || undefined,
         title: cvTitle,
         template,
