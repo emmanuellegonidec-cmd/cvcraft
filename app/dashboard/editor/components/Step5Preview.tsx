@@ -59,54 +59,25 @@ export function Step5Preview({
         alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10,
       }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT }}>
+          <div style={{ fontSize: 13, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT }}>
             Aperçu final
           </div>
-          <div style={{ fontSize: 10, color: '#888', fontFamily: FONT, marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: '#888', fontFamily: FONT, marginTop: 2 }}>
             {cvTitle}
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {/* Copier texte */}
-          <button
-            onClick={copyText}
-            style={{
-              background: '#fff', color: '#111', fontSize: 12,
-              fontWeight: 800, padding: '8px 16px',
-              border: '2px solid #111', borderRadius: 8,
-              cursor: 'pointer', fontFamily: FONT,
-              boxShadow: '2px 2px 0 #111',
-            }}
-          >
+          <button onClick={copyText}
+            style={{ background: '#fff', color: '#111', fontSize: 13, fontWeight: 800, padding: '9px 18px', border: '2px solid #111', borderRadius: 8, cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>
             {copied ? '✓ Copié' : 'Copier le texte'}
           </button>
-
-          {/* Télécharger PDF */}
-          <button
-            onClick={onDownloadPdf}
-            style={{
-              background: '#F5C400', color: '#111', fontSize: 12,
-              fontWeight: 800, padding: '8px 16px',
-              border: '2px solid #111', borderRadius: 8,
-              cursor: 'pointer', fontFamily: FONT,
-              boxShadow: '2px 2px 0 #111',
-            }}
-          >
+          <button onClick={onDownloadPdf}
+            style={{ background: '#F5C400', color: '#111', fontSize: 13, fontWeight: 800, padding: '9px 18px', border: '2px solid #111', borderRadius: 8, cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>
             ↓ Télécharger PDF
           </button>
-
-          {/* Continuer */}
-          <button
-            onClick={onNext}
-            style={{
-              background: '#111', color: '#fff', fontSize: 12,
-              fontWeight: 800, padding: '8px 16px',
-              border: '2px solid #111', borderRadius: 8,
-              cursor: 'pointer', fontFamily: FONT,
-              boxShadow: `2px 2px 0 ${accentColor}`,
-            }}
-          >
+          <button onClick={onNext}
+            style={{ background: '#111', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 18px', border: '2px solid #111', borderRadius: 8, cursor: 'pointer', fontFamily: FONT, boxShadow: `2px 2px 0 ${accentColor}` }}>
             Sauvegarder →
           </button>
         </div>
@@ -115,16 +86,38 @@ export function Step5Preview({
       {/* ── INFO ATS ── */}
       <div style={{
         background: '#F0FFF4', border: '1px solid #2D6A4F',
-        borderRadius: 8, padding: '10px 14px',
-        fontSize: 11, color: '#2D6A4F', fontFamily: FONT,
-        lineHeight: 1.6, marginBottom: 16,
+        borderRadius: 8, padding: '11px 14px',
+        fontSize: 13, color: '#2D6A4F', fontFamily: FONT,
+        lineHeight: 1.6, marginBottom: 14,
         display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        <span style={{ fontSize: 14 }}>✅</span>
-        <span>
-          <strong>CV optimisé pour les ATS</strong> — compétences en texte réel,
-          structure linéaire, mots-clés du poste visé intégrés.
-        </span>
+        <span>✅</span>
+        <span><strong>CV optimisé pour les ATS</strong> — compétences en texte réel, structure linéaire, mots-clés du poste visé intégrés.</span>
+      </div>
+
+      {/* ── CONSEILS AVANT D'ENVOYER ── */}
+      <div style={{
+        marginBottom: 16, background: '#FAFAFA',
+        border: '2px solid #111', borderRadius: 8,
+        padding: '14px 18px', boxShadow: '2px 2px 0 #111',
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 900, color: '#111', fontFamily: FONT, marginBottom: 10 }}>
+          💡 Conseils avant d'envoyer
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {[
+            { icon: '📄', text: 'Envoie toujours le PDF — jamais le Word ni le texte copié-collé' },
+            { icon: '📝', text: 'Vérifie que ton nom de fichier est professionnel : CV_Prenom_Nom.pdf' },
+            { icon: '🎯', text: 'Adapte le poste visé pour chaque candidature et régénère si besoin' },
+            { icon: '🔍', text: 'Relis une dernière fois les dates et l\'orthographe avant d\'envoyer' },
+            { icon: '📧', text: 'Pour les portails en ligne, copie-colle le texte brut dans les champs formulaire' },
+          ].map((tip, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, fontSize: 13, color: '#333', fontFamily: FONT, lineHeight: 1.5 }}>
+              <span style={{ flexShrink: 0 }}>{tip.icon}</span>
+              <span>{tip.text}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── APERÇU ── */}
@@ -135,31 +128,6 @@ export function Step5Preview({
         accentColor={accentColor}
         fontFamily={font}
       />
-
-      {/* ── CONSEILS ── */}
-      <div style={{
-        marginTop: 16, background: '#FAFAFA',
-        border: '2px solid #111', borderRadius: 8,
-        padding: '14px 18px', boxShadow: '2px 2px 0 #111',
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 900, color: '#111', fontFamily: FONT, marginBottom: 10 }}>
-          💡 Conseils avant d'envoyer
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {[
-            { icon: '📄', text: 'Envoie toujours le PDF — jamais le Word ni le texte copié-collé' },
-            { icon: '📝', text: 'Vérifie que ton nom de fichier est professionnel : CV_Prenom_Nom.pdf' },
-            { icon: '🎯', text: 'Adapte le poste visé pour chaque candidature et régénère si besoin' },
-            { icon: '🔍', text: 'Relis une dernière fois les dates et l\'orthographe avant d\'envoyer' },
-            { icon: '📧', text: 'Pour les portails en ligne, copie-colle le texte brut dans les champs formulaire' },
-          ].map((tip, i) => (
-            <div key={i} style={{ display: 'flex', gap: 10, fontSize: 11, color: '#333', fontFamily: FONT, lineHeight: 1.5 }}>
-              <span style={{ flexShrink: 0 }}>{tip.icon}</span>
-              <span>{tip.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
 
     </div>
   );
