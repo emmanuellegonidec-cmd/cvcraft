@@ -61,18 +61,6 @@ export function Step4Generate({ form, onGenerated, onNext }: Props) {
         mots-clés attendus par les recruteurs.
       </div>
 
-      {/* Info ATS */}
-      <div style={{
-        background: '#F0FFF4', border: '1px solid #2D6A4F',
-        borderRadius: 8, padding: '12px 18px',
-        fontSize: 12, color: '#2D6A4F', fontFamily: FONT,
-        lineHeight: 1.6, maxWidth: 420, textAlign: 'left',
-      }}>
-        <strong>✅ Optimisation ATS incluse :</strong><br />
-        Claude utilise les mots-clés de ton poste visé,
-        structure le contenu pour les parseurs et évite
-        les formulations qui bloquent les filtres automatiques.
-      </div>
 
       {/* Bouton */}
       <button
