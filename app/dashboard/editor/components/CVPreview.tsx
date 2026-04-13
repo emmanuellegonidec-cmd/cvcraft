@@ -10,7 +10,7 @@ interface Props {
   photo: string;
   template: TemplateId;
   accentColor: string;
-  font: FontId;
+  fontFamily: string;
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────
@@ -71,7 +71,8 @@ function Skills({ skills, accentColor }: { skills: string; accentColor: string }
 }
 
 // ── TEMPLATE CLASSIQUE ────────────────────────────────────────────────
-function ClassicPreview({ form, photo, accentColor }: { form: CVFormData; photo: string; accentColor: string }) {
+function ClassicPreview({ form, photo, accentColor, fontFamily }: { form: CVFormData; photo: string; accentColor: string; fontFamily: string }) {
+  const FONT = fontFamily;
   const contact = [form.email, form.phone, form.city, form.linkedin].filter(Boolean).join('  ·  ');
   return (
     <div style={{ fontFamily: FONT, fontSize: 13 }}>
@@ -116,7 +117,8 @@ function ClassicPreview({ form, photo, accentColor }: { form: CVFormData; photo:
 }
 
 // ── TEMPLATE MODERNE ──────────────────────────────────────────────────
-function ModernPreview({ form, photo, accentColor }: { form: CVFormData; photo: string; accentColor: string }) {
+function ModernPreview({ form, photo, accentColor, fontFamily }: { form: CVFormData; photo: string; accentColor: string; fontFamily: string }) {
+  const FONT = fontFamily;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', fontFamily: FONT, fontSize: 13, minHeight: 500 }}>
       <div style={{ background: accentColor, padding: '20px 14px', color: '#fff' }}>
@@ -163,8 +165,9 @@ function ModernPreview({ form, photo, accentColor }: { form: CVFormData; photo: 
 }
 
 // ── TEMPLATE MINIMALISTE ──────────────────────────────────────────────
-function MinimalPreview({ form, photo, accentColor }: { form: CVFormData; photo: string; accentColor: string }) {
-  const contact = [form.email, form.phone, form.city, form.linkedin].filter(Boolean).join('  ·  ');
+function MinimalPreview({ form, photo, accentColor, fontFamily }: { form: CVFormData; photo: string; accentColor: string; fontFamily: string }) {
+   const FONT = fontFamily;
+   const contact = [form.email, form.phone, form.city, form.linkedin].filter(Boolean).join('  ·  ');
   return (
     <div style={{ fontFamily: FONT, fontSize: 13 }}>
       <div style={{ height: 3, background: accentColor, marginBottom: 16, borderRadius: 2 }} />
@@ -212,7 +215,8 @@ function MinimalPreview({ form, photo, accentColor }: { form: CVFormData; photo:
 }
 
 // ── TEMPLATE ÉLÉGANT ──────────────────────────────────────────────────
-function ElegantPreview({ form, photo, accentColor }: { form: CVFormData; photo: string; accentColor: string }) {
+function ElegantPreview({ form, photo, accentColor, fontFamily }: { form: CVFormData; photo: string; accentColor: string; fontFamily: string }) {
+  const FONT = fontFamily;
   const contact = [form.email, form.phone, form.city, form.linkedin].filter(Boolean).join('  ·  ');
   return (
     <div style={{ fontFamily: FONT, fontSize: 13 }}>
@@ -258,7 +262,8 @@ function ElegantPreview({ form, photo, accentColor }: { form: CVFormData; photo:
 }
 
 // ── TEMPLATE CRÉATIF ──────────────────────────────────────────────────
-function CreativePreview({ form, photo, accentColor }: { form: CVFormData; photo: string; accentColor: string }) {
+function CreativePreview({ form, photo, accentColor, fontFamily }: { form: CVFormData; photo: string; accentColor: string; fontFamily: string }) {
+  const FONT = fontFamily;
   const contact = [form.email, form.phone, form.city, form.linkedin].filter(Boolean).join('  ·  ');
   return (
     <div style={{ fontFamily: FONT, fontSize: 13, display: 'flex' }}>
@@ -333,8 +338,9 @@ function CreativePreview({ form, photo, accentColor }: { form: CVFormData; photo
 }
 
 // ── TEMPLATE EXECUTIVE ────────────────────────────────────────────────
-function ExecutivePreview({ form, photo, accentColor }: { form: CVFormData; photo: string; accentColor: string }) {
-  const contact = [form.email, form.phone, form.city, form.linkedin].filter(Boolean).join('  ·  ');
+function ExecutivePreview({ form, photo, accentColor, fontFamily }: { form: CVFormData; photo: string; accentColor: string; fontFamily: string }) {
+    const FONT = fontFamily;
+    const contact = [form.email, form.phone, form.city, form.linkedin].filter(Boolean).join('  ·  ');
   return (
     <div style={{ fontFamily: FONT, fontSize: 13 }}>
       <div style={{ height: 2, background: '#111', marginBottom: 14 }} />
@@ -383,8 +389,9 @@ function ExecutivePreview({ form, photo, accentColor }: { form: CVFormData; phot
 }
 
 // ── EXPORT PRINCIPAL ──────────────────────────────────────────────────
-export function CVPreview({ form, photo, template, accentColor, font }: Props) {
-  const props = { form, photo, accentColor };
+export function CVPreview({ form, photo, template, accentColor, fontFamily }: Props) {
+  const FONT = fontFamily;
+  const props = { form, photo, accentColor, fontFamily };
 
   return (
     <div style={{
