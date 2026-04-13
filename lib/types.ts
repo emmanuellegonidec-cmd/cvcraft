@@ -13,6 +13,8 @@ export interface CVFormData {
   firstName: string;
   lastName: string;
   photo?: string;
+  font?: string;
+accentColor?: string;
   title: string;
   email: string;
   phone: string;
