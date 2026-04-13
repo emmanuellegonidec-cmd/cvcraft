@@ -53,7 +53,12 @@ export function Step2Import({ onImportSuccess, onNext, onSkip }: Props) {
       setStatus({ type: 'success', msg: 'Profil importé avec succès !' });
       setTimeout(() => { setStatus(null); onNext(); }, 1500);
     } catch (e: any) {
-      setStatus({ type: 'error', msg: e.message || 'Erreur lors de l\'import.' });
+      setStatus({
+  type: 'error',
+  msg: e.message?.includes('overloaded') || e.message?.includes('529')
+    ? 'Claude est temporairement surchargé. Réessaie dans quelques minutes.'
+    : e.message || 'Erreur lors de l\'import.',
+});
     }
   }
 
