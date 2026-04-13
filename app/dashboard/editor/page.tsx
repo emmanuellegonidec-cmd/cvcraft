@@ -221,7 +221,7 @@ if (session?.access_token) {
       </div>
 
       {/* Grille compacte 3 colonnes */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, overflowX: 'auto', paddingBottom: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
         {CV_TEMPLATES.map(t => {
           const isSelected = template === t.id;
           return (
@@ -235,7 +235,6 @@ if (session?.access_token) {
     transition: 'all .15s',
     transform: isSelected ? 'translate(-1px,-1px)' : 'none',
     background: isSelected ? '#FFF9E6' : '#fff',
-    minWidth: 120, flexShrink: 0,
   }}
 >
               <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, borderBottom: `1px solid ${isSelected ? accentColor : '#eee'}` }}>
