@@ -64,15 +64,8 @@ function ExpBlock({ exp, accentColor, showBar = false }: { exp: any; accentColor
 
 function Skills({ skills, accentColor }: { skills: string; accentColor: string }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
-      {splitSkills(skills).map((sk, i) => (
-        <span key={i} style={{
-          background: '#111', color: '#fff', fontSize: 10,
-          padding: '3px 8px', borderRadius: 10, fontFamily: FONT,
-        }}>
-          {sk}
-        </span>
-      ))}
+    <div style={{ fontSize: 11, lineHeight: 1.8, color: '#333', fontFamily: FONT, marginTop: 4 }}>
+      {splitSkills(skills).join('  ·  ')}
     </div>
   );
 }
@@ -143,9 +136,9 @@ function ModernPreview({ form, photo, accentColor }: { form: CVFormData; photo: 
         {form.skills && (
           <>
             <div style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 1, marginTop: 12, marginBottom: 5, fontFamily: FONT }}>Compétences</div>
-            {splitSkills(form.skills).map((sk, i) => (
-              <div key={i} style={{ background: 'rgba(255,255,255,0.2)', fontSize: 9, padding: '2px 6px', borderRadius: 3, marginBottom: 3, color: '#fff', fontFamily: FONT }}>{sk}</div>
-            ))}
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.9)', lineHeight: 1.8, fontFamily: FONT }}>
+  {splitSkills(form.skills).join('  ·  ')}
+</div>
           </>
         )}
         {form.education?.length > 0 && (
@@ -327,9 +320,9 @@ function CreativePreview({ form, photo, accentColor }: { form: CVFormData; photo
                 <div style={{ flex: 1, height: 0.5, background: '#eee' }} />
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {splitSkills(form.skills).map((sk, i) => (
-                  <span key={i} style={{ border: `1px solid ${accentColor}`, color: accentColor, fontSize: 10, padding: '2px 7px', borderRadius: 4, fontFamily: FONT }}>{sk}</span>
-                ))}
+               <div style={{ fontSize: 11, lineHeight: 1.8, color: '#333', fontFamily: FONT }}>
+  {splitSkills(form.skills).join('  ·  ')}
+</div>
               </div>
             </div>
           )}
