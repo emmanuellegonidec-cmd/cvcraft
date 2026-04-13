@@ -363,8 +363,10 @@ function EditorContent() {
 
 function CVPreviewWrapper({ form, photo, template, accentColor, font }: any) {
   const { CVPreview } = require('./components/CVPreview');
+  const { getFont } = require('@/lib/cv-config');
+  const fontFamily = getFont(font).family;
   return (
-    <CVPreview form={form} photo={photo} template={template} accentColor={accentColor} font={font} />
+    <CVPreview form={form} photo={photo} template={template} accentColor={accentColor} fontFamily={fontFamily} />
   );
 }
 
