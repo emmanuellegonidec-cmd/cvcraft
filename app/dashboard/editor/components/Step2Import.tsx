@@ -66,11 +66,29 @@ export function Step2Import({ onImportSuccess, onNext, onSkip }: Props) {
 
   const dropBase: React.CSSProperties = {
     border: '2px dashed #111', borderRadius: 8,
-    padding: '20px 10px', textAlign: 'center',
+    padding: '24px 10px', textAlign: 'center',
     cursor: 'pointer', flex: 1,
     display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center', gap: 6,
+    alignItems: 'center', justifyContent: 'center', gap: 8,
     transition: 'all .15s',
+  };
+
+  const blocStyle: React.CSSProperties = {
+    border: '2px solid #111', borderRadius: 10,
+    background: '#fff', boxShadow: '3px 3px 0 #111',
+    overflow: 'hidden', display: 'flex', flexDirection: 'column',
+  };
+
+  const blocHeadStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 12,
+    padding: '14px 16px', borderBottom: '2px solid #111',
+    background: '#F7F6F3',
+  };
+
+  const blocBodyStyle: React.CSSProperties = {
+    padding: '16px', fontSize: 13, color: '#444',
+    lineHeight: 1.6, fontFamily: FONT, fontWeight: 600,
+    flex: 1, display: 'flex', flexDirection: 'column', gap: 14,
   };
 
   return (
@@ -80,24 +98,24 @@ export function Step2Import({ onImportSuccess, onNext, onSkip }: Props) {
       </div>
 
       {/* ── CONSEIL ATS ── */}
-      <div style={{ background: '#F0FFF4', border: '1.5px solid #2D6A4F', borderRadius: 8, padding: '11px 14px', marginBottom: 20, fontSize: 12, color: '#2D6A4F', lineHeight: 1.6, fontFamily: FONT, fontWeight: 600 }}>
+      <div style={{ background: '#F0FFF4', border: '1.5px solid #2D6A4F', borderRadius: 8, padding: '12px 16px', marginBottom: 22, fontSize: 13, color: '#2D6A4F', lineHeight: 1.6, fontFamily: FONT, fontWeight: 600 }}>
         ✅ <strong style={{ fontWeight: 800 }}>Conseil ATS :</strong> L'IA nettoie automatiquement les données importées pour qu'elles soient lisibles par les logiciels de recrutement.
       </div>
 
       {/* ── 3 BLOCS EN COLONNES ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16, marginBottom: 16 }}>
 
         {/* BLOC 1 — Remplir manuellement */}
-        <div style={{ border: '2px solid #111', borderRadius: 10, background: '#fff', boxShadow: '3px 3px 0 #111', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: '2px solid #111', background: '#F7F6F3' }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', border: '2px solid #111', background: '#F5C400', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, flexShrink: 0 }}>✏</div>
-            <div style={{ fontSize: 12, fontWeight: 900, color: '#111', fontFamily: FONT }}>Remplir manuellement</div>
+        <div style={blocStyle}>
+          <div style={blocHeadStyle}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', border: '2px solid #111', background: '#F5C400', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, flexShrink: 0 }}>✏</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#111', fontFamily: FONT }}>Remplir manuellement</div>
           </div>
-          <div style={{ padding: '14px', fontSize: 11, color: '#444', lineHeight: 1.6, fontFamily: FONT, fontWeight: 600, flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={blocBodyStyle}>
             <div>Tu saisis tes informations directement dans le formulaire à l'étape suivante.</div>
             <button
               onClick={onSkip}
-              style={{ display: 'block', padding: '9px 14px', border: '2px solid #111', borderRadius: 7, fontSize: 11, fontWeight: 800, cursor: 'pointer', boxShadow: '2px 2px 0 #111', background: '#fff', color: '#111', textAlign: 'center', fontFamily: FONT, width: '100%' }}
+              style={{ display: 'block', padding: '10px 14px', border: '2px solid #111', borderRadius: 7, fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '2px 2px 0 #111', background: '#fff', color: '#111', textAlign: 'center', fontFamily: FONT, width: '100%' }}
             >
               Continuer sans importer →
             </button>
@@ -105,12 +123,12 @@ export function Step2Import({ onImportSuccess, onNext, onSkip }: Props) {
         </div>
 
         {/* BLOC 2 — Importer un CV PDF */}
-        <div style={{ border: '2px solid #111', borderRadius: 10, background: '#fff', boxShadow: '3px 3px 0 #111', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: '2px solid #111', background: '#F7F6F3' }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', border: '2px solid #111', background: '#E8F4FD', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>📄</div>
-            <div style={{ fontSize: 12, fontWeight: 900, color: '#111', fontFamily: FONT }}>Importer un CV PDF</div>
+        <div style={blocStyle}>
+          <div style={blocHeadStyle}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', border: '2px solid #111', background: '#E8F4FD', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>📄</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#111', fontFamily: FONT }}>Importer un CV PDF</div>
           </div>
-          <div style={{ padding: '14px', fontSize: 11, color: '#444', lineHeight: 1.6, fontFamily: FONT, fontWeight: 600, flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={blocBodyStyle}>
             <div>L'IA extrait automatiquement tes informations depuis ton CV existant.</div>
             <div
               onClick={() => fileRef.current?.click()}
@@ -119,22 +137,22 @@ export function Step2Import({ onImportSuccess, onNext, onSkip }: Props) {
               onDrop={e => { e.preventDefault(); setIsDragOverPdf(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
               style={{ ...dropBase, background: isDragOverPdf ? '#FFF3CD' : '#FAFAFA', boxShadow: isDragOverPdf ? '2px 2px 0 #111' : 'none' }}
             >
-              <div style={{ fontSize: 22, color: '#888', lineHeight: 1 }}>⬆</div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#111', fontFamily: FONT }}>Glisse ton CV ici</div>
-              <div style={{ fontSize: 10, color: '#888', fontFamily: FONT, fontWeight: 600 }}>ou clique pour sélectionner un PDF</div>
+              <div style={{ fontSize: 26, color: '#888', lineHeight: 1 }}>⬆</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#111', fontFamily: FONT }}>Glisse ton CV ici</div>
+              <div style={{ fontSize: 12, color: '#888', fontFamily: FONT, fontWeight: 600 }}>ou clique pour sélectionner un PDF</div>
             </div>
             <input ref={fileRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
           </div>
         </div>
 
         {/* BLOC 3 — LinkedIn */}
-        <div style={{ border: '2px solid #111', borderRadius: 10, background: '#fff', boxShadow: '3px 3px 0 #111', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: '2px solid #111', background: '#F7F6F3' }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', border: '2px solid #111', background: '#0A66C2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900, color: '#fff', fontFamily: 'serif', flexShrink: 0 }}>in</div>
-            <div style={{ fontSize: 12, fontWeight: 900, color: '#111', fontFamily: FONT }}>Profil LinkedIn</div>
+        <div style={blocStyle}>
+          <div style={blocHeadStyle}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', border: '2px solid #111', background: '#0A66C2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 900, color: '#fff', fontFamily: 'serif', flexShrink: 0 }}>in</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#111', fontFamily: FONT }}>Profil LinkedIn</div>
           </div>
-          <div style={{ padding: '14px', fontSize: 11, color: '#444', lineHeight: 1.6, fontFamily: FONT, fontWeight: 600, flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ background: '#FFF3CD', border: '2px solid #111', borderRadius: 7, padding: '8px 10px', fontSize: 10, color: '#111', lineHeight: 1.6, boxShadow: '2px 2px 0 #111' }}>
+          <div style={blocBodyStyle}>
+            <div style={{ background: '#FFF3CD', border: '2px solid #111', borderRadius: 7, padding: '10px 12px', fontSize: 12, color: '#111', lineHeight: 1.6, boxShadow: '2px 2px 0 #111' }}>
               <strong style={{ color: '#E8151B', fontWeight: 800 }}>Exporter depuis LinkedIn :</strong><br />
               Profil → <strong style={{ fontWeight: 800 }}>Plus</strong> → <strong style={{ fontWeight: 800 }}>Enregistrer au format PDF</strong>
             </div>
@@ -145,9 +163,9 @@ export function Step2Import({ onImportSuccess, onNext, onSkip }: Props) {
               onDrop={e => { e.preventDefault(); setIsDragOverLi(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
               style={{ ...dropBase, background: isDragOverLi ? '#FFF3CD' : '#FAFAFA', boxShadow: isDragOverLi ? '2px 2px 0 #111' : 'none' }}
             >
-              <div style={{ fontSize: 22, color: '#0A66C2', fontFamily: 'serif', fontWeight: 900, lineHeight: 1 }}>in</div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#111', fontFamily: FONT }}>Glisse ton export LinkedIn</div>
-              <div style={{ fontSize: 10, color: '#888', fontFamily: FONT, fontWeight: 600 }}>ou clique pour sélectionner</div>
+              <div style={{ fontSize: 26, color: '#0A66C2', fontFamily: 'serif', fontWeight: 900, lineHeight: 1 }}>in</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#111', fontFamily: FONT }}>Glisse ton export LinkedIn</div>
+              <div style={{ fontSize: 12, color: '#888', fontFamily: FONT, fontWeight: 600 }}>ou clique pour sélectionner</div>
             </div>
             <input ref={linkedinRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
           </div>
@@ -157,7 +175,7 @@ export function Step2Import({ onImportSuccess, onNext, onSkip }: Props) {
 
       {/* ── STATUT ── */}
       {status && (
-        <div style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, fontFamily: FONT, fontWeight: 700, border: '2px solid #111', background: status.type === 'success' ? '#D4EDDA' : status.type === 'error' ? '#F8D7DA' : '#FFF3CD', color: '#111', boxShadow: '2px 2px 0 #111' }}>
+        <div style={{ padding: '12px 16px', borderRadius: 8, fontSize: 14, fontFamily: FONT, fontWeight: 700, border: '2px solid #111', background: status.type === 'success' ? '#D4EDDA' : status.type === 'error' ? '#F8D7DA' : '#FFF3CD', color: '#111', boxShadow: '2px 2px 0 #111' }}>
           {status.type === 'success' ? '✅ ' : status.type === 'error' ? '❌ ' : '⏳ '}
           {status.msg}
         </div>
