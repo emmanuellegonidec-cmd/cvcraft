@@ -133,7 +133,7 @@ export function Step5Preview({
         photo={photo}
         template={template}
         accentColor={accentColor}
-        font={font}
+        fontFamily={font}
       />
 
       {/* ── CONSEILS ── */}
