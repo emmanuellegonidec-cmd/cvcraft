@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { CVFormData, defaultFormData } from '@/lib/types';
-import { TemplateId, FontId, DEFAULT_CV_CONFIG } from '@/lib/cv-config';
+import { TemplateId, FontId, DEFAULT_CV_CONFIG, CV_TEMPLATES, CV_PALETTES, CV_FONTS } from '@/lib/cv-config';
 import { pdf } from '@react-pdf/renderer';
 import { CVPdf } from '@/lib/pdf-generator';
 
@@ -193,19 +193,12 @@ if (session?.access_token) {
             background: '#fff', borderBottom: '2px solid #111',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <button
-                onClick={() => router.push('/dashboard')}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#111', fontSize: 12, fontWeight: 700, fontFamily: FONT, padding: 0 }}
-              >
-                ← Tableau de bord
-              </button>
-              <span style={{ color: '#ddd' }}>|</span>
-              <input
-                value={cvTitle}
-                onChange={e => setCvTitle(e.target.value)}
-                style={{ border: 'none', background: 'transparent', fontSize: 14, fontWeight: 800, color: '#111', padding: '4px 0', outline: 'none', width: 220, fontFamily: FONT }}
-              />
-            </div>
+  <input
+    value={cvTitle}
+    onChange={e => setCvTitle(e.target.value)}
+    style={{ border: 'none', background: 'transparent', fontSize: 15, fontWeight: 800, color: '#111', padding: '4px 0', outline: 'none', width: 260, fontFamily: FONT }}
+  />
+</div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               {saveMsg && (
                 <span style={{ fontSize: 12, fontWeight: 700, color: saveMsg.startsWith('✅') ? '#1A7A4A' : '#E8151B', fontFamily: FONT }}>
@@ -228,35 +221,113 @@ if (session?.access_token) {
 
               {/* Étape 1 + aperçu sur 2 colonnes */}
               {step === 1 && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, height: '100%' }}>
-                  <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto' }}>
-                    <Step1Templates
-                      template={template}
-                      accentColor={accentColor}
-                      font={font}
-                      onTemplateChange={t => { setTemplate(t); }}
-                      onColorChange={setAccentColor}
-                      onFontChange={setFont}
-                      onNext={next}
-                    />
-                  </div>
-                  <div style={{ padding: '1.5rem', overflowY: 'auto', background: '#fff' }}>
-                    <div style={{ fontSize: 10, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 12 }}>
-                      Aperçu du template
-                    </div>
-                    <div style={{ background: '#F7F6F3', border: '2px solid #111', borderRadius: 10, padding: '1.5rem', boxShadow: '3px 3px 0 #111', minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ textAlign: 'center', color: '#888', fontSize: 13, fontFamily: FONT, lineHeight: 2 }}>
-                        <div style={{ fontSize: 40, marginBottom: 12 }}>
-                          {['classic','modern','minimal','elegant','creative','executive'].includes(template) ? '◼' : '◼'}
-                        </div>
-                        Template <strong style={{ color: '#111', textTransform: 'capitalize' }}>{template}</strong><br />
-                        Couleur <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: accentColor, border: '1px solid #111', verticalAlign: 'middle', marginLeft: 4 }} /><br />
-                        Police <strong style={{ color: '#111' }}>{font}</strong>
-                      </div>
-                    </div>
-                  </div>
+  <div style={{ display: 'grid', gridTemplateColumns: '420px 1fr', gap: 0, height: '100%' }}>
+    {/* Gauche — choix template */}
+    <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto' }}>
+      <div style={{ fontSize: 13, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
+        Choisis ton modèle
+      </div>
+
+      {/* Grille compacte 3 colonnes */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 18 }}>
+        {CV_TEMPLATES.map(t => {
+          const isSelected = template === t.id;
+          return (
+            <div
+              key={t.id}
+              onClick={() => setTemplate(t.id as TemplateId)}
+              style={{
+                border: `2px solid ${isSelected ? accentColor : '#111'}`,
+                borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
+                boxShadow: isSelected ? `2px 2px 0 ${accentColor}` : '2px 2px 0 #111',
+                transition: 'all .15s',
+                transform: isSelected ? 'translate(-1px,-1px)' : 'none',
+                background: isSelected ? '#FFF9E6' : '#fff',
+              }}
+            >
+              <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, borderBottom: `1px solid ${isSelected ? accentColor : '#eee'}` }}>
+                {t.preview}
+              </div>
+              <div style={{ padding: '7px 8px' }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: '#111', fontFamily: FONT, marginBottom: 2 }}>{t.name}</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: t.atsLevel === 'excellent' ? '#155724' : '#856404', background: t.atsLevel === 'excellent' ? '#D4EDDA' : '#FFF3CD', padding: '1px 5px', borderRadius: 3, display: 'inline-block' }}>
+                  {t.atsLevel === 'excellent' ? '✅ Excellent ATS' : '✔ Bon ATS'}
                 </div>
-              )}
+                <div style={{ fontSize: 10, color: '#555', fontFamily: FONT, marginTop: 3, fontWeight: 600 }}>{t.description}</div>
+                <div style={{ fontSize: 9, color: '#888', fontFamily: FONT, marginTop: 1 }}>{t.target}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Couleur */}
+      <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111', marginBottom: 10 }}>
+        <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT, color: '#111' }}>Couleur d'accent</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {CV_PALETTES.map(p => (
+            <div key={p.id} onClick={() => setAccentColor(p.accent)} title={p.name}
+              style={{ width: 26, height: 26, borderRadius: '50%', background: p.accent, cursor: 'pointer', border: accentColor === p.accent ? '3px solid #111' : '2px solid transparent', boxShadow: accentColor === p.accent ? '0 0 0 2px #fff inset' : 'none', transition: 'all .15s' }} />
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: '#666', fontFamily: FONT, marginTop: 6, fontWeight: 600 }}>
+          {CV_PALETTES.find(p => p.accent === accentColor)?.name} — la couleur n'affecte pas les ATS
+        </div>
+      </div>
+
+      {/* Police */}
+      <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111', marginBottom: 16 }}>
+        <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT, color: '#111' }}>Police</div>
+        <select value={font} onChange={e => setFont(e.target.value as FontId)}
+          style={{ width: '100%', padding: '7px 9px', fontSize: 13, fontFamily: FONT, border: '2px solid #111', borderRadius: 6, background: '#fff', color: '#111', outline: 'none' }}>
+          {CV_FONTS.map(f => (
+            <option key={f.id} value={f.id}>{f.name} — {f.atsScore === 'excellent' ? '✅ Excellent ATS' : '✔ Bon ATS'}</option>
+          ))}
+        </select>
+      </div>
+
+      <button onClick={next}
+        style={{ width: '100%', padding: '12px', background: '#111', color: '#fff', border: '2px solid #111', borderRadius: 8, fontSize: 13, fontWeight: 800, fontFamily: FONT, cursor: 'pointer', boxShadow: `3px 3px 0 ${accentColor}` }}>
+        Continuer →
+      </button>
+    </div>
+
+    {/* Droite — aperçu réel du template */}
+    <div style={{ padding: '1.5rem', overflowY: 'auto', background: '#fff' }}>
+      <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
+        Aperçu du template
+      </div>
+      <CVPreviewWrapper
+        form={{
+          ...defaultFormData,
+          firstName: 'Jean', lastName: 'Doe',
+          title: 'CEO — Jean find my Job',
+          email: 'jean@jeanfindmyjob.fr',
+          phone: '06 12 34 56 78',
+          city: 'Paris',
+          linkedin: 'linkedin.com/in/jeandoe',
+          summary: 'Entrepreneur passionné par l\'emploi et la tech RH. Fondateur de Jean find my Job, plateforme de suivi de candidatures pour les chercheurs d\'emploi. 10 ans d\'expérience en Product Management.',
+          experiences: [
+            { id: '1', role: 'CEO & Fondateur', company: 'Jean find my Job', start: '2023', end: 'Présent', description: 'Conception et développement de la plateforme\nAcquisition des 1 000 premiers utilisateurs en 3 mois' },
+            { id: '2', role: 'Head of Product', company: 'Jobteaser', start: '2019', end: '2023', description: 'Roadmap produit · Équipe de 8 personnes · 2M utilisateurs' },
+          ],
+          education: [
+            { id: '1', degree: 'MBA Entrepreneuriat', school: 'HEC Paris', year: '2019' },
+            { id: '2', degree: 'Programmation', school: 'École 42', year: '2015' },
+          ],
+          skills: 'Product, IA, No-Code, Growth, Next.js, Leadership, Strategy',
+          targetJob: '',
+          lang: 'français',
+          tone: 'professionnel',
+        }}
+        photo=""
+        template={template}
+        accentColor={accentColor}
+        font={font}
+      />
+    </div>
+  </div>
+)}
 
               {/* Étape 2 */}
               {step === 2 && (
