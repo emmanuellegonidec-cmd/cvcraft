@@ -307,17 +307,6 @@ export function Step3Form({
         </div>
       </div>
 
-
-          <label style={fieldLabelStyle}>Ton</label>
-          <select style={inputStyle} value={form.tone || 'professionnel'} onChange={e => setField('tone', e.target.value)}>
-            <option value="professionnel">Professionnel</option>
-            <option value="moderne et dynamique">Dynamique</option>
-            <option value="académique">Académique</option>
-            <option value="créatif">Créatif</option>
-          </select>
-        </div>
-      </div>
-
       {/* ── BOUTON CONTINUER ── */}
       <button
         onClick={onNext}
