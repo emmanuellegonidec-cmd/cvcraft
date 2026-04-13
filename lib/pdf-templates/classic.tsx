@@ -154,14 +154,7 @@ export function ClassicPdf({ formData, accentColor, fontFamily, photo }: Props) 
             <Text style={s.skillsText}>
               {formatSkillsForPdf(formData.skills)}
             </Text>
-            {/* Rendu visuel badges (texte réel dans chaque badge) */}
-            <View style={s.skillBadgeRow}>
-              {splitSkills(formData.skills).map((sk, i) => (
-                <View key={i} style={s.skillBadge}>
-                  <Text style={s.skillBadgeText}>{sk}</Text>
-                </View>
-              ))}
-            </View>
+            
           </View>
         )}
 

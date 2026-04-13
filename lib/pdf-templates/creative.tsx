@@ -202,14 +202,7 @@ export function CreativePdf({ formData, accentColor, fontFamily, photo }: Props)
               <Text style={s.skillsText}>
                 {formatSkillsForPdf(formData.skills)}
               </Text>
-              {/* Rendu visuel badges contour accent */}
-              <View style={s.skillBadgeRow}>
-                {splitSkills(formData.skills).map((sk, i) => (
-                  <View key={i} style={s.skillBadge}>
-                    <Text style={s.skillBadgeText}>{sk}</Text>
-                  </View>
-                ))}
-              </View>
+              
             </View>
           )}
 
