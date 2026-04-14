@@ -113,8 +113,8 @@ export default function DashboardPage() {
     const cr = await fetch('/api/contacts', { headers: h });
     const cd = await cr.json();
     const contactsList = cd.contacts || [];
-    const supabase = createClient();
-    const { data: notesData } = await supabase
+    const sbNotes = createClient();
+    const { data: notesData } = await sbNotes
       .from('contact_notes')
       .select('contact_id')
       .in('contact_id', contactsList.map((c: any) => c.id));
@@ -125,6 +125,17 @@ export default function DashboardPage() {
     setContacts(contactsList.map((c: any) => ({
       ...c,
       notes_count: countMap[c.id] ?? 0,
+    })));
+    // Lien automatique offre → contact via job_id
+    const sbJobs = createClient();
+    const { data: jobsData } = await sbJobs.from('jobs').select('id, title, company');
+    const jobMap: Record<string, string> = {};
+    (jobsData || []).forEach((j: any) => {
+      jobMap[j.id] = j.title + (j.company ? ' — ' + j.company : '');
+    });
+    setContacts(prev => prev.map(c => ({
+      ...c,
+      job_manual: c.job_manual || (c.job_id ? jobMap[c.job_id] : null) || null,
     })));
   }, [accessToken]);
 
