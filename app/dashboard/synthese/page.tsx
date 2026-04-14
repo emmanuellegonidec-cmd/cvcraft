@@ -13,7 +13,7 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archivé',
 };
 
-// Labels de secours pour les sub_status standard (pas de numéro d'étape affiché)
+// Labels pour les sub_status standard (pas d'UUID) — pas de numéro d'étape
 const STANDARD_SUB_STATUS_LABELS: Record<string, string> = {
   to_apply: 'Envie de postuler',
   applied: 'Postulé',
@@ -26,26 +26,30 @@ const STANDARD_SUB_STATUS_LABELS: Record<string, string> = {
   offer: 'Offre reçue',
 };
 
-interface StageDetail {
+interface StageEntry {
+  id: string;
   label: string;
-  job_id: string;
   position: number;
 }
 
-// Retourne le label + étape uniquement depuis pipeline_stages (dynamic par offre)
+// Les positions sont des valeurs type 1000/2000/5250...
+// On trie par position et on utilise le RANG dans la liste triée comme numéro d'étape
 function getStepInfo(
   sub_status: string,
   jobId: string,
-  stagesDetailMap: Record<string, StageDetail>,
-  jobStageCounts: Record<string, number>
+  jobStagesMap: Record<string, StageEntry[]>
 ) {
-  // Étape custom (UUID dans pipeline_stages)
-  const stageInfo = stagesDetailMap[sub_status];
-  if (stageInfo) {
-    const total = jobStageCounts[jobId] ?? null;
-    return { label: stageInfo.label, step: stageInfo.position, total };
+  const stages = jobStagesMap[jobId] || [];
+  // Chercher le stage custom (UUID) dans les stages du job
+  const idx = stages.findIndex(s => s.id === sub_status);
+  if (idx >= 0) {
+    return {
+      label: stages[idx].label,
+      step: idx + 1,        // rang dans la liste triée (1-based)
+      total: stages.length, // total des étapes custom pour CE job
+    };
   }
-  // Étape standard (clé string) — label seulement, pas de numéro d'étape
+  // sub_status standard (clé string) — label seulement, pas de numéro
   const label = STANDARD_SUB_STATUS_LABELS[sub_status] || sub_status || '—';
   return { label, step: null, total: null };
 }
@@ -87,10 +91,10 @@ export default function SynthesePage() {
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [stagesDetailMap, setStagesDetailMap] = useState<Record<string, StageDetail>>({});
-  const [jobStageCounts, setJobStageCounts] = useState<Record<string, number>>({});
+  // Map job_id → liste d'étapes triées par position
+  const [jobStagesMap, setJobStagesMap] = useState<Record<string, StageEntry[]>>({});
 
-  // Chargement de la police via <link> pour éviter le freeze Chrome à l'impression
+  // Police Montserrat via <link> pour éviter le freeze Chrome à l'impression
   useEffect(() => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -107,22 +111,24 @@ export default function SynthesePage() {
       if (!user) { router.push('/auth/login'); return; }
 
       // Fetch toutes les étapes custom avec job_id et position
-      // → permet de calculer le total réel par offre
+      // position = valeur brute (ex: 1000, 2000, 5250...) — il faut trier et utiliser le rang
       const { data: stagesData } = await supabase
         .from('pipeline_stages')
         .select('id, label, job_id, position')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .not('job_id', 'is', null); // uniquement les étapes liées à une offre
 
-      const detailMap: Record<string, StageDetail> = {};
-      const countMap: Record<string, number> = {};
-
+      // Construire la map job_id → [stages triés par position]
+      const rawMap: Record<string, StageEntry[]> = {};
       (stagesData || []).forEach((s: { id: string; label: string; job_id: string; position: number }) => {
-        detailMap[s.id] = { label: s.label, job_id: s.job_id, position: s.position };
-        countMap[s.job_id] = (countMap[s.job_id] || 0) + 1;
+        if (!rawMap[s.job_id]) rawMap[s.job_id] = [];
+        rawMap[s.job_id].push({ id: s.id, label: s.label, position: s.position });
       });
-
-      setStagesDetailMap(detailMap);
-      setJobStageCounts(countMap);
+      // Trier chaque liste par position croissante
+      Object.keys(rawMap).forEach(jobId => {
+        rawMap[jobId].sort((a, b) => a.position - b.position);
+      });
+      setJobStagesMap(rawMap);
 
       let query = supabase
         .from('jobs')
@@ -223,8 +229,7 @@ export default function SynthesePage() {
         @media print {
           @page { margin: 1.5cm; }
           .no-print { display: none !important; }
-          *[style*="position: fixed"],
-          *[style*="position:fixed"] { display: none !important; }
+          *[style*="position: fixed"], *[style*="position:fixed"] { display: none !important; }
           .synthese-sidebar { display: none !important; }
           .synthese-content { padding: 0 !important; max-width: 100% !important; }
           .synthese-page { background: white !important; }
@@ -247,33 +252,27 @@ export default function SynthesePage() {
             <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#F5C400' }}>find my Job</span>
           </div>
-
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>Recherche</div>
             {['Tableau de bord','Candidatures','Contacts','Entretiens','Événements','Statistiques'].map(label => (
-              <button key={label}
-                onClick={() => router.push('/dashboard')}
+              <button key={label} onClick={() => router.push('/dashboard')}
                 style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
               >{label}</button>
             ))}
-
             <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>Outils</div>
             <button style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid #E8151B', borderRadius: 0, background: '#1c1c1c', color: '#fff', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
               Synthèse
             </button>
-            <button
-              onClick={() => router.push('/dashboard/help')}
+            <button onClick={() => router.push('/dashboard/help')}
               style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s' }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
             >Help</button>
           </div>
-
           <div style={{ borderTop: '1px solid #1e1e1e', padding: '10px 10px 8px', flexShrink: 0 }}>
-            <button
-              onClick={() => router.push('/dashboard/profile')}
+            <button onClick={() => router.push('/dashboard/profile')}
               style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', border: '1px solid #242424', borderRadius: 8, background: 'transparent', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', transition: 'all 0.12s' }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#F5C400'; (e.currentTarget as HTMLButtonElement).style.background = '#161616'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#242424'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
@@ -281,8 +280,7 @@ export default function SynthesePage() {
               <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#fff', flexShrink: 0 }}>E</div>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Mon profil</div>
             </button>
-            <button
-              onClick={() => router.push('/')}
+            <button onClick={() => router.push('/')}
               style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', marginTop: 2, border: 'none', borderRadius: 6, background: 'transparent', color: '#444', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'color 0.12s' }}
               onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = '#E8151B'}
               onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = '#444'}
@@ -364,7 +362,7 @@ export default function SynthesePage() {
                     </td></tr>
                   )}
                   {jobs.map(job => {
-                    const stepInfo = getStepInfo(job.sub_status, job.id, stagesDetailMap, jobStageCounts);
+                    const stepInfo = getStepInfo(job.sub_status, job.id, jobStagesMap);
                     return (
                       <tr key={job.id}>
                         <td style={{ color: '#888', fontSize: 11 }}>{formatDateShort(job.created_at)}</td>
@@ -389,7 +387,7 @@ export default function SynthesePage() {
                           <div style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>{stepInfo.label}</div>
                           {stepInfo.step !== null && (
                             <div style={{ fontSize: 10, color: '#888', marginTop: 2, fontFamily: 'Montserrat,sans-serif' }}>
-                              Étape {stepInfo.step}{stepInfo.total !== null ? `/${stepInfo.total}` : ''}
+                              Étape {stepInfo.step}/{stepInfo.total}
                             </div>
                           )}
                         </td>
