@@ -124,12 +124,12 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
   const th: React.CSSProperties = {
     fontSize: 12, fontWeight: 800, color: '#888',
     textTransform: 'uppercase', letterSpacing: '0.8px', fontFamily: FONT,
-    padding: '10px 8px',
+    padding: '12px 12px',
   }
 
   // Cellule données
   const td: React.CSSProperties = {
-    padding: '12px 8px',
+    padding: '16px 12px',
     borderTop: '1px solid #F0F0F0',
     overflow: 'hidden',
   }
