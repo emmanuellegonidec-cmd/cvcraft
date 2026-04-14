@@ -13,74 +13,62 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archivé',
 };
 
-// Étapes standard avec leurs positions fixes (1000, 2000, 3000...)
-// Les étapes custom s'intercalent entre ces valeurs
+// Étapes standard avec positions fixes (1000, 2000...)
+// Les étapes custom s'intercalent avec des valeurs intermédiaires
 const BASE_STEPS: { key: string; label: string; position: number }[] = [
-  { key: 'to_apply',           label: 'Envie de postuler',       position: 1000 },
-  { key: 'applied',            label: 'Postulé',                  position: 2000 },
-  { key: 'phone_interview',    label: 'Entretien téléphonique',   position: 3000 },
-  { key: 'hr_interview',       label: 'Entretien RH',             position: 4000 },
-  { key: 'manager_interview',  label: 'Entretien manager',        position: 5000 },
-  { key: 'director_interview', label: 'Entretien direction',      position: 6000 },
-  { key: 'drh_interview',      label: 'Entretien DRH',            position: 7000 },
-  { key: 'offer_received',     label: 'Offre reçue',              position: 8000 },
+  { key: 'to_apply',           label: 'Envie de postuler',     position: 1000 },
+  { key: 'applied',            label: 'Postulé',                position: 2000 },
+  { key: 'phone_interview',    label: 'Entretien téléphonique', position: 3000 },
+  { key: 'hr_interview',       label: 'Entretien RH',           position: 4000 },
+  { key: 'manager_interview',  label: 'Entretien manager',      position: 5000 },
+  { key: 'director_interview', label: 'Entretien direction',    position: 6000 },
+  { key: 'drh_interview',      label: 'Entretien DRH',          position: 7000 },
+  { key: 'offer_received',     label: 'Offre reçue',            position: 8000 },
 ];
 
 interface StageEntry {
-  id: string;       // clé standard (ex: 'manager_interview') ou UUID custom
+  id: string;
   label: string;
   position: number;
 }
 
-// Construit le pipeline réel pour un job :
-// étapes standard (moins hidden_steps) + étapes custom, triées par position
-function buildJobPipeline(
-  hiddenSteps: string[],
-  customStages: StageEntry[]
-): StageEntry[] {
+// Pipeline réel d'un job = étapes standard (moins hidden) + étapes custom, triées par position
+function buildPipeline(hiddenSteps: string[], customStages: StageEntry[]): StageEntry[] {
   const base = BASE_STEPS
     .filter(s => !hiddenSteps.includes(s.key))
     .map(s => ({ id: s.key, label: s.label, position: s.position }));
-
   return [...base, ...customStages].sort((a, b) => a.position - b.position);
 }
 
-function getStepInfo(
-  sub_status: string,
-  jobId: string,
-  jobPipelines: Record<string, StageEntry[]>
-) {
+function getStepInfo(sub_status: string, pipeline: StageEntry[]) {
   const normalized = sub_status === 'offer' ? 'offer_received' : sub_status;
-  const pipeline = jobPipelines[jobId] || [];
-
   const idx = pipeline.findIndex(s => s.id === normalized);
   if (idx >= 0) {
-    return {
-      label: pipeline[idx].label,
-      step: idx + 1,
-      total: pipeline.length,
-    };
+    return { label: pipeline[idx].label, step: idx + 1, total: pipeline.length };
   }
-
-  // Fallback : label brut sans numéro
-  const baseStep = BASE_STEPS.find(s => s.key === normalized);
-  return { label: baseStep?.label || sub_status || '—', step: null, total: null };
+  // Fallback label sans numéro
+  const base = BASE_STEPS.find(s => s.key === normalized);
+  return { label: base?.label || sub_status || '—', step: null, total: null };
 }
 
 function formatDateFr(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
-
 function formatDateShort(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 interface Job {
-  id: string; title: string; company: string; status: string;
-  sub_status: string; created_at: string; note: string;
-  hidden_steps: string[];
+  id: string;
+  title: string;
+  company: string;
+  status: string;
+  sub_status: string;
+  created_at: string;
+  note: string;
+  pipeline: StageEntry[]; // pipeline réel pré-calculé pour ce job
 }
 
 interface Exchange {
@@ -105,8 +93,6 @@ export default function SynthesePage() {
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(false);
-  // Pipeline réel par job_id (étapes standard filtrées + custom, triées)
-  const [jobPipelines, setJobPipelines] = useState<Record<string, StageEntry[]>>({});
 
   useEffect(() => {
     const link = document.createElement('link');
@@ -123,7 +109,7 @@ export default function SynthesePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/auth/login'); return; }
 
-      // Fetch les étapes custom avec job_id et position
+      // 1. Fetch toutes les étapes custom (avec job_id et position)
       const { data: stagesData } = await supabase
         .from('pipeline_stages')
         .select('id, label, job_id, position')
@@ -137,7 +123,7 @@ export default function SynthesePage() {
         customByJob[s.job_id].push({ id: s.id, label: s.label, position: s.position });
       });
 
-      // Fetch les jobs avec hidden_steps
+      // 2. Fetch les jobs avec hidden_steps
       let query = supabase
         .from('jobs')
         .select('id, title, company, status, sub_status, created_at, hidden_steps')
@@ -151,18 +137,9 @@ export default function SynthesePage() {
       if (jobsError) { console.error('jobs error', jobsError); return; }
 
       const jobList = jobsData || [];
-
-      // Construire le pipeline réel pour chaque job
-      const pipelines: Record<string, StageEntry[]> = {};
-      jobList.forEach((j: { id: string; hidden_steps: string[] | null }) => {
-        const hidden = j.hidden_steps || [];
-        const custom = customByJob[j.id] || [];
-        pipelines[j.id] = buildJobPipeline(hidden, custom);
-      });
-      setJobPipelines(pipelines);
-
       const jobIds = jobList.map((j: { id: string }) => j.id);
 
+      // 3. Fetch échanges
       if (jobIds.length > 0) {
         const { data: exData } = await supabase
           .from('job_exchanges')
@@ -184,6 +161,7 @@ export default function SynthesePage() {
         setExchanges([]);
       }
 
+      // 4. Fetch actions
       const { data: actionsData } = await supabase
         .from('actions')
         .select('id, nom, organisateur, categorie, date_debut, date_fin, note')
@@ -193,11 +171,23 @@ export default function SynthesePage() {
         .order('date_debut', { ascending: false });
       setActions(actionsData || []);
 
-      setJobs(jobList.map((j: { id: string; title: string; company: string; status: string; sub_status: string; created_at: string; hidden_steps: string[] | null }) => ({
-        ...j,
-        hidden_steps: j.hidden_steps || [],
+      // 5. Construire chaque job avec son pipeline pré-calculé
+      setJobs(jobList.map((j: {
+        id: string; title: string; company: string;
+        status: string; sub_status: string; created_at: string;
+        hidden_steps: string[] | null;
+      }) => ({
+        id: j.id,
+        title: j.title,
+        company: j.company,
+        status: j.status,
+        sub_status: j.sub_status,
+        created_at: j.created_at,
         note: '',
+        // Pipeline = étapes standard (moins hidden) + custom du job, triées par position
+        pipeline: buildPipeline(j.hidden_steps || [], customByJob[j.id] || []),
       })));
+
     } finally {
       setLoading(false);
     }
@@ -217,9 +207,7 @@ export default function SynthesePage() {
   const updateJob = (id: string, field: 'title' | 'company' | 'note', value: string) => {
     setJobs(prev => prev.map(j => j.id === id ? { ...j, [field]: value } : j));
   };
-
   const removeJob = (id: string) => setJobs(prev => prev.filter(j => j.id !== id));
-
   const updateActionNote = (id: string, value: string) => {
     setActions(prev => prev.map(a => a.id === id ? { ...a, note: value } : a));
   };
@@ -380,7 +368,7 @@ export default function SynthesePage() {
                     </td></tr>
                   )}
                   {jobs.map(job => {
-                    const stepInfo = getStepInfo(job.sub_status, job.id, jobPipelines);
+                    const stepInfo = getStepInfo(job.sub_status, job.pipeline);
                     return (
                       <tr key={job.id}>
                         <td style={{ color: '#888', fontSize: 11 }}>{formatDateShort(job.created_at)}</td>
