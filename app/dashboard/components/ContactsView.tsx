@@ -51,6 +51,32 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact }
     )
   }, [contacts, search])
 
+  const colStyle: React.CSSProperties = {
+    fontSize: 10, fontWeight: 800, color: '#888',
+    textTransform: 'uppercase', letterSpacing: '1px', fontFamily: FONT,
+  }
+
+  const btnStyle: React.CSSProperties = {
+    padding: '5px 10px', border: '2px solid #111', borderRadius: 5,
+    fontSize: 10, fontWeight: 800, cursor: 'pointer',
+    background: '#fff', color: '#111',
+    boxShadow: '1px 1px 0 #111', whiteSpace: 'nowrap' as const,
+    fontFamily: FONT,
+  }
+
+  const btnRedStyle: React.CSSProperties = {
+    ...btnStyle,
+    border: '2px solid #E8151B', color: '#E8151B',
+    boxShadow: '1px 1px 0 #E8151B',
+  }
+
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '46px 220px 1fr 180px auto',
+    alignItems: 'center',
+    gap: 14,
+  }
+
   return (
     <div style={{ fontFamily: FONT }}>
 
@@ -58,10 +84,10 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact }
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,
         background: '#fff', border: '2px solid #111', borderRadius: 8,
-        padding: '10px 14px', marginBottom: 20,
+        padding: '9px 14px', marginBottom: 14,
         boxShadow: '3px 3px 0 #111',
       }}>
-        <span style={{ fontSize: 16, color: '#888' }}>🔍</span>
+        <span style={{ fontSize: 14, color: '#888' }}>🔍</span>
         <input
           type="text"
           placeholder="Rechercher par nom, entreprise, poste…"
@@ -69,129 +95,113 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact }
           onChange={e => setSearch(e.target.value)}
           style={{
             border: 'none', outline: 'none', flex: 1,
-            fontSize: 14, fontWeight: 600, fontFamily: FONT,
+            fontSize: 13, fontWeight: 600, fontFamily: FONT,
             color: '#111', background: 'transparent',
           }}
         />
+        <span style={{ fontSize: 11, color: '#888', fontWeight: 700, fontFamily: FONT }}>
+          {filtered.length} contact{filtered.length > 1 ? 's' : ''}
+        </span>
         {search && (
-          <button
-            onClick={() => setSearch('')}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 16, color: '#888', fontFamily: FONT, padding: 0,
-            }}
-          >✕</button>
+          <button onClick={() => setSearch('')} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 15, color: '#888', fontFamily: FONT, padding: 0,
+          }}>✕</button>
         )}
       </div>
 
-      {/* COMPTEUR */}
-      {search && (
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#888', marginBottom: 12 }}>
-          {filtered.length} contact{filtered.length > 1 ? 's' : ''} trouvé{filtered.length > 1 ? 's' : ''}
-        </div>
-      )}
+      {/* EN-TÊTES COLONNES */}
+      <div style={{ ...gridStyle, padding: '0 16px 6px' }}>
+        <div />
+        <div style={colStyle}>Nom</div>
+        <div style={colStyle}>Entreprise</div>
+        <div style={colStyle}>Offre associée</div>
+        <div />
+      </div>
 
-      {/* LISTE HORIZONTALE */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-
+      {/* LIGNES */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {filtered.map((c, i) => {
           const avatarStyle = AVATAR_COLORS[i % AVATAR_COLORS.length]
           const initials = getInitials(c.name)
 
           return (
-            <div
-              key={c.id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 16,
-                background: '#fff', border: '2px solid #111',
-                borderRadius: 10, padding: '14px 18px',
-                boxShadow: '3px 3px 0 #111',
-              }}
-            >
+            <div key={c.id} style={{
+              ...gridStyle,
+              background: '#fff', border: '2px solid #111',
+              borderRadius: 8, padding: '10px 16px',
+              boxShadow: '2px 2px 0 #111',
+            }}>
               {/* AVATAR */}
               <div style={{
-                width: 46, height: 46, borderRadius: '50%',
+                width: 38, height: 38, borderRadius: '50%',
                 background: avatarStyle.bg, border: '2px solid #111',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, fontWeight: 900, color: avatarStyle.color,
+                fontSize: 12, fontWeight: 900, color: avatarStyle.color,
                 flexShrink: 0, fontFamily: FONT,
               }}>
                 {initials}
               </div>
 
-              {/* INFOS */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 900, color: '#111', fontFamily: FONT }}>
+              {/* NOM + RÔLE */}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 900, color: '#111', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {c.name}
                 </div>
                 {c.role && (
-                  <div style={{ fontSize: 12, color: '#555', fontWeight: 600, marginTop: 1, fontFamily: FONT }}>
+                  <div style={{ fontSize: 11, color: '#555', fontWeight: 600, marginTop: 2, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {c.role}
-                  </div>
-                )}
-                {c.company && (
-                  <div style={{ marginTop: 6 }}>
-                    <span style={{
-                      display: 'inline-block', background: '#111', color: '#F5C400',
-                      fontSize: 11, fontWeight: 800, padding: '3px 10px',
-                      borderRadius: 20, fontFamily: FONT,
-                    }}>
-                      {c.company}
-                    </span>
-                  </div>
-                )}
-                {c.job_manual && (
-                  <div style={{ fontSize: 11, color: '#555', fontWeight: 600, marginTop: 5, fontFamily: FONT }}>
-                    💼 <span style={{ color: '#111', fontWeight: 700 }}>{c.job_manual}</span>
-                  </div>
-                )}
-                {c.phone && (
-                  <div style={{ fontSize: 11, color: '#666', fontWeight: 600, marginTop: 4, fontFamily: FONT }}>
-                    📞 {c.phone}
                   </div>
                 )}
               </div>
 
+              {/* ENTREPRISE */}
+              <div style={{ minWidth: 0 }}>
+                {c.company ? (
+                  <span style={{
+                    display: 'inline-block', background: '#111', color: '#F5C400',
+                    fontSize: 10, fontWeight: 800, padding: '2px 9px',
+                    borderRadius: 20, fontFamily: FONT, whiteSpace: 'nowrap',
+                  }}>
+                    {c.company}
+                  </span>
+                ) : c.phone ? (
+                  <span style={{ fontSize: 11, color: '#888', fontWeight: 600, fontFamily: FONT }}>
+                    📞 {c.phone}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 11, color: '#ccc', fontFamily: FONT }}>—</span>
+                )}
+              </div>
+
+              {/* OFFRE ASSOCIÉE */}
+              <div style={{ minWidth: 0 }}>
+                {c.job_manual ? (
+                  <span style={{ fontSize: 11, color: '#555', fontWeight: 600, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                    💼 {c.job_manual}
+                  </span>
+                ) : c.phone && c.company ? (
+                  <span style={{ fontSize: 11, color: '#888', fontWeight: 600, fontFamily: FONT }}>
+                    📞 {c.phone}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 11, color: '#ccc', fontFamily: FONT }}>—</span>
+                )}
+              </div>
+
               {/* BOUTONS */}
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
                 {c.email && (
-                  <button
-                    onClick={() => window.open('mailto:' + c.email)}
-                    style={{
-                      padding: '7px 12px', border: '2px solid #111', borderRadius: 6,
-                      fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                      background: '#fff', color: '#111',
-                      boxShadow: '2px 2px 0 #111', fontFamily: FONT,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
+                  <button onClick={() => window.open('mailto:' + c.email)} style={btnStyle}>
                     Email
                   </button>
                 )}
                 {c.linkedin && (
-                  <button
-                    onClick={() => window.open(c.linkedin!)}
-                    style={{
-                      padding: '7px 12px', border: '2px solid #111', borderRadius: 6,
-                      fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                      background: '#fff', color: '#111',
-                      boxShadow: '2px 2px 0 #111', fontFamily: FONT,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
+                  <button onClick={() => window.open(c.linkedin!)} style={btnStyle}>
                     LinkedIn
                   </button>
                 )}
-                <button
-                  onClick={() => onDeleteContact(c.id)}
-                  style={{
-                    padding: '7px 12px', border: '2px solid #E8151B', borderRadius: 6,
-                    fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                    background: '#fff', color: '#E8151B',
-                    boxShadow: '2px 2px 0 #E8151B', fontFamily: FONT,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+                <button onClick={() => onDeleteContact(c.id)} style={btnRedStyle}>
                   Supprimer
                 </button>
               </div>
@@ -203,20 +213,20 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact }
         {filtered.length === 0 && search && (
           <div style={{
             textAlign: 'center', padding: '40px 20px',
-            color: '#888', fontSize: 14, fontWeight: 700, fontFamily: FONT,
+            color: '#888', fontSize: 13, fontWeight: 700, fontFamily: FONT,
           }}>
-            Aucun contact trouvé pour "{search}"
+            Aucun contact trouvé pour &quot;{search}&quot;
           </div>
         )}
 
-        {/* CARTE AJOUTER */}
+        {/* AJOUTER */}
         <div
           onClick={onAddContact}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '2px dashed #ccc', borderRadius: 10, padding: 20,
-            cursor: 'pointer', color: '#aaa', fontSize: 13, fontWeight: 700,
-            fontFamily: FONT, transition: 'all 0.15s',
+            border: '2px dashed #ccc', borderRadius: 8, padding: 14,
+            cursor: 'pointer', color: '#aaa', fontSize: 12, fontWeight: 700,
+            fontFamily: FONT,
           }}
           onMouseOver={e => {
             const el = e.currentTarget as HTMLElement
@@ -231,7 +241,6 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact }
         >
           + Ajouter un contact
         </div>
-
       </div>
     </div>
   )
