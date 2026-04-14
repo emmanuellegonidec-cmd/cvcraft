@@ -114,18 +114,24 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
     )
   }, [contacts, search])
 
-  // Grille : avatar | nom+rôle | entreprise | offre | échanges | tel | actions
-  const COLS = '46px minmax(140px,1.4fr) minmax(120px,0.9fr) minmax(120px,1.1fr) 90px 110px auto'
-
-  const colLabel: React.CSSProperties = {
-    fontSize: 10, fontWeight: 800, color: '#888',
-    textTransform: 'uppercase', letterSpacing: '1px', fontFamily: FONT,
-  }
-
   const btn: React.CSSProperties = {
     padding: '5px 10px', border: '2px solid #111', borderRadius: 6,
-    fontSize: 11, fontWeight: 800, cursor: 'pointer', background: '#fff', color: '#111',
+    fontSize: 12, fontWeight: 800, cursor: 'pointer', background: '#fff', color: '#111',
     boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' as const, fontFamily: FONT,
+  }
+
+  // Cellule header
+  const th: React.CSSProperties = {
+    fontSize: 12, fontWeight: 800, color: '#888',
+    textTransform: 'uppercase', letterSpacing: '0.8px', fontFamily: FONT,
+    padding: '10px 8px',
+  }
+
+  // Cellule données
+  const td: React.CSSProperties = {
+    padding: '12px 8px',
+    borderTop: '1px solid #F0F0F0',
+    overflow: 'hidden',
   }
 
   return (
@@ -136,90 +142,93 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
         <span style={{ fontSize: 15, color: '#888' }}>🔍</span>
         <input type="text" placeholder="Rechercher par nom, entreprise, poste…" value={search} onChange={e => setSearch(e.target.value)}
           style={{ border: 'none', outline: 'none', flex: 1, fontSize: 14, fontWeight: 600, fontFamily: FONT, color: '#111', background: 'transparent' }} />
-        <span style={{ fontSize: 12, color: '#888', fontWeight: 700, fontFamily: FONT }}>{filtered.length} contact{filtered.length > 1 ? 's' : ''}</span>
+        <span style={{ fontSize: 13, color: '#888', fontWeight: 700, fontFamily: FONT }}>{filtered.length} contact{filtered.length > 1 ? 's' : ''}</span>
         {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#888', padding: 0 }}>✕</button>}
       </div>
 
-      {/* TABLEAU : header + lignes dans le même conteneur pour alignement parfait */}
+      {/* TABLEAU UNIQUE — header + lignes dans le même display:grid */}
       <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '54px 1fr 160px 180px 80px 120px 280px',
+          alignItems: 'center',
+        }}>
 
-        {/* EN-TÊTE */}
-        <div style={{ display: 'grid', gridTemplateColumns: COLS, alignItems: 'center', gap: 12, padding: '8px 14px', background: '#F5F5F0', borderBottom: '2px solid #111' }}>
-          <div />
-          <div style={colLabel}>Nom / Rôle</div>
-          <div style={colLabel}>Entreprise</div>
-          <div style={colLabel}>Offre associée</div>
-          <div style={colLabel}>Échanges</div>
-          <div style={colLabel}>Téléphone</div>
-          <div />
-        </div>
+          {/* ── EN-TÊTES ── */}
+          <div style={{ ...th, background: '#F5F5F0' }} />
+          <div style={{ ...th, background: '#F5F5F0' }}>Nom / Rôle</div>
+          <div style={{ ...th, background: '#F5F5F0' }}>Entreprise</div>
+          <div style={{ ...th, background: '#F5F5F0' }}>Offre associée</div>
+          <div style={{ ...th, background: '#F5F5F0', textAlign: 'center' as const }}>Échanges</div>
+          <div style={{ ...th, background: '#F5F5F0' }}>Téléphone</div>
+          <div style={{ ...th, background: '#F5F5F0', borderBottom: '2px solid #111' }} />
 
-        {/* LIGNES */}
-        {filtered.map((c, i) => {
-          const av = AVATAR_COLORS[i % AVATAR_COLORS.length]
-          const count = c.notes_count ?? 0
-          return (
-            <div key={c.id} style={{ display: 'grid', gridTemplateColumns: COLS, alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: i < filtered.length - 1 ? '1px solid #F0F0F0' : 'none' }}>
+          {/* Ligne de séparation header */}
+          <div style={{ gridColumn: '1 / -1', borderBottom: '2px solid #111' }} />
 
-              {/* AVATAR */}
-              <div style={{ width: 38, height: 38, borderRadius: '50%', background: av.bg, border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: av.color, flexShrink: 0, fontFamily: FONT }}>
-                {getInitials(c.name)}
-              </div>
+          {/* ── LIGNES DE DONNÉES ── */}
+          {filtered.map((c, i) => {
+            const av = AVATAR_COLORS[i % AVATAR_COLORS.length]
+            const count = c.notes_count ?? 0
+            return [
+              // Avatar
+              <div key={`av-${c.id}`} style={{ ...td, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: av.bg, border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: av.color, flexShrink: 0, fontFamily: FONT }}>
+                  {getInitials(c.name)}
+                </div>
+              </div>,
 
-              {/* NOM + RÔLE DESSOUS */}
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 900, color: '#111', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
-                {c.role && <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginTop: 1, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.role}</div>}
-              </div>
+              // Nom + rôle
+              <div key={`nm-${c.id}`} style={td}>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#111', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                {c.role && <div style={{ fontSize: 12, color: '#888', fontWeight: 600, marginTop: 2, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.role}</div>}
+              </div>,
 
-              {/* ENTREPRISE */}
-              <div style={{ minWidth: 0 }}>
+              // Entreprise
+              <div key={`co-${c.id}`} style={td}>
                 {c.company
-                  ? <span style={{ display: 'inline-block', background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '2px 9px', borderRadius: 20, fontFamily: FONT, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.company}</span>
-                  : <span style={{ fontSize: 12, color: '#ddd', fontFamily: FONT }}>—</span>}
-              </div>
+                  ? <span style={{ display: 'inline-block', background: '#111', color: '#F5C400', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, fontFamily: FONT, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.company}</span>
+                  : <span style={{ fontSize: 13, color: '#ccc', fontFamily: FONT }}>—</span>}
+              </div>,
 
-              {/* OFFRE ASSOCIÉE */}
-              <div style={{ minWidth: 0 }}>
+              // Offre associée
+              <div key={`jo-${c.id}`} style={td}>
                 {c.job_manual
-                  ? <span style={{ fontSize: 11, color: '#555', fontWeight: 700, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>💼 {c.job_manual}</span>
-                  : <span style={{ fontSize: 12, color: '#ddd', fontFamily: FONT }}>—</span>}
-              </div>
+                  ? <span style={{ fontSize: 12, color: '#555', fontWeight: 700, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>💼 {c.job_manual}</span>
+                  : <span style={{ fontSize: 13, color: '#ccc', fontFamily: FONT }}>—</span>}
+              </div>,
 
-              {/* ÉCHANGES */}
-              <div>
+              // Échanges
+              <div key={`ex-${c.id}`} style={{ ...td, textAlign: 'center' as const }}>
                 {count > 0
-                  ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F5F5F0', border: '1.5px solid #ddd', borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 800, color: '#111', fontFamily: FONT }}>
-                      💬 {count}
-                    </span>
-                  : <span style={{ fontSize: 12, color: '#ddd', fontFamily: FONT }}>—</span>}
-              </div>
+                  ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F5F5F0', border: '1.5px solid #ddd', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 800, color: '#111', fontFamily: FONT }}>💬 {count}</span>
+                  : <span style={{ fontSize: 13, color: '#ccc', fontFamily: FONT }}>—</span>}
+              </div>,
 
-              {/* TÉLÉPHONE */}
-              <div style={{ minWidth: 0 }}>
+              // Téléphone
+              <div key={`ph-${c.id}`} style={td}>
                 {c.phone
-                  ? <span style={{ fontSize: 11, color: '#555', fontWeight: 600, fontFamily: FONT, whiteSpace: 'nowrap' }}>📞 {c.phone}</span>
-                  : <span style={{ fontSize: 12, color: '#ddd', fontFamily: FONT }}>—</span>}
-              </div>
+                  ? <span style={{ fontSize: 12, color: '#555', fontWeight: 600, fontFamily: FONT, whiteSpace: 'nowrap' }}>📞 {c.phone}</span>
+                  : <span style={{ fontSize: 13, color: '#ccc', fontFamily: FONT }}>—</span>}
+              </div>,
 
-              {/* BOUTONS : Email · LinkedIn · Modifier · Supprimer */}
-              <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+              // Boutons : Email · LinkedIn · Modifier · Supprimer
+              <div key={`bt-${c.id}`} style={{ ...td, display: 'flex', gap: 5, justifyContent: 'flex-end', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                 {c.email && <button onClick={() => window.open('mailto:' + c.email)} style={btn}>Email</button>}
                 {c.linkedin && <button onClick={() => window.open(c.linkedin!)} style={btn}>LinkedIn</button>}
                 <button onClick={() => setEditContact(c)} style={{ ...btn, background: '#F5C400' }}>✏️ Modifier</button>
                 <button onClick={() => onDeleteContact(c.id)} style={{ ...btn, border: '2px solid #E8151B', color: '#E8151B', boxShadow: '2px 2px 0 #E8151B', background: '#fff' }}>Supprimer</button>
-              </div>
+              </div>,
+            ]
+          })}
 
+          {filtered.length === 0 && search && (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 20px', color: '#888', fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
+              Aucun contact trouvé pour &quot;{search}&quot;
             </div>
-          )
-        })}
+          )}
 
-        {filtered.length === 0 && search && (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: '#888', fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
-            Aucun contact trouvé pour &quot;{search}&quot;
-          </div>
-        )}
-
+        </div>
       </div>
 
       {/* AJOUTER */}
