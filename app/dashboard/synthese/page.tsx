@@ -237,6 +237,7 @@ export default function SynthesePage() {
         .print-title { display: none; }
         @media print {
           @page { margin: 1.5cm; }
+          * { font-family: Arial, sans-serif !important; }
           .no-print { display: none !important; }
           *[style*="position: fixed"], *[style*="position:fixed"] { display: none !important; }
           .synthese-sidebar { display: none !important; }
