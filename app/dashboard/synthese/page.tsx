@@ -13,26 +13,25 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archivé',
 };
 
-// Étapes standard avec positions fixes (1000, 2000...)
-// Les étapes custom s'intercalent avec des valeurs intermédiaires
+// 6 étapes standard avec positions fixes
+// Les étapes custom s'intercalent avec des valeurs intermédiaires (ex: 4250 entre 4000 et 5000)
 const BASE_STEPS: { key: string; label: string; position: number }[] = [
-  { key: 'to_apply',           label: 'Envie de postuler',     position: 1000 },
-  { key: 'applied',            label: 'Postulé',                position: 2000 },
-  { key: 'phone_interview',    label: 'Entretien téléphonique', position: 3000 },
-  { key: 'hr_interview',       label: 'Entretien RH',           position: 4000 },
-  { key: 'manager_interview',  label: 'Entretien manager',      position: 5000 },
-  { key: 'director_interview', label: 'Entretien direction',    position: 6000 },
-  { key: 'drh_interview',      label: 'Entretien DRH',          position: 7000 },
-  { key: 'offer_received',     label: 'Offre reçue',            position: 8000 },
+  { key: 'to_apply',          label: 'Envie de postuler',     position: 1000 },
+  { key: 'applied',           label: 'Postulé',                position: 2000 },
+  { key: 'phone_interview',   label: 'Entretien téléphonique', position: 3000 },
+  { key: 'hr_interview',      label: 'Entretien RH',           position: 4000 },
+  { key: 'manager_interview', label: 'Entretien manager',      position: 5000 },
+  { key: 'offer_received',    label: 'Offre reçue',            position: 6000 },
 ];
 
 interface StageEntry {
-  id: string;
+  id: string;      // clé standard (ex: 'hr_interview') ou UUID custom
   label: string;
   position: number;
 }
 
-// Pipeline réel d'un job = étapes standard (moins hidden) + étapes custom, triées par position
+// Construit le vrai pipeline d'un job :
+// (6 étapes standard - étapes supprimées) + étapes custom, triées par position
 function buildPipeline(hiddenSteps: string[], customStages: StageEntry[]): StageEntry[] {
   const base = BASE_STEPS
     .filter(s => !hiddenSteps.includes(s.key))
@@ -40,15 +39,21 @@ function buildPipeline(hiddenSteps: string[], customStages: StageEntry[]): Stage
   return [...base, ...customStages].sort((a, b) => a.position - b.position);
 }
 
+// Cherche le sub_status dans le pipeline du job → rang et total réels
 function getStepInfo(sub_status: string, pipeline: StageEntry[]) {
+  if (!sub_status || pipeline.length === 0) return { label: '—', step: null, total: null };
+
+  // Normaliser l'alias offer → offer_received
   const normalized = sub_status === 'offer' ? 'offer_received' : sub_status;
+
   const idx = pipeline.findIndex(s => s.id === normalized);
   if (idx >= 0) {
     return { label: pipeline[idx].label, step: idx + 1, total: pipeline.length };
   }
-  // Fallback label sans numéro
+
+  // Fallback : label brut sans numéro
   const base = BASE_STEPS.find(s => s.key === normalized);
-  return { label: base?.label || sub_status || '—', step: null, total: null };
+  return { label: base?.label || sub_status, step: null, total: null };
 }
 
 function formatDateFr(d: string | null) {
@@ -61,22 +66,15 @@ function formatDateShort(d: string | null) {
 }
 
 interface Job {
-  id: string;
-  title: string;
-  company: string;
-  status: string;
-  sub_status: string;
-  created_at: string;
-  note: string;
-  pipeline: StageEntry[]; // pipeline réel pré-calculé pour ce job
+  id: string; title: string; company: string; status: string;
+  sub_status: string; created_at: string; note: string;
+  pipeline: StageEntry[]; // pipeline réel pré-calculé
 }
-
 interface Exchange {
   id: string; job_id: string; date: string | null;
   step_label: string; content: string | null;
   job_title?: string; job_company?: string;
 }
-
 interface ActionItem {
   id: string; nom: string; organisateur: string | null;
   categorie: string | null; date_debut: string | null;
@@ -109,21 +107,24 @@ export default function SynthesePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/auth/login'); return; }
 
-      // 1. Fetch toutes les étapes custom (avec job_id et position)
+      // 1. Étapes custom (avec job_id et position)
       const { data: stagesData } = await supabase
         .from('pipeline_stages')
         .select('id, label, job_id, position')
         .eq('user_id', user.id)
         .not('job_id', 'is', null);
 
-      // Regrouper les stages custom par job_id
+      // Regrouper par job_id et trier par position
       const customByJob: Record<string, StageEntry[]> = {};
       (stagesData || []).forEach((s: { id: string; label: string; job_id: string; position: number }) => {
         if (!customByJob[s.job_id]) customByJob[s.job_id] = [];
         customByJob[s.job_id].push({ id: s.id, label: s.label, position: s.position });
       });
+      Object.keys(customByJob).forEach(jobId => {
+        customByJob[jobId].sort((a, b) => a.position - b.position);
+      });
 
-      // 2. Fetch les jobs avec hidden_steps
+      // 2. Jobs avec hidden_steps
       let query = supabase
         .from('jobs')
         .select('id, title, company, status, sub_status, created_at, hidden_steps')
@@ -139,7 +140,7 @@ export default function SynthesePage() {
       const jobList = jobsData || [];
       const jobIds = jobList.map((j: { id: string }) => j.id);
 
-      // 3. Fetch échanges
+      // 3. Échanges
       if (jobIds.length > 0) {
         const { data: exData } = await supabase
           .from('job_exchanges')
@@ -161,7 +162,7 @@ export default function SynthesePage() {
         setExchanges([]);
       }
 
-      // 4. Fetch actions
+      // 4. Actions/Événements
       const { data: actionsData } = await supabase
         .from('actions')
         .select('id, nom, organisateur, categorie, date_debut, date_fin, note')
@@ -171,7 +172,7 @@ export default function SynthesePage() {
         .order('date_debut', { ascending: false });
       setActions(actionsData || []);
 
-      // 5. Construire chaque job avec son pipeline pré-calculé
+      // 5. Jobs avec pipeline pré-calculé (stocké dans l'objet job)
       setJobs(jobList.map((j: {
         id: string; title: string; company: string;
         status: string; sub_status: string; created_at: string;
@@ -184,7 +185,7 @@ export default function SynthesePage() {
         sub_status: j.sub_status,
         created_at: j.created_at,
         note: '',
-        // Pipeline = étapes standard (moins hidden) + custom du job, triées par position
+        // Pipeline = (6 standard - supprimées) + custom du job, triées par position
         pipeline: buildPipeline(j.hidden_steps || [], customByJob[j.id] || []),
       })));
 
