@@ -237,7 +237,7 @@ export default function SynthesePage() {
         .print-title { display: none; }
         @media print {
           @page { margin: 1.5cm; }
-          * { font-family: Arial, sans-serif !important; }
+          * { font-family: 'Montserrat', Arial, sans-serif !important; }
           .no-print { display: none !important; }
           *[style*="position: fixed"], *[style*="position:fixed"] { display: none !important; }
           .synthese-sidebar { display: none !important; }
@@ -488,7 +488,7 @@ export default function SynthesePage() {
           )}
 
           <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn-red" onClick={() => window.print()}>Exporter en PDF</button>
+            <button className="btn-red" onClick={async () => { await document.fonts.ready; window.print(); }}>Exporter en PDF</button>
           </div>
 
         </div>
