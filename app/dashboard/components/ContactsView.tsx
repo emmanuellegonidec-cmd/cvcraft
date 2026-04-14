@@ -150,7 +150,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
       <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '54px minmax(170px,260px) minmax(130px,160px) minmax(180px,220px) 85px 130px auto',
+          gridTemplateColumns: '54px 230px 160px 1fr 80px 140px auto',
           alignItems: 'center',
         }}>
 
@@ -213,7 +213,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
               </div>,
 
               // Boutons : Email · LinkedIn · Modifier · Supprimer
-              <div key={`bt-${c.id}`} style={{ ...td, display: 'flex', gap: 5, justifyContent: 'flex-end', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+              <div key={`bt-${c.id}`} style={{ ...td, display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                 {c.email && <button onClick={() => window.open('mailto:' + c.email)} style={btn}>Email</button>}
                 {c.linkedin && <button onClick={() => window.open(c.linkedin!)} style={btn}>LinkedIn</button>}
                 <button onClick={() => setEditContact(c)} style={{ ...btn, background: '#F5C400' }}>✏️ Modifier</button>
