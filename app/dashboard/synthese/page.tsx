@@ -13,45 +13,58 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archivé',
 };
 
-// Labels pour les sub_status standard (pas d'UUID) — pas de numéro d'étape
-const STANDARD_SUB_STATUS_LABELS: Record<string, string> = {
-  to_apply: 'Envie de postuler',
-  applied: 'Postulé',
-  phone_interview: 'Entretien téléphonique',
-  hr_interview: 'Entretien RH',
-  manager_interview: 'Entretien manager',
-  director_interview: 'Entretien direction',
-  drh_interview: 'Entretien DRH',
-  offer_received: 'Offre reçue',
-  offer: 'Offre reçue',
-};
+// Étapes standard avec leurs positions fixes (1000, 2000, 3000...)
+// Les étapes custom s'intercalent entre ces valeurs
+const BASE_STEPS: { key: string; label: string; position: number }[] = [
+  { key: 'to_apply',           label: 'Envie de postuler',       position: 1000 },
+  { key: 'applied',            label: 'Postulé',                  position: 2000 },
+  { key: 'phone_interview',    label: 'Entretien téléphonique',   position: 3000 },
+  { key: 'hr_interview',       label: 'Entretien RH',             position: 4000 },
+  { key: 'manager_interview',  label: 'Entretien manager',        position: 5000 },
+  { key: 'director_interview', label: 'Entretien direction',      position: 6000 },
+  { key: 'drh_interview',      label: 'Entretien DRH',            position: 7000 },
+  { key: 'offer_received',     label: 'Offre reçue',              position: 8000 },
+];
 
 interface StageEntry {
-  id: string;
+  id: string;       // clé standard (ex: 'manager_interview') ou UUID custom
   label: string;
   position: number;
 }
 
-// Les positions sont des valeurs type 1000/2000/5250...
-// On trie par position et on utilise le RANG dans la liste triée comme numéro d'étape
+// Construit le pipeline réel pour un job :
+// étapes standard (moins hidden_steps) + étapes custom, triées par position
+function buildJobPipeline(
+  hiddenSteps: string[],
+  customStages: StageEntry[]
+): StageEntry[] {
+  const base = BASE_STEPS
+    .filter(s => !hiddenSteps.includes(s.key))
+    .map(s => ({ id: s.key, label: s.label, position: s.position }));
+
+  return [...base, ...customStages].sort((a, b) => a.position - b.position);
+}
+
 function getStepInfo(
   sub_status: string,
   jobId: string,
-  jobStagesMap: Record<string, StageEntry[]>
+  jobPipelines: Record<string, StageEntry[]>
 ) {
-  const stages = jobStagesMap[jobId] || [];
-  // Chercher le stage custom (UUID) dans les stages du job
-  const idx = stages.findIndex(s => s.id === sub_status);
+  const normalized = sub_status === 'offer' ? 'offer_received' : sub_status;
+  const pipeline = jobPipelines[jobId] || [];
+
+  const idx = pipeline.findIndex(s => s.id === normalized);
   if (idx >= 0) {
     return {
-      label: stages[idx].label,
-      step: idx + 1,        // rang dans la liste triée (1-based)
-      total: stages.length, // total des étapes custom pour CE job
+      label: pipeline[idx].label,
+      step: idx + 1,
+      total: pipeline.length,
     };
   }
-  // sub_status standard (clé string) — label seulement, pas de numéro
-  const label = STANDARD_SUB_STATUS_LABELS[sub_status] || sub_status || '—';
-  return { label, step: null, total: null };
+
+  // Fallback : label brut sans numéro
+  const baseStep = BASE_STEPS.find(s => s.key === normalized);
+  return { label: baseStep?.label || sub_status || '—', step: null, total: null };
 }
 
 function formatDateFr(d: string | null) {
@@ -67,6 +80,7 @@ function formatDateShort(d: string | null) {
 interface Job {
   id: string; title: string; company: string; status: string;
   sub_status: string; created_at: string; note: string;
+  hidden_steps: string[];
 }
 
 interface Exchange {
@@ -91,10 +105,9 @@ export default function SynthesePage() {
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(false);
-  // Map job_id → liste d'étapes triées par position
-  const [jobStagesMap, setJobStagesMap] = useState<Record<string, StageEntry[]>>({});
+  // Pipeline réel par job_id (étapes standard filtrées + custom, triées)
+  const [jobPipelines, setJobPipelines] = useState<Record<string, StageEntry[]>>({});
 
-  // Police Montserrat via <link> pour éviter le freeze Chrome à l'impression
   useEffect(() => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -110,29 +123,24 @@ export default function SynthesePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/auth/login'); return; }
 
-      // Fetch toutes les étapes custom avec job_id et position
-      // position = valeur brute (ex: 1000, 2000, 5250...) — il faut trier et utiliser le rang
+      // Fetch les étapes custom avec job_id et position
       const { data: stagesData } = await supabase
         .from('pipeline_stages')
         .select('id, label, job_id, position')
         .eq('user_id', user.id)
-        .not('job_id', 'is', null); // uniquement les étapes liées à une offre
+        .not('job_id', 'is', null);
 
-      // Construire la map job_id → [stages triés par position]
-      const rawMap: Record<string, StageEntry[]> = {};
+      // Regrouper les stages custom par job_id
+      const customByJob: Record<string, StageEntry[]> = {};
       (stagesData || []).forEach((s: { id: string; label: string; job_id: string; position: number }) => {
-        if (!rawMap[s.job_id]) rawMap[s.job_id] = [];
-        rawMap[s.job_id].push({ id: s.id, label: s.label, position: s.position });
+        if (!customByJob[s.job_id]) customByJob[s.job_id] = [];
+        customByJob[s.job_id].push({ id: s.id, label: s.label, position: s.position });
       });
-      // Trier chaque liste par position croissante
-      Object.keys(rawMap).forEach(jobId => {
-        rawMap[jobId].sort((a, b) => a.position - b.position);
-      });
-      setJobStagesMap(rawMap);
 
+      // Fetch les jobs avec hidden_steps
       let query = supabase
         .from('jobs')
-        .select('id, title, company, status, sub_status, created_at')
+        .select('id, title, company, status, sub_status, created_at, hidden_steps')
         .eq('user_id', user.id)
         .gte('created_at', dateFrom)
         .lte('created_at', dateTo + 'T23:59:59')
@@ -143,6 +151,16 @@ export default function SynthesePage() {
       if (jobsError) { console.error('jobs error', jobsError); return; }
 
       const jobList = jobsData || [];
+
+      // Construire le pipeline réel pour chaque job
+      const pipelines: Record<string, StageEntry[]> = {};
+      jobList.forEach((j: { id: string; hidden_steps: string[] | null }) => {
+        const hidden = j.hidden_steps || [];
+        const custom = customByJob[j.id] || [];
+        pipelines[j.id] = buildJobPipeline(hidden, custom);
+      });
+      setJobPipelines(pipelines);
+
       const jobIds = jobList.map((j: { id: string }) => j.id);
 
       if (jobIds.length > 0) {
@@ -175,8 +193,10 @@ export default function SynthesePage() {
         .order('date_debut', { ascending: false });
       setActions(actionsData || []);
 
-      setJobs(jobList.map((j: { id: string; title: string; company: string; status: string; sub_status: string; created_at: string }) => ({
-        ...j, note: '',
+      setJobs(jobList.map((j: { id: string; title: string; company: string; status: string; sub_status: string; created_at: string; hidden_steps: string[] | null }) => ({
+        ...j,
+        hidden_steps: j.hidden_steps || [],
+        note: '',
       })));
     } finally {
       setLoading(false);
@@ -246,7 +266,6 @@ export default function SynthesePage() {
 
       <div className="synthese-page">
 
-        {/* Sidebar */}
         <aside className="synthese-sidebar no-print">
           <div onClick={() => router.push('/')} style={{ padding: '18px 16px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
@@ -288,7 +307,6 @@ export default function SynthesePage() {
           </div>
         </aside>
 
-        {/* Contenu */}
         <div className="synthese-content">
 
           <div className="screen-title no-print" style={{ marginBottom: 28 }}>
@@ -362,7 +380,7 @@ export default function SynthesePage() {
                     </td></tr>
                   )}
                   {jobs.map(job => {
-                    const stepInfo = getStepInfo(job.sub_status, job.id, jobStagesMap);
+                    const stepInfo = getStepInfo(job.sub_status, job.id, jobPipelines);
                     return (
                       <tr key={job.id}>
                         <td style={{ color: '#888', fontSize: 11 }}>{formatDateShort(job.created_at)}</td>
