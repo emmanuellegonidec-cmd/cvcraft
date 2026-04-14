@@ -5,21 +5,16 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 
 const STATUS_LABELS: Record<string, string> = {
-  to_apply: 'À postuler', applied: 'Postulé', in_progress: 'En cours',
-  offer_received: 'Offre reçue', offer: 'Offre reçue', archived: 'Archivé',
-};
-
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  to_apply:       { bg: '#F1EFE8', color: '#5F5E5A' },
-  applied:        { bg: '#FAEEDA', color: '#854F0B' },
-  in_progress:    { bg: '#E6F1FB', color: '#185FA5' },
-  offer_received: { bg: '#EAF3DE', color: '#3B6D11' },
-  offer:          { bg: '#EAF3DE', color: '#3B6D11' },
-  archived:       { bg: '#FCEBEB', color: '#A32D2D' },
+  to_apply: 'Envie de postuler',
+  applied: 'Postulé',
+  in_progress: 'En cours',
+  offer_received: 'Offre reçue',
+  offer: 'Offre reçue',
+  archived: 'Archivé',
 };
 
 const PIPELINE_STEPS: { key: string; label: string }[] = [
-  { key: 'to_apply',           label: 'Envoi de postuler' },
+  { key: 'to_apply',           label: 'Envie de postuler' },
   { key: 'applied',            label: 'Postulé' },
   { key: 'phone_interview',    label: 'Entretien téléphonique' },
   { key: 'hr_interview',       label: 'Entretien RH' },
@@ -27,14 +22,14 @@ const PIPELINE_STEPS: { key: string; label: string }[] = [
   { key: 'director_interview', label: 'Entretien direction' },
   { key: 'drh_interview',      label: 'Entretien DRH' },
   { key: 'offer_received',     label: 'Offre reçue' },
-  { key: 'offer',              label: 'Offre reçue' },
 ];
 
 function getStepInfo(sub_status: string, pipelineStages: Record<string, string>) {
-  const idx = PIPELINE_STEPS.findIndex(s => s.key === sub_status);
-  if (idx >= 0) return { label: PIPELINE_STEPS[idx].label, step: idx + 1, total: 8 };
-  if (pipelineStages[sub_status]) return { label: pipelineStages[sub_status], step: null, total: null };
-  return { label: sub_status || '—', step: null, total: null };
+  const normalized = sub_status === 'offer' ? 'offer_received' : sub_status;
+  const idx = PIPELINE_STEPS.findIndex(s => s.key === normalized);
+  if (idx >= 0) return { step: idx + 1, total: PIPELINE_STEPS.length };
+  if (pipelineStages[sub_status]) return { step: null, total: null };
+  return { step: null, total: null };
 }
 
 function formatDateFr(d: string | null) {
@@ -168,7 +163,6 @@ export default function SynthesePage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap');
         * { box-sizing: border-box; }
         .synthese-page { font-family: 'Montserrat', sans-serif; display: flex; min-height: 100vh; background: #f5f5f0; }
         .synthese-sidebar { width: 200px; min-width: 200px; background: #0f0f0f; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; border-right: 1px solid #1e1e1e; }
@@ -186,9 +180,6 @@ export default function SynthesePage() {
         .btn-delete { background: transparent; border: 1px solid #ddd; border-radius: 4px; padding: 3px 8px; font-size: 11px; color: #bbb; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.12s; }
         .btn-delete:hover { background: #FCEBEB; border-color: #E8151B; color: #E8151B; }
         input[type=date], select { border: 2px solid #111; border-radius: 4px; padding: 7px 10px; font-size: 13px; font-family: 'Montserrat', sans-serif; background: #fff; color: #111; }
-        .nav-btn { display: flex; align-items: center; padding: 9px 12px; border: none; border-left: 3px solid transparent; background: transparent; color: #888; font-family: Montserrat,sans-serif; font-weight: 500; font-size: 14px; cursor: pointer; text-align: left; width: 100%; transition: all 0.12s; }
-        .nav-btn:hover { background: #161616; color: #ccc; }
-        .nav-btn.active { border-left: 3px solid #E8151B; background: #1c1c1c; color: #fff; font-weight: 700; }
         .note-editable:empty:before { content: 'Écrire ici...'; color: #ccc; font-style: italic; }
         .print-title { display: none; }
         @media print {
@@ -299,7 +290,7 @@ export default function SynthesePage() {
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ flex: 1, minWidth: 130 }} />
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ flex: 1, minWidth: 160 }}>
               <option value="all">Tous les statuts</option>
-              <option value="to_apply">À postuler</option>
+              <option value="to_apply">Envie de postuler</option>
               <option value="applied">Postulé</option>
               <option value="in_progress">En cours</option>
               <option value="offer_received">Offre reçue</option>
@@ -330,15 +321,15 @@ export default function SynthesePage() {
               <table>
                 <colgroup>
                   <col style={{ width: '9%' }} />
-                  <col style={{ width: '17%' }} />
+                  <col style={{ width: '20%' }} />
+                  <col style={{ width: '15%' }} />
                   <col style={{ width: '13%' }} />
-                  <col style={{ width: '11%' }} />
-                  <col style={{ width: '16%' }} />
-                  <col style={{ width: '27%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '23%' }} />
                   <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
-                  <tr>{['Date','Poste','Entreprise','Statut','Étape pipeline','Notes',''].map(h => <th key={h}>{h}</th>)}</tr>
+                  <tr>{['Date','Poste','Entreprise','Statut','Étape parcours','Notes',''].map(h => <th key={h}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {jobs.length === 0 && (
@@ -365,14 +356,11 @@ export default function SynthesePage() {
                             {job.company}
                           </div>
                         </td>
-                        <td>
-                          <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 99, border: '1px solid #111', background: STATUS_COLORS[job.status]?.bg || '#F1EFE8', color: STATUS_COLORS[job.status]?.color || '#5F5E5A' }}>
-                            {STATUS_LABELS[job.status] || job.status}
-                          </span>
+                        <td style={{ fontSize: 12, fontWeight: 600, color: '#111' }}>
+                          {STATUS_LABELS[job.status] || job.status}
                         </td>
-                        <td>
-                          <div style={{ fontSize: 12, color: '#111', fontWeight: 600 }}>{stepInfo.label}</div>
-                          {stepInfo.step && <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>Étape {stepInfo.step}/{stepInfo.total}</div>}
+                        <td style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>
+                          {stepInfo.step ? `Étape ${stepInfo.step}/${stepInfo.total}` : '—'}
                         </td>
                         <td>
                           <div
@@ -415,11 +403,7 @@ export default function SynthesePage() {
                       <td style={{ color: '#888', fontSize: 11 }}>{formatDateShort(ex.date)}</td>
                       <td style={{ fontWeight: 600 }}>{ex.job_title}</td>
                       <td>{ex.job_company}</td>
-                      <td>
-                        <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, border: '1px solid #ddd', background: '#f5f5f0', color: '#555' }}>
-                          {ex.step_label}
-                        </span>
-                      </td>
+                      <td style={{ fontSize: 12, color: '#555' }}>{ex.step_label}</td>
                       <td style={{ fontSize: 12, color: '#555' }}>{ex.content || '—'}</td>
                     </tr>
                   ))}
@@ -450,11 +434,7 @@ export default function SynthesePage() {
                       <td style={{ color: '#888', fontSize: 11 }}>{formatDateShort(a.date_debut)}</td>
                       <td style={{ fontWeight: 600, fontSize: 12 }}>{a.nom}</td>
                       <td style={{ fontSize: 12 }}>{a.organisateur || '—'}</td>
-                      <td>
-                        <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, border: '1px solid #ddd', background: '#f5f5f0', color: '#555' }}>
-                          {a.categorie || '—'}
-                        </span>
-                      </td>
+                      <td style={{ fontSize: 12, color: '#555' }}>{a.categorie || '—'}</td>
                       <td>
                         <div
                           contentEditable
