@@ -13,16 +13,18 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archivé',
 };
 
-const PIPELINE_STEPS: { key: string; label: string }[] = [
-  { key: 'to_apply',           label: 'Envie de postuler' },
-  { key: 'applied',            label: 'Postulé' },
-  { key: 'phone_interview',    label: 'Entretien téléphonique' },
-  { key: 'hr_interview',       label: 'Entretien RH' },
-  { key: 'manager_interview',  label: 'Entretien manager' },
-  { key: 'director_interview', label: 'Entretien direction' },
-  { key: 'drh_interview',      label: 'Entretien DRH' },
-  { key: 'offer_received',     label: 'Offre reçue' },
-];
+// Labels de secours pour les sub_status standard (pas de numéro d'étape affiché)
+const STANDARD_SUB_STATUS_LABELS: Record<string, string> = {
+  to_apply: 'Envie de postuler',
+  applied: 'Postulé',
+  phone_interview: 'Entretien téléphonique',
+  hr_interview: 'Entretien RH',
+  manager_interview: 'Entretien manager',
+  director_interview: 'Entretien direction',
+  drh_interview: 'Entretien DRH',
+  offer_received: 'Offre reçue',
+  offer: 'Offre reçue',
+};
 
 interface StageDetail {
   label: string;
@@ -30,26 +32,22 @@ interface StageDetail {
   position: number;
 }
 
+// Retourne le label + étape uniquement depuis pipeline_stages (dynamic par offre)
 function getStepInfo(
   sub_status: string,
   jobId: string,
   stagesDetailMap: Record<string, StageDetail>,
   jobStageCounts: Record<string, number>
 ) {
-  const normalized = sub_status === 'offer' ? 'offer_received' : sub_status;
-  const idx = PIPELINE_STEPS.findIndex(s => s.key === normalized);
-  if (idx >= 0) {
-    return { label: PIPELINE_STEPS[idx].label, step: idx + 1, total: PIPELINE_STEPS.length };
-  }
+  // Étape custom (UUID dans pipeline_stages)
   const stageInfo = stagesDetailMap[sub_status];
   if (stageInfo) {
-    return {
-      label: stageInfo.label,
-      step: stageInfo.position,
-      total: jobStageCounts[jobId] ?? null,
-    };
+    const total = jobStageCounts[jobId] ?? null;
+    return { label: stageInfo.label, step: stageInfo.position, total };
   }
-  return { label: '—', step: null, total: null };
+  // Étape standard (clé string) — label seulement, pas de numéro d'étape
+  const label = STANDARD_SUB_STATUS_LABELS[sub_status] || sub_status || '—';
+  return { label, step: null, total: null };
 }
 
 function formatDateFr(d: string | null) {
@@ -108,7 +106,8 @@ export default function SynthesePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/auth/login'); return; }
 
-      // Fetch pipeline_stages avec job_id et position pour calculer le vrai total par offre
+      // Fetch toutes les étapes custom avec job_id et position
+      // → permet de calculer le total réel par offre
       const { data: stagesData } = await supabase
         .from('pipeline_stages')
         .select('id, label, job_id, position')
@@ -116,10 +115,12 @@ export default function SynthesePage() {
 
       const detailMap: Record<string, StageDetail> = {};
       const countMap: Record<string, number> = {};
+
       (stagesData || []).forEach((s: { id: string; label: string; job_id: string; position: number }) => {
         detailMap[s.id] = { label: s.label, job_id: s.job_id, position: s.position };
         countMap[s.job_id] = (countMap[s.job_id] || 0) + 1;
       });
+
       setStagesDetailMap(detailMap);
       setJobStageCounts(countMap);
 
@@ -249,28 +250,19 @@ export default function SynthesePage() {
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>Recherche</div>
-            {[
-              { label: 'Tableau de bord' },
-              { label: 'Candidatures' },
-              { label: 'Contacts' },
-              { label: 'Entretiens' },
-              { label: 'Événements' },
-              { label: 'Statistiques' },
-            ].map(item => (
-              <button key={item.label}
+            {['Tableau de bord','Candidatures','Contacts','Entretiens','Événements','Statistiques'].map(label => (
+              <button key={label}
                 onClick={() => router.push('/dashboard')}
                 style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
-              >{item.label}</button>
+              >{label}</button>
             ))}
 
             <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>Outils</div>
-
             <button style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid #E8151B', borderRadius: 0, background: '#1c1c1c', color: '#fff', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
               Synthèse
             </button>
-
             <button
               onClick={() => router.push('/dashboard/help')}
               style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s' }}
@@ -287,9 +279,7 @@ export default function SynthesePage() {
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#242424'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
             >
               <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#fff', flexShrink: 0 }}>E</div>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Mon profil</div>
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Mon profil</div>
             </button>
             <button
               onClick={() => router.push('/')}
@@ -303,7 +293,6 @@ export default function SynthesePage() {
         {/* Contenu */}
         <div className="synthese-content">
 
-          {/* Titre écran */}
           <div className="screen-title no-print" style={{ marginBottom: 28 }}>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: '#111', margin: 0, fontFamily: 'Montserrat,sans-serif' }}>
               Synthèse <span style={{ color: '#E8151B' }}>de mes candidatures</span>
@@ -311,11 +300,8 @@ export default function SynthesePage() {
             <p style={{ fontSize: 14, color: '#888', marginTop: 4 }}>Exportez un bilan complet de votre recherche d'emploi</p>
           </div>
 
-          {/* Titre PDF uniquement */}
           <div className="print-title">
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111', margin: '0 0 4px 0', fontFamily: 'Montserrat,sans-serif' }}>
-              Bilan d'activité
-            </h1>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111', margin: '0 0 4px 0', fontFamily: 'Montserrat,sans-serif' }}>Bilan d'activité</h1>
             <p style={{ fontSize: 13, color: '#555', margin: 0, fontFamily: 'Montserrat,sans-serif' }}>
               Période : {formatDateFr(dateFrom)} → {formatDateFr(dateTo)}
             </p>
@@ -400,20 +386,15 @@ export default function SynthesePage() {
                           {STATUS_LABELS[job.status] || job.status}
                         </td>
                         <td>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>
-                            {stepInfo.label !== '—' ? stepInfo.label : '—'}
-                          </div>
-                          {stepInfo.step && (
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>{stepInfo.label}</div>
+                          {stepInfo.step !== null && (
                             <div style={{ fontSize: 10, color: '#888', marginTop: 2, fontFamily: 'Montserrat,sans-serif' }}>
-                              Étape {stepInfo.step}{stepInfo.total ? `/${stepInfo.total}` : ''}
+                              Étape {stepInfo.step}{stepInfo.total !== null ? `/${stepInfo.total}` : ''}
                             </div>
                           )}
                         </td>
                         <td>
-                          <div
-                            contentEditable
-                            suppressContentEditableWarning
-                            className="note-editable"
+                          <div contentEditable suppressContentEditableWarning className="note-editable"
                             style={{ fontSize: 12, color: '#333', outline: 'none', minHeight: 36, cursor: 'text', lineHeight: 1.6 }}
                             onBlur={e => updateJob(job.id, 'note', e.currentTarget.textContent || '')}
                           />
@@ -483,10 +464,7 @@ export default function SynthesePage() {
                       <td style={{ fontSize: 12 }}>{a.organisateur || '—'}</td>
                       <td style={{ fontSize: 12, color: '#555' }}>{a.categorie || '—'}</td>
                       <td>
-                        <div
-                          contentEditable
-                          suppressContentEditableWarning
-                          className="note-editable"
+                        <div contentEditable suppressContentEditableWarning className="note-editable"
                           style={{ fontSize: 12, color: '#333', outline: 'none', minHeight: 28, cursor: 'text', lineHeight: 1.6 }}
                           onBlur={e => updateActionNote(a.id, e.currentTarget.textContent || '')}
                         >
