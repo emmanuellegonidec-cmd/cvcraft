@@ -24,12 +24,32 @@ const PIPELINE_STEPS: { key: string; label: string }[] = [
   { key: 'offer_received',     label: 'Offre reçue' },
 ];
 
-function getStepInfo(sub_status: string, pipelineStages: Record<string, string>) {
+interface StageDetail {
+  label: string;
+  job_id: string;
+  position: number;
+}
+
+function getStepInfo(
+  sub_status: string,
+  jobId: string,
+  stagesDetailMap: Record<string, StageDetail>,
+  jobStageCounts: Record<string, number>
+) {
   const normalized = sub_status === 'offer' ? 'offer_received' : sub_status;
   const idx = PIPELINE_STEPS.findIndex(s => s.key === normalized);
-  if (idx >= 0) return { step: idx + 1, total: PIPELINE_STEPS.length };
-  if (pipelineStages[sub_status]) return { step: null, total: null };
-  return { step: null, total: null };
+  if (idx >= 0) {
+    return { label: PIPELINE_STEPS[idx].label, step: idx + 1, total: PIPELINE_STEPS.length };
+  }
+  const stageInfo = stagesDetailMap[sub_status];
+  if (stageInfo) {
+    return {
+      label: stageInfo.label,
+      step: stageInfo.position,
+      total: jobStageCounts[jobId] ?? null,
+    };
+  }
+  return { label: '—', step: null, total: null };
 }
 
 function formatDateFr(d: string | null) {
@@ -69,7 +89,17 @@ export default function SynthesePage() {
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pipelineStages, setPipelineStages] = useState<Record<string, string>>({});
+  const [stagesDetailMap, setStagesDetailMap] = useState<Record<string, StageDetail>>({});
+  const [jobStageCounts, setJobStageCounts] = useState<Record<string, number>>({});
+
+  // Chargement de la police via <link> pour éviter le freeze Chrome à l'impression
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap';
+    document.head.appendChild(link);
+    return () => { document.head.removeChild(link); };
+  }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -78,13 +108,20 @@ export default function SynthesePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/auth/login'); return; }
 
+      // Fetch pipeline_stages avec job_id et position pour calculer le vrai total par offre
       const { data: stagesData } = await supabase
         .from('pipeline_stages')
-        .select('id, label')
+        .select('id, label, job_id, position')
         .eq('user_id', user.id);
-      const stagesMap: Record<string, string> = {};
-      (stagesData || []).forEach((s: { id: string; label: string }) => { stagesMap[s.id] = s.label; });
-      setPipelineStages(stagesMap);
+
+      const detailMap: Record<string, StageDetail> = {};
+      const countMap: Record<string, number> = {};
+      (stagesData || []).forEach((s: { id: string; label: string; job_id: string; position: number }) => {
+        detailMap[s.id] = { label: s.label, job_id: s.job_id, position: s.position };
+        countMap[s.job_id] = (countMap[s.job_id] || 0) + 1;
+      });
+      setStagesDetailMap(detailMap);
+      setJobStageCounts(countMap);
 
       let query = supabase
         .from('jobs')
@@ -167,7 +204,7 @@ export default function SynthesePage() {
         .synthese-page { font-family: 'Montserrat', sans-serif; display: flex; min-height: 100vh; background: #f5f5f0; }
         .synthese-sidebar { width: 200px; min-width: 200px; background: #0f0f0f; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; border-right: 1px solid #1e1e1e; }
         .synthese-content { flex: 1; padding: 36px 44px; max-width: 1200px; }
-        .section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+        .section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-family: 'Montserrat', sans-serif; }
         .stat-card { background: #fff; border: 2px solid #111; border-radius: 8px; padding: 16px 18px; box-shadow: 4px 4px 0 #111; }
         table { width: 100%; border-collapse: collapse; background: #fff; border: 2px solid #111; table-layout: fixed; }
         th { background: #111; color: #fff; text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; font-family: 'Montserrat', sans-serif; }
@@ -185,11 +222,14 @@ export default function SynthesePage() {
         @media print {
           @page { margin: 1.5cm; }
           .no-print { display: none !important; }
+          *[style*="position: fixed"],
+          *[style*="position:fixed"] { display: none !important; }
           .synthese-sidebar { display: none !important; }
           .synthese-content { padding: 0 !important; max-width: 100% !important; }
           .synthese-page { background: white !important; }
-          th { background: #111 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .stat-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+          th { background: #111 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .stat-card { box-shadow: none !important; border: 2px solid #111 !important; }
+          table { border: 2px solid #111 !important; }
           .btn-delete { display: none !important; }
           .note-editable:empty:before { content: '' !important; }
           .note-editable:empty { display: none !important; }
@@ -309,7 +349,7 @@ export default function SynthesePage() {
             ].map(s => (
               <div key={s.label} className="stat-card">
                 <div style={{ fontSize: 28, fontWeight: 900, color: '#111', fontFamily: 'Montserrat,sans-serif' }}>{s.value}</div>
-                <div style={{ fontSize: 11, color: '#888', marginTop: 2, fontWeight: 500 }}>{s.label}</div>
+                <div style={{ fontSize: 11, color: '#888', marginTop: 2, fontWeight: 500, fontFamily: 'Montserrat,sans-serif' }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -321,11 +361,11 @@ export default function SynthesePage() {
               <table>
                 <colgroup>
                   <col style={{ width: '9%' }} />
+                  <col style={{ width: '19%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '19%' }} />
                   <col style={{ width: '20%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '23%' }} />
                   <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
@@ -338,7 +378,7 @@ export default function SynthesePage() {
                     </td></tr>
                   )}
                   {jobs.map(job => {
-                    const stepInfo = getStepInfo(job.sub_status, pipelineStages);
+                    const stepInfo = getStepInfo(job.sub_status, job.id, stagesDetailMap, jobStageCounts);
                     return (
                       <tr key={job.id}>
                         <td style={{ color: '#888', fontSize: 11 }}>{formatDateShort(job.created_at)}</td>
@@ -359,8 +399,15 @@ export default function SynthesePage() {
                         <td style={{ fontSize: 12, fontWeight: 600, color: '#111' }}>
                           {STATUS_LABELS[job.status] || job.status}
                         </td>
-                        <td style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>
-                          {stepInfo.step ? `Étape ${stepInfo.step}/${stepInfo.total}` : '—'}
+                        <td>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>
+                            {stepInfo.label !== '—' ? stepInfo.label : '—'}
+                          </div>
+                          {stepInfo.step && (
+                            <div style={{ fontSize: 10, color: '#888', marginTop: 2, fontFamily: 'Montserrat,sans-serif' }}>
+                              Étape {stepInfo.step}{stepInfo.total ? `/${stepInfo.total}` : ''}
+                            </div>
+                          )}
                         </td>
                         <td>
                           <div
@@ -412,7 +459,7 @@ export default function SynthesePage() {
             </div>
           )}
 
-          {/* Tableau actions */}
+          {/* Tableau événements */}
           {actions.length > 0 && (
             <div style={{ marginBottom: 36 }}>
               <div className="section-label">Événements & formations</div>
