@@ -122,6 +122,7 @@ export default function DashboardPage() {
     (notesData || []).forEach((n: any) => {
       countMap[n.contact_id] = (countMap[n.contact_id] || 0) + 1;
     });
+    
     setContacts(contactsList.map((c: any) => ({
       ...c,
       notes_count: countMap[c.id] ?? 0,
@@ -174,9 +175,17 @@ export default function DashboardPage() {
       (jobsData2 || []).forEach((j: any) => {
         jobMap2[j.id] = j.title + (j.company ? ' — ' + j.company : '');
       });
+      const { data: interviewData } = await supabase
+        .from('jobs')
+        .select('interview_contact_id')
+        .in('interview_contact_id', contactsList.map((c: any) => c.id));
+      const interviewMap: Record<string, number> = {};
+      (interviewData || []).forEach((j: any) => {
+        if (j.interview_contact_id) interviewMap[j.interview_contact_id] = (interviewMap[j.interview_contact_id] || 0) + 1;
+      });
       setContacts(contactsList.map((c: any) => ({
         ...c,
-        notes_count: countMap2[c.id] ?? 0,
+        notes_count: (countMap2[c.id] ?? 0) + (interviewMap[c.id] ?? 0),
         job_manual: c.job_manual || (c.job_id ? jobMap2[c.job_id] : null) || null,
       })));
 

@@ -37,17 +37,12 @@ function getInitials(name: string) {
 
 // ── MODALE MODIFICATION ──────────────────────────────────────────────────────
 function EditModal({ contact, onClose, onSaved }: {
-  contact: Contact
-  onClose: () => void
-  onSaved: () => void
+  contact: Contact; onClose: () => void; onSaved: () => void
 }) {
   const [form, setForm] = useState({
-    name: contact.name || '',
-    role: contact.role || '',
-    company: contact.company || '',
-    email: contact.email || '',
-    phone: contact.phone || '',
-    linkedin: contact.linkedin || '',
+    name: contact.name || '', role: contact.role || '',
+    company: contact.company || '', email: contact.email || '',
+    phone: contact.phone || '', linkedin: contact.linkedin || '',
     job_manual: contact.job_manual || '',
   })
   const [saving, setSaving] = useState(false)
@@ -55,15 +50,9 @@ function EditModal({ contact, onClose, onSaved }: {
 
   const Field = ({ label, k, placeholder = '' }: { label: string; k: keyof typeof form; placeholder?: string }) => (
     <div style={{ marginBottom: 14 }}>
-      <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 5, fontFamily: FONT }}>
-        {label}
-      </label>
-      <input
-        value={form[k]}
-        onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))}
-        placeholder={placeholder}
-        style={{ width: '100%', padding: '9px 12px', border: '2px solid #111', borderRadius: 6, fontSize: 14, fontWeight: 600, fontFamily: FONT, color: '#111', outline: 'none', boxSizing: 'border-box' as const }}
-      />
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 5, fontFamily: FONT }}>{label}</label>
+      <input value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} placeholder={placeholder}
+        style={{ width: '100%', padding: '9px 12px', border: '2px solid #111', borderRadius: 6, fontSize: 14, fontWeight: 600, fontFamily: FONT, color: '#111', outline: 'none', boxSizing: 'border-box' as const }} />
     </div>
   )
 
@@ -73,12 +62,9 @@ function EditModal({ contact, onClose, onSaved }: {
     try {
       const supabase = createClient()
       const { error: err } = await supabase.from('contacts').update({
-        name: form.name.trim(),
-        role: form.role.trim() || null,
-        company: form.company.trim() || null,
-        email: form.email.trim() || null,
-        phone: form.phone.trim() || null,
-        linkedin: form.linkedin.trim() || null,
+        name: form.name.trim(), role: form.role.trim() || null,
+        company: form.company.trim() || null, email: form.email.trim() || null,
+        phone: form.phone.trim() || null, linkedin: form.linkedin.trim() || null,
         job_manual: form.job_manual.trim() || null,
       }).eq('id', contact.id)
       if (err) throw err
@@ -101,15 +87,9 @@ function EditModal({ contact, onClose, onSaved }: {
         <Field label="Téléphone" k="phone" placeholder="+33 6 00 00 00 00" />
         <Field label="LinkedIn" k="linkedin" placeholder="https://linkedin.com/in/…" />
         <Field label="Offre associée" k="job_manual" placeholder="ex : Responsable Marketing ESCP" />
-        {error && (
-          <div style={{ background: '#FEE2E2', border: '1px solid #E8151B', borderRadius: 6, padding: '10px 14px', fontSize: 13, fontWeight: 700, color: '#E8151B', marginBottom: 16, fontFamily: FONT }}>
-            {error}
-          </div>
-        )}
+        {error && <div style={{ background: '#FEE2E2', border: '1px solid #E8151B', borderRadius: 6, padding: '10px 14px', fontSize: 13, fontWeight: 700, color: '#E8151B', marginBottom: 16, fontFamily: FONT }}>{error}</div>}
         <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: 11, background: '#fff', border: '2px solid #111', borderRadius: 8, fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
-            Annuler
-          </button>
+          <button onClick={onClose} style={{ flex: 1, padding: 11, background: '#fff', border: '2px solid #111', borderRadius: 8, fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
           <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: 11, background: '#F5C400', border: '2px solid #111', borderRadius: 8, fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, boxShadow: '3px 3px 0 #111' }}>
             {saving ? 'Enregistrement…' : 'Enregistrer'}
           </button>
@@ -134,155 +114,123 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
     )
   }, [contacts, search])
 
-  const gridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: '50px minmax(160px,1.6fr) minmax(150px,1.1fr) minmax(130px,1.2fr) auto',
-    alignItems: 'center',
-    gap: 14,
-  }
+  // Grille : avatar | nom+rôle | entreprise | offre | échanges | tel | actions
+  const COLS = '46px minmax(140px,1.4fr) minmax(120px,0.9fr) minmax(120px,1.1fr) 90px 110px auto'
 
   const colLabel: React.CSSProperties = {
-    fontSize: 11, fontWeight: 800, color: '#888',
+    fontSize: 10, fontWeight: 800, color: '#888',
     textTransform: 'uppercase', letterSpacing: '1px', fontFamily: FONT,
   }
 
-  const btnBase: React.CSSProperties = {
-    padding: '6px 12px', border: '2px solid #111', borderRadius: 6,
-    fontSize: 12, fontWeight: 800, cursor: 'pointer',
-    background: '#fff', color: '#111',
-    boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' as const,
-    fontFamily: FONT,
+  const btn: React.CSSProperties = {
+    padding: '5px 10px', border: '2px solid #111', borderRadius: 6,
+    fontSize: 11, fontWeight: 800, cursor: 'pointer', background: '#fff', color: '#111',
+    boxShadow: '2px 2px 0 #111', whiteSpace: 'nowrap' as const, fontFamily: FONT,
   }
 
   return (
     <div style={{ fontFamily: FONT }}>
 
       {/* BARRE DE RECHERCHE */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '2px solid #111', borderRadius: 8, padding: '10px 16px', marginBottom: 16, boxShadow: '3px 3px 0 #111' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '2px solid #111', borderRadius: 8, padding: '10px 16px', marginBottom: 12, boxShadow: '3px 3px 0 #111' }}>
         <span style={{ fontSize: 15, color: '#888' }}>🔍</span>
-        <input
-          type="text"
-          placeholder="Rechercher par nom, entreprise, poste…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ border: 'none', outline: 'none', flex: 1, fontSize: 14, fontWeight: 600, fontFamily: FONT, color: '#111', background: 'transparent' }}
-        />
-        <span style={{ fontSize: 12, color: '#888', fontWeight: 700, fontFamily: FONT }}>
-          {filtered.length} contact{filtered.length > 1 ? 's' : ''}
-        </span>
-        {search && (
-          <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#888', padding: 0 }}>✕</button>
-        )}
+        <input type="text" placeholder="Rechercher par nom, entreprise, poste…" value={search} onChange={e => setSearch(e.target.value)}
+          style={{ border: 'none', outline: 'none', flex: 1, fontSize: 14, fontWeight: 600, fontFamily: FONT, color: '#111', background: 'transparent' }} />
+        <span style={{ fontSize: 12, color: '#888', fontWeight: 700, fontFamily: FONT }}>{filtered.length} contact{filtered.length > 1 ? 's' : ''}</span>
+        {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#888', padding: 0 }}>✕</button>}
       </div>
 
-      {/* EN-TÊTES — alignés sur la grille des lignes */}
-      <div style={{ ...gridStyle, padding: '0 16px 8px' }}>
-        <div />
-        <div style={colLabel}>Nom / Échanges</div>
-        <div style={colLabel}>Entreprise</div>
-        <div style={colLabel}>Offre associée</div>
-        <div />
-      </div>
+      {/* TABLEAU : header + lignes dans le même conteneur pour alignement parfait */}
+      <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
 
-      {/* LIGNES */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* EN-TÊTE */}
+        <div style={{ display: 'grid', gridTemplateColumns: COLS, alignItems: 'center', gap: 12, padding: '8px 14px', background: '#F5F5F0', borderBottom: '2px solid #111' }}>
+          <div />
+          <div style={colLabel}>Nom / Rôle</div>
+          <div style={colLabel}>Entreprise</div>
+          <div style={colLabel}>Offre associée</div>
+          <div style={colLabel}>Échanges</div>
+          <div style={colLabel}>Téléphone</div>
+          <div />
+        </div>
+
+        {/* LIGNES */}
         {filtered.map((c, i) => {
           const av = AVATAR_COLORS[i % AVATAR_COLORS.length]
           const count = c.notes_count ?? 0
           return (
-            <div key={c.id} style={{ ...gridStyle, background: '#fff', border: '2px solid #111', borderRadius: 8, padding: '12px 16px', boxShadow: '2px 2px 0 #111' }}>
+            <div key={c.id} style={{ display: 'grid', gridTemplateColumns: COLS, alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: i < filtered.length - 1 ? '1px solid #F0F0F0' : 'none' }}>
 
               {/* AVATAR */}
-              <div style={{ width: 42, height: 42, borderRadius: '50%', background: av.bg, border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: av.color, flexShrink: 0, fontFamily: FONT }}>
+              <div style={{ width: 38, height: 38, borderRadius: '50%', background: av.bg, border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: av.color, flexShrink: 0, fontFamily: FONT }}>
                 {getInitials(c.name)}
               </div>
 
-              {/* NOM + RÔLE + ÉCHANGES */}
+              {/* NOM + RÔLE DESSOUS */}
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 900, color: '#111', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {c.name}
-                </div>
-                {c.role && (
-                  <div style={{ fontSize: 12, color: '#555', fontWeight: 600, marginTop: 2, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {c.role}
-                  </div>
-                )}
-                {count > 0 && (
-                  <div style={{ marginTop: 4 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F5F5F0', border: '1.5px solid #ddd', borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 800, color: '#111', fontFamily: FONT }}>
-                      💬 {count} échange{count > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                )}
+                <div style={{ fontSize: 13, fontWeight: 900, color: '#111', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                {c.role && <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginTop: 1, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.role}</div>}
               </div>
 
               {/* ENTREPRISE */}
-              <div>
-                {c.company ? (
-                  <div>
-                    <span style={{ display: 'inline-block', background: '#111', color: '#F5C400', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, fontFamily: FONT }}>
-                      {c.company}
-                    </span>
-                    {c.phone && (
-                      <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginTop: 4, fontFamily: FONT }}>
-                        📞 {c.phone}
-                      </div>
-                    )}
-                  </div>
-                ) : c.phone ? (
-                  <span style={{ fontSize: 12, color: '#888', fontWeight: 600, fontFamily: FONT }}>📞 {c.phone}</span>
-                ) : (
-                  <span style={{ fontSize: 12, color: '#ddd', fontFamily: FONT }}>—</span>
-                )}
+              <div style={{ minWidth: 0 }}>
+                {c.company
+                  ? <span style={{ display: 'inline-block', background: '#111', color: '#F5C400', fontSize: 10, fontWeight: 800, padding: '2px 9px', borderRadius: 20, fontFamily: FONT, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.company}</span>
+                  : <span style={{ fontSize: 12, color: '#ddd', fontFamily: FONT }}>—</span>}
               </div>
 
               {/* OFFRE ASSOCIÉE */}
               <div style={{ minWidth: 0 }}>
-                {c.job_manual ? (
-                  <span style={{ fontSize: 12, color: '#555', fontWeight: 700, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                    💼 {c.job_manual}
-                  </span>
-                ) : (
-                  <span style={{ fontSize: 12, color: '#ddd', fontFamily: FONT }}>—</span>
-                )}
+                {c.job_manual
+                  ? <span style={{ fontSize: 11, color: '#555', fontWeight: 700, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>💼 {c.job_manual}</span>
+                  : <span style={{ fontSize: 12, color: '#ddd', fontFamily: FONT }}>—</span>}
               </div>
 
-              {/* BOUTONS */}
-              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                <button onClick={() => setEditContact(c)} style={{ ...btnBase, background: '#F5C400', boxShadow: '2px 2px 0 #111' }}>
-                  ✏️ Modifier
-                </button>
-                {c.email && (
-                  <button onClick={() => window.open('mailto:' + c.email)} style={btnBase}>Email</button>
-                )}
-                {c.linkedin && (
-                  <button onClick={() => window.open(c.linkedin!)} style={btnBase}>LinkedIn</button>
-                )}
-                <button onClick={() => onDeleteContact(c.id)} style={{ ...btnBase, border: '2px solid #E8151B', color: '#E8151B', boxShadow: '2px 2px 0 #E8151B', background: '#fff' }}>
-                  Supprimer
-                </button>
+              {/* ÉCHANGES */}
+              <div>
+                {count > 0
+                  ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F5F5F0', border: '1.5px solid #ddd', borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 800, color: '#111', fontFamily: FONT }}>
+                      💬 {count}
+                    </span>
+                  : <span style={{ fontSize: 12, color: '#ddd', fontFamily: FONT }}>—</span>}
               </div>
+
+              {/* TÉLÉPHONE */}
+              <div style={{ minWidth: 0 }}>
+                {c.phone
+                  ? <span style={{ fontSize: 11, color: '#555', fontWeight: 600, fontFamily: FONT, whiteSpace: 'nowrap' }}>📞 {c.phone}</span>
+                  : <span style={{ fontSize: 12, color: '#ddd', fontFamily: FONT }}>—</span>}
+              </div>
+
+              {/* BOUTONS : Email · LinkedIn · Modifier · Supprimer */}
+              <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                {c.email && <button onClick={() => window.open('mailto:' + c.email)} style={btn}>Email</button>}
+                {c.linkedin && <button onClick={() => window.open(c.linkedin!)} style={btn}>LinkedIn</button>}
+                <button onClick={() => setEditContact(c)} style={{ ...btn, background: '#F5C400' }}>✏️ Modifier</button>
+                <button onClick={() => onDeleteContact(c.id)} style={{ ...btn, border: '2px solid #E8151B', color: '#E8151B', boxShadow: '2px 2px 0 #E8151B', background: '#fff' }}>Supprimer</button>
+              </div>
+
             </div>
           )
         })}
 
         {filtered.length === 0 && search && (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: '#888', fontSize: 14, fontWeight: 700, fontFamily: FONT }}>
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: '#888', fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
             Aucun contact trouvé pour &quot;{search}&quot;
           </div>
         )}
 
-        <div onClick={onAddContact}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #ccc', borderRadius: 8, padding: 16, cursor: 'pointer', color: '#aaa', fontSize: 13, fontWeight: 700, fontFamily: FONT }}
-          onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#111'; el.style.color = '#111' }}
-          onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#ccc'; el.style.color = '#aaa' }}>
-          + Ajouter un contact
-        </div>
       </div>
 
-      {editContact && (
-        <EditModal contact={editContact} onClose={() => setEditContact(null)} onSaved={() => { setEditContact(null); onRefresh?.() }} />
-      )}
+      {/* AJOUTER */}
+      <div onClick={onAddContact}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #ccc', borderRadius: 8, padding: 14, marginTop: 10, cursor: 'pointer', color: '#aaa', fontSize: 13, fontWeight: 700, fontFamily: FONT }}
+        onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#111'; el.style.color = '#111' }}
+        onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#ccc'; el.style.color = '#aaa' }}>
+        + Ajouter un contact
+      </div>
+
+      {editContact && <EditModal contact={editContact} onClose={() => setEditContact(null)} onSaved={() => { setEditContact(null); onRefresh?.() }} />}
     </div>
   )
 }
