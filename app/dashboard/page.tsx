@@ -112,7 +112,20 @@ export default function DashboardPage() {
     const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` };
     const cr = await fetch('/api/contacts', { headers: h });
     const cd = await cr.json();
-    setContacts(cd.contacts || []);
+    const contactsList = cd.contacts || [];
+    const supabase = createClient();
+    const { data: notesData } = await supabase
+      .from('contact_notes')
+      .select('contact_id')
+      .in('contact_id', contactsList.map((c: any) => c.id));
+    const countMap: Record<string, number> = {};
+    (notesData || []).forEach((n: any) => {
+      countMap[n.contact_id] = (countMap[n.contact_id] || 0) + 1;
+    });
+    setContacts(contactsList.map((c: any) => ({
+      ...c,
+      notes_count: countMap[c.id] ?? 0,
+    })));
   }, [accessToken]);
 
   useEffect(() => {
