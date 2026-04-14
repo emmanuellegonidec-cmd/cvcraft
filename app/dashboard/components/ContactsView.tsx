@@ -150,12 +150,11 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
       <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '54px 220px 150px minmax(150px,1fr) 90px 140px auto',
+          gridTemplateColumns: '220px 150px minmax(150px,1fr) 90px 140px auto',
           alignItems: 'center',
         }}>
 
           {/* ── EN-TÊTES ── */}
-          <div style={{ ...th, background: '#F5F5F0' }} />
           <div style={{ ...th, background: '#F5F5F0' }}>Nom / Rôle</div>
           <div style={{ ...th, background: '#F5F5F0' }}>Entreprise</div>
           <div style={{ ...th, background: '#F5F5F0' }}>Offre associée</div>
@@ -171,12 +170,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
             const av = AVATAR_COLORS[i % AVATAR_COLORS.length]
             const count = c.notes_count ?? 0
             return [
-              // Avatar
-              <div key={`av-${c.id}`} style={{ ...td, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: av.bg, border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: av.color, flexShrink: 0, fontFamily: FONT }}>
-                  {getInitials(c.name)}
-                </div>
-              </div>,
+              
 
               // Nom + rôle
               <div key={`nm-${c.id}`} style={td}>
@@ -217,7 +211,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
                 {c.email && <button onClick={() => window.open('mailto:' + c.email)} style={btn}>Email</button>}
                 {c.linkedin && <button onClick={() => window.open(c.linkedin!)} style={btn}>LinkedIn</button>}
                 <button onClick={() => setEditContact(c)} style={{ ...btn, background: '#F5C400' }}>✏️ Modifier</button>
-                <button onClick={() => onDeleteContact(c.id)} style={{ ...btn, border: '2px solid #E8151B', color: '#E8151B', boxShadow: '2px 2px 0 #E8151B', background: '#fff' }}>Supprimer</button>
+                <button onClick={() => onDeleteContact(c.id)} style={{ ...btn, border: '2px solid #E8151B', color: '#E8151B', boxShadow: '2px 2px 0 #E8151B', background: '#fff', padding: '5px 10px', fontWeight: 900, fontSize: 14 }}>✕</button>
               </div>,
             ]
           })}
