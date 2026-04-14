@@ -160,7 +160,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
           <div style={{ ...th, background: '#F5F5F0' }}>Offre associée</div>
           <div style={{ ...th, background: '#F5F5F0', textAlign: 'center' as const }}>Échanges</div>
           <div style={{ ...th, background: '#F5F5F0' }}>Téléphone</div>
-          <div style={{ background: '#F5F5F0' }} />
+          <div style={{ background: '#F5F5F0', padding: '12px 12px' }} />
 
           {/* Ligne de séparation header */}
           <div style={{ gridColumn: '1 / -1', borderBottom: '2px solid #111' }} />
