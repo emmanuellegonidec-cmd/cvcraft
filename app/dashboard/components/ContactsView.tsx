@@ -150,7 +150,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
       <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '220px 150px minmax(150px,1fr) 90px 140px auto',
+          gridTemplateColumns: '220px 150px minmax(150px,400px) 90px 140px auto',
           alignItems: 'center',
         }}>
 
