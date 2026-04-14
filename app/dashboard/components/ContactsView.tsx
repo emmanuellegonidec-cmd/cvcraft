@@ -150,7 +150,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
       <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '54px minmax(140px,210px) minmax(130px,170px) minmax(130px,170px) 85px 130px auto',
+          gridTemplateColumns: '54px minmax(170px,260px) minmax(130px,160px) minmax(180px,220px) 85px 130px auto',
           alignItems: 'center',
         }}>
 
@@ -161,7 +161,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
           <div style={{ ...th, background: '#F5F5F0' }}>Offre associée</div>
           <div style={{ ...th, background: '#F5F5F0', textAlign: 'center' as const }}>Échanges</div>
           <div style={{ ...th, background: '#F5F5F0' }}>Téléphone</div>
-          <div style={{ ...th, background: '#F5F5F0', borderBottom: '2px solid #111' }} />
+          <div style={{ ...th, background: '#F5F5F0' }} />
 
           {/* Ligne de séparation header */}
           <div style={{ gridColumn: '1 / -1', borderBottom: '2px solid #111' }} />
