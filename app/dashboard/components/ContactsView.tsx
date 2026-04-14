@@ -143,15 +143,14 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
         <div style={{ display: 'grid', gridTemplateColumns: COLS, alignItems: 'center' }}>
 
           {/* EN-TÊTES */}
-          <div style={th}>Nom / Rôle</div>
-          <div style={th}>Entreprise</div>
-          <div style={th}>Offre associée</div>
-          <div style={{ ...th, textAlign: 'center' as const }}>Échanges</div>
-          <div style={th}>Téléphone</div>
-          <div style={th} />
-
-          {/* Séparateur */}
-          <div style={{ gridColumn: '1 / -1', borderBottom: '2px solid #111' }} />
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: COLS, background: '#F5F5F0', borderBottom: '2px solid #111' }}>
+            <div style={th}>Nom / Rôle</div>
+            <div style={th}>Entreprise</div>
+            <div style={th}>Offre associée</div>
+            <div style={{ ...th, textAlign: 'center' as const }}>Échanges</div>
+            <div style={th}>Téléphone</div>
+            <div style={th} />
+          </div>
 
           {/* LIGNES */}
           {filtered.map((c) => {
