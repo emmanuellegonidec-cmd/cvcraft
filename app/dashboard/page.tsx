@@ -182,6 +182,7 @@ export default function DashboardPage() {
         setStagesLabelMap(map);
       }
       setLoading(false);
+      setTimeout(() => fetchContacts(), 500);
     }
     load();
   }, [router]);
