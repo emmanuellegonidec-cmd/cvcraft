@@ -69,6 +69,7 @@ interface Job {
   created_at: string; applied_at: string | null
   interview_at: string | null; interview_time: string | null; interview_time_end: string | null
   interview_type: string | null; interview_contact_id: string | null
+  interview_contacts: Record<string, string> | null
   interview_location: string | null; interview_link: string | null; interview_phone: string | null
   company_description: string | null; company_website: string | null
   company_size: string | null; department: string | null; source_platform: string | null
@@ -624,6 +625,7 @@ export default function JobDetailPage() {
             onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
             onCreateContact={() => openCreateContact('')}
             currentStepNum={currentStepIndex + 1}
+            currentStepId={currentStepId}
             currentStepLabel={currentStepLabel}
           />
         )}
