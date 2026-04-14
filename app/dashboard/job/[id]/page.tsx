@@ -549,7 +549,7 @@ export default function JobDetailPage() {
 
       <div className="jfmj-main">
         <div className="jfmj-back-mobile" style={{ display: 'none', marginBottom: 14 }}>
-          <button onClick={() => router.back()} style={{ background: '#fff', border: '1.5px solid #EBEBEB', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: '#111', cursor: 'pointer', fontFamily: FONT }}>← Mes candidatures</button>
+          <button onClick={() => router.push('/dashboard')} style={{ background: '#fff', border: '1.5px solid #EBEBEB', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: '#111', cursor: 'pointer', fontFamily: FONT }}>← Tableau de bord</button>
         </div>
 
         <JobHeader
