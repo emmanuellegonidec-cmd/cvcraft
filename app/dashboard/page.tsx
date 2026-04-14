@@ -160,7 +160,25 @@ export default function DashboardPage() {
       const jd = await jr.json();
       const cd = await cr.json();
       setJobs(jd.jobs || []);
-      setContacts(cd.contacts || []);
+      const contactsList = cd.contacts || [];
+      const { data: notesData2 } = await supabase
+        .from('contact_notes')
+        .select('contact_id')
+        .in('contact_id', contactsList.map((c: any) => c.id));
+      const countMap2: Record<string, number> = {};
+      (notesData2 || []).forEach((n: any) => {
+        countMap2[n.contact_id] = (countMap2[n.contact_id] || 0) + 1;
+      });
+      const { data: jobsData2 } = await supabase.from('jobs').select('id, title, company');
+      const jobMap2: Record<string, string> = {};
+      (jobsData2 || []).forEach((j: any) => {
+        jobMap2[j.id] = j.title + (j.company ? ' — ' + j.company : '');
+      });
+      setContacts(contactsList.map((c: any) => ({
+        ...c,
+        notes_count: countMap2[c.id] ?? 0,
+        job_manual: c.job_manual || (c.job_id ? jobMap2[c.job_id] : null) || null,
+      })));
 
       const { data: customStages } = await supabase
         .from('pipeline_stages').select('*')
