@@ -129,7 +129,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
 
   // Cellule données
   const td: React.CSSProperties = {
-    padding: '16px 12px',
+    padding: '20px 12px',
     borderTop: '1px solid #F0F0F0',
     overflow: 'hidden',
   }
@@ -160,7 +160,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
           <div style={{ ...th, background: '#F5F5F0' }}>Offre associée</div>
           <div style={{ ...th, background: '#F5F5F0', textAlign: 'center' as const }}>Échanges</div>
           <div style={{ ...th, background: '#F5F5F0' }}>Téléphone</div>
-          <div style={{ ...th, background: '#F5F5F0' }} />
+          <div style={{ background: '#F5F5F0' }} />
 
           {/* Ligne de séparation header */}
           <div style={{ gridColumn: '1 / -1', borderBottom: '2px solid #111' }} />
@@ -210,7 +210,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
               <div key={`bt-${c.id}`} style={{ ...td, display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                 {c.email && <button onClick={() => window.open('mailto:' + c.email)} style={btn}>Email</button>}
                 {c.linkedin && <button onClick={() => window.open(c.linkedin!)} style={btn}>LinkedIn</button>}
-                <button onClick={() => setEditContact(c)} style={{ ...btn, background: '#F5C400' }}>✏️ Modifier</button>
+                <button onClick={() => setEditContact(c)} style={{ ...btn, background: '#F5C400', padding: '5px 10px', fontSize: 15 }}>✏️</button>
                 <button onClick={() => onDeleteContact(c.id)} style={{ ...btn, border: '2px solid #E8151B', color: '#E8151B', boxShadow: '2px 2px 0 #E8151B', background: '#fff', padding: '5px 10px', fontWeight: 900, fontSize: 14 }}>✕</button>
               </div>,
             ]
