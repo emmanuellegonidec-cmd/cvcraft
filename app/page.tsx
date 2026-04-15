@@ -184,7 +184,16 @@ export default async function LandingPage() {
             </div>
           </div>
           <div className="hero-logo-wrap" style={{ display:'flex',alignItems:'center',justifyContent:'center' }}>
-          <Image src="/logojeanfindmyjob.webp" alt="Jean find my Job" className="hero-logo-img" width={680} height={400} style={{ width:'100%',maxWidth:680,height:'auto',objectFit:'contain' }} priority />  
+          <Image 
+  src="/logojeanfindmyjob.webp" 
+  alt="Jean find my Job" 
+  className="hero-logo-img" 
+  width={680} 
+  height={400} 
+  style={{ width:'100%', maxWidth:680, height:'auto', objectFit:'contain' }} 
+  priority
+  sizes="(max-width: 768px) 100vw, 680px"
+/>
           </div>
         </div>
       </section>
@@ -237,17 +246,29 @@ export default async function LandingPage() {
         </div>
         <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>📋 Tableau de bord — Vue Kanban</div>
-          <Image src="/kanban-dashboard.png" alt="Tableau de bord kanban Jean find my Job" width={1200} height={400} style={{ width:'100%',height:'auto',display:'block',maxHeight:400,objectFit:'cover',objectPosition:'top center' }} priority />
-        </div>
-      </section>
-
-      <div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
+        <Image 
+  src="/kanban-dashboard.png" 
+  alt="Tableau de bord kanban Jean find my Job" 
+  width={1200} 
+  height={400} 
+  style={{ width:'100%', height:'auto', display:'block', maxHeight:400, objectFit:'cover', objectPosition:'top center' }} 
+  priority
+  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+/>  
 
       {/* FEATURE 2 — Parcours par offre */}
       <section id="cv" className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
         <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>🗂️ Parcours de candidature — Vue détaillée</div>
-         <Image src="/parcours-candidature.png" alt="Parcours de candidature Jean find my Job" width={1200} height={400} style={{ width:'100%',height:'auto',display:'block',maxHeight:400,objectFit:'cover',objectPosition:'top center' }} />
+        <Image 
+  src="/parcours-candidature.png" 
+  alt="Parcours de candidature Jean find my Job" 
+  width={1200} 
+  height={400} 
+  style={{ width:'100%', height:'auto', display:'block', maxHeight:400, objectFit:'cover', objectPosition:'top center' }} 
+  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+  loading="lazy"
+/>
         </div>
         <div>
           <div style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>02</div>
@@ -295,7 +316,15 @@ export default async function LandingPage() {
         </div>
         <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#111',fontSize:12,fontWeight:800,color:'#F5C400',textTransform:'uppercase',letterSpacing:'0.04em' }}>🎯 Score ATS — Résultat en direct</div>
-          <Image src="/score-ats.png" alt="Score ATS Jean find my Job" width={1200} height={400} style={{ width:'100%',height:'auto',display:'block',maxHeight:400,objectFit:'cover',objectPosition:'top center' }} />
+          <Image 
+  src="/score-ats.png" 
+  alt="Score ATS Jean find my Job" 
+  width={1200} 
+  height={400} 
+  style={{ width:'100%', height:'auto', display:'block', maxHeight:400, objectFit:'cover', objectPosition:'top center' }} 
+  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+  loading="lazy"
+/>
         </div>
       </section>
 
