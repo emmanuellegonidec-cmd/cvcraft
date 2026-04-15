@@ -254,7 +254,11 @@ export default async function LandingPage() {
   style={{ width:'100%', height:'auto', display:'block', maxHeight:400, objectFit:'cover', objectPosition:'top center' }} 
   priority
   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-/>  
+/>
+        </div>
+      </section>
+
+      <div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
 
       {/* FEATURE 2 — Parcours par offre */}
       <section id="cv" className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
