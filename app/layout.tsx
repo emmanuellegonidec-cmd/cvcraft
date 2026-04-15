@@ -1,15 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Script from 'next/script';
-import { Montserrat } from 'next/font/google';
-
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-  style: ['normal', 'italic'],
-  display: 'swap',
-  variable: '--font-montserrat',
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://jeanfindmyjob.fr'),
@@ -47,9 +38,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={montserrat.variable}>
+    <html lang="fr">
       <head>
-        {/* Google Analytics GA4 */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-LKZHGMP0WG"
           strategy="afterInteractive"
