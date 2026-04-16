@@ -323,7 +323,7 @@ export default function DashboardCalendar({
   async function loadActions() {
     try {
       const token = (window as any).__jfmj_token;
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
       const [resEv, resPA] = await Promise.all([
         fetch('/api/actions', { headers }),
