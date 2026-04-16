@@ -12,22 +12,23 @@ const REASONS = [
 ]
 
 interface Props {
-  archivedReason: string | null
+archivedReason: string | null
   archivedNote: string | null
   onPatch: (field: string, value: any) => void
   onJobChange: (field: string, value: any) => void
+  currentStepNum: number
 }
 
-export default function JobArchivedDetails({ archivedReason, archivedNote, onPatch, onJobChange }: Props) {
+export default function JobArchivedDetails({ archivedReason, archivedNote, onPatch, onJobChange, currentStepNum }: Props) {
   return (
     <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, overflow: 'hidden' }}>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 24px', borderBottom: '1.5px solid #eee' }}>
         <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#111', border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: '#aaa', flexShrink: 0, fontFamily: FONT }}>
-          ✕
+         {currentStepNum}
         </div>
         <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.5px', color: '#111', fontFamily: FONT }}>
-          Raison de l&apos;archivage
+          Motif de refus / archivage
         </span>
       </div>
 

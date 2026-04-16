@@ -625,6 +625,7 @@ export default function JobDetailPage() {
     archivedNote={(job as any).archived_note ?? null}
     onPatch={patchJob}
     onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
+    currentStepNum={currentStepIndex + 1}
   />
 )}
        {isInterviewStep && (
@@ -640,14 +641,16 @@ export default function JobDetailPage() {
           />
         )}
 
-        <JobStepActions
-          jobId={jobId}
-          userId={userId}
-          currentStepId={currentStepId}
-          currentStepLabel={currentStepLabel}
-          currentStepIndex={currentStepIndex}
-          jobTitle={job.title}
-        />
+       {currentStepId !== 'archived' && (
+  <JobStepActions
+    jobId={jobId}
+    userId={userId}
+    currentStepId={currentStepId}
+    currentStepLabel={currentStepLabel}
+    currentStepIndex={currentStepIndex}
+    jobTitle={job.title}
+  />
+)}
 
         <JobExchanges
           exchanges={exchanges}
