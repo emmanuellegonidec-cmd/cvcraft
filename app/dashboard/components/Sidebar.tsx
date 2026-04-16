@@ -84,7 +84,7 @@ export default function Sidebar({
   const sectionLabel: React.CSSProperties = {
     fontSize: 10,
     fontWeight: 700,
-    color: '#666',
+    color: '#888',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     padding: '16px 8px 8px',
@@ -168,9 +168,9 @@ export default function Sidebar({
             </button>
             <button
               onClick={() => router.push('/dashboard/cv-creator')}
-              style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 6px 22px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#666', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+              style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 6px 22px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#F5C400'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#666'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
             >
               Mes CV
             </button>
@@ -217,12 +217,12 @@ export default function Sidebar({
             display: 'flex', alignItems: 'center', gap: 8,
             width: '100%', padding: '7px 12px', marginTop: 2,
             border: 'none', borderRadius: 6,
-            background: 'transparent', color: '#666',
+            background: 'transparent', color: '#888',
             fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 12,
             cursor: 'pointer', transition: 'color 0.12s',
           }}
           onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = '#E8151B'}
-          onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = '#666'}
+          onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = '#888'}
         >
           ⎋ Déconnexion
         </button>
