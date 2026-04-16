@@ -67,7 +67,7 @@ export default function JobInterviewDetails({
   }
 
   return (
-    <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '2px solid #111', overflow: 'hidden', boxShadow: '2px 2px 0 #111' }}>
+    <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, overflow: 'hidden' }}>
 
       {/* Header */}
       <div
