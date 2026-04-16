@@ -22,6 +22,7 @@ const BASE_STEPS = [
   { id: 'hr_interview',      label: 'Entretien RH',           num: 4 },
   { id: 'manager_interview', label: 'Entretien manager',      num: 5 },
   { id: 'offer',             label: 'Offre reçue',            num: 6 },
+  { id: 'archived',          label: 'Archivé',                num: 7 },
 ]
 
 const BASE_STEP_POSITIONS: Record<string, number> = {
@@ -31,6 +32,7 @@ const BASE_STEP_POSITIONS: Record<string, number> = {
   hr_interview:      4000,
   manager_interview: 5000,
   offer:             6000,
+  archived:          7000,
 }
 
 const INTERVIEW_STEP_IDS = ['phone_interview', 'hr_interview', 'manager_interview']
@@ -38,7 +40,7 @@ const INTERVIEW_STEP_IDS = ['phone_interview', 'hr_interview', 'manager_intervie
 const STATUS_MAP: Record<string, string> = {
   to_apply: 'to_apply', applied: 'applied',
   phone_interview: 'in_progress', hr_interview: 'in_progress',
-  manager_interview: 'in_progress', offer: 'offer',
+  manager_interview: 'in_progress', offer: 'offer', archived: 'archived',
 }
 
 const STATUS_LABELS: Record<string, string> = {
