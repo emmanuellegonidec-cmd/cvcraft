@@ -323,32 +323,53 @@ export default function DashboardCalendar({
   async function loadActions() {
     try {
       const token = (window as any).__jfmj_token;
-      const res = await fetch('/api/actions', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) return;
-      const data = await res.json();
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const evs: CalEvent[] = (data || []).map((action: any) => {
-        const date = new Date(action.date_debut);
-        const hour = date.getHours();
-        const minutes = date.getMinutes();
-        const endDate = action.date_fin ? new Date(action.date_fin) : null;
-        const endHour = endDate ? endDate.getHours() : undefined;
-        const endMinutes = endDate ? endDate.getMinutes() : undefined;
-        return {
-          jobId: action.id,
-          date,
-          dateField: 'action' as CalEvent['dateField'],
-          title: action.nom,
-          company: action.organisateur || action.categorie || '',
-          type: 'action' as CalEvent['type'],
-          hour: hour > 0 || minutes > 0 ? hour : undefined,
-          minutes: hour > 0 || minutes > 0 ? minutes : undefined,
-          endHour,
-          endMinutes,
-        };
-      });
+      const [resEv, resPA] = await Promise.all([
+        fetch('/api/actions', { headers }),
+        fetch('/api/personal-actions', { headers }),
+      ]);
+
+      const evs: CalEvent[] = [];
+
+      if (resEv.ok) {
+        const data = await resEv.json();
+        (data || []).forEach((action: any) => {
+          const date = new Date(action.date_debut);
+          const hour = date.getHours();
+          const minutes = date.getMinutes();
+          const endDate = action.date_fin ? new Date(action.date_fin) : null;
+          const endHour = endDate ? endDate.getHours() : undefined;
+          const endMinutes = endDate ? endDate.getMinutes() : undefined;
+          evs.push({
+            jobId: action.id,
+            date,
+            dateField: 'action' as CalEvent['dateField'],
+            title: action.nom,
+            company: action.organisateur || action.categorie || '',
+            type: 'action' as CalEvent['type'],
+            hour: hour > 0 || minutes > 0 ? hour : undefined,
+            minutes: hour > 0 || minutes > 0 ? minutes : undefined,
+            endHour,
+            endMinutes,
+          });
+        });
+      }
+
+      if (resPA.ok) {
+        const dataPA = await resPA.json();
+        (dataPA.actions || []).forEach((action: any) => {
+          const date = parseLocalDate(action.date_action);
+          evs.push({
+            jobId: action.id,
+            date,
+            dateField: 'action' as CalEvent['dateField'],
+            title: action.nom,
+            company: action.plateforme || action.type || '',
+            type: 'action' as CalEvent['type'],
+          });
+        });
+      }
 
       setActionEvents(evs);
     } catch (err) {
