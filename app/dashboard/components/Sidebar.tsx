@@ -19,7 +19,8 @@ interface SidebarProps {
 
 const RECHERCHE_ITEMS: { id: View; label: string }[] = [
   { id: 'kanban',   label: 'Tableau de bord' },
-  { id: 'list',     label: 'Candidatures'    },
+ { id: 'list',             label: 'Candidatures'  },
+{ id: 'personal_actions', label: 'Actions'        },
   { id: 'contacts', label: 'Contacts'        },
   { id: 'agenda',   label: 'Entretiens'      },
   { id: 'actions',  label: 'Événements'      },

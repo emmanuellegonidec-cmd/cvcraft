@@ -16,6 +16,7 @@ import JobModal from './components/JobModal';
 import { SettingsModal } from './components/Modals';
 import DashboardCalendar from './components/DashboardCalendar';
 import ActionsSection from './components/ActionsSection';
+import PersonalActionsSection from './components/PersonalActionsSection';
 
 import {
   View, Stage, NewJobState,
@@ -50,6 +51,7 @@ export default function DashboardPage() {
   const [showSettings, setShowSettings]   = useState(false);
   const [triggerAddContact, setTriggerAddContact] = useState(0);
   const [triggerAddAction, setTriggerAddAction] = useState(0);
+  const [triggerAddPersonalAction, setTriggerAddPersonalAction] = useState(0);
   const [newJob, setNewJob]               = useState<NewJobState>({ ...EMPTY_JOB });
   const [editingJobId, setEditingJobId]   = useState<string | null>(null);
   const [addJobMode, setAddJobMode]       = useState<null | 'url' | 'manual' | 'file' | 'spontaneous'>(null);
@@ -63,21 +65,19 @@ export default function DashboardPage() {
   const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, string>>({});
   const newJobRef = useRef<NewJobState>({ ...EMPTY_JOB });
 
-  // Actions collapsible ferme par defaut + compteur
   const [actionsVisible, setActionsVisible] = useState(false);
   const [actionsCount, setActionsCount] = useState(0);
+  const [personalActionsCount, setPersonalActionsCount] = useState(0);
 
-  // Modale suppression offre custom
   const [deleteJobTarget, setDeleteJobTarget] = useState<Job | null>(null);
   const [deleteJobLoading, setDeleteJobLoading] = useState(false);
 
   useEffect(() => { newJobRef.current = newJob; }, [newJob]);
   useEffect(() => { if (accessToken) (window as any).__jfmj_token = accessToken; }, [accessToken]);
 
-  // Reset du trigger action à chaque changement de vue
-  // Evite que le modal s'ouvre automatiquement quand on revient sur le tableau de bord
   useEffect(() => {
     setTriggerAddAction(0);
+    setTriggerAddPersonalAction(0);
   }, [view]);
 
   const today = new Date().toLocaleDateString('fr-FR', {
@@ -122,12 +122,10 @@ export default function DashboardPage() {
     (notesData || []).forEach((n: any) => {
       countMap[n.contact_id] = (countMap[n.contact_id] || 0) + 1;
     });
-    
     setContacts(contactsList.map((c: any) => ({
       ...c,
       notes_count: countMap[c.id] ?? 0,
     })));
-    // Lien automatique offre → contact via job_id
     const sbJobs = createClient();
     const { data: jobsData } = await sbJobs.from('jobs').select('id, title, company');
     const jobMap: Record<string, string> = {};
@@ -388,6 +386,7 @@ export default function DashboardPage() {
   function getMainButtonLabel() {
     if (view === 'contacts') return '+ Ajouter un contact';
     if (view === 'actions') return '+ Ajouter un événement';
+    if (view === 'personal_actions') return '+ Ajouter une action';
     return '+ Ajouter une offre';
   }
 
@@ -438,6 +437,7 @@ export default function DashboardPage() {
               <button className="btn-main" onClick={() => {
                 if (view === 'contacts') setTriggerAddContact(n => n + 1);
                 else if (view === 'actions') setTriggerAddAction(n => n + 1);
+                else if (view === 'personal_actions') setTriggerAddPersonalAction(n => n + 1);
                 else openAddJobModal();
               }}>
                 {mainButtonLabel}
@@ -547,6 +547,22 @@ export default function DashboardPage() {
 
           {view === 'actions' && (
             <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} />
+          )}
+
+          {view === 'personal_actions' && (
+            <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
+              <div style={{ padding: '10px 16px', borderBottom: '2px solid #111', background: '#FAFAFA', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
+                  ⚡ Actions
+                </span>
+                {personalActionsCount > 0 && (
+                  <span style={{ background: '#111', color: '#fff', fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 10 }}>
+                    {personalActionsCount}
+                  </span>
+                )}
+              </div>
+              <PersonalActionsSection triggerOpen={triggerAddPersonalAction} onCountChange={setPersonalActionsCount} />
+            </div>
           )}
         </div>
       </main>
