@@ -165,7 +165,6 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
       }}>
         {action.title}
         {action.type === 'included' && !action.is_done && <span style={{ background: '#2E7D32', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>✓</span>}
-        {action.type === 'new' && !action.is_done && <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 5px', borderRadius: 20, marginLeft: 4 }}>Nouveau</span>}
       </span>
 
       <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: isDateCard ? 8 : 10, flex: isDateCard ? 'none' : 1 }}>{action.sub}</span>

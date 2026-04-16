@@ -119,7 +119,7 @@ function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect
     <div style={{ width: 280, flexShrink: 0, position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', overflowX: 'hidden', background: '#fff', borderRight: '1.5px solid #EBEBEB', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
       <div style={{ padding: '18px 16px 14px', borderBottom: '1.5px solid #EBEBEB', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: '#111', letterSpacing: '-0.2px' }}>Mes candidatures</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#111', letterSpacing: '-0.2px' }}>Tableau de bord</span>
           <span style={{ fontSize: 11, fontWeight: 700, color: '#888', background: '#F5F5F0', padding: '2px 8px', borderRadius: 20 }}>{jobs.length}</span>
         </div>
       </div>
