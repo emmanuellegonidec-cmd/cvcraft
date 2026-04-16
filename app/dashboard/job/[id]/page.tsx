@@ -13,6 +13,7 @@ import JobStepProgress from './components/JobStepProgress'
 import JobStepActions from './components/JobStepActions'
 import EditJobModal from './components/EditJobModal'
 import ParcoursBannerModal from './components/ParcoursBannerModal'
+import JobArchivedDetails from './components/JobArchivedDetails'
 const FONT = "'Montserrat', sans-serif"
 
 const BASE_STEPS = [
@@ -618,7 +619,14 @@ export default function JobDetailPage() {
           stepDates={mergedStepDates}
           onStepDatesChange={handleStepDatesChange}
         />
-
+{currentStepId === 'archived' && (
+  <JobArchivedDetails
+    archivedReason={(job as any).archived_reason ?? null}
+    archivedNote={(job as any).archived_note ?? null}
+    onPatch={patchJob}
+    onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
+  />
+)}
        {isInterviewStep && (
           <JobInterviewDetails
             job={job}
