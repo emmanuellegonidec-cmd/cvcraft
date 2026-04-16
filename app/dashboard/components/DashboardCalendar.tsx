@@ -577,11 +577,6 @@ export default function DashboardCalendar({
                             {timeLabel}{endLabel ? ` → ${endLabel}` : ''}
                           </div>
                         )}
-                        {isAction && (
-                          <div style={{ fontSize: 10, opacity: .85, fontWeight: 800, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-                            ⚡ {ev.company || 'Action'}
-                          </div>
-                        )}
                         {isDeadline && (
                           <div style={{ fontSize: 10, opacity: .85, fontWeight: 800, lineHeight: 1.3 }}>⏰ {ev.deadlineLabel}</div>
                         )}
@@ -590,6 +585,11 @@ export default function DashboardCalendar({
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           textDecoration: isArchived ? 'line-through' : 'none',
                         }}>{ev.title}</div>
+                        {isAction && ev.company && (
+                          <div style={{ fontSize: 10, opacity: .85, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            ⚡ {ev.company}
+                          </div>
+                        )}
                         {ev.company && !isAction && height > 40 && (
                           <div style={{
                             fontSize: 10, opacity: .85, lineHeight: 1.3,
