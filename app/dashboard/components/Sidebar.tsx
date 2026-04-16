@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 
-type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats' | 'actions';
+type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats' | 'actions' | 'personal_actions';
 
 interface SidebarProps {
   view: View;
