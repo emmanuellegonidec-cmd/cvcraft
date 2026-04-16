@@ -17,14 +17,20 @@ interface SidebarProps {
   onSettings: () => void;
 }
 
-const RECHERCHE_ITEMS: { id: View; label: string }[] = [
+const SUIVI_ITEMS: { id: View; label: string }[] = [
   { id: 'kanban',   label: 'Tableau de bord' },
- { id: 'list',             label: 'Candidatures'  },
-{ id: 'personal_actions', label: 'Actions'        },
+  { id: 'list',     label: 'Candidatures'    },
   { id: 'contacts', label: 'Contacts'        },
   { id: 'agenda',   label: 'Entretiens'      },
-  { id: 'actions',  label: 'Événements'      },
-  { id: 'stats',    label: 'Statistiques'    },
+];
+
+const AGENDA_ITEMS: { id: View; label: string }[] = [
+  { id: 'actions',          label: 'Événements' },
+  { id: 'personal_actions', label: 'Actions'    },
+];
+
+const OUTILS_ITEMS: { id: View; label: string }[] = [
+  { id: 'stats', label: 'Statistiques' },
 ];
 
 export default function Sidebar({
@@ -75,6 +81,37 @@ export default function Sidebar({
     transition: 'all 0.12s',
   };
 
+  const sectionLabel: React.CSSProperties = {
+    fontSize: 10,
+    fontWeight: 700,
+    color: '#444',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    padding: '16px 8px 8px',
+  };
+
+  const renderItems = (items: { id: View; label: string }[]) =>
+    items.map((item) => {
+      const isActive = view === item.id;
+      return (
+        <button
+          key={item.id}
+          onClick={() => setView(item.id)}
+          style={{
+            ...navBtnBase,
+            borderLeft: isActive ? '3px solid #E8151B' : '3px solid transparent',
+            background: isActive ? '#1c1c1c' : 'transparent',
+            color: isActive ? '#fff' : '#888',
+            fontWeight: isActive ? 700 : 500,
+          }}
+          onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; } }}
+          onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; } }}
+        >
+          {item.label}
+        </button>
+      );
+    });
+
   return (
     <aside style={{
       width: 200, minWidth: 200,
@@ -98,34 +135,17 @@ export default function Sidebar({
       {/* Nav */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
 
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>
-          Recherche
-        </div>
+        {/* SUIVI */}
+        <div style={{ ...sectionLabel, paddingTop: '0px' }}>Suivi</div>
+        {renderItems(SUIVI_ITEMS)}
 
-        {RECHERCHE_ITEMS.map((item) => {
-          const isActive = view === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setView(item.id)}
-              style={{
-                ...navBtnBase,
-                borderLeft: isActive ? '3px solid #E8151B' : '3px solid transparent',
-                background: isActive ? '#1c1c1c' : 'transparent',
-                color: isActive ? '#fff' : '#888',
-                fontWeight: isActive ? 700 : 500,
-              }}
-              onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; } }}
-              onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; } }}
-            >
-              {item.label}
-            </button>
-          );
-        })}
+        {/* AGENDA */}
+        <div style={sectionLabel}>Agenda</div>
+        {renderItems(AGENDA_ITEMS)}
 
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>
-          Outils
-        </div>
+        {/* OUTILS */}
+        <div style={sectionLabel}>Outils</div>
+        {renderItems(OUTILS_ITEMS)}
 
         <button
           onClick={() => router.push('/dashboard/synthese')}
@@ -136,24 +156,26 @@ export default function Sidebar({
           Synthèse
         </button>
 
-       {isAdmin && (
-  <>
-    <button
-      onClick={() => router.push('/dashboard/editor')}
-      style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', border: 'none', borderLeft: '3px solid #E8151B', borderRadius: 0, background: '#1c1c1c', color: '#fff', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left', width: '100%' }}
-    >
-      CV Creator
-    </button>
-    <button
-      onClick={() => router.push('/dashboard/cv-creator')}
-      style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 6px 22px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#666', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}
-      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#F5C400'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#666'; }}
-    >
-      Mes CV
-    </button>
-  </>
-)}
+        {isAdmin && (
+          <>
+            <button
+              onClick={() => router.push('/dashboard/editor')}
+              style={{ ...navBtnBase }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
+            >
+              CV Creator
+            </button>
+            <button
+              onClick={() => router.push('/dashboard/cv-creator')}
+              style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 6px 22px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#666', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#F5C400'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#666'; }}
+            >
+              Mes CV
+            </button>
+          </>
+        )}
 
         <button
           onClick={() => router.push('/dashboard/help')}
