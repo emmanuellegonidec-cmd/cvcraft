@@ -423,16 +423,28 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {view === 'kanban' && (
-              <button
-                className="btn-main"
-                style={{ background: '#F5C400', boxShadow: '2px 2px 0 #111', color: '#111' }}
-                onClick={() => {
-                  setActionsVisible(true);
-                  setTimeout(() => setTriggerAddAction(n => n + 1), 50);
-                }}
-              >
-                + Ajouter un événement
-              </button>
+              <>
+                <button
+                  className="btn-main"
+                  style={{ background: '#F5C400', boxShadow: '2px 2px 0 #111', color: '#111' }}
+                  onClick={() => {
+                    setActionsVisible(true);
+                    setTimeout(() => setTriggerAddAction(n => n + 1), 50);
+                  }}
+                >
+                  + Ajouter un événement
+                </button>
+                <button
+                  className="btn-main"
+                  style={{ background: '#fff', boxShadow: '2px 2px 0 #111', color: '#111' }}
+                  onClick={() => {
+                    setPersonalActionsVisible(true);
+                    setTimeout(() => setTriggerAddPersonalAction(n => n + 1), 50);
+                  }}
+                >
+                  + Ajouter une action
+                </button>
+              </>
             )}
             {mainButtonLabel && (
               <button className="btn-main" onClick={() => {
