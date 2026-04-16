@@ -53,7 +53,7 @@ export default function JobHeader({ job, onBack, onEdit, onDelete, onGenerateCV 
       <div style={{ flex: 1, minWidth: 200 }}>
         <div style={{ fontSize: 12, color: '#666', marginBottom: 8, fontFamily: FONT }}>
           <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#F5C400', fontWeight: 700, cursor: 'pointer', fontFamily: FONT, fontSize: 12, padding: 0 }}>
-            ← Mes candidatures
+            ← Tableau de bord
           </button>
           {' / '}<span style={{ color: '#555' }}>{job.company}</span>
         </div>
