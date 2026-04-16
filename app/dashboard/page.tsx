@@ -67,6 +67,7 @@ export default function DashboardPage() {
 
   const [actionsVisible, setActionsVisible] = useState(false);
   const [actionsCount, setActionsCount] = useState(0);
+  const [personalActionsVisible, setPersonalActionsVisible] = useState(false);
   const [personalActionsCount, setPersonalActionsCount] = useState(0);
 
   const [deleteJobTarget, setDeleteJobTarget] = useState<Job | null>(null);
@@ -541,6 +542,37 @@ export default function DashboardPage() {
               </div>
               {actionsVisible && (
                 <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} />
+              )}
+            </div>
+          )}
+
+          {view === 'kanban' && (
+            <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 16px',
+                borderBottom: personalActionsVisible ? '2px solid #111' : 'none',
+                background: '#FAFAFA',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
+                    ⚡ Actions
+                  </span>
+                  {personalActionsCount > 0 && (
+                    <span style={{ background: '#111', color: '#fff', fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 10 }}>
+                      {personalActionsCount}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setPersonalActionsVisible(v => !v)}
+                  style={{ fontSize: 11, fontWeight: 800, fontFamily: FONT, background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}
+                >
+                  {personalActionsVisible ? 'Masquer' : 'Afficher'}
+                </button>
+              </div>
+              {personalActionsVisible && (
+                <PersonalActionsSection triggerOpen={triggerAddPersonalAction} onCountChange={setPersonalActionsCount} />
               )}
             </div>
           )}
