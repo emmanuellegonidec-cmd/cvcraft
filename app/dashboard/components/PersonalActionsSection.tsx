@@ -45,8 +45,9 @@ interface JobOption { id: string; title: string; company: string; }
 interface Props {
   triggerOpen?: number;
   onCountChange?: (n: number) => void;
-  // Mode compact (utilisé sur le kanban principal) : masque les actions passées
-  // dont le statut est "fait" ou "annule" pour ne garder que ce qui est à traiter
+  // Mode compact (utilisé sur le kanban principal) : masque les actions
+  // avec statut "fait" ou "annule" — peu importe leur date. On ne garde
+  // que les actions actives (à faire / en retard).
   compact?: boolean;
 }
 
@@ -241,12 +242,19 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
   );
 
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = actions.filter(a => a.date_action >= today).sort((a, b) => a.date_action.localeCompare(b.date_action));
-  // En mode compact : masquer les passées dont le statut est 'fait' ou 'annule'
-  // (on garde donc seulement les passées encore à traiter = "en retard")
-  const past = actions
+
+  // Filtre global pour le mode compact : masque TOUTES les actions faites ou annulées
+  // (quelle que soit leur date — y compris celles à venir si déjà cochées)
+  const filteredActions = compact
+    ? actions.filter(a => a.statut !== 'fait' && a.statut !== 'annule')
+    : actions;
+
+  const upcoming = filteredActions
+    .filter(a => a.date_action >= today)
+    .sort((a, b) => a.date_action.localeCompare(b.date_action));
+
+  const past = filteredActions
     .filter(a => a.date_action < today)
-    .filter(a => compact ? (a.statut !== 'fait' && a.statut !== 'annule') : true)
     .sort((a, b) => b.date_action.localeCompare(a.date_action));
 
   function renderActionRow(a: PersonalAction) {
@@ -313,8 +321,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
     );
   }
 
-  // En mode compact, si rien à afficher, on montre un message différent
-  const isEmpty = compact ? (upcoming.length === 0 && past.length === 0) : actions.length === 0;
+  const isEmpty = filteredActions.length === 0;
   const emptyText = compact
     ? { icon: '✅', title: 'Tout est à jour !', subtitle: 'Aucune action en attente ou en retard.' }
     : { icon: '⚡', title: 'Aucune action pour le moment.', subtitle: 'Ajoutez vos candidatures externes, prises de contact, mises à jour de profil...' };

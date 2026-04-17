@@ -40,8 +40,8 @@ export default function ActionsSection({
 }: {
   triggerOpen?: number
   onCountChange?: (count: number) => void
-  // Mode compact (utilisé sur le kanban principal) : masque les événements passés
-  // dont le statut est "fait" ou "annule" pour ne garder que ce qui est à traiter
+  // Mode compact (utilisé sur le kanban principal) : masque TOUS les événements
+  // avec statut "fait" ou "annule" — peu importe leur date.
   compact?: boolean
 }) {
   const [actions, setActions] = useState<Action[]>([])
@@ -135,13 +135,15 @@ export default function ActionsSection({
 
   const isPast = (dateStr: string) => new Date(dateStr) < new Date()
 
-  const upcoming = actions.filter(a => !isPast(a.date_debut))
-  // En mode compact : masquer les passés dont le statut est 'fait' ou 'annule'
-  const past = actions
-    .filter(a => isPast(a.date_debut))
-    .filter(a => compact ? (a.statut !== 'fait' && a.statut !== 'annule') : true)
+  // En mode compact : masque tous les événements faits ou annulés (quelle que soit la date)
+  const filteredActions = compact
+    ? actions.filter(a => a.statut !== 'fait' && a.statut !== 'annule')
+    : actions
 
-  const isEmpty = compact ? (upcoming.length === 0 && past.length === 0) : actions.length === 0
+  const upcoming = filteredActions.filter(a => !isPast(a.date_debut))
+  const past = filteredActions.filter(a => isPast(a.date_debut))
+
+  const isEmpty = filteredActions.length === 0
   const emptyText = compact
     ? 'Tout est à jour ! Aucun événement en attente ou en retard.'
     : 'Aucun événement pour le moment. Ajoutez vos ateliers, formations, rendez-vous...'
