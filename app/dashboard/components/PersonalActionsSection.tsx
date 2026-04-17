@@ -45,6 +45,9 @@ interface JobOption { id: string; title: string; company: string; }
 interface Props {
   triggerOpen?: number;
   onCountChange?: (n: number) => void;
+  // Mode compact (utilisé sur le kanban principal) : masque les actions passées
+  // dont le statut est "fait" ou "annule" pour ne garder que ce qui est à traiter
+  compact?: boolean;
 }
 
 function notifyCalendarRefresh() {
@@ -53,7 +56,6 @@ function notifyCalendarRefresh() {
   }
 }
 
-// Calcule le statut effectif : 'fait' | 'annule' | 'a_faire' | 'en_retard'
 function getEffectiveStatus(a: PersonalAction): 'fait' | 'annule' | 'a_faire' | 'en_retard' {
   if (a.statut === 'fait') return 'fait';
   if (a.statut === 'annule') return 'annule';
@@ -64,7 +66,7 @@ function getEffectiveStatus(a: PersonalAction): 'fait' | 'annule' | 'a_faire' | 
   return 'a_faire';
 }
 
-export default function PersonalActionsSection({ triggerOpen, onCountChange }: Props) {
+export default function PersonalActionsSection({ triggerOpen, onCountChange, compact = false }: Props) {
   const [actions, setActions] = useState<PersonalAction[]>([]);
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -240,7 +242,12 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
 
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = actions.filter(a => a.date_action >= today).sort((a, b) => a.date_action.localeCompare(b.date_action));
-  const past = actions.filter(a => a.date_action < today).sort((a, b) => b.date_action.localeCompare(a.date_action));
+  // En mode compact : masquer les passées dont le statut est 'fait' ou 'annule'
+  // (on garde donc seulement les passées encore à traiter = "en retard")
+  const past = actions
+    .filter(a => a.date_action < today)
+    .filter(a => compact ? (a.statut !== 'fait' && a.statut !== 'annule') : true)
+    .sort((a, b) => b.date_action.localeCompare(a.date_action));
 
   function renderActionRow(a: PersonalAction) {
     const effectiveStatus = getEffectiveStatus(a);
@@ -248,7 +255,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
     const isCancelled = effectiveStatus === 'annule';
     const isLate = effectiveStatus === 'en_retard';
 
-    // Opacity seule, PAS de texte barré
     const opacity = isDone ? 0.65 : isCancelled ? 0.55 : 1;
     const borderLeft = isLate ? '4px solid #E8151B' : '4px solid transparent';
 
@@ -307,14 +313,20 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
     );
   }
 
+  // En mode compact, si rien à afficher, on montre un message différent
+  const isEmpty = compact ? (upcoming.length === 0 && past.length === 0) : actions.length === 0;
+  const emptyText = compact
+    ? { icon: '✅', title: 'Tout est à jour !', subtitle: 'Aucune action en attente ou en retard.' }
+    : { icon: '⚡', title: 'Aucune action pour le moment.', subtitle: 'Ajoutez vos candidatures externes, prises de contact, mises à jour de profil...' };
+
   return (
     <div style={{ fontFamily: FONT }}>
 
-      {actions.length === 0 ? (
+      {isEmpty ? (
         <div style={{ padding: '40px 20px', textAlign: 'center', color: '#aaa', fontFamily: FONT }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>⚡</div>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Aucune action pour le moment.</div>
-          <div style={{ fontSize: 13, marginTop: 4 }}>Ajoutez vos candidatures externes, prises de contact, mises à jour de profil...</div>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>{emptyText.icon}</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{emptyText.title}</div>
+          <div style={{ fontSize: 13, marginTop: 4 }}>{emptyText.subtitle}</div>
         </div>
       ) : (
         <>
@@ -329,7 +341,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
           {past.length > 0 && (
             <>
               <div style={{ padding: '6px 20px', fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', background: '#F5F5F5', borderBottom: '1px solid #E8E8E8' }}>
-                Passées
+                {compact ? 'En retard' : 'Passées'}
               </div>
               {past.map(renderActionRow)}
             </>

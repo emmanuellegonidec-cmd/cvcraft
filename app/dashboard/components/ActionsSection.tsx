@@ -36,9 +36,13 @@ function getEffectiveStatus(a: Action): 'fait' | 'annule' | 'a_faire' | 'en_reta
 export default function ActionsSection({
   triggerOpen = 0,
   onCountChange,
+  compact = false,
 }: {
   triggerOpen?: number
   onCountChange?: (count: number) => void
+  // Mode compact (utilisé sur le kanban principal) : masque les événements passés
+  // dont le statut est "fait" ou "annule" pour ne garder que ce qui est à traiter
+  compact?: boolean
 }) {
   const [actions, setActions] = useState<Action[]>([])
   const [loading, setLoading] = useState(true)
@@ -132,15 +136,23 @@ export default function ActionsSection({
   const isPast = (dateStr: string) => new Date(dateStr) < new Date()
 
   const upcoming = actions.filter(a => !isPast(a.date_debut))
-  const past = actions.filter(a => isPast(a.date_debut))
+  // En mode compact : masquer les passés dont le statut est 'fait' ou 'annule'
+  const past = actions
+    .filter(a => isPast(a.date_debut))
+    .filter(a => compact ? (a.statut !== 'fait' && a.statut !== 'annule') : true)
+
+  const isEmpty = compact ? (upcoming.length === 0 && past.length === 0) : actions.length === 0
+  const emptyText = compact
+    ? 'Tout est à jour ! Aucun événement en attente ou en retard.'
+    : 'Aucun événement pour le moment. Ajoutez vos ateliers, formations, rendez-vous...'
 
   return (
     <div style={{ padding: 16 }}>
       {loading ? (
         <p style={{ fontSize: 13, color: '#888', fontFamily: 'Montserrat, sans-serif' }}>Chargement...</p>
-      ) : actions.length === 0 ? (
+      ) : isEmpty ? (
         <p style={{ fontSize: 13, color: '#888', fontFamily: 'Montserrat, sans-serif', textAlign: 'center', padding: '20px 0' }}>
-          Aucun événement pour le moment. Ajoutez vos ateliers, formations, rendez-vous...
+          {compact && '✅ '}{emptyText}
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -161,7 +173,9 @@ export default function ActionsSection({
           )}
           {past.length > 0 && (
             <>
-              <p style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'Montserrat, sans-serif', marginTop: 8, marginBottom: 4 }}>Passées</p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'Montserrat, sans-serif', marginTop: 8, marginBottom: 4 }}>
+                {compact ? 'En retard' : 'Passées'}
+              </p>
               {past.map(action => (
                 <ActionCard
                   key={action.id}
@@ -218,7 +232,6 @@ function ActionCard({ action, formatDate, onEdit, onDelete, onQuickStatus }: {
   const isLate = effectiveStatus === 'en_retard'
 
   const borderLeft = isLate ? `4px solid #E8151B` : `4px solid ${color}`
-  // Opacity seule, pas de barré
   const opacity = isDone ? 0.65 : isCancelled ? 0.55 : 1
 
   return (

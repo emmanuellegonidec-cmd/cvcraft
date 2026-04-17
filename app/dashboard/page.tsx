@@ -563,7 +563,10 @@ export default function DashboardPage() {
                 </button>
               </div>
               {actionsVisible && (
-                <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} />
+                {actionsVisible && (
+                <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} compact />
+              )}
+            </div>
               )}
             </div>
           )}
@@ -594,7 +597,7 @@ export default function DashboardPage() {
                 </button>
               </div>
               {personalActionsVisible && (
-                <PersonalActionsSection triggerOpen={triggerAddPersonalAction} onCountChange={setPersonalActionsCount} />
+                <PersonalActionsSection triggerOpen={triggerAddPersonalAction} onCountChange={setPersonalActionsCount} compact />
               )}
             </div>
           )}
