@@ -18,7 +18,7 @@ interface SidebarProps {
 }
 
 const SUIVI_ITEMS: { id: View; label: string }[] = [
-  { id: 'kanban',   label: 'Candidatures' },
+  { id: 'kanban',   label: 'Tableau de bord' },
   { id: 'list',     label: 'Candidatures'    },
   { id: 'contacts', label: 'Contacts'        },
   { id: 'agenda',   label: 'Entretiens'      },
