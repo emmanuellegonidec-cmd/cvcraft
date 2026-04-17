@@ -408,7 +408,6 @@ export default function DashboardPage() {
 
   const mainButtonLabel = getMainButtonLabel();
 
-  // Liste compacte des jobs pour le sélecteur "offre liée" du panneau d'action
   const jobOptionsForPanel = jobs.map(j => ({ id: j.id, title: j.title || '', company: j.company || '' }));
 
   return (
@@ -563,10 +562,7 @@ export default function DashboardPage() {
                 </button>
               </div>
               {actionsVisible && (
-                {actionsVisible && (
                 <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} compact />
-              )}
-            </div>
               )}
             </div>
           )}
