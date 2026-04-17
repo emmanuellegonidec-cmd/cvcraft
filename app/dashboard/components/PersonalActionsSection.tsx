@@ -101,6 +101,20 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
 
   useEffect(() => { loadActions(); loadJobs(); }, []);
 
+  // Écoute le signal de rafraîchissement (déclenché par le panneau de détail
+  // après modification ou suppression depuis le calendrier)
+  useEffect(() => {
+    const handler = () => loadActions();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('jfmj-calendar-refresh', handler);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('jfmj-calendar-refresh', handler);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (triggerOpen && triggerOpen > 0) openModal();
   }, [triggerOpen]);
@@ -147,7 +161,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
       if (data.action) {
         await loadActions();
         setShowModal(false);
-        // Notifie le calendrier qu'une action a été ajoutée/modifiée
         notifyCalendarRefresh();
       }
     } finally { setSaving(false); }
@@ -160,7 +173,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
       await authFetch('/api/personal-actions?id=' + deleteTarget.id, { method: 'DELETE' });
       await loadActions();
       setDeleteTarget(null);
-      // Notifie le calendrier qu'une action a été supprimée
       notifyCalendarRefresh();
     } finally { setDeleteLoading(false); }
   }

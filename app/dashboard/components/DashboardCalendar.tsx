@@ -30,6 +30,9 @@ type CalEvent = {
   endHour?: number;
   endMinutes?: number;
   deadlineLabel?: string;
+  // Champs pour les actions/événements cliquables
+  actionKind?: 'personal_action' | 'event';
+  rawData?: any;
 };
 
 const EV_STYLE: Record<CalEvent['type'], React.CSSProperties> = {
@@ -59,10 +62,6 @@ const navBtnStyle: React.CSSProperties = {
   width: 28, height: 28, cursor: 'pointer', color: '#555',
   fontSize: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   fontFamily: 'Montserrat,sans-serif', padding: 0,
-};
-
-const weekTh: React.CSSProperties = {
-  background: '#FAFAFA', padding: '8px 4px', borderBottom: '2px solid #111',
 };
 
 function sameDay(a: Date, b: Date) {
@@ -126,15 +125,13 @@ function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}):
       const hasInterview = hasAnyDate;
 
       if (hasAnyDate) {
-        // Logique : step_dates future = prochaine étape planifiée (priorité)
-        // step_dates passée = date du clic, pas de l'entretien → utiliser interview_at
         const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
         if (stepDateObj && stepDateObj >= todayMidnight) {
-          date = stepDateObj; // date future = prochaine étape planifiée
+          date = stepDateObj;
         } else if (interviewAtObj) {
-          date = interviewAtObj; // step_date passée → interview_at prime
+          date = interviewAtObj;
         } else if (stepDateObj) {
-          date = stepDateObj; // pas d'interview_at → step_date même passée
+          date = stepDateObj;
         } else {
           date = new Date(job.created_at);
           dateField = 'created_at';
@@ -199,10 +196,11 @@ function getWeekStart(base: Date, off: number): Date {
 }
 
 function EventCard({
-  ev, onJobClick, onDragStart,
+  ev, onJobClick, onActionClick, onDragStart,
 }: {
   ev: CalEvent;
   onJobClick: (jobId: string) => void;
+  onActionClick?: (kind: 'personal_action' | 'event', data: any) => void;
   onDragStart: (e: React.DragEvent, ev: CalEvent) => void;
 }) {
   const isArchived = ev.type === 'archive';
@@ -210,19 +208,30 @@ function EventCard({
   const isAction   = ev.type === 'action';
   const timeLabel = ev.hour !== undefined ? formatTime(ev.hour, ev.minutes || 0) : undefined;
 
+  function handleClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (isAction) {
+      if (onActionClick && ev.actionKind && ev.rawData) {
+        onActionClick(ev.actionKind, ev.rawData);
+      }
+    } else {
+      onJobClick(ev.jobId);
+    }
+  }
+
   return (
     <div
       draggable={!isArchived && !isDeadline && !isAction}
       onDragStart={e => !isArchived && !isDeadline && !isAction && onDragStart(e, ev)}
-      onClick={e => { e.stopPropagation(); if (!isAction) onJobClick(ev.jobId); }}
-      title={`${isDeadline ? '⏰ ' + (ev.deadlineLabel || 'Deadline') + ' — ' : ''}${isAction ? '⚡ Action — ' : ''}${ev.title} — ${ev.company}`}
+      onClick={handleClick}
+      title={`${isDeadline ? '⏰ ' + (ev.deadlineLabel || 'Deadline') + ' — ' : ''}${isAction ? '⚡ ' + (ev.actionKind === 'event' ? 'Événement' : 'Action') + ' — ' : ''}${ev.title} — ${ev.company}`}
       style={{
         ...EV_STYLE[ev.type],
         borderRadius: 5, padding: '5px 8px', marginBottom: 3,
-        cursor: isAction ? 'default' : 'pointer',
+        cursor: 'pointer',
         fontFamily: 'Montserrat,sans-serif', overflow: 'hidden',
         userSelect: 'none', opacity: isArchived ? 0.65 : 1,
-        border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(255,255,255,0.3)' : 'none',
+        border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(0,0,0,0.3)' : 'none',
       }}
     >
       {isDeadline && (
@@ -260,11 +269,12 @@ function EventCard({
 }
 
 export default function DashboardCalendar({
-  jobs, onJobClick, onDateChange, stagesLabelMap = {},
+  jobs, onJobClick, onActionClick, onDateChange, stagesLabelMap = {},
 }: {
   jobs: Job[];
   stagesLabelMap?: Record<string, string>;
   onJobClick: (jobId: string) => void;
+  onActionClick?: (kind: 'personal_action' | 'event', data: any) => void;
   onDateChange: (jobId: string, field: string, newDate: Date) => void;
 }) {
   const [calView, setCalView]   = useState<'week' | 'month'>('week');
@@ -283,9 +293,7 @@ export default function DashboardCalendar({
   }, [jobs]);
 
   // Charge les événements/actions au montage ET écoute le signal global
-  // 'jfmj-calendar-refresh' déclenché à chaque ajout/édition/suppression d'un
-  // événement ou d'une action personnelle, pour mettre à jour le calendrier
-  // sans avoir besoin de recharger la page.
+  // 'jfmj-calendar-refresh' déclenché à chaque ajout/édition/suppression
   useEffect(() => {
     loadActions();
     const handleRefresh = () => { loadActions(); };
@@ -365,6 +373,8 @@ export default function DashboardCalendar({
             minutes: hour > 0 || minutes > 0 ? minutes : undefined,
             endHour,
             endMinutes,
+            actionKind: 'event',
+            rawData: action,
           });
         });
       }
@@ -375,8 +385,6 @@ export default function DashboardCalendar({
           const date = parseLocalDate(action.date_action);
 
           // Lecture optionnelle de heure_action ("HH:MM")
-          // Si elle est définie, l'action s'affiche à cette heure dans le calendrier
-          // Sinon, elle reste sur toute la journée (comportement précédent)
           let hour: number | undefined;
           let minutes: number | undefined;
           if (action.heure_action && typeof action.heure_action === 'string') {
@@ -396,6 +404,8 @@ export default function DashboardCalendar({
             type: 'action' as CalEvent['type'],
             hour,
             minutes,
+            actionKind: 'personal_action',
+            rawData: action,
           });
         });
       }
@@ -477,7 +487,7 @@ export default function DashboardCalendar({
   }
 
   function WeekView() {
-    const HOUR_H = 60; // px par heure
+    const HOUR_H = 60;
     const START_H = 8;
     const totalH = HOURS.length * HOUR_H;
 
@@ -500,14 +510,13 @@ export default function DashboardCalendar({
         const dur = Math.max(endMin - startMin, 30);
         return (dur / 60) * HOUR_H - 2;
       }
-      return 44; // hauteur par défaut sans heure de fin
+      return 44;
     }
 
     return (
       <>
         <NavBar periodLabel={periodLabel} />
         <div style={{ border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
-          {/* En-tête jours */}
           <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
             <div />
             {days.map((d, i) => {
@@ -527,9 +536,7 @@ export default function DashboardCalendar({
             })}
           </div>
 
-          {/* Corps — lignes d'heures + colonnes */}
           <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))' }}>
-            {/* Colonne heures */}
             <div style={{ background: '#FAFAFA', borderRight: '1px solid #E5E5E5', position: 'relative', height: totalH }}>
               {HOURS.map(h => (
                 <div key={h} style={{
@@ -539,7 +546,6 @@ export default function DashboardCalendar({
               ))}
             </div>
 
-            {/* Colonnes jours */}
             {days.map((d, di) => {
               const isTod = sameDay(d, today);
               const dayEvs = allEvents.filter(e => sameDay(e.date, d));
@@ -558,7 +564,6 @@ export default function DashboardCalendar({
                     ...dropStyle(key),
                   }}
                 >
-                  {/* Lignes d'heures */}
                   {HOURS.map(h => (
                     <div key={h} style={{
                       position: 'absolute', top: (h - START_H) * HOUR_H,
@@ -566,7 +571,6 @@ export default function DashboardCalendar({
                     }} />
                   ))}
 
-                  {/* Événements positionnés */}
                   {dayEvs.map((ev, ei) => {
                     const top = evTop(ev);
                     const height = evHeight(ev);
@@ -576,12 +580,23 @@ export default function DashboardCalendar({
                     const timeLabel = ev.hour !== undefined ? formatTime(ev.hour, ev.minutes || 0) : undefined;
                     const endLabel = ev.endHour !== undefined ? formatTime(ev.endHour, ev.endMinutes || 0) : undefined;
 
+                    function handleEvClick(e: React.MouseEvent) {
+                      e.stopPropagation();
+                      if (isAction) {
+                        if (onActionClick && ev.actionKind && ev.rawData) {
+                          onActionClick(ev.actionKind, ev.rawData);
+                        }
+                      } else if (!isDeadline) {
+                        onJobClick(ev.jobId);
+                      }
+                    }
+
                     return (
                       <div
                         key={ei}
                         draggable={!isArchived && !isDeadline && !isAction}
                         onDragStart={e => !isArchived && !isDeadline && !isAction && handleDragStart(e, ev)}
-                        onClick={e => { e.stopPropagation(); if (!isAction) onJobClick(ev.jobId); }}
+                        onClick={handleEvClick}
                         style={{
                           position: 'absolute',
                           top: top + 1,
@@ -591,12 +606,12 @@ export default function DashboardCalendar({
                           ...EV_STYLE[ev.type],
                           borderRadius: 5,
                           padding: '4px 7px',
-                          cursor: isAction ? 'default' : 'pointer',
+                          cursor: 'pointer',
                           fontFamily: 'Montserrat,sans-serif',
                           overflow: 'hidden',
                           userSelect: 'none',
                           opacity: isArchived ? 0.65 : 1,
-                          border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(255,255,255,0.3)' : 'none',
+                          border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(0,0,0,0.3)' : 'none',
                           zIndex: 1,
                           boxSizing: 'border-box',
                         }}
@@ -688,7 +703,7 @@ export default function DashboardCalendar({
                       : d.getDate()}
                   </div>
                   {dayEvs.slice(0, 3).map((ev, ei) => (
-                    <EventCard key={ei} ev={ev} onJobClick={onJobClick} onDragStart={handleDragStart} />
+                    <EventCard key={ei} ev={ev} onJobClick={onJobClick} onActionClick={onActionClick} onDragStart={handleDragStart} />
                   ))}
                   {dayEvs.length > 3 && (
                     <div style={{ fontSize: 9, color: '#AAA', fontWeight: 700, padding: '1px 3px' }}>+{dayEvs.length - 3} autres</div>

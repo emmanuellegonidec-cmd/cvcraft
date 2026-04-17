@@ -17,6 +17,7 @@ import { SettingsModal } from './components/Modals';
 import DashboardCalendar from './components/DashboardCalendar';
 import ActionsSection from './components/ActionsSection';
 import PersonalActionsSection from './components/PersonalActionsSection';
+import ActionDetailPanel from './components/ActionDetailPanel';
 
 import {
   View, Stage, NewJobState,
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const [loading, setLoading]             = useState(true);
   const [view, setView]                   = useState<View>('kanban');
   const [selectedJob, setSelectedJob]     = useState<Job | null>(null);
+  const [selectedActionDetail, setSelectedActionDetail] = useState<{ kind: 'personal_action' | 'event'; data: any } | null>(null);
   const [showAddJob, setShowAddJob]       = useState(false);
   const [showSettings, setShowSettings]   = useState(false);
   const [triggerAddContact, setTriggerAddContact] = useState(0);
@@ -318,6 +320,10 @@ export default function DashboardPage() {
     if (job) setSelectedJob(job);
   }
 
+  function handleCalendarActionClick(kind: 'personal_action' | 'event', data: any) {
+    setSelectedActionDetail({ kind, data });
+  }
+
   function deleteJob(id: string) {
     const job = jobs.find(j => j.id === id);
     if (job) setDeleteJobTarget(job);
@@ -401,6 +407,9 @@ export default function DashboardPage() {
   );
 
   const mainButtonLabel = getMainButtonLabel();
+
+  // Liste compacte des jobs pour le sélecteur "offre liée" du panneau d'action
+  const jobOptionsForPanel = jobs.map(j => ({ id: j.id, title: j.title || '', company: j.company || '' }));
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: FONT }}>
@@ -490,6 +499,7 @@ export default function DashboardPage() {
               jobs={jobs}
               stagesLabelMap={stagesLabelMap}
               onJobClick={handleCalendarJobClick}
+              onActionClick={handleCalendarActionClick}
               onDateChange={handleCalendarDateChange}
             />
           )}
@@ -616,6 +626,15 @@ export default function DashboardPage() {
           job={selectedJob} stages={stages} userId={userId} accessToken={accessToken}
           onClose={() => setSelectedJob(null)} onStatusChange={updateJobStatus}
           onFieldUpdate={updateJobField} onEdit={openEditJobModal} onDelete={deleteJob}
+        />
+      )}
+
+      {selectedActionDetail && (
+        <ActionDetailPanel
+          kind={selectedActionDetail.kind}
+          data={selectedActionDetail.data}
+          jobs={jobOptionsForPanel}
+          onClose={() => setSelectedActionDetail(null)}
         />
       )}
 

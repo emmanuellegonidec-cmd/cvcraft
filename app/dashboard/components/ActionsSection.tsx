@@ -56,6 +56,20 @@ export default function ActionsSection({
 
   useEffect(() => { fetchActions() }, [])
 
+  // Écoute le signal de rafraîchissement (déclenché par le panneau de détail
+  // après modification ou suppression depuis le calendrier)
+  useEffect(() => {
+    const handler = () => fetchActions()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('jfmj-calendar-refresh', handler)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('jfmj-calendar-refresh', handler)
+      }
+    }
+  }, [])
+
   useEffect(() => {
     if (triggerOpen > 0) { setSelectedAction(null); setModalOpen(true) }
   }, [triggerOpen])
