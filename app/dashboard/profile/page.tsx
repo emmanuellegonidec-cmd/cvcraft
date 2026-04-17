@@ -146,6 +146,26 @@ export default function ProfilePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Erreur serveur');
       setProfile(data.profile);
+
+      // Synchroniser aussi user_metadata Supabase pour que le dashboard principal
+      // et les autres pages affichent le bon prénom immédiatement
+      try {
+        const supabase = createClient();
+        const fn = (data.profile?.first_name ?? '').trim();
+        const ln = (data.profile?.last_name ?? '').trim();
+        const fullName = [fn, ln].filter(Boolean).join(' ');
+        await supabase.auth.updateUser({
+          data: {
+            first_name: fn,
+            last_name: ln,
+            full_name: fullName,
+          },
+        });
+      } catch (metaErr) {
+        // Non bloquant : on log mais on ne casse pas le save si les metadata ne se mettent pas à jour
+        console.warn('Impossible de synchroniser user_metadata:', metaErr);
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e: unknown) {
@@ -245,8 +265,8 @@ export default function ProfilePage() {
         {/* 1 — Infos de base */}
         <Section title="👤 Informations de base">
           <Row>
-            <Field label="Prénom"><Input value={profile.first_name ?? ''} onChange={(v) => setProfile((p) => ({ ...p, first_name: v }))} placeholder="Emmanuelle" /></Field>
-            <Field label="Nom"><Input value={profile.last_name ?? ''} onChange={(v) => setProfile((p) => ({ ...p, last_name: v }))} placeholder="Dupont" /></Field>
+            <Field label="Prénom"><Input value={profile.first_name ?? ''} onChange={(v) => setProfile((p) => ({ ...p, first_name: v }))} placeholder="Votre prénom" /></Field>
+            <Field label="Nom"><Input value={profile.last_name ?? ''} onChange={(v) => setProfile((p) => ({ ...p, last_name: v }))} placeholder="Votre nom" /></Field>
           </Row>
           <Field label="Email" hint="Non modifiable ici">
             <input type="text" value={email} disabled style={{ ...inputStyle, background: '#f5f5f5', color: '#888' }} />
@@ -255,10 +275,10 @@ export default function ProfilePage() {
 
         {/* 2 — Situation pro */}
         <Section title="💼 Situation professionnelle">
-          <Field label="Poste actuel / dernier poste"><Input value={profile.current_title ?? ''} onChange={(v) => setProfile((p) => ({ ...p, current_title: v }))} placeholder="Directrice Marketing" /></Field>
-          <Field label="Poste recherché"><Input value={profile.target_title ?? ''} onChange={(v) => setProfile((p) => ({ ...p, target_title: v }))} placeholder="CMO / Head of Marketing" /></Field>
+          <Field label="Poste actuel / dernier poste"><Input value={profile.current_title ?? ''} onChange={(v) => setProfile((p) => ({ ...p, current_title: v }))} placeholder="Ex : Directrice Marketing" /></Field>
+          <Field label="Poste recherché"><Input value={profile.target_title ?? ''} onChange={(v) => setProfile((p) => ({ ...p, target_title: v }))} placeholder="Ex : CMO / Head of Marketing" /></Field>
           <Row>
-            <Field label="Secteur d'activité"><Input value={profile.sector ?? ''} onChange={(v) => setProfile((p) => ({ ...p, sector: v }))} placeholder="Tech, Retail, Santé…" /></Field>
+            <Field label="Secteur d'activité"><Input value={profile.sector ?? ''} onChange={(v) => setProfile((p) => ({ ...p, sector: v }))} placeholder="Ex : Tech, Retail, Santé…" /></Field>
             <Field label="Niveau d'expérience">
               <select value={profile.experience_level ?? ''} onChange={(e) => setProfile((p) => ({ ...p, experience_level: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
                 {EXPERIENCE_LEVELS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -270,8 +290,8 @@ export default function ProfilePage() {
         {/* 3 — Localisation */}
         <Section title="📍 Localisation">
           <Row>
-            <Field label="Ville"><Input value={profile.city ?? ''} onChange={(v) => setProfile((p) => ({ ...p, city: v }))} placeholder="Paris" /></Field>
-            <Field label="Région"><Input value={profile.region ?? ''} onChange={(v) => setProfile((p) => ({ ...p, region: v }))} placeholder="Île-de-France" /></Field>
+            <Field label="Ville"><Input value={profile.city ?? ''} onChange={(v) => setProfile((p) => ({ ...p, city: v }))} placeholder="Ex : Paris" /></Field>
+            <Field label="Région"><Input value={profile.region ?? ''} onChange={(v) => setProfile((p) => ({ ...p, region: v }))} placeholder="Ex : Île-de-France" /></Field>
           </Row>
           <Field label="Mobilité géographique">
             <select value={profile.mobility ?? ''} onChange={(e) => setProfile((p) => ({ ...p, mobility: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
@@ -286,10 +306,10 @@ export default function ProfilePage() {
             <textarea value={profile.summary ?? ''} onChange={(e) => setProfile((p) => ({ ...p, summary: e.target.value }))} placeholder="Ex : Directrice marketing avec 20 ans d'expérience dans le digital et le retail…" rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
           </Field>
           <Field label="Compétences clés" hint="Séparées par des virgules">
-            <Input value={skillsText} onChange={setSkillsText} placeholder="Marketing digital, SEO, Management d'équipe, CRM, Data Analytics" />
+            <Input value={skillsText} onChange={setSkillsText} placeholder="Ex : Marketing digital, SEO, Management d'équipe, CRM, Data Analytics" />
           </Field>
           <Field label="Langues parlées" hint="Séparées par des virgules">
-            <Input value={languagesText} onChange={setLanguagesText} placeholder="Français (natif), Anglais (courant), Espagnol (notions)" />
+            <Input value={languagesText} onChange={setLanguagesText} placeholder="Ex : Français (natif), Anglais (courant), Espagnol (notions)" />
           </Field>
         </Section>
 
@@ -302,7 +322,7 @@ export default function ProfilePage() {
               </select>
             </Field>
             <Field label="Prétentions salariales">
-              <Input value={profile.salary_expectation ?? ''} onChange={(v) => setProfile((p) => ({ ...p, salary_expectation: v }))} placeholder="55 000 – 65 000 € brut / an" />
+              <Input value={profile.salary_expectation ?? ''} onChange={(v) => setProfile((p) => ({ ...p, salary_expectation: v }))} placeholder="Ex : 55 000 – 65 000 € brut / an" />
             </Field>
           </Row>
           <Field label="Types de contrat recherchés">

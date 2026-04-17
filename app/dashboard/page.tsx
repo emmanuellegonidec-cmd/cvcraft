@@ -75,7 +75,6 @@ export default function DashboardPage() {
   const [deleteJobTarget, setDeleteJobTarget] = useState<Job | null>(null);
   const [deleteJobLoading, setDeleteJobLoading] = useState(false);
 
-  // NOUVEAU : état pour la création depuis clic calendrier
   const [slotCreationTarget, setSlotCreationTarget] = useState<{ date: Date; hasTime: boolean } | null>(null);
   const [personalActionInitialData, setPersonalActionInitialData] = useState<{ date: string; heure?: string } | null>(null);
   const [eventInitialData, setEventInitialData] = useState<{ date: string; heure?: string } | null>(null);
@@ -114,6 +113,23 @@ export default function DashboardPage() {
   const handleRefresh = useCallback(() => {
     if (accessToken) fetchJobs(accessToken);
   }, [accessToken, fetchJobs]);
+
+  // NOUVEAU : re-fetch du prénom depuis /api/profile (source de vérité)
+  const refetchFirstName = useCallback(async (token: string) => {
+    try {
+      const res = await fetch('/api/profile', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.profile?.first_name) {
+          setFirstName(capitalize(data.profile.first_name));
+        }
+      }
+    } catch {
+      // silencieux, pas bloquant
+    }
+  }, []);
 
   const fetchContacts = useCallback(async () => {
     if (!accessToken) return;
@@ -154,18 +170,36 @@ export default function DashboardPage() {
       setAccessToken(session.access_token);
       setUserId(session.user.id);
       setUserEmail(session.user.email || '');
+
+      // Fallback initial rapide : on prend le prénom depuis les metadata Supabase
       const meta = session.user.user_metadata;
       setFirstName(capitalize(
         meta?.first_name || meta?.full_name?.split(' ')[0] ||
         session.user.email?.split('@')[0] || ''
       ));
+
       const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
-      const [jr, cr] = await Promise.all([
+
+      // NOUVEAU : on fetch aussi /api/profile pour avoir la version à jour du prénom
+      // (la table user_profiles est source de vérité, les metadata peuvent être en retard)
+      const [jr, cr, pr] = await Promise.all([
         fetch('/api/jobs', { headers: h }),
         fetch('/api/contacts', { headers: h }),
+        fetch('/api/profile', { headers: h }),
       ]);
       const jd = await jr.json();
       const cd = await cr.json();
+
+      // Si /api/profile renvoie un prénom, on écrase le fallback
+      try {
+        const pd = await pr.json();
+        if (pd?.profile?.first_name) {
+          setFirstName(capitalize(pd.profile.first_name));
+        }
+      } catch {
+        // silencieux
+      }
+
       setJobs(jd.jobs || []);
       const contactsList = cd.contacts || [];
       const { data: notesData2 } = await supabase
@@ -219,6 +253,25 @@ export default function DashboardPage() {
     }
     load();
   }, [router]);
+
+  // NOUVEAU : re-fetch du prénom au retour sur l'onglet/fenêtre (après modif dans /profile)
+  useEffect(() => {
+    if (!accessToken) return;
+    function onFocus() {
+      refetchFirstName(accessToken!);
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        refetchFirstName(accessToken!);
+      }
+    }
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [accessToken, refetchFirstName]);
 
   const stats = {
     total: jobs.length,
@@ -329,7 +382,6 @@ export default function DashboardPage() {
     setSelectedActionDetail({ kind, data });
   }
 
-  // NOUVEAU : clic sur créneau libre → ouvre popup de choix
   function handleEmptySlotClick(date: Date, hasTime: boolean) {
     setSlotCreationTarget({ date, hasTime });
   }
@@ -451,7 +503,6 @@ export default function DashboardPage() {
 
   const jobOptionsForPanel = jobs.map(j => ({ id: j.id, title: j.title || '', company: j.company || '' }));
 
-  // Format date pour affichage dans popup de choix
   function formatSlotDate(date: Date, hasTime: boolean): string {
     const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     if (hasTime) {
@@ -747,7 +798,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* NOUVEAU : popup de choix événement/action après clic créneau calendrier */}
       {slotCreationTarget && (
         <div
           onClick={() => setSlotCreationTarget(null)}
