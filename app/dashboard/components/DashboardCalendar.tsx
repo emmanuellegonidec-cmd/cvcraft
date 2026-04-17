@@ -282,8 +282,21 @@ export default function DashboardCalendar({
     if (jobs.length) loadDeadlines();
   }, [jobs]);
 
+  // Charge les événements/actions au montage ET écoute le signal global
+  // 'jfmj-calendar-refresh' déclenché à chaque ajout/édition/suppression d'un
+  // événement ou d'une action personnelle, pour mettre à jour le calendrier
+  // sans avoir besoin de recharger la page.
   useEffect(() => {
     loadActions();
+    const handleRefresh = () => { loadActions(); };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('jfmj-calendar-refresh', handleRefresh);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('jfmj-calendar-refresh', handleRefresh);
+      }
+    };
   }, []);
 
   async function loadDeadlines() {

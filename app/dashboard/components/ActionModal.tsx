@@ -90,6 +90,10 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
 
       onSave()
       onClose()
+      // Notifie le calendrier qu'un événement a été ajouté/modifié pour qu'il se rafraîchisse
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('jfmj-calendar-refresh'))
+      }
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -116,7 +120,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
         onClick={e => e.stopPropagation()}
       >
         <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#111' }}>
-          {action?.id ? 'Modifier l\'action' : '+ Ajouter une action'}
+          {action?.id ? 'Modifier l\'événement' : '+ Ajouter un événement'}
         </h2>
 
         {error && (
@@ -127,7 +131,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={labelStyle}>Nom de l'action *</label>
+            <label style={labelStyle}>Nom de l'événement *</label>
             <input
               style={inputStyle}
               placeholder="Ex: Atelier CV Hello Simone"

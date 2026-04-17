@@ -39,6 +39,13 @@ interface Props {
   onCountChange?: (n: number) => void;
 }
 
+// Petit utilitaire pour notifier le calendrier qu'il doit se rafraîchir
+function notifyCalendarRefresh() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('jfmj-calendar-refresh'));
+  }
+}
+
 export default function PersonalActionsSection({ triggerOpen, onCountChange }: Props) {
   const [actions, setActions] = useState<PersonalAction[]>([]);
   const [jobs, setJobs] = useState<JobOption[]>([]);
@@ -132,7 +139,12 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
       };
       const res = await authFetch('/api/personal-actions', { method: 'POST', body: JSON.stringify(body) });
       const data = await res.json();
-      if (data.action) { await loadActions(); setShowModal(false); }
+      if (data.action) {
+        await loadActions();
+        setShowModal(false);
+        // Notifie le calendrier qu'une action a été ajoutée/modifiée
+        notifyCalendarRefresh();
+      }
     } finally { setSaving(false); }
   }
 
@@ -143,6 +155,8 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
       await authFetch('/api/personal-actions?id=' + deleteTarget.id, { method: 'DELETE' });
       await loadActions();
       setDeleteTarget(null);
+      // Notifie le calendrier qu'une action a été supprimée
+      notifyCalendarRefresh();
     } finally { setDeleteLoading(false); }
   }
 

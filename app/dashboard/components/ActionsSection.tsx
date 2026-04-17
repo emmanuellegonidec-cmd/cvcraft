@@ -48,7 +48,7 @@ export default function ActionsSection({
         onCountChange?.(data.length)
       }
     } catch (err) {
-      console.error('Erreur chargement actions:', err)
+      console.error('Erreur chargement événements:', err)
     } finally {
       setLoading(false)
     }
@@ -69,6 +69,10 @@ export default function ActionsSection({
       })
       setDeleteTarget(null)
       fetchActions()
+      // Notifie le calendrier qu'un événement a été supprimé pour qu'il se rafraîchisse
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('jfmj-calendar-refresh'))
+      }
     } catch (err) {
       console.error('Erreur suppression:', err)
     }
