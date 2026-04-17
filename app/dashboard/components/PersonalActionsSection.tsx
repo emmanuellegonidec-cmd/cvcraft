@@ -45,10 +45,9 @@ interface JobOption { id: string; title: string; company: string; }
 interface Props {
   triggerOpen?: number;
   onCountChange?: (n: number) => void;
-  // Mode compact (utilisé sur le kanban principal) : masque les actions
-  // avec statut "fait" ou "annule" — peu importe leur date. On ne garde
-  // que les actions actives (à faire / en retard).
   compact?: boolean;
+  // NOUVEAU : pré-remplissage de la date/heure pour création depuis clic calendrier
+  initialDateTime?: { date: string; heure?: string } | null;
 }
 
 function notifyCalendarRefresh() {
@@ -67,7 +66,7 @@ function getEffectiveStatus(a: PersonalAction): 'fait' | 'annule' | 'a_faire' | 
   return 'a_faire';
 }
 
-export default function PersonalActionsSection({ triggerOpen, onCountChange, compact = false }: Props) {
+export default function PersonalActionsSection({ triggerOpen, onCountChange, compact = false, initialDateTime = null }: Props) {
   const [actions, setActions] = useState<PersonalAction[]>([]);
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,12 +149,13 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
       setFormJobId(action.job_id || '');
       setFormStatut(action.statut || 'a_faire');
     } else {
+      // Mode création : vide OU pré-rempli depuis initialDateTime
       setEditAction(null);
       setFormType('Candidature externe');
       setFormNom('');
       setFormPlateforme('');
-      setFormDate(new Date().toISOString().slice(0, 10));
-      setFormHeure('');
+      setFormDate(initialDateTime?.date || new Date().toISOString().slice(0, 10));
+      setFormHeure(initialDateTime?.heure || '');
       setFormNote('');
       setFormJobId('');
       setFormStatut('a_faire');
@@ -243,8 +243,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Filtre global pour le mode compact : masque TOUTES les actions faites ou annulées
-  // (quelle que soit leur date — y compris celles à venir si déjà cochées)
   const filteredActions = compact
     ? actions.filter(a => a.statut !== 'fait' && a.statut !== 'annule')
     : actions;

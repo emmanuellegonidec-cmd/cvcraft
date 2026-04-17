@@ -37,12 +37,13 @@ export default function ActionsSection({
   triggerOpen = 0,
   onCountChange,
   compact = false,
+  initialDateTime = null,
 }: {
   triggerOpen?: number
   onCountChange?: (count: number) => void
-  // Mode compact (utilisé sur le kanban principal) : masque TOUS les événements
-  // avec statut "fait" ou "annule" — peu importe leur date.
   compact?: boolean
+  // NOUVEAU : pré-remplissage date/heure pour création depuis clic calendrier
+  initialDateTime?: { date: string; heure?: string } | null
 }) {
   const [actions, setActions] = useState<Action[]>([])
   const [loading, setLoading] = useState(true)
@@ -135,7 +136,6 @@ export default function ActionsSection({
 
   const isPast = (dateStr: string) => new Date(dateStr) < new Date()
 
-  // En mode compact : masque tous les événements faits ou annulés (quelle que soit la date)
   const filteredActions = compact
     ? actions.filter(a => a.statut !== 'fait' && a.statut !== 'annule')
     : actions
@@ -215,6 +215,7 @@ export default function ActionsSection({
         onClose={() => setModalOpen(false)}
         onSave={fetchActions}
         action={selectedAction}
+        initialDateTime={selectedAction ? null : initialDateTime}
       />
     </div>
   )

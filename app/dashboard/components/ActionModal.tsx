@@ -34,9 +34,11 @@ interface ActionModalProps {
   onClose: () => void
   onSave: () => void
   action?: Action | null
+  // NOUVEAU : pré-remplissage de la date/heure pour création depuis clic calendrier
+  initialDateTime?: { date: string; heure?: string } | null
 }
 
-export default function ActionModal({ isOpen, onClose, onSave, action }: ActionModalProps) {
+export default function ActionModal({ isOpen, onClose, onSave, action, initialDateTime }: ActionModalProps) {
   const [nom, setNom] = useState('')
   const [organisateur, setOrganisateur] = useState('')
   const [categorie, setCategorie] = useState('')
@@ -49,6 +51,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
 
   useEffect(() => {
     if (action) {
+      // Mode édition
       setNom(action.nom || '')
       setOrganisateur(action.organisateur || '')
       setCategorie(action.categorie || '')
@@ -58,16 +61,28 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
       setNote(action.note || '')
       setStatut(action.statut || 'a_faire')
     } else {
+      // Mode création : vide OU pré-rempli depuis initialDateTime
       setNom('')
       setOrganisateur('')
       setCategorie('')
-      setDateDebut('')
-      setDateFin('')
+      if (initialDateTime) {
+        const h = initialDateTime.heure || '09:00'
+        const datetimeLocal = `${initialDateTime.date}T${h}`
+        setDateDebut(datetimeLocal)
+        // Date de fin : 1h après la date de début par défaut
+        const [hh, mm] = h.split(':').map(Number)
+        const endH = String((hh + 1) % 24).padStart(2, '0')
+        const endMM = String(mm).padStart(2, '0')
+        setDateFin(`${initialDateTime.date}T${endH}:${endMM}`)
+      } else {
+        setDateDebut('')
+        setDateFin('')
+      }
       setNote('')
       setStatut('a_faire')
     }
     setError('')
-  }, [action, isOpen])
+  }, [action, isOpen, initialDateTime])
 
   if (!isOpen) return null
 
@@ -199,7 +214,6 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
             </div>
           </div>
 
-          {/* Sélecteur de statut */}
           <div>
             <label style={labelStyle}>Statut</label>
             <div style={{ display: 'flex', gap: 6 }}>

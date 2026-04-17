@@ -213,7 +213,6 @@ function getWeekStart(base: Date, off: number): Date {
   return d;
 }
 
-// Style selon statut : opacity seule pour fait/annulé, bordure rouge pour en_retard
 function getStatusStyleOverride(ev: CalEvent): React.CSSProperties {
   if (ev.type !== 'action' || !ev.actionStatus) return {};
   if (ev.actionStatus === 'fait') {
@@ -314,13 +313,16 @@ function EventCard({
 }
 
 export default function DashboardCalendar({
-  jobs, onJobClick, onActionClick, onDateChange, stagesLabelMap = {},
+  jobs, onJobClick, onActionClick, onDateChange, onEmptySlotClick, stagesLabelMap = {},
 }: {
   jobs: Job[];
   stagesLabelMap?: Record<string, string>;
   onJobClick: (jobId: string) => void;
   onActionClick?: (kind: 'personal_action' | 'event', data: any) => void;
   onDateChange: (jobId: string, field: string, newDate: Date) => void;
+  // NOUVEAU : clic sur un créneau libre du calendrier
+  // hasTime = true en vue semaine (heure précise), false en vue mois (juste date)
+  onEmptySlotClick?: (date: Date, hasTime: boolean) => void;
 }) {
   const [calView, setCalView]   = useState<'week' | 'month'>('week');
   const [offset, setOffset]     = useState(0);
@@ -501,6 +503,26 @@ export default function DashboardCalendar({
       : {};
   }
 
+  // NOUVEAU : clic sur un créneau libre (vue semaine) — calcule l'heure depuis la position Y
+  function handleWeekSlotClick(e: React.MouseEvent, dayDate: Date, hourHeight: number, startH: number) {
+    if (!onEmptySlotClick) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const hour = Math.floor(y / hourHeight) + startH;
+    if (hour < 0 || hour >= 24) return;
+    const clickedDate = new Date(dayDate);
+    clickedDate.setHours(hour, 0, 0, 0);
+    onEmptySlotClick(clickedDate, true);
+  }
+
+  // NOUVEAU : clic sur une case jour (vue mois) — sans heure
+  function handleMonthDayClick(dayDate: Date, isOther: boolean) {
+    if (!onEmptySlotClick || isOther) return;
+    const clickedDate = new Date(dayDate);
+    clickedDate.setHours(0, 0, 0, 0);
+    onEmptySlotClick(clickedDate, false);
+  }
+
   function NavBar({ periodLabel }: { periodLabel: string }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -563,6 +585,11 @@ export default function DashboardCalendar({
     return (
       <>
         <NavBar periodLabel={periodLabel} />
+        {onEmptySlotClick && (
+          <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 8, fontFamily: 'Montserrat,sans-serif' }}>
+            💡 Astuce : cliquez sur un créneau libre pour créer un événement ou une action
+          </div>
+        )}
         <div style={{ border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, minmax(0, 1fr))', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
             <div />
@@ -603,11 +630,13 @@ export default function DashboardCalendar({
                   onDragOver={e => { e.preventDefault(); setDragOver(key); }}
                   onDragLeave={() => setDragOver(null)}
                   onDrop={e => handleDrop(e, d)}
+                  onClick={e => handleWeekSlotClick(e, d, HOUR_H, START_H)}
                   style={{
                     position: 'relative',
                     height: totalH,
                     borderLeft: '1px solid #E5E5E5',
                     background: isTod ? 'rgba(245,196,0,0.04)' : 'transparent',
+                    cursor: onEmptySlotClick ? 'copy' : 'default',
                     ...dropStyle(key),
                   }}
                 >
@@ -615,6 +644,7 @@ export default function DashboardCalendar({
                     <div key={h} style={{
                       position: 'absolute', top: (h - START_H) * HOUR_H,
                       left: 0, right: 0, borderTop: '1px solid #F0F0F0',
+                      pointerEvents: 'none',
                     }} />
                   ))}
 
@@ -725,6 +755,11 @@ export default function DashboardCalendar({
     return (
       <>
         <NavBar periodLabel={periodLabel} />
+        {onEmptySlotClick && (
+          <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 8, fontFamily: 'Montserrat,sans-serif' }}>
+            💡 Astuce : cliquez sur un jour pour créer un événement ou une action
+          </div>
+        )}
         <div style={{ border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', background: '#111' }}>
             {CAL_DAYS.map((d, i) => (
@@ -748,12 +783,14 @@ export default function DashboardCalendar({
                   onDragOver={e => { e.preventDefault(); setDragOver(key); }}
                   onDragLeave={() => setDragOver(null)}
                   onDrop={e => handleDrop(e, d)}
+                  onClick={() => handleMonthDayClick(d, isOther)}
                   style={{
                     minHeight: 80,
                     borderRight: (idx % 7) < 6 ? '1px solid #E5E5E5' : 'none',
                     borderBottom: idx < 35 ? '1px solid #E5E5E5' : 'none',
                     padding: '5px 4px 3px',
                     background: isTod ? 'rgba(245,196,0,0.07)' : 'transparent',
+                    cursor: (onEmptySlotClick && !isOther) ? 'copy' : 'default',
                     ...dropStyle(key),
                   }}
                 >

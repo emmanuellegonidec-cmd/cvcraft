@@ -75,6 +75,11 @@ export default function DashboardPage() {
   const [deleteJobTarget, setDeleteJobTarget] = useState<Job | null>(null);
   const [deleteJobLoading, setDeleteJobLoading] = useState(false);
 
+  // NOUVEAU : état pour la création depuis clic calendrier
+  const [slotCreationTarget, setSlotCreationTarget] = useState<{ date: Date; hasTime: boolean } | null>(null);
+  const [personalActionInitialData, setPersonalActionInitialData] = useState<{ date: string; heure?: string } | null>(null);
+  const [eventInitialData, setEventInitialData] = useState<{ date: string; heure?: string } | null>(null);
+
   useEffect(() => { newJobRef.current = newJob; }, [newJob]);
   useEffect(() => { if (accessToken) (window as any).__jfmj_token = accessToken; }, [accessToken]);
 
@@ -324,6 +329,42 @@ export default function DashboardPage() {
     setSelectedActionDetail({ kind, data });
   }
 
+  // NOUVEAU : clic sur créneau libre → ouvre popup de choix
+  function handleEmptySlotClick(date: Date, hasTime: boolean) {
+    setSlotCreationTarget({ date, hasTime });
+  }
+
+  function buildInitialFromSlot(target: { date: Date; hasTime: boolean }) {
+    const y = target.date.getFullYear();
+    const m = String(target.date.getMonth() + 1).padStart(2, '0');
+    const d = String(target.date.getDate()).padStart(2, '0');
+    const isoDate = `${y}-${m}-${d}`;
+    const heure = target.hasTime
+      ? `${String(target.date.getHours()).padStart(2, '0')}:${String(target.date.getMinutes()).padStart(2, '0')}`
+      : undefined;
+    return { date: isoDate, heure };
+  }
+
+  function openEventFromSlot() {
+    if (!slotCreationTarget) return;
+    const initial = buildInitialFromSlot(slotCreationTarget);
+    setEventInitialData(initial);
+    setPersonalActionInitialData(null);
+    setActionsVisible(true);
+    setSlotCreationTarget(null);
+    setTimeout(() => setTriggerAddAction(n => n + 1), 50);
+  }
+
+  function openActionFromSlot() {
+    if (!slotCreationTarget) return;
+    const initial = buildInitialFromSlot(slotCreationTarget);
+    setPersonalActionInitialData(initial);
+    setEventInitialData(null);
+    setPersonalActionsVisible(true);
+    setSlotCreationTarget(null);
+    setTimeout(() => setTriggerAddPersonalAction(n => n + 1), 50);
+  }
+
   function deleteJob(id: string) {
     const job = jobs.find(j => j.id === id);
     if (job) setDeleteJobTarget(job);
@@ -410,6 +451,17 @@ export default function DashboardPage() {
 
   const jobOptionsForPanel = jobs.map(j => ({ id: j.id, title: j.title || '', company: j.company || '' }));
 
+  // Format date pour affichage dans popup de choix
+  function formatSlotDate(date: Date, hasTime: boolean): string {
+    const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    if (hasTime) {
+      const h = String(date.getHours()).padStart(2, '0');
+      const m = String(date.getMinutes()).padStart(2, '0');
+      return `${dateStr} — ${h}h${m}`;
+    }
+    return dateStr;
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: FONT }}>
       <style>{GLOBAL_STYLES}</style>
@@ -436,6 +488,7 @@ export default function DashboardPage() {
                   className="btn-main"
                   style={{ background: '#F5C400', boxShadow: '2px 2px 0 #111', color: '#111' }}
                   onClick={() => {
+                    setEventInitialData(null);
                     setActionsVisible(true);
                     setTimeout(() => setTriggerAddAction(n => n + 1), 50);
                   }}
@@ -446,6 +499,7 @@ export default function DashboardPage() {
                   className="btn-main"
                   style={{ background: '#fff', boxShadow: '2px 2px 0 #111', color: '#111' }}
                   onClick={() => {
+                    setPersonalActionInitialData(null);
                     setPersonalActionsVisible(true);
                     setTimeout(() => setTriggerAddPersonalAction(n => n + 1), 50);
                   }}
@@ -457,8 +511,8 @@ export default function DashboardPage() {
             {mainButtonLabel && (
               <button className="btn-main" onClick={() => {
                 if (view === 'contacts') setTriggerAddContact(n => n + 1);
-                else if (view === 'actions') setTriggerAddAction(n => n + 1);
-                else if (view === 'personal_actions') setTriggerAddPersonalAction(n => n + 1);
+                else if (view === 'actions') { setEventInitialData(null); setTriggerAddAction(n => n + 1); }
+                else if (view === 'personal_actions') { setPersonalActionInitialData(null); setTriggerAddPersonalAction(n => n + 1); }
                 else openAddJobModal();
               }}>
                 {mainButtonLabel}
@@ -500,6 +554,7 @@ export default function DashboardPage() {
               onJobClick={handleCalendarJobClick}
               onActionClick={handleCalendarActionClick}
               onDateChange={handleCalendarDateChange}
+              onEmptySlotClick={handleEmptySlotClick}
             />
           )}
 
@@ -562,7 +617,7 @@ export default function DashboardPage() {
                 </button>
               </div>
               {actionsVisible && (
-                <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} compact />
+                <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} compact initialDateTime={eventInitialData} />
               )}
             </div>
           )}
@@ -593,7 +648,7 @@ export default function DashboardPage() {
                 </button>
               </div>
               {personalActionsVisible && (
-                <PersonalActionsSection triggerOpen={triggerAddPersonalAction} onCountChange={setPersonalActionsCount} compact />
+                <PersonalActionsSection triggerOpen={triggerAddPersonalAction} onCountChange={setPersonalActionsCount} compact initialDateTime={personalActionInitialData} />
               )}
             </div>
           )}
@@ -687,6 +742,81 @@ export default function DashboardPage() {
               >
                 {deleteJobLoading ? '…' : 'Supprimer'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NOUVEAU : popup de choix événement/action après clic créneau calendrier */}
+      {slotCreationTarget && (
+        <div
+          onClick={() => setSlotCreationTarget(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: 20 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 460, border: '2px solid #111', boxShadow: '5px 5px 0 #111', fontFamily: FONT }}
+          >
+            <div style={{ padding: '18px 24px', borderBottom: '2px solid #111', background: '#FAFAFA', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Créer à cette date</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginTop: 2, textTransform: 'capitalize' }}>
+                  📅 {formatSlotDate(slotCreationTarget.date, slotCreationTarget.hasTime)}
+                </div>
+              </div>
+              <button
+                onClick={() => setSlotCreationTarget(null)}
+                style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#888', lineHeight: 1, padding: 0 }}
+              >×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#111', marginBottom: 14 }}>Que souhaitez-vous créer ?</div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <button
+                  onClick={openEventFromSlot}
+                  style={{
+                    background: '#F5C400', border: '2px solid #111', borderRadius: 10,
+                    padding: '20px 14px', cursor: 'pointer', textAlign: 'left',
+                    fontFamily: FONT, boxShadow: '3px 3px 0 #111',
+                  }}
+                >
+                  <div style={{ fontSize: 24, marginBottom: 8 }}>📅</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: '#111', marginBottom: 4 }}>Événement</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#111', opacity: 0.75, lineHeight: 1.4 }}>
+                    Atelier, formation, RDV conseil, bilan de compétences…
+                  </div>
+                </button>
+
+                <button
+                  onClick={openActionFromSlot}
+                  style={{
+                    background: '#fff', border: '2px solid #111', borderRadius: 10,
+                    padding: '20px 14px', cursor: 'pointer', textAlign: 'left',
+                    fontFamily: FONT, boxShadow: '3px 3px 0 #111',
+                  }}
+                >
+                  <div style={{ fontSize: 24, marginBottom: 8 }}>⚡</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: '#111', marginBottom: 4 }}>Action</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#555', lineHeight: 1.4 }}>
+                    Candidature externe, prise de contact réseau, mise à jour profil…
+                  </div>
+                </button>
+              </div>
+
+              <div style={{ textAlign: 'center', marginTop: 18 }}>
+                <button
+                  onClick={() => setSlotCreationTarget(null)}
+                  style={{
+                    background: 'none', border: 'none', color: '#888',
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    fontFamily: FONT, padding: '6px 12px',
+                  }}
+                >
+                  Annuler
+                </button>
+              </div>
             </div>
           </div>
         </div>
