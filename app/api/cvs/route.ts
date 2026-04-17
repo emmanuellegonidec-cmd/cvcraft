@@ -23,12 +23,22 @@ async function getAuth(req: NextRequest) {
   return { supabase, user };
 }
 
+// Construit un titre lisible pour un CV uploadé
+// Ex: "CV - Chargée de projet web — Maison Lenôtre"
+// Fallback si l'offre a été supprimée : "CV - Offre supprimée"
+function buildUploadTitle(fileName: string, jobTitle?: string, jobCompany?: string): string {
+  const prefix = fileName.toLowerCase().startsWith('cv') ? 'CV' : fileName;
+  if (!jobTitle) return `${prefix} - Offre supprimée`;
+  const parts = [prefix, '-', jobTitle];
+  if (jobCompany) parts.push('—', jobCompany);
+  return parts.join(' ');
+}
+
 export async function GET(req: NextRequest) {
   const { supabase, user } = await getAuth(req);
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
   try {
-    // 1. Profil : default_cv_ref + cv_display_names
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('default_cv_ref, cv_display_names')
@@ -38,7 +48,7 @@ export async function GET(req: NextRequest) {
     const defaultRef: string | null = profile?.default_cv_ref || null;
     const displayNames: Record<string, string> = profile?.cv_display_names || {};
 
-    // 2. CV créés via le CV Creator (table cvs)
+    // CV Creator
     const { data: creatorCvs } = await supabase
       .from('cvs')
       .select('id, title, template, created_at, updated_at')
@@ -62,7 +72,7 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // 3. CV uploadés dans le bucket job-documents (sous {user_id}/{job_id}/)
+    // CV uploadés (bucket)
     const { data: folders } = await supabase.storage
       .from('job-documents')
       .list(user.id, { limit: 1000, sortBy: { column: 'name', order: 'asc' } });
@@ -70,7 +80,6 @@ export async function GET(req: NextRequest) {
     const uploadList: any[] = [];
 
     if (folders && folders.length > 0) {
-      // Récupérer les infos des jobs pour afficher titre + entreprise
       const jobIds = folders.filter((f: any) => !f.name.includes('.')).map((f: any) => f.name);
       let jobsMap: Record<string, any> = {};
 
@@ -82,9 +91,8 @@ export async function GET(req: NextRequest) {
         jobsMap = Object.fromEntries((jobs || []).map((j: any) => [j.id, j]));
       }
 
-      // Pour chaque dossier d'offre, lister les fichiers et filtrer les CV
       for (const folder of folders) {
-        if ((folder as any).name.includes('.')) continue; // pas un dossier
+        if ((folder as any).name.includes('.')) continue;
 
         const jobId = (folder as any).name;
         const { data: files } = await supabase.storage
@@ -95,18 +103,19 @@ export async function GET(req: NextRequest) {
 
         for (const file of files) {
           const fname = (file as any).name.toLowerCase();
-          // On filtre les CV : nom commence par "cv"
-          // (exclut lm.pdf, lettre.pdf, motivation.pdf, etc.)
           if (!fname.startsWith('cv')) continue;
 
           const filePath = `${user.id}/${jobId}/${(file as any).name}`;
           const ref = `upload:${filePath}`;
           const job = jobsMap[jobId];
 
+          // NOUVEAU : on construit un titre enrichi qui intègre déjà l'offre liée
+          const autoTitle = buildUploadTitle((file as any).name, job?.title, job?.company);
+
           uploadList.push({
             ref,
             source: 'upload' as const,
-            title: (file as any).name,
+            title: autoTitle,
             display_name: displayNames[ref] || null,
             created_at: (file as any).created_at,
             updated_at: (file as any).updated_at || (file as any).created_at,
@@ -116,6 +125,7 @@ export async function GET(req: NextRequest) {
               job_title: job?.title || 'Offre supprimée',
               job_company: job?.company || '',
               file_path: filePath,
+              file_name: (file as any).name,
               file_size: (file as any).metadata?.size || 0,
             },
           });
@@ -123,7 +133,6 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 4. Merger et trier par date de mise à jour décroissante
     const allCvs = [...creatorList, ...uploadList].sort((a, b) => {
       const ad = new Date(a.updated_at || a.created_at).getTime();
       const bd = new Date(b.updated_at || b.created_at).getTime();
@@ -152,7 +161,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'ref invalide' }, { status: 400 });
     }
 
-    // Sécurité upload : le path doit commencer par user.id
     if (ref.startsWith('upload:')) {
       const filePath = ref.slice('upload:'.length);
       if (!filePath.startsWith(user.id + '/')) {
@@ -160,7 +168,6 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    // Lire le profil existant
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('default_cv_ref, cv_display_names')
@@ -169,7 +176,6 @@ export async function PATCH(req: NextRequest) {
 
     const updates: any = {};
 
-    // Mise à jour display_name
     if (display_name !== undefined) {
       const currentNames = { ...(profile?.cv_display_names || {}) };
       const cleaned = typeof display_name === 'string' ? display_name.trim() : '';
@@ -181,7 +187,6 @@ export async function PATCH(req: NextRequest) {
       updates.cv_display_names = currentNames;
     }
 
-    // Mise à jour is_default
     if (is_default === true) {
       updates.default_cv_ref = ref;
     } else if (is_default === false && profile?.default_cv_ref === ref) {
@@ -192,7 +197,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Aucune mise à jour spécifiée' }, { status: 400 });
     }
 
-    // Upsert : crée le profil s'il n'existe pas, sinon met à jour
     const { error } = await supabase
       .from('user_profiles')
       .upsert({ user_id: user.id, ...updates }, { onConflict: 'user_id' });
@@ -229,7 +233,6 @@ export async function DELETE(req: NextRequest) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     } else if (ref.startsWith('upload:')) {
       const filePath = ref.slice('upload:'.length);
-      // Sécurité : vérifier que le path commence bien par user.id
       if (!filePath.startsWith(user.id + '/')) {
         return NextResponse.json({ error: 'Accès interdit' }, { status: 403 });
       }
@@ -241,7 +244,6 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ref invalide' }, { status: 400 });
     }
 
-    // Nettoyer les références dans user_profiles
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('default_cv_ref, cv_display_names')
