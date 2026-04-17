@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { Montserrat } from 'next/font/google';
+import CVsSection from './components/CVsSection';
 const montserrat = Montserrat({ subsets: ['latin'], weight: ['500', '600', '700', '800', '900'] });
 
 interface UserProfile {
@@ -162,7 +163,6 @@ export default function ProfilePage() {
           },
         });
       } catch (metaErr) {
-        // Non bloquant : on log mais on ne casse pas le save si les metadata ne se mettent pas à jour
         console.warn('Impossible de synchroniser user_metadata:', metaErr);
       }
 
@@ -300,8 +300,8 @@ export default function ProfilePage() {
           </Field>
         </Section>
 
-        {/* 4 — Infos CV */}
-        <Section title="📄 Informations CV">
+        {/* 4 — Infos CV (texte) */}
+        <Section title="📝 Informations CV">
           <Field label="Résumé / pitch personnel">
             <textarea value={profile.summary ?? ''} onChange={(e) => setProfile((p) => ({ ...p, summary: e.target.value }))} placeholder="Ex : Directrice marketing avec 20 ans d'expérience dans le digital et le retail…" rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }} />
           </Field>
@@ -313,7 +313,10 @@ export default function ProfilePage() {
           </Field>
         </Section>
 
-        {/* 5 — Disponibilité */}
+        {/* 5 — Mes CV (fichiers) */}
+        {token && <CVsSection token={token} />}
+
+        {/* 6 — Disponibilité */}
         <Section title="🗓️ Disponibilité & contrat">
           <Row>
             <Field label="Disponibilité">
@@ -346,7 +349,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {/* 6 — Mot de passe */}
+        {/* 7 — Mot de passe */}
         <Section title="🔒 Modifier le mot de passe">
           <Field label="Nouveau mot de passe">
             <div style={{ position: 'relative' }}>
