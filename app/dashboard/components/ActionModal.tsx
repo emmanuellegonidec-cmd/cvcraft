@@ -12,6 +12,12 @@ const CATEGORIES = [
   'Autre',
 ]
 
+const STATUTS = [
+  { value: 'a_faire', label: 'À faire', color: '#1B4F72' },
+  { value: 'fait',    label: 'Fait',    color: '#1A7A4A' },
+  { value: 'annule',  label: 'Annulé',  color: '#888' },
+]
+
 interface Action {
   id?: string
   nom: string
@@ -20,6 +26,7 @@ interface Action {
   date_debut: string
   date_fin: string
   note: string
+  statut?: string
 }
 
 interface ActionModalProps {
@@ -36,6 +43,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
   const [dateDebut, setDateDebut] = useState('')
   const [dateFin, setDateFin] = useState('')
   const [note, setNote] = useState('')
+  const [statut, setStatut] = useState('a_faire')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -44,9 +52,11 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
       setNom(action.nom || '')
       setOrganisateur(action.organisateur || '')
       setCategorie(action.categorie || '')
-      const toLocalInput = (s: string) => { const d = new Date(s); const off = d.getTimezoneOffset(); return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16); }; setDateDebut(action.date_debut ? toLocalInput(action.date_debut) : '')
+      const toLocalInput = (s: string) => { const d = new Date(s); const off = d.getTimezoneOffset(); return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16); }
+      setDateDebut(action.date_debut ? toLocalInput(action.date_debut) : '')
       setDateFin(action.date_fin ? toLocalInput(action.date_fin) : '')
       setNote(action.note || '')
+      setStatut(action.statut || 'a_faire')
     } else {
       setNom('')
       setOrganisateur('')
@@ -54,6 +64,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
       setDateDebut('')
       setDateFin('')
       setNote('')
+      setStatut('a_faire')
     }
     setError('')
   }, [action, isOpen])
@@ -71,7 +82,13 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
       const token = (window as any).__jfmj_token
       const method = action?.id ? 'PUT' : 'POST'
       const toISO = (val: string) => val ? new Date(val).toISOString() : null
-      const body: any = { nom, organisateur, categorie, date_debut: toISO(dateDebut), date_fin: dateFin ? toISO(dateFin) : null, note }
+      const body: any = {
+        nom, organisateur, categorie,
+        date_debut: toISO(dateDebut),
+        date_fin: dateFin ? toISO(dateFin) : null,
+        note,
+        statut,
+      }
       if (action?.id) body.id = action.id
 
       const res = await fetch('/api/actions', {
@@ -90,7 +107,6 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
 
       onSave()
       onClose()
-      // Notifie le calendrier qu'un événement a été ajouté/modifié pour qu'il se rafraîchisse
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('jfmj-calendar-refresh'))
       }
@@ -116,6 +132,8 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
           boxShadow: '4px 4px 0 #111',
           width: '100%', maxWidth: 480, padding: 28,
           borderRadius: 2,
+          maxHeight: '90vh',
+          overflowY: 'auto',
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -178,6 +196,33 @@ export default function ActionModal({ isOpen, onClose, onSave, action }: ActionM
                 value={dateFin}
                 onChange={e => setDateFin(e.target.value)}
               />
+            </div>
+          </div>
+
+          {/* Sélecteur de statut */}
+          <div>
+            <label style={labelStyle}>Statut</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {STATUTS.map(s => (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => setStatut(s.value)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    border: '2px solid #111',
+                    background: statut === s.value ? s.color : '#fff',
+                    color: statut === s.value ? '#fff' : '#111',
+                    cursor: 'pointer',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontWeight: 700,
+                    fontSize: 12,
+                  }}
+                >
+                  {s.label}
+                </button>
+              ))}
             </div>
           </div>
 

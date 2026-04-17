@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('personal_actions')
-    .select('id, nom, type, plateforme, date_action, heure_action, note, job_id, jobs:job_id (title, company)')
+    .select('id, nom, type, plateforme, date_action, heure_action, note, job_id, statut, jobs:job_id (title, company)')
     .eq('user_id', user.id)
     .order('date_action', { ascending: false });
 
@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
     heure_action: a.heure_action,
     note: a.note,
     job_id: a.job_id,
+    statut: a.statut || 'a_faire',
     job_title: a.jobs?.title || null,
     job_company: a.jobs?.company || null,
   }));
@@ -46,12 +47,23 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { id, nom, type, plateforme, date_action, heure_action, note, job_id } = body;
+  const { id, nom, type, plateforme, date_action, heure_action, note, job_id, statut } = body;
 
   if (id) {
+    // Mise à jour : on ne met à jour que les champs présents dans le body
+    const updateData: any = {};
+    if (nom !== undefined) updateData.nom = nom;
+    if (type !== undefined) updateData.type = type;
+    if (plateforme !== undefined) updateData.plateforme = plateforme;
+    if (date_action !== undefined) updateData.date_action = date_action;
+    if (heure_action !== undefined) updateData.heure_action = heure_action || null;
+    if (note !== undefined) updateData.note = note;
+    if (job_id !== undefined) updateData.job_id = job_id;
+    if (statut !== undefined) updateData.statut = statut;
+
     const { data, error } = await supabase
       .from('personal_actions')
-      .update({ nom, type, plateforme, date_action, heure_action: heure_action || null, note, job_id })
+      .update(updateData)
       .eq('id', id).eq('user_id', user.id)
       .select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -59,7 +71,13 @@ export async function POST(req: NextRequest) {
   } else {
     const { data, error } = await supabase
       .from('personal_actions')
-      .insert({ user_id: user.id, nom, type, plateforme, date_action, heure_action: heure_action || null, note, job_id })
+      .insert({
+        user_id: user.id,
+        nom, type, plateforme, date_action,
+        heure_action: heure_action || null,
+        note, job_id,
+        statut: statut || 'a_faire',
+      })
       .select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ action: data });

@@ -32,6 +32,12 @@ const PERSONAL_TYPE_COLORS: Record<string, string> = {
   'Autre': '#555',
 };
 
+const STATUTS = [
+  { value: 'a_faire', label: 'À faire', color: '#1B4F72' },
+  { value: 'fait',    label: 'Fait',    color: '#1A7A4A' },
+  { value: 'annule',  label: 'Annulé',  color: '#888' },
+];
+
 interface JobOption { id: string; title: string; company: string; }
 
 interface Props {
@@ -59,6 +65,23 @@ function formatDateTimeLabel(s: string) {
   if (!s) return '';
   const d = new Date(s);
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// Calcule le statut effectif (en_retard si date passée et statut a_faire)
+function getEffectiveStatus(kind: 'personal_action' | 'event', data: any): 'fait' | 'annule' | 'a_faire' | 'en_retard' {
+  const statut = data.statut || 'a_faire';
+  if (statut === 'fait') return 'fait';
+  if (statut === 'annule') return 'annule';
+  const now = new Date();
+  let target: Date;
+  if (kind === 'personal_action') {
+    const dateStr = data.date_action + (data.heure_action ? 'T' + data.heure_action : 'T23:59:59');
+    target = new Date(dateStr);
+  } else {
+    target = new Date(data.date_fin || data.date_debut);
+  }
+  if (target < now) return 'en_retard';
+  return 'a_faire';
 }
 
 const inputStyle: React.CSSProperties = {
@@ -90,6 +113,9 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
   const [evDateDebut, setEvDateDebut] = useState('');
   const [evDateFin, setEvDateFin] = useState('');
   const [evNote, setEvNote] = useState(data.note || '');
+
+  // Statut (partagé aux deux)
+  const [statut, setStatut] = useState(data.statut || 'a_faire');
 
   useEffect(() => {
     if (kind === 'event' && data.date_debut) {
@@ -135,6 +161,7 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
         heure_action: paHeure || null,
         note: paNote.trim() || null,
         job_id: paJobId || null,
+        statut,
       };
       const res = await authFetch('/api/personal-actions', { method: 'POST', body: JSON.stringify(body) });
       const result = await res.json();
@@ -168,6 +195,7 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
         date_debut: toISO(evDateDebut),
         date_fin: evDateFin ? toISO(evDateFin) : null,
         note: evNote,
+        statut,
       };
       const res = await authFetch('/api/actions', { method: 'PUT', body: JSON.stringify(body) });
       if (!res.ok) {
@@ -177,11 +205,50 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
       Object.assign(data, {
         nom: evNom, organisateur: evOrganisateur, categorie: evCategorie,
         date_debut: body.date_debut, date_fin: body.date_fin, note: evNote,
+        statut,
       });
       notifyRefresh();
       setMode('view');
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Changement rapide de statut (depuis le mode VIEW)
+  async function quickChangeStatus(newStatut: string) {
+    setSaving(true); setError('');
+    try {
+      if (kind === 'personal_action') {
+        const res = await authFetch('/api/personal-actions', {
+          method: 'POST',
+          body: JSON.stringify({ id: data.id, statut: newStatut }),
+        });
+        const result = await res.json();
+        if (result.action) {
+          data.statut = newStatut;
+          setStatut(newStatut);
+          notifyRefresh();
+        } else {
+          setError(result.error || 'Erreur');
+        }
+      } else {
+        const res = await authFetch('/api/actions', {
+          method: 'PUT',
+          body: JSON.stringify({ id: data.id, statut: newStatut }),
+        });
+        if (res.ok) {
+          data.statut = newStatut;
+          setStatut(newStatut);
+          notifyRefresh();
+        } else {
+          const result = await res.json();
+          setError(result.error || 'Erreur');
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Erreur');
     } finally {
       setSaving(false);
     }
@@ -202,6 +269,7 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
   }
 
   const headerLabel = kind === 'personal_action' ? 'Action' : 'Événement';
+  const effectiveStatus = getEffectiveStatus(kind, data);
 
   return (
     <>
@@ -243,21 +311,74 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
 
           {mode === 'view' ? (
             <>
-              {/* Titre + badge */}
+              {/* Titre + badges */}
               <div style={{ marginBottom: 22 }}>
-                <h2 style={{ fontSize: 20, fontWeight: 900, color: '#111', margin: '0 0 10px', fontFamily: FONT, lineHeight: 1.3 }}>
+                <h2 style={{
+                  fontSize: 20, fontWeight: 900, color: '#111', margin: '0 0 10px',
+                  fontFamily: FONT, lineHeight: 1.3,
+                  textDecoration: (effectiveStatus === 'fait' || effectiveStatus === 'annule') ? 'line-through' : 'none',
+                  opacity: effectiveStatus === 'annule' ? 0.6 : 1,
+                }}>
                   {data.nom}
                 </h2>
-                {kind === 'personal_action' && data.type && (
-                  <span style={{ background: PERSONAL_TYPE_COLORS[data.type] || '#555', color: '#fff', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 4, display: 'inline-block' }}>
-                    {data.type}
-                  </span>
-                )}
-                {kind === 'event' && data.categorie && (
-                  <span style={{ background: CATEGORIE_COLORS[data.categorie] || '#888', color: '#111', fontSize: 11, fontWeight: 800, padding: '3px 10px', border: '1px solid #111', display: 'inline-block' }}>
-                    {data.categorie}
-                  </span>
-                )}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {kind === 'personal_action' && data.type && (
+                    <span style={{ background: PERSONAL_TYPE_COLORS[data.type] || '#555', color: '#fff', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 4 }}>
+                      {data.type}
+                    </span>
+                  )}
+                  {kind === 'event' && data.categorie && (
+                    <span style={{ background: CATEGORIE_COLORS[data.categorie] || '#888', color: '#111', fontSize: 11, fontWeight: 800, padding: '3px 10px', border: '1px solid #111' }}>
+                      {data.categorie}
+                    </span>
+                  )}
+                  {effectiveStatus === 'en_retard' && (
+                    <span style={{ background: '#E8151B', color: '#fff', fontSize: 10, fontWeight: 900, padding: '3px 10px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      🔴 En retard
+                    </span>
+                  )}
+                  {effectiveStatus === 'fait' && (
+                    <span style={{ background: '#1A7A4A', color: '#fff', fontSize: 10, fontWeight: 900, padding: '3px 10px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      ✓ Fait
+                    </span>
+                  )}
+                  {effectiveStatus === 'annule' && (
+                    <span style={{ background: '#888', color: '#fff', fontSize: 10, fontWeight: 900, padding: '3px 10px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Annulé
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Sélecteur de statut rapide */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6, fontFamily: FONT }}>
+                  Changer le statut
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {STATUTS.map(s => (
+                    <button
+                      key={s.value}
+                      onClick={() => quickChangeStatus(s.value)}
+                      disabled={saving || statut === s.value}
+                      style={{
+                        flex: 1,
+                        padding: '8px 10px',
+                        border: '2px solid #111',
+                        borderRadius: 6,
+                        background: statut === s.value ? s.color : '#fff',
+                        color: statut === s.value ? '#fff' : '#111',
+                        cursor: statut === s.value ? 'default' : 'pointer',
+                        fontFamily: FONT,
+                        fontWeight: 800,
+                        fontSize: 11,
+                        opacity: saving ? 0.6 : 1,
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Détails */}
@@ -310,6 +431,25 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
                       {jobs.map(j => <option key={j.id} value={j.id}>{j.title}{j.company ? ` — ${j.company}` : ''}</option>)}
                     </select>
                   </Field>
+                  <Field label="Statut">
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {STATUTS.map(s => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => setStatut(s.value)}
+                          style={{
+                            flex: 1, padding: '10px', border: '2px solid #111', borderRadius: 6,
+                            background: statut === s.value ? s.color : '#fff',
+                            color: statut === s.value ? '#fff' : '#111',
+                            cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 12,
+                          }}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
                   <Field label="Note (optionnel)">
                     <textarea value={paNote} onChange={e => setPaNote(e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' }} />
                   </Field>
@@ -336,6 +476,25 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
                       <input type="datetime-local" value={evDateFin} onChange={e => setEvDateFin(e.target.value)} style={inputStyle} />
                     </Field>
                   </div>
+                  <Field label="Statut">
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {STATUTS.map(s => (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() => setStatut(s.value)}
+                          style={{
+                            flex: 1, padding: '10px', border: '2px solid #111', borderRadius: 6,
+                            background: statut === s.value ? s.color : '#fff',
+                            color: statut === s.value ? '#fff' : '#111',
+                            cursor: 'pointer', fontFamily: FONT, fontWeight: 800, fontSize: 12,
+                          }}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
                   <Field label="Note">
                     <textarea value={evNote} onChange={e => setEvNote(e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' }} />
                   </Field>

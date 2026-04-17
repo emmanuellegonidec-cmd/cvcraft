@@ -18,6 +18,8 @@ const DETAIL_STEP_LABELS: Record<string, string> = {
   offer:             'Offre reçue',
 };
 
+type ActionStatus = 'a_faire' | 'fait' | 'annule' | 'en_retard';
+
 type CalEvent = {
   jobId: string;
   date: Date;
@@ -30,9 +32,9 @@ type CalEvent = {
   endHour?: number;
   endMinutes?: number;
   deadlineLabel?: string;
-  // Champs pour les actions/événements cliquables
   actionKind?: 'personal_action' | 'event';
   rawData?: any;
+  actionStatus?: ActionStatus;
 };
 
 const EV_STYLE: Record<CalEvent['type'], React.CSSProperties> = {
@@ -77,6 +79,23 @@ function formatTime(h: number, m: number) {
 function parseLocalDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
   return new Date(y, m - 1, d);
+}
+
+// Calcule le statut effectif d'une action/event (en_retard si date passée)
+function computeActionStatus(kind: 'personal_action' | 'event', raw: any): ActionStatus {
+  const statut = raw.statut || 'a_faire';
+  if (statut === 'fait') return 'fait';
+  if (statut === 'annule') return 'annule';
+  const now = new Date();
+  let target: Date;
+  if (kind === 'personal_action') {
+    const dateStr = raw.date_action + (raw.heure_action ? 'T' + raw.heure_action : 'T23:59:59');
+    target = new Date(dateStr);
+  } else {
+    target = new Date(raw.date_fin || raw.date_debut);
+  }
+  if (target < now) return 'en_retard';
+  return 'a_faire';
 }
 
 function jobsToEvents(jobs: Job[], stagesLabelMap: Record<string, string> = {}): CalEvent[] {
@@ -195,6 +214,21 @@ function getWeekStart(base: Date, off: number): Date {
   return d;
 }
 
+// Style à appliquer aux événements selon leur statut d'action
+function getStatusStyleOverride(ev: CalEvent): React.CSSProperties {
+  if (ev.type !== 'action' || !ev.actionStatus) return {};
+  if (ev.actionStatus === 'fait') {
+    return { opacity: 0.55, textDecoration: 'line-through' };
+  }
+  if (ev.actionStatus === 'annule') {
+    return { opacity: 0.4, textDecoration: 'line-through', background: '#BBB' };
+  }
+  if (ev.actionStatus === 'en_retard') {
+    return { border: '2px solid #E8151B', boxShadow: '0 0 0 1px #E8151B inset' };
+  }
+  return {};
+}
+
 function EventCard({
   ev, onJobClick, onActionClick, onDragStart,
 }: {
@@ -207,6 +241,7 @@ function EventCard({
   const isDeadline = ev.type === 'deadline';
   const isAction   = ev.type === 'action';
   const timeLabel = ev.hour !== undefined ? formatTime(ev.hour, ev.minutes || 0) : undefined;
+  const statusStyle = getStatusStyleOverride(ev);
 
   function handleClick(e: React.MouseEvent) {
     e.stopPropagation();
@@ -224,19 +259,25 @@ function EventCard({
       draggable={!isArchived && !isDeadline && !isAction}
       onDragStart={e => !isArchived && !isDeadline && !isAction && onDragStart(e, ev)}
       onClick={handleClick}
-      title={`${isDeadline ? '⏰ ' + (ev.deadlineLabel || 'Deadline') + ' — ' : ''}${isAction ? '⚡ ' + (ev.actionKind === 'event' ? 'Événement' : 'Action') + ' — ' : ''}${ev.title} — ${ev.company}`}
+      title={`${isDeadline ? '⏰ ' + (ev.deadlineLabel || 'Deadline') + ' — ' : ''}${isAction ? '⚡ ' + (ev.actionKind === 'event' ? 'Événement' : 'Action') + ' — ' : ''}${ev.title} — ${ev.company}${ev.actionStatus === 'en_retard' ? ' [EN RETARD]' : ''}${ev.actionStatus === 'fait' ? ' [FAIT]' : ''}${ev.actionStatus === 'annule' ? ' [ANNULÉ]' : ''}`}
       style={{
         ...EV_STYLE[ev.type],
+        ...statusStyle,
         borderRadius: 5, padding: '5px 8px', marginBottom: 3,
         cursor: 'pointer',
         fontFamily: 'Montserrat,sans-serif', overflow: 'hidden',
-        userSelect: 'none', opacity: isArchived ? 0.65 : 1,
-        border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(0,0,0,0.3)' : 'none',
+        userSelect: 'none', opacity: statusStyle.opacity ?? (isArchived ? 0.65 : 1),
+        border: statusStyle.border || (isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(0,0,0,0.3)' : 'none'),
       }}
     >
       {isDeadline && (
         <div style={{ fontSize: 10, opacity: .9, fontWeight: 800, lineHeight: 1.3 }}>
           ⏰ {ev.deadlineLabel || 'Deadline'}
+        </div>
+      )}
+      {isAction && ev.actionStatus === 'en_retard' && (
+        <div style={{ fontSize: 9, fontWeight: 900, lineHeight: 1.3, color: '#E8151B', textTransform: 'uppercase' }}>
+          🔴 En retard
         </div>
       )}
       {isAction && (
@@ -255,7 +296,7 @@ function EventCard({
       <div style={{
         fontSize: 12, fontWeight: 800, lineHeight: 1.4,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        textDecoration: isArchived ? 'line-through' : 'none',
+        textDecoration: (isArchived || statusStyle.textDecoration) ? 'line-through' : 'none',
       }}>{ev.title}</div>
       {ev.company && !isAction && (
         <div style={{
@@ -292,8 +333,6 @@ export default function DashboardCalendar({
     if (jobs.length) loadDeadlines();
   }, [jobs]);
 
-  // Charge les événements/actions au montage ET écoute le signal global
-  // 'jfmj-calendar-refresh' déclenché à chaque ajout/édition/suppression
   useEffect(() => {
     loadActions();
     const handleRefresh = () => { loadActions(); };
@@ -362,6 +401,7 @@ export default function DashboardCalendar({
           const endDate = action.date_fin ? new Date(action.date_fin) : null;
           const endHour = endDate ? endDate.getHours() : undefined;
           const endMinutes = endDate ? endDate.getMinutes() : undefined;
+          const actionStatus = computeActionStatus('event', action);
           evs.push({
             jobId: action.id,
             date,
@@ -375,6 +415,7 @@ export default function DashboardCalendar({
             endMinutes,
             actionKind: 'event',
             rawData: action,
+            actionStatus,
           });
         });
       }
@@ -384,7 +425,6 @@ export default function DashboardCalendar({
         (dataPA.actions || []).forEach((action: any) => {
           const date = parseLocalDate(action.date_action);
 
-          // Lecture optionnelle de heure_action ("HH:MM")
           let hour: number | undefined;
           let minutes: number | undefined;
           if (action.heure_action && typeof action.heure_action === 'string') {
@@ -394,6 +434,8 @@ export default function DashboardCalendar({
               minutes = isNaN(parts[1]) ? 0 : parts[1];
             }
           }
+
+          const actionStatus = computeActionStatus('personal_action', action);
 
           evs.push({
             jobId: action.id,
@@ -406,6 +448,7 @@ export default function DashboardCalendar({
             minutes,
             actionKind: 'personal_action',
             rawData: action,
+            actionStatus,
           });
         });
       }
@@ -579,6 +622,7 @@ export default function DashboardCalendar({
                     const isDeadline = ev.type === 'deadline';
                     const timeLabel = ev.hour !== undefined ? formatTime(ev.hour, ev.minutes || 0) : undefined;
                     const endLabel = ev.endHour !== undefined ? formatTime(ev.endHour, ev.endMinutes || 0) : undefined;
+                    const statusStyle = getStatusStyleOverride(ev);
 
                     function handleEvClick(e: React.MouseEvent) {
                       e.stopPropagation();
@@ -597,6 +641,7 @@ export default function DashboardCalendar({
                         draggable={!isArchived && !isDeadline && !isAction}
                         onDragStart={e => !isArchived && !isDeadline && !isAction && handleDragStart(e, ev)}
                         onClick={handleEvClick}
+                        title={ev.actionStatus === 'en_retard' ? '🔴 En retard' : ev.actionStatus === 'fait' ? '✓ Fait' : ev.actionStatus === 'annule' ? 'Annulé' : ''}
                         style={{
                           position: 'absolute',
                           top: top + 1,
@@ -604,14 +649,15 @@ export default function DashboardCalendar({
                           right: 2,
                           height: height,
                           ...EV_STYLE[ev.type],
+                          ...statusStyle,
                           borderRadius: 5,
                           padding: '4px 7px',
                           cursor: 'pointer',
                           fontFamily: 'Montserrat,sans-serif',
                           overflow: 'hidden',
                           userSelect: 'none',
-                          opacity: isArchived ? 0.65 : 1,
-                          border: isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(0,0,0,0.3)' : 'none',
+                          opacity: statusStyle.opacity ?? (isArchived ? 0.65 : 1),
+                          border: statusStyle.border || (isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(0,0,0,0.3)' : 'none'),
                           zIndex: 1,
                           boxSizing: 'border-box',
                         }}
@@ -624,10 +670,15 @@ export default function DashboardCalendar({
                         {isDeadline && (
                           <div style={{ fontSize: 10, opacity: .85, fontWeight: 800, lineHeight: 1.3 }}>⏰ {ev.deadlineLabel}</div>
                         )}
+                        {isAction && ev.actionStatus === 'en_retard' && (
+                          <div style={{ fontSize: 9, fontWeight: 900, lineHeight: 1.3, color: '#E8151B', textTransform: 'uppercase' }}>
+                            🔴 Retard
+                          </div>
+                        )}
                         <div style={{
                           fontSize: 11, fontWeight: 800, lineHeight: 1.3,
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          textDecoration: isArchived ? 'line-through' : 'none',
+                          textDecoration: (isArchived || statusStyle.textDecoration) ? 'line-through' : 'none',
                         }}>{ev.title}</div>
                         {isAction && ev.company && (
                           <div style={{ fontSize: 10, opacity: .85, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -20,6 +20,12 @@ const TYPE_COLORS: Record<string, string> = {
   'Autre': '#555',
 };
 
+const STATUTS = [
+  { value: 'a_faire', label: 'À faire', color: '#1B4F72' },
+  { value: 'fait',    label: 'Fait',    color: '#1A7A4A' },
+  { value: 'annule',  label: 'Annulé',  color: '#888' },
+];
+
 interface PersonalAction {
   id: string;
   nom: string;
@@ -29,6 +35,7 @@ interface PersonalAction {
   heure_action: string | null;
   note: string | null;
   job_id: string | null;
+  statut: string;
   job_title?: string | null;
   job_company?: string | null;
 }
@@ -40,11 +47,22 @@ interface Props {
   onCountChange?: (n: number) => void;
 }
 
-// Petit utilitaire pour notifier le calendrier qu'il doit se rafraîchir
 function notifyCalendarRefresh() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('jfmj-calendar-refresh'));
   }
+}
+
+// Calcule le statut effectif : 'fait' | 'annule' | 'a_faire' | 'en_retard'
+// 'en_retard' = date passée ET statut encore 'a_faire'
+function getEffectiveStatus(a: PersonalAction): 'fait' | 'annule' | 'a_faire' | 'en_retard' {
+  if (a.statut === 'fait') return 'fait';
+  if (a.statut === 'annule') return 'annule';
+  const now = new Date();
+  const dateStr = a.date_action + (a.heure_action ? 'T' + a.heure_action : 'T23:59:59');
+  const actionDate = new Date(dateStr);
+  if (actionDate < now) return 'en_retard';
+  return 'a_faire';
 }
 
 export default function PersonalActionsSection({ triggerOpen, onCountChange }: Props) {
@@ -62,6 +80,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
   const [formHeure, setFormHeure] = useState('');
   const [formNote, setFormNote] = useState('');
   const [formJobId, setFormJobId] = useState('');
+  const [formStatut, setFormStatut] = useState('a_faire');
   const [saving, setSaving] = useState(false);
 
   function getToken() {
@@ -101,8 +120,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
 
   useEffect(() => { loadActions(); loadJobs(); }, []);
 
-  // Écoute le signal de rafraîchissement (déclenché par le panneau de détail
-  // après modification ou suppression depuis le calendrier)
   useEffect(() => {
     const handler = () => loadActions();
     if (typeof window !== 'undefined') {
@@ -129,6 +146,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
       setFormHeure(action.heure_action || '');
       setFormNote(action.note || '');
       setFormJobId(action.job_id || '');
+      setFormStatut(action.statut || 'a_faire');
     } else {
       setEditAction(null);
       setFormType('Candidature externe');
@@ -138,6 +156,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
       setFormHeure('');
       setFormNote('');
       setFormJobId('');
+      setFormStatut('a_faire');
     }
     setShowModal(true);
   }
@@ -155,6 +174,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
         heure_action: formHeure || null,
         note: formNote.trim() || null,
         job_id: formJobId || null,
+        statut: formStatut,
       };
       const res = await authFetch('/api/personal-actions', { method: 'POST', body: JSON.stringify(body) });
       const data = await res.json();
@@ -164,6 +184,20 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
         notifyCalendarRefresh();
       }
     } finally { setSaving(false); }
+  }
+
+  // Changement de statut rapide (sans ouvrir le modal)
+  async function quickChangeStatus(a: PersonalAction, newStatut: string) {
+    try {
+      await authFetch('/api/personal-actions', {
+        method: 'POST',
+        body: JSON.stringify({ id: a.id, statut: newStatut }),
+      });
+      await loadActions();
+      notifyCalendarRefresh();
+    } catch (err) {
+      console.error('Erreur changement statut:', err);
+    }
   }
 
   async function confirmDelete() {
@@ -182,10 +216,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
     if (h) return `${dateStr} — ${h.replace(':', 'h')}`;
     return dateStr;
   }
-
-  const today = new Date().toISOString().slice(0, 10);
-  const upcoming = actions.filter(a => a.date_action >= today).sort((a, b) => a.date_action.localeCompare(b.date_action));
-  const past = actions.filter(a => a.date_action < today).sort((a, b) => b.date_action.localeCompare(a.date_action));
 
   const inputStyle: React.CSSProperties = {
     width: '100%', border: '2px solid #111', borderRadius: 6,
@@ -210,6 +240,80 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
     </div>
   );
 
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = actions.filter(a => a.date_action >= today).sort((a, b) => a.date_action.localeCompare(b.date_action));
+  const past = actions.filter(a => a.date_action < today).sort((a, b) => b.date_action.localeCompare(a.date_action));
+
+  // Rendu d'une ligne d'action avec statut
+  function renderActionRow(a: PersonalAction) {
+    const effectiveStatus = getEffectiveStatus(a);
+    const isDone = effectiveStatus === 'fait';
+    const isCancelled = effectiveStatus === 'annule';
+    const isLate = effectiveStatus === 'en_retard';
+
+    // Style de la ligne selon le statut
+    const rowBg = '#fff';
+    const opacity = isDone ? 0.65 : isCancelled ? 0.5 : 1;
+    const textStyle = (isDone || isCancelled) ? { textDecoration: 'line-through' as const } : {};
+    const borderLeft = isLate ? '4px solid #E8151B' : '4px solid transparent';
+
+    return (
+      <div key={a.id} style={{
+        display: 'flex', alignItems: 'center', padding: '14px 20px',
+        borderBottom: '1px solid #EBEBEB', gap: 14, background: rowBg,
+        borderLeft, opacity,
+      }}>
+        {/* Bouton rapide : basculer fait / à faire */}
+        <button
+          onClick={() => quickChangeStatus(a, isDone ? 'a_faire' : 'fait')}
+          title={isDone ? 'Marquer comme à faire' : 'Marquer comme fait'}
+          style={{
+            width: 28, height: 28, minWidth: 28, borderRadius: '50%',
+            border: '2px solid ' + (isDone ? '#1A7A4A' : '#CCC'),
+            background: isDone ? '#1A7A4A' : '#fff',
+            color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 900,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}
+        >
+          {isDone ? '✓' : ''}
+        </button>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+            <span style={{ fontWeight: 800, fontSize: 14, color: '#111', fontFamily: FONT, ...textStyle }}>{a.nom}</span>
+            <span style={{ background: TYPE_COLORS[a.type] || '#555', color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 4, whiteSpace: 'nowrap' }}>{a.type}</span>
+            {/* Badge statut */}
+            {isLate && (
+              <span style={{ background: '#E8151B', color: '#fff', fontSize: 10, fontWeight: 900, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                🔴 En retard
+              </span>
+            )}
+            {isDone && (
+              <span style={{ background: '#1A7A4A', color: '#fff', fontSize: 10, fontWeight: 900, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                ✓ Fait
+              </span>
+            )}
+            {isCancelled && (
+              <span style={{ background: '#888', color: '#fff', fontSize: 10, fontWeight: 900, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Annulé
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            {a.plateforme && <span style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>📍 {a.plateforme}</span>}
+            <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>📅 {formatDate(a.date_action, a.heure_action)}</span>
+            {a.job_title && <span style={{ fontSize: 11, color: '#111', fontWeight: 700, background: '#F5F5F0', border: '1px solid #DDD', borderRadius: 4, padding: '2px 8px' }}>🔗 {a.job_title}{a.job_company ? ` — ${a.job_company}` : ''}</span>}
+          </div>
+          {a.note && <div style={{ fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' }}>{a.note}</div>}
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <button onClick={() => openModal(a)} style={btnIconStyle} title="Modifier">✏️</button>
+          <button onClick={() => setDeleteTarget(a)} style={btnIconStyle} title="Supprimer">🗑️</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ fontFamily: FONT }}>
 
@@ -226,26 +330,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
               <div style={{ padding: '6px 20px', fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', background: '#F5F5F5', borderBottom: '1px solid #E8E8E8' }}>
                 À venir
               </div>
-              {upcoming.map(a => (
-                <div key={a.id} style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #EBEBEB', gap: 14, background: '#fff' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                      <span style={{ fontWeight: 800, fontSize: 14, color: '#111', fontFamily: FONT }}>{a.nom}</span>
-                      <span style={{ background: TYPE_COLORS[a.type] || '#555', color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 4, whiteSpace: 'nowrap' }}>{a.type}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                      {a.plateforme && <span style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>📍 {a.plateforme}</span>}
-                      <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>📅 {formatDate(a.date_action, a.heure_action)}</span>
-                      {a.job_title && <span style={{ fontSize: 11, color: '#111', fontWeight: 700, background: '#F5F5F0', border: '1px solid #DDD', borderRadius: 4, padding: '2px 8px' }}>🔗 {a.job_title}{a.job_company ? ` — ${a.job_company}` : ''}</span>}
-                    </div>
-                    {a.note && <div style={{ fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' }}>{a.note}</div>}
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    <button onClick={() => openModal(a)} style={btnIconStyle} title="Modifier">✏️</button>
-                    <button onClick={() => setDeleteTarget(a)} style={btnIconStyle} title="Supprimer">🗑️</button>
-                  </div>
-                </div>
-              ))}
+              {upcoming.map(renderActionRow)}
             </>
           )}
           {past.length > 0 && (
@@ -253,26 +338,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
               <div style={{ padding: '6px 20px', fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', background: '#F5F5F5', borderBottom: '1px solid #E8E8E8' }}>
                 Passées
               </div>
-              {past.map(a => (
-                <div key={a.id} style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #EBEBEB', gap: 14, background: '#fff' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                      <span style={{ fontWeight: 800, fontSize: 14, color: '#111', fontFamily: FONT }}>{a.nom}</span>
-                      <span style={{ background: TYPE_COLORS[a.type] || '#555', color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 4, whiteSpace: 'nowrap' }}>{a.type}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                      {a.plateforme && <span style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>📍 {a.plateforme}</span>}
-                      <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>📅 {formatDate(a.date_action, a.heure_action)}</span>
-                      {a.job_title && <span style={{ fontSize: 11, color: '#111', fontWeight: 700, background: '#F5F5F0', border: '1px solid #DDD', borderRadius: 4, padding: '2px 8px' }}>🔗 {a.job_title}{a.job_company ? ` — ${a.job_company}` : ''}</span>}
-                    </div>
-                    {a.note && <div style={{ fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' }}>{a.note}</div>}
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    <button onClick={() => openModal(a)} style={btnIconStyle} title="Modifier">✏️</button>
-                    <button onClick={() => setDeleteTarget(a)} style={btnIconStyle} title="Supprimer">🗑️</button>
-                  </div>
-                </div>
-              ))}
+              {past.map(renderActionRow)}
             </>
           )}
         </>
@@ -325,6 +391,35 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
                   )}
                 </div>
               </div>
+
+              {/* Statut */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>Statut</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {STATUTS.map(s => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setFormStatut(s.value)}
+                      style={{
+                        flex: 1,
+                        padding: '10px 12px',
+                        border: '2px solid #111',
+                        borderRadius: 6,
+                        background: formStatut === s.value ? s.color : '#fff',
+                        color: formStatut === s.value ? '#fff' : '#111',
+                        cursor: 'pointer',
+                        fontFamily: FONT,
+                        fontWeight: 800,
+                        fontSize: 12,
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div style={{ marginBottom: 20 }}>
                 <label style={labelStyle}>Offre liée <span style={{ textTransform: 'none', fontWeight: 600, color: '#999' }}>(optionnel)</span></label>
                 <select value={formJobId} onChange={e => setFormJobId(e.target.value)} style={inputStyle}>

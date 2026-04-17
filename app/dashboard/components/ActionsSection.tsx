@@ -11,6 +11,7 @@ interface Action {
   date_debut: string
   date_fin: string
   note: string
+  statut: string
 }
 
 const CATEGORIE_COLORS: Record<string, string> = {
@@ -21,6 +22,16 @@ const CATEGORIE_COLORS: Record<string, string> = {
   'Rendez-vous conseil': '#9b59b6',
   'Bilan de compétences': '#e67e22',
   'Autre': '#888',
+}
+
+// Calcule le statut effectif : 'fait' | 'annule' | 'a_faire' | 'en_retard'
+function getEffectiveStatus(a: Action): 'fait' | 'annule' | 'a_faire' | 'en_retard' {
+  if (a.statut === 'fait') return 'fait'
+  if (a.statut === 'annule') return 'annule'
+  const now = new Date()
+  const eventEnd = new Date(a.date_fin || a.date_debut)
+  if (eventEnd < now) return 'en_retard'
+  return 'a_faire'
 }
 
 export default function ActionsSection({
@@ -36,9 +47,13 @@ export default function ActionsSection({
   const [selectedAction, setSelectedAction] = useState<Action | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Action | null>(null)
 
+  function getToken() {
+    return typeof window !== 'undefined' ? (window as any).__jfmj_token : null
+  }
+
   const fetchActions = async () => {
     try {
-      const token = (window as any).__jfmj_token
+      const token = getToken()
       const res = await fetch('/api/actions', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -56,8 +71,6 @@ export default function ActionsSection({
 
   useEffect(() => { fetchActions() }, [])
 
-  // Écoute le signal de rafraîchissement (déclenché par le panneau de détail
-  // après modification ou suppression depuis le calendrier)
   useEffect(() => {
     const handler = () => fetchActions()
     if (typeof window !== 'undefined') {
@@ -76,19 +89,39 @@ export default function ActionsSection({
 
   const handleDelete = async (id: string) => {
     try {
-      const token = (window as any).__jfmj_token
+      const token = getToken()
       await fetch(`/api/actions?id=${id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       setDeleteTarget(null)
       fetchActions()
-      // Notifie le calendrier qu'un événement a été supprimé pour qu'il se rafraîchisse
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('jfmj-calendar-refresh'))
       }
     } catch (err) {
       console.error('Erreur suppression:', err)
+    }
+  }
+
+  // Changement de statut rapide (sans ouvrir le modal)
+  const quickChangeStatus = async (action: Action, newStatut: string) => {
+    try {
+      const token = getToken()
+      await fetch('/api/actions', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ id: action.id, statut: newStatut }),
+      })
+      fetchActions()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('jfmj-calendar-refresh'))
+      }
+    } catch (err) {
+      console.error('Erreur changement statut:', err)
     }
   }
 
@@ -123,7 +156,7 @@ export default function ActionsSection({
                   formatDate={formatDate}
                   onEdit={() => { setSelectedAction(action); setModalOpen(true) }}
                   onDelete={() => setDeleteTarget(action)}
-                  past={false}
+                  onQuickStatus={(s) => quickChangeStatus(action, s)}
                 />
               ))}
             </>
@@ -138,7 +171,7 @@ export default function ActionsSection({
                   formatDate={formatDate}
                   onEdit={() => { setSelectedAction(action); setModalOpen(true) }}
                   onDelete={() => setDeleteTarget(action)}
-                  past={true}
+                  onQuickStatus={(s) => quickChangeStatus(action, s)}
                 />
               ))}
             </>
@@ -173,35 +206,73 @@ export default function ActionsSection({
   )
 }
 
-function ActionCard({ action, formatDate, onEdit, onDelete, past }: {
+function ActionCard({ action, formatDate, onEdit, onDelete, onQuickStatus }: {
   action: Action
   formatDate: (d: string) => string
   onEdit: () => void
   onDelete: () => void
-  past: boolean
+  onQuickStatus: (s: string) => void
 }) {
   const color = CATEGORIE_COLORS[action.categorie] || '#888'
+  const effectiveStatus = getEffectiveStatus(action)
+  const isDone = effectiveStatus === 'fait'
+  const isCancelled = effectiveStatus === 'annule'
+  const isLate = effectiveStatus === 'en_retard'
+
+  const borderLeft = isLate ? `4px solid #E8151B` : `4px solid ${color}`
+  const opacity = isDone ? 0.65 : isCancelled ? 0.5 : 1
+  const textDeco = (isDone || isCancelled) ? 'line-through' : 'none'
 
   return (
     <div style={{
       border: '1.5px solid #111',
-      borderLeft: `4px solid ${color}`,
+      borderLeft,
       padding: '10px 14px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      background: past ? '#fafafa' : '#fff',
-      opacity: past ? 0.75 : 1,
+      background: '#fff',
+      opacity,
       gap: 12,
     }}>
+      {/* Bouton rapide : basculer fait / à faire */}
+      <button
+        onClick={() => onQuickStatus(isDone ? 'a_faire' : 'fait')}
+        title={isDone ? 'Marquer comme à faire' : 'Marquer comme fait'}
+        style={{
+          width: 26, height: 26, minWidth: 26, borderRadius: '50%',
+          border: '2px solid ' + (isDone ? '#1A7A4A' : '#CCC'),
+          background: isDone ? '#1A7A4A' : '#fff',
+          color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 900,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}
+      >
+        {isDone ? '✓' : ''}
+      </button>
+
       <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-          <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13, color: '#111' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13, color: '#111', textDecoration: textDeco }}>
             {action.nom}
           </span>
           {action.categorie && (
             <span style={{ background: color, color: '#111', fontSize: 10, fontWeight: 700, padding: '2px 8px', border: '1px solid #111' }}>
               {action.categorie}
+            </span>
+          )}
+          {isLate && (
+            <span style={{ background: '#E8151B', color: '#fff', fontSize: 10, fontWeight: 900, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              🔴 En retard
+            </span>
+          )}
+          {isDone && (
+            <span style={{ background: '#1A7A4A', color: '#fff', fontSize: 10, fontWeight: 900, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              ✓ Fait
+            </span>
+          )}
+          {isCancelled && (
+            <span style={{ background: '#888', color: '#fff', fontSize: 10, fontWeight: 900, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Annulé
             </span>
           )}
         </div>
