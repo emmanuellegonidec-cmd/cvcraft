@@ -373,6 +373,20 @@ export default function DashboardCalendar({
         const dataPA = await resPA.json();
         (dataPA.actions || []).forEach((action: any) => {
           const date = parseLocalDate(action.date_action);
+
+          // Lecture optionnelle de heure_action ("HH:MM")
+          // Si elle est définie, l'action s'affiche à cette heure dans le calendrier
+          // Sinon, elle reste sur toute la journée (comportement précédent)
+          let hour: number | undefined;
+          let minutes: number | undefined;
+          if (action.heure_action && typeof action.heure_action === 'string') {
+            const parts = action.heure_action.split(':').map(Number);
+            if (parts.length >= 2 && !isNaN(parts[0])) {
+              hour = parts[0];
+              minutes = isNaN(parts[1]) ? 0 : parts[1];
+            }
+          }
+
           evs.push({
             jobId: action.id,
             date,
@@ -380,6 +394,8 @@ export default function DashboardCalendar({
             title: action.nom,
             company: action.plateforme || action.type || '',
             type: 'action' as CalEvent['type'],
+            hour,
+            minutes,
           });
         });
       }

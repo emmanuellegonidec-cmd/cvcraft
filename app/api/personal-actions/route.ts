@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('personal_actions')
-    .select('id, nom, type, plateforme, date_action, note, job_id, jobs:job_id (title, company)')
+    .select('id, nom, type, plateforme, date_action, heure_action, note, job_id, jobs:job_id (title, company)')
     .eq('user_id', user.id)
     .order('date_action', { ascending: false });
 
@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
     type: a.type,
     plateforme: a.plateforme,
     date_action: a.date_action,
+    heure_action: a.heure_action,
     note: a.note,
     job_id: a.job_id,
     job_title: a.jobs?.title || null,
@@ -45,12 +46,12 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { id, nom, type, plateforme, date_action, note, job_id } = body;
+  const { id, nom, type, plateforme, date_action, heure_action, note, job_id } = body;
 
   if (id) {
     const { data, error } = await supabase
       .from('personal_actions')
-      .update({ nom, type, plateforme, date_action, note, job_id })
+      .update({ nom, type, plateforme, date_action, heure_action: heure_action || null, note, job_id })
       .eq('id', id).eq('user_id', user.id)
       .select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
   } else {
     const { data, error } = await supabase
       .from('personal_actions')
-      .insert({ user_id: user.id, nom, type, plateforme, date_action, note, job_id })
+      .insert({ user_id: user.id, nom, type, plateforme, date_action, heure_action: heure_action || null, note, job_id })
       .select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ action: data });

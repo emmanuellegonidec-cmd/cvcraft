@@ -26,6 +26,7 @@ interface PersonalAction {
   type: string;
   plateforme: string | null;
   date_action: string;
+  heure_action: string | null;
   note: string | null;
   job_id: string | null;
   job_title?: string | null;
@@ -58,6 +59,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
   const [formNom, setFormNom] = useState('');
   const [formPlateforme, setFormPlateforme] = useState('');
   const [formDate, setFormDate] = useState('');
+  const [formHeure, setFormHeure] = useState('');
   const [formNote, setFormNote] = useState('');
   const [formJobId, setFormJobId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -110,6 +112,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
       setFormNom(action.nom);
       setFormPlateforme(action.plateforme || '');
       setFormDate(action.date_action);
+      setFormHeure(action.heure_action || '');
       setFormNote(action.note || '');
       setFormJobId(action.job_id || '');
     } else {
@@ -118,6 +121,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
       setFormNom('');
       setFormPlateforme('');
       setFormDate(new Date().toISOString().slice(0, 10));
+      setFormHeure('');
       setFormNote('');
       setFormJobId('');
     }
@@ -134,6 +138,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
         type: formType,
         plateforme: formPlateforme.trim() || null,
         date_action: formDate,
+        heure_action: formHeure || null,
         note: formNote.trim() || null,
         job_id: formJobId || null,
       };
@@ -160,8 +165,10 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
     } finally { setDeleteLoading(false); }
   }
 
-  function formatDate(d: string) {
-    return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  function formatDate(d: string, h?: string | null) {
+    const dateStr = new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (h) return `${dateStr} — ${h.replace(':', 'h')}`;
+    return dateStr;
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -216,7 +223,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                       {a.plateforme && <span style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>📍 {a.plateforme}</span>}
-                      <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>📅 {formatDate(a.date_action)}</span>
+                      <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>📅 {formatDate(a.date_action, a.heure_action)}</span>
                       {a.job_title && <span style={{ fontSize: 11, color: '#111', fontWeight: 700, background: '#F5F5F0', border: '1px solid #DDD', borderRadius: 4, padding: '2px 8px' }}>🔗 {a.job_title}{a.job_company ? ` — ${a.job_company}` : ''}</span>}
                     </div>
                     {a.note && <div style={{ fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' }}>{a.note}</div>}
@@ -243,7 +250,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                       {a.plateforme && <span style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>📍 {a.plateforme}</span>}
-                      <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>📅 {formatDate(a.date_action)}</span>
+                      <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>📅 {formatDate(a.date_action, a.heure_action)}</span>
                       {a.job_title && <span style={{ fontSize: 11, color: '#111', fontWeight: 700, background: '#F5F5F0', border: '1px solid #DDD', borderRadius: 4, padding: '2px 8px' }}>🔗 {a.job_title}{a.job_company ? ` — ${a.job_company}` : ''}</span>}
                     </div>
                     {a.note && <div style={{ fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' }}>{a.note}</div>}
@@ -288,6 +295,22 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
                 <div>
                   <label style={labelStyle}>Date *</label>
                   <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} style={inputStyle} />
+                </div>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>Heure <span style={{ textTransform: 'none', fontWeight: 600, color: '#999' }}>(optionnel — laissez vide si pas d'heure précise)</span></label>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input type="time" value={formHeure} onChange={e => setFormHeure(e.target.value)} style={{ ...inputStyle, maxWidth: 180 }} />
+                  {formHeure && (
+                    <button
+                      type="button"
+                      onClick={() => setFormHeure('')}
+                      style={{ background: '#fff', border: '1.5px solid #DDD', borderRadius: 6, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: '#888', fontFamily: FONT }}
+                      title="Effacer l'heure"
+                    >
+                      ✕ Effacer
+                    </button>
+                  )}
                 </div>
               </div>
               <div style={{ marginBottom: 20 }}>
