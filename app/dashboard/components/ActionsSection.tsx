@@ -24,7 +24,6 @@ const CATEGORIE_COLORS: Record<string, string> = {
   'Autre': '#888',
 }
 
-// Calcule le statut effectif : 'fait' | 'annule' | 'a_faire' | 'en_retard'
 function getEffectiveStatus(a: Action): 'fait' | 'annule' | 'a_faire' | 'en_retard' {
   if (a.statut === 'fait') return 'fait'
   if (a.statut === 'annule') return 'annule'
@@ -104,7 +103,6 @@ export default function ActionsSection({
     }
   }
 
-  // Changement de statut rapide (sans ouvrir le modal)
   const quickChangeStatus = async (action: Action, newStatut: string) => {
     try {
       const token = getToken()
@@ -220,8 +218,8 @@ function ActionCard({ action, formatDate, onEdit, onDelete, onQuickStatus }: {
   const isLate = effectiveStatus === 'en_retard'
 
   const borderLeft = isLate ? `4px solid #E8151B` : `4px solid ${color}`
-  const opacity = isDone ? 0.65 : isCancelled ? 0.5 : 1
-  const textDeco = (isDone || isCancelled) ? 'line-through' : 'none'
+  // Opacity seule, pas de barré
+  const opacity = isDone ? 0.65 : isCancelled ? 0.55 : 1
 
   return (
     <div style={{
@@ -235,7 +233,6 @@ function ActionCard({ action, formatDate, onEdit, onDelete, onQuickStatus }: {
       opacity,
       gap: 12,
     }}>
-      {/* Bouton rapide : basculer fait / à faire */}
       <button
         onClick={() => onQuickStatus(isDone ? 'a_faire' : 'fait')}
         title={isDone ? 'Marquer comme à faire' : 'Marquer comme fait'}
@@ -252,7 +249,7 @@ function ActionCard({ action, formatDate, onEdit, onDelete, onQuickStatus }: {
 
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13, color: '#111', textDecoration: textDeco }}>
+          <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13, color: '#111' }}>
             {action.nom}
           </span>
           {action.categorie && (

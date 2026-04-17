@@ -81,7 +81,6 @@ function parseLocalDate(dateStr: string): Date {
   return new Date(y, m - 1, d);
 }
 
-// Calcule le statut effectif d'une action/event (en_retard si date passée)
 function computeActionStatus(kind: 'personal_action' | 'event', raw: any): ActionStatus {
   const statut = raw.statut || 'a_faire';
   if (statut === 'fait') return 'fait';
@@ -214,14 +213,14 @@ function getWeekStart(base: Date, off: number): Date {
   return d;
 }
 
-// Style à appliquer aux événements selon leur statut d'action
+// Style selon statut : opacity seule pour fait/annulé, bordure rouge pour en_retard
 function getStatusStyleOverride(ev: CalEvent): React.CSSProperties {
   if (ev.type !== 'action' || !ev.actionStatus) return {};
   if (ev.actionStatus === 'fait') {
-    return { opacity: 0.55, textDecoration: 'line-through' };
+    return { opacity: 0.65 };
   }
   if (ev.actionStatus === 'annule') {
-    return { opacity: 0.4, textDecoration: 'line-through', background: '#BBB' };
+    return { opacity: 0.5 };
   }
   if (ev.actionStatus === 'en_retard') {
     return { border: '2px solid #E8151B', boxShadow: '0 0 0 1px #E8151B inset' };
@@ -280,6 +279,11 @@ function EventCard({
           🔴 En retard
         </div>
       )}
+      {isAction && ev.actionStatus === 'fait' && (
+        <div style={{ fontSize: 9, fontWeight: 900, lineHeight: 1.3, color: '#1A7A4A', textTransform: 'uppercase' }}>
+          ✓ Fait
+        </div>
+      )}
       {isAction && (
         <div style={{ fontSize: 10, opacity: .9, fontWeight: 800, lineHeight: 1.3 }}>
           ⚡ {ev.company || 'Action'}
@@ -296,7 +300,7 @@ function EventCard({
       <div style={{
         fontSize: 12, fontWeight: 800, lineHeight: 1.4,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        textDecoration: (isArchived || statusStyle.textDecoration) ? 'line-through' : 'none',
+        textDecoration: isArchived ? 'line-through' : 'none',
       }}>{ev.title}</div>
       {ev.company && !isAction && (
         <div style={{
@@ -675,10 +679,15 @@ export default function DashboardCalendar({
                             🔴 Retard
                           </div>
                         )}
+                        {isAction && ev.actionStatus === 'fait' && (
+                          <div style={{ fontSize: 9, fontWeight: 900, lineHeight: 1.3, color: '#1A7A4A', textTransform: 'uppercase' }}>
+                            ✓ Fait
+                          </div>
+                        )}
                         <div style={{
                           fontSize: 11, fontWeight: 800, lineHeight: 1.3,
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          textDecoration: (isArchived || statusStyle.textDecoration) ? 'line-through' : 'none',
+                          textDecoration: isArchived ? 'line-through' : 'none',
                         }}>{ev.title}</div>
                         {isAction && ev.company && (
                           <div style={{ fontSize: 10, opacity: .85, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

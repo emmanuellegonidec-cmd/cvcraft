@@ -54,7 +54,6 @@ function notifyCalendarRefresh() {
 }
 
 // Calcule le statut effectif : 'fait' | 'annule' | 'a_faire' | 'en_retard'
-// 'en_retard' = date passée ET statut encore 'a_faire'
 function getEffectiveStatus(a: PersonalAction): 'fait' | 'annule' | 'a_faire' | 'en_retard' {
   if (a.statut === 'fait') return 'fait';
   if (a.statut === 'annule') return 'annule';
@@ -186,7 +185,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
     } finally { setSaving(false); }
   }
 
-  // Changement de statut rapide (sans ouvrir le modal)
   async function quickChangeStatus(a: PersonalAction, newStatut: string) {
     try {
       await authFetch('/api/personal-actions', {
@@ -244,26 +242,22 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
   const upcoming = actions.filter(a => a.date_action >= today).sort((a, b) => a.date_action.localeCompare(b.date_action));
   const past = actions.filter(a => a.date_action < today).sort((a, b) => b.date_action.localeCompare(a.date_action));
 
-  // Rendu d'une ligne d'action avec statut
   function renderActionRow(a: PersonalAction) {
     const effectiveStatus = getEffectiveStatus(a);
     const isDone = effectiveStatus === 'fait';
     const isCancelled = effectiveStatus === 'annule';
     const isLate = effectiveStatus === 'en_retard';
 
-    // Style de la ligne selon le statut
-    const rowBg = '#fff';
-    const opacity = isDone ? 0.65 : isCancelled ? 0.5 : 1;
-    const textStyle = (isDone || isCancelled) ? { textDecoration: 'line-through' as const } : {};
+    // Opacity seule, PAS de texte barré
+    const opacity = isDone ? 0.65 : isCancelled ? 0.55 : 1;
     const borderLeft = isLate ? '4px solid #E8151B' : '4px solid transparent';
 
     return (
       <div key={a.id} style={{
         display: 'flex', alignItems: 'center', padding: '14px 20px',
-        borderBottom: '1px solid #EBEBEB', gap: 14, background: rowBg,
+        borderBottom: '1px solid #EBEBEB', gap: 14, background: '#fff',
         borderLeft, opacity,
       }}>
-        {/* Bouton rapide : basculer fait / à faire */}
         <button
           onClick={() => quickChangeStatus(a, isDone ? 'a_faire' : 'fait')}
           title={isDone ? 'Marquer comme à faire' : 'Marquer comme fait'}
@@ -280,9 +274,8 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-            <span style={{ fontWeight: 800, fontSize: 14, color: '#111', fontFamily: FONT, ...textStyle }}>{a.nom}</span>
+            <span style={{ fontWeight: 800, fontSize: 14, color: '#111', fontFamily: FONT }}>{a.nom}</span>
             <span style={{ background: TYPE_COLORS[a.type] || '#555', color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 4, whiteSpace: 'nowrap' }}>{a.type}</span>
-            {/* Badge statut */}
             {isLate && (
               <span style={{ background: '#E8151B', color: '#fff', fontSize: 10, fontWeight: 900, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 🔴 En retard
@@ -344,7 +337,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
         </>
       )}
 
-      {/* MODAL AJOUT / ÉDITION */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto', border: '2px solid #111', boxShadow: '5px 5px 0 #111', fontFamily: FONT }}>
@@ -392,7 +384,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
                 </div>
               </div>
 
-              {/* Statut */}
               <div style={{ marginBottom: 20 }}>
                 <label style={labelStyle}>Statut</label>
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -444,7 +435,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange }: P
         </div>
       )}
 
-      {/* MODAL SUPPRESSION */}
       {deleteTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 30, width: '100%', maxWidth: 400, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B', fontFamily: FONT }}>

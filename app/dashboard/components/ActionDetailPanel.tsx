@@ -67,7 +67,6 @@ function formatDateTimeLabel(s: string) {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-// Calcule le statut effectif (en_retard si date passée et statut a_faire)
 function getEffectiveStatus(kind: 'personal_action' | 'event', data: any): 'fait' | 'annule' | 'a_faire' | 'en_retard' {
   const statut = data.statut || 'a_faire';
   if (statut === 'fait') return 'fait';
@@ -97,7 +96,6 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
-  // Champs personal_action
   const [paNom, setPaNom] = useState(data.nom || '');
   const [paType, setPaType] = useState(data.type || PERSONAL_ACTION_TYPES[0]);
   const [paPlateforme, setPaPlateforme] = useState(data.plateforme || '');
@@ -106,7 +104,6 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
   const [paNote, setPaNote] = useState(data.note || '');
   const [paJobId, setPaJobId] = useState(data.job_id || '');
 
-  // Champs event
   const [evNom, setEvNom] = useState(data.nom || '');
   const [evOrganisateur, setEvOrganisateur] = useState(data.organisateur || '');
   const [evCategorie, setEvCategorie] = useState(data.categorie || '');
@@ -114,7 +111,6 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
   const [evDateFin, setEvDateFin] = useState('');
   const [evNote, setEvNote] = useState(data.note || '');
 
-  // Statut (partagé aux deux)
   const [statut, setStatut] = useState(data.statut || 'a_faire');
 
   useEffect(() => {
@@ -216,7 +212,6 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
     }
   }
 
-  // Changement rapide de statut (depuis le mode VIEW)
   async function quickChangeStatus(newStatut: string) {
     setSaving(true); setError('');
     try {
@@ -271,21 +266,21 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
   const headerLabel = kind === 'personal_action' ? 'Action' : 'Événement';
   const effectiveStatus = getEffectiveStatus(kind, data);
 
+  // Opacity seule sur le contenu principal (pas de barré)
+  const contentOpacity = effectiveStatus === 'fait' ? 0.75 : effectiveStatus === 'annule' ? 0.6 : 1;
+
   return (
     <>
-      {/* Overlay */}
       <div onClick={onClose} style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 998,
       }} />
 
-      {/* Panneau latéral */}
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: 420, maxWidth: '100vw',
         background: '#fff', borderLeft: '2px solid #111', zIndex: 999,
         display: 'flex', flexDirection: 'column', fontFamily: FONT,
         boxShadow: '-4px 0 0 #111',
       }}>
-        {/* Header */}
         <div style={{
           padding: '16px 20px', borderBottom: '2px solid #111', background: '#FAFAFA',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -301,7 +296,6 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
           }} title="Fermer">×</button>
         </div>
 
-        {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           {error && (
             <div style={{ background: '#ffeaea', border: '1px solid #E8151B', color: '#E8151B', padding: '8px 12px', marginBottom: 16, fontSize: 12, borderRadius: 6 }}>
@@ -312,12 +306,10 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
           {mode === 'view' ? (
             <>
               {/* Titre + badges */}
-              <div style={{ marginBottom: 22 }}>
+              <div style={{ marginBottom: 22, opacity: contentOpacity }}>
                 <h2 style={{
                   fontSize: 20, fontWeight: 900, color: '#111', margin: '0 0 10px',
                   fontFamily: FONT, lineHeight: 1.3,
-                  textDecoration: (effectiveStatus === 'fait' || effectiveStatus === 'annule') ? 'line-through' : 'none',
-                  opacity: effectiveStatus === 'annule' ? 0.6 : 1,
                 }}>
                   {data.nom}
                 </h2>
@@ -350,7 +342,6 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
                 </div>
               </div>
 
-              {/* Sélecteur de statut rapide */}
               <div style={{ marginBottom: 24 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6, fontFamily: FONT }}>
                   Changer le statut
@@ -381,8 +372,7 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
                 </div>
               </div>
 
-              {/* Détails */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, opacity: contentOpacity }}>
                 {kind === 'personal_action' && (
                   <>
                     <DetailRow label="Date" value={formatDateLabel(data.date_action, data.heure_action)} icon="📅" />
@@ -402,7 +392,6 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
               </div>
             </>
           ) : (
-            // Mode EDIT
             <>
               {kind === 'personal_action' ? (
                 <>
@@ -504,7 +493,6 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
           )}
         </div>
 
-        {/* Footer */}
         <div style={{ padding: 16, borderTop: '2px solid #111', background: '#FAFAFA', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {mode === 'view' ? (
             <>
@@ -540,7 +528,6 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
         </div>
       </div>
 
-      {/* Confirmation suppression */}
       {showDelete && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 28, maxWidth: 400, width: '100%', border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B', fontFamily: FONT }}>
