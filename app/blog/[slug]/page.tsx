@@ -179,28 +179,28 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             <div className="article-content" dangerouslySetInnerHTML={{ __html: article.content }} />
           )}
 
-          {/* CTA fin d'article — simple, centré, charte neo-brutalist */}
+          {/* CTA fin d'article — fond noir, titre blanc avec accent jaune, bouton jaune */}
           <div style={{
             marginTop: '4rem',
             padding: '3rem 2rem',
-            background: '#F5C400',
+            background: '#111',
             borderRadius: 12,
             border: '2.5px solid #111',
-            boxShadow: '5px 5px 0 #111',
+            boxShadow: '5px 5px 0 #E8151B',
             textAlign: 'center'
           }}>
             <h3 style={{
-              color: '#111',
+              color: '#fff',
               fontSize: '1.6rem',
               fontWeight: 900,
               margin: '0 0 12px',
               letterSpacing: '-0.02em',
-              lineHeight: 1.2
+              lineHeight: 1.25
             }}>
-              Prêt à organiser votre recherche d'emploi ?
+              Prêt à organiser votre <span style={{ color: '#F5C400' }}>recherche d&apos;emploi</span> ?
             </h3>
             <p style={{
-              color: '#111',
+              color: '#BBB',
               fontSize: 15,
               fontWeight: 500,
               lineHeight: 1.6,
@@ -213,8 +213,8 @@ export default async function ArticlePage({ params }: { params: { slug: string }
               href="/auth/signup"
               style={{
                 display: 'inline-block',
-                background: '#111',
-                color: '#F5C400',
+                background: '#F5C400',
+                color: '#111',
                 border: '2.5px solid #111',
                 borderRadius: 8,
                 padding: '14px 32px',
