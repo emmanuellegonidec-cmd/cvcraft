@@ -28,7 +28,7 @@ export default function ConfidentialitePage() {
         <div style={{ marginBottom: '2.5rem' }}>
           <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 800, color: '#111', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Légal</div>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Politique de confidentialité</h1>
-          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 10 avril 2026</p>
+          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 18 avril 2026</p>
         </div>
 
         {[
@@ -39,8 +39,10 @@ export default function ConfidentialitePage() {
           {
             title: '2. Données collectées',
             content: `Nous collectons uniquement les données nécessaires au fonctionnement du service :
-- Données de compte : adresse e-mail, mot de passe (chiffré)
-- Données de candidature : offres d'emploi, notes, contacts, étapes de suivi
+- Données de compte : adresse e-mail, mot de passe (chiffré via bcrypt)
+- Données de profil : prénom, nom, poste actuel, poste recherché, secteur, compétences, disponibilité, prétentions salariales (tous ces champs sont optionnels)
+- Données de candidature : offres d'emploi suivies, notes personnelles, contacts professionnels, étapes de suivi, échanges (emails, comptes-rendus d'entretiens)
+- Documents : CV et lettres de motivation, qu'ils soient uploadés par vos soins depuis la fiche d'une offre ou générés via notre éditeur CV
 - Données techniques : logs de connexion, adresse IP
 - Newsletter : adresse e-mail (sur inscription volontaire uniquement)`
           },
@@ -67,29 +69,58 @@ Nos sous-traitants techniques sont soigneusement sélectionnés et liés par des
 Aucun de ces sous-traitants n'est autorisé à utiliser vos données à ses propres fins commerciales.`
           },
           {
-           title: '5. Durée de conservation',
+            title: '5. Durée de conservation',
             content: `Vos données sont conservées tant que votre compte est actif, et au maximum 2 ans après votre dernière connexion, conformément aux recommandations de la CNIL sur la conservation des données de candidature (délibération CNIL n°2002-017 et lignes directrices RGPD — Article 5(1)(e) du Règlement UE 2016/679).
 
-En cas de suppression de compte, toutes vos données (candidatures, CV, notes, contacts) sont définitivement effacées dans un délai de 30 jours. Vous pouvez demander la suppression immédiate à tout moment en contactant : hello@jeanfindmyjob.fr` 
+En cas de suppression de compte, toutes vos données (candidatures, CV, notes, contacts) sont définitivement effacées dans un délai de 30 jours. Vous pouvez demander la suppression immédiate à tout moment en contactant : hello@jeanfindmyjob.fr`
           },
           {
-            title: '6. Vos droits (RGPD)',
-            content: `Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez des droits suivants :
-- Droit d'accès à vos données
-- Droit de rectification
-- Droit à l'effacement (droit à l'oubli)
-- Droit à la portabilité
-- Droit d'opposition
+            title: '6. Consentement explicite pour les documents (CV et lettres de motivation)',
+            content: `Lors de l'upload d'un CV, d'une lettre de motivation ou de la création d'un CV via notre éditeur, un consentement explicite vous est demandé avant tout enregistrement sur nos serveurs.
 
-Pour exercer vos droits, contactez-nous à : hello@jeanfindmyjob.fr`
+Cette demande de consentement vous informe :
+- De la nature sécurisée du stockage (base de données chiffrée AES-256, hébergée en Union Européenne via Supabase)
+- De la durée de conservation (2 ans après votre dernière connexion)
+- De vos droits (consultation, modification, suppression — voir section 7 ci-dessous)
+- Du lien vers la présente politique de confidentialité
+
+Vous devez cocher explicitement la case "J'ai lu et j'accepte les mentions légales" pour que votre document soit enregistré. Sans ce consentement, aucun document n'est stocké sur nos serveurs.
+
+Ce consentement est renouvelé à chaque upload afin de vous garantir une information claire et actuelle à chaque action sensible, conformément à l'Article 7 du RGPD (conditions applicables au consentement).`
           },
           {
-            title: '7. Cookies',
+            title: '7. Vos droits (RGPD) et comment les exercer',
+            content: `Conformément au Règlement Général sur la Protection des Données (Règlement UE 2016/679, articles 15 à 22), vous disposez des droits suivants sur vos données personnelles :
+
+🔍 Droit d'accès (article 15) — consulter l'ensemble des données que nous détenons à votre sujet.
+• Procédure : accessible directement depuis votre espace personnel sur /dashboard/profile. Pour une copie complète au format exportable, contactez-nous à hello@jeanfindmyjob.fr.
+
+✏️ Droit de rectification (article 16) — modifier vos données inexactes ou incomplètes.
+• Procédure : modifiable directement depuis /dashboard/profile (informations personnelles, CV, candidatures, contacts). Pour toute donnée non modifiable depuis l'interface, contactez-nous.
+
+🗑️ Droit à l'effacement (article 17) — demander la suppression de vos données ("droit à l'oubli").
+• Procédure : supprimez votre compte depuis /dashboard/profile (zone de danger en bas de page, saisie de "SUPPRIMER" pour confirmation). L'effacement complet est effectué sous 30 jours. Pour une suppression immédiate, contactez-nous.
+
+📦 Droit à la portabilité (article 20) — récupérer vos données dans un format lisible et transférable.
+• Procédure : demande par email à hello@jeanfindmyjob.fr — nous vous fournissons vos données au format JSON dans les délais légaux.
+
+✋ Droit d'opposition (article 21) — vous opposer au traitement de vos données pour des finalités spécifiques (newsletter, analyses statistiques).
+• Procédure : désinscription newsletter en un clic dans chaque email envoyé. Autres oppositions par email à hello@jeanfindmyjob.fr.
+
+⏸️ Droit à la limitation du traitement (article 18) — demander le gel temporaire du traitement de vos données (par exemple en cas de contestation de leur exactitude).
+• Procédure : demande par email à hello@jeanfindmyjob.fr.
+
+Délai de réponse : conformément à l'article 12 du RGPD, nous vous répondons sous 1 mois à compter de la réception de votre demande. Ce délai peut être prolongé de 2 mois pour les demandes complexes ou nombreuses, avec information préalable de notre part.
+
+Recours auprès de la CNIL : si vous estimez, après nous avoir contactés, que vos droits ne sont pas respectés, vous pouvez introduire une réclamation auprès de la Commission Nationale de l'Informatique et des Libertés (CNIL) via www.cnil.fr, ou saisir la juridiction compétente.`
+          },
+          {
+            title: '8. Cookies',
             content: `Jean find my Job utilise uniquement des cookies strictement nécessaires au fonctionnement du service (session d'authentification) et des cookies analytiques anonymes via Google Analytics (GA4). Aucun cookie publicitaire n'est utilisé.`
           },
           {
-            title: '8. Contact',
-            content: `Pour toute question relative à vos données personnelles : hello@jeanfindmyjob.fr`
+            title: '9. Contact',
+            content: `Pour toute question relative à vos données personnelles, pour exercer vos droits, ou pour toute réclamation : hello@jeanfindmyjob.fr`
           },
         ].map((section) => (
           <div key={section.title} style={{ marginBottom: '2rem', padding: '1.5rem', border: '2px solid #111', borderRadius: 12, boxShadow: '3px 3px 0 #111' }}>
