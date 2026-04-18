@@ -66,7 +66,9 @@ async function handleSubmit(e: React.FormEvent) {
             <div style={{ marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                 <label style={{ ...labelStyle, marginBottom: 0 }}>Mot de passe</label>
-                <span style={{ fontSize: 12, color: '#E8151B', fontWeight: 700, cursor: 'pointer' }}>Mot de passe oublié ?</span>
+                <Link href="/auth/reset-password" style={{ fontSize: 12, color: '#E8151B', fontWeight: 700, textDecoration: 'none' }}>
+                  Mot de passe oublié ?
+                </Link>
               </div>
               <div style={{ position: 'relative' }}>
                 <input style={{ ...inputStyle, paddingRight: 44 }} type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Votre mot de passe" required />
