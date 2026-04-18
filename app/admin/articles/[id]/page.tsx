@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase'
+import SeoFields from '@/components/admin/SeoFields'
 
 const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false })
 
@@ -32,6 +33,8 @@ export default function AdminEditArticlePage() {
     cover_image_alt: '',
     category: 'Conseils',
     published: false,
+    seo_title: '',
+    seo_description: '',
   })
 
   useEffect(() => {
@@ -58,6 +61,8 @@ export default function AdminEditArticlePage() {
           cover_image_alt: data.cover_image_alt ?? '',
           category: data.category ?? 'Conseils',
           published: data.published ?? false,
+          seo_title: data.seo_title ?? '',
+          seo_description: data.seo_description ?? '',
         })
       } catch {
         setError("Impossible de charger l'article.")
@@ -167,7 +172,7 @@ export default function AdminEditArticlePage() {
     <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-black" style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}>
-          ✍️ Éditer l'article
+          ✍️ Éditer l&apos;article
         </h1>
         <button onClick={() => router.push('/admin/articles')} className="text-sm font-semibold text-gray-500 hover:text-gray-800">
           ← Retour
@@ -218,6 +223,17 @@ export default function AdminEditArticlePage() {
           <textarea name="excerpt" value={form.excerpt} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded text-sm font-medium outline-none resize-none" style={{ border: '2px solid #111' }} />
         </div>
 
+        {/* Bloc SEO avec aperçu Google */}
+        <SeoFields
+          title={form.title}
+          excerpt={form.excerpt}
+          slug={form.slug}
+          seoTitle={form.seo_title}
+          seoDescription={form.seo_description}
+          onSeoTitleChange={(v) => setForm(f => ({ ...f, seo_title: v }))}
+          onSeoDescriptionChange={(v) => setForm(f => ({ ...f, seo_description: v }))}
+        />
+
         {/* Image de couverture */}
         <div>
           <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
@@ -249,7 +265,7 @@ export default function AdminEditArticlePage() {
 
           {/* Alt SEO */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Texte alternatif (SEO) — décrit l'image pour Google</label>
+            <label className="block text-xs font-bold text-gray-500 mb-1">Texte alternatif (SEO) — décrit l&apos;image pour Google</label>
             <input
               type="text"
               name="cover_image_alt"
@@ -263,6 +279,7 @@ export default function AdminEditArticlePage() {
 
           {form.cover_image_url && (
             <div className="mt-3 relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={form.cover_image_url}
                 alt={form.cover_image_alt || form.title}
@@ -284,7 +301,7 @@ export default function AdminEditArticlePage() {
         {/* Éditeur */}
         <div>
           <label className="block text-sm font-black mb-2" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-            Contenu de l'article
+            Contenu de l&apos;article
             <span className="ml-2 text-xs font-normal text-gray-400">📁 Upload = image depuis votre ordinateur (nom SEO auto) · 🌐 URL img = image externe</span>
           </label>
           {!loading && (

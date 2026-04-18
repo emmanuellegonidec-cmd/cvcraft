@@ -43,6 +43,13 @@ function normalizeInternalUrl(url: string | null | undefined): string | null {
   return url.replace(/^http:\/\/(www\.)?jeanfindmyjob\.fr/i, 'https://$1jeanfindmyjob.fr')
 }
 
+// Convertit les chaînes vides en null pour que les fallback SQL fonctionnent
+function emptyToNull(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const trimmed = v.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
 // GET : récupère un article par ID
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -66,7 +73,19 @@ export async function POST(req: NextRequest) {
   if (!isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 })
 
   const body = await req.json()
-  const { title, slug, excerpt, content, cover_image_url, category, published, published_at } = body
+  const {
+    title,
+    slug,
+    excerpt,
+    content,
+    cover_image_url,
+    cover_image_alt,
+    category,
+    published,
+    published_at,
+    seo_title,
+    seo_description,
+  } = body
 
   if (!title?.trim()) return NextResponse.json({ error: 'Titre obligatoire' }, { status: 400 })
   if (!slug?.trim()) return NextResponse.json({ error: 'Slug obligatoire' }, { status: 400 })
@@ -80,9 +99,12 @@ export async function POST(req: NextRequest) {
       excerpt: excerpt?.trim() ?? null,
       content: normalizeInternalLinksHTML(content?.trim() ?? null),
       cover_image_url: normalizeInternalUrl(cover_image_url?.trim() ?? null),
+      cover_image_alt: emptyToNull(cover_image_alt),
       category: category ?? 'Conseils',
       published: published ?? false,
       published_at: published_at ?? null,
+      seo_title: emptyToNull(seo_title),
+      seo_description: emptyToNull(seo_description),
     })
     .select()
     .single()
@@ -100,13 +122,21 @@ export async function PATCH(req: NextRequest) {
   const { id, ...updates } = body
   if (!id) return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
 
-  // Applique la sanitisation HTTPS uniquement sur les champs envoyés
+  // Applique les transformations uniquement sur les champs envoyés
   const sanitized: Record<string, unknown> = { ...updates }
+
   if (sanitized.content !== undefined) {
     sanitized.content = normalizeInternalLinksHTML(sanitized.content as string | null)
   }
   if (sanitized.cover_image_url !== undefined) {
     sanitized.cover_image_url = normalizeInternalUrl(sanitized.cover_image_url as string | null)
+  }
+  // Champs SEO : string vide → null pour que le fallback frontend fonctionne
+  if (sanitized.seo_title !== undefined) {
+    sanitized.seo_title = emptyToNull(sanitized.seo_title)
+  }
+  if (sanitized.seo_description !== undefined) {
+    sanitized.seo_description = emptyToNull(sanitized.seo_description)
   }
 
   const adminClient = getAdminClient()

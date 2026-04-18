@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase'
 import Image from 'next/image'
+import SeoFields from '@/components/admin/SeoFields'
 
 const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false })
 
@@ -26,6 +27,7 @@ export default function AdminNewArticlePage() {
   const [form, setForm] = useState({
     title: '', slug: '', excerpt: '', content: '',
     cover_image_url: '', cover_image_alt: '', category: 'Conseils',
+    seo_title: '', seo_description: '',
   })
 
   useEffect(() => {
@@ -157,23 +159,36 @@ export default function AdminNewArticlePage() {
           <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Extrait (affiché sur la landing page)</label>
           <textarea name="excerpt" value={form.excerpt} onChange={handleChange} rows={2} placeholder="Résumé court affiché sous le titre..." className="w-full px-4 py-3 rounded text-sm font-medium outline-none resize-none" style={{ border: '2px solid #111' }} />
         </div>
-<div style={{ backgroundColor: '#fffbe6', border: '2px solid #F5C400', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12, fontFamily: 'Montserrat, sans-serif' }}>
-  <div style={{ fontWeight: 800, color: '#111', marginBottom: 4 }}>📐 Règles pour les images du blog</div>
-  <ul style={{ margin: 0, paddingLeft: 16, color: '#555', lineHeight: 1.8 }}>
-    <li><strong>Dimensions :</strong> 1200 × 630 px (format 16/9 recommandé)</li>
-    <li><strong>Poids max :</strong> 2 MB</li>
-    <li><strong>Formats acceptés :</strong> WebP (idéal), JPG, PNG</li>
-    <li><strong>Conseil :</strong> utilise <a href="https://squoosh.app" target="_blank" rel="noreferrer" style={{ color: '#E8151B', fontWeight: 700 }}>squoosh.app</a> pour compresser gratuitement avant d'uploader</li>
-  </ul>
-</div>
-<div className="flex items-center gap-3 mb-3">
+
+        {/* Bloc SEO avec aperçu Google */}
+        <SeoFields
+          title={form.title}
+          excerpt={form.excerpt}
+          slug={form.slug}
+          seoTitle={form.seo_title}
+          seoDescription={form.seo_description}
+          onSeoTitleChange={(v) => setForm(f => ({ ...f, seo_title: v }))}
+          onSeoDescriptionChange={(v) => setForm(f => ({ ...f, seo_description: v }))}
+        />
+
+        {/* Règles images */}
+        <div style={{ backgroundColor: '#fffbe6', border: '2px solid #F5C400', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12, fontFamily: 'Montserrat, sans-serif' }}>
+          <div style={{ fontWeight: 800, color: '#111', marginBottom: 4 }}>📐 Règles pour les images du blog</div>
+          <ul style={{ margin: 0, paddingLeft: 16, color: '#555', lineHeight: 1.8 }}>
+            <li><strong>Dimensions :</strong> 1200 × 630 px (format 16/9 recommandé)</li>
+            <li><strong>Poids max :</strong> 2 MB</li>
+            <li><strong>Formats acceptés :</strong> WebP (idéal), JPG, PNG</li>
+            <li><strong>Conseil :</strong> utilise <a href="https://squoosh.app" target="_blank" rel="noreferrer" style={{ color: '#E8151B', fontWeight: 700 }}>squoosh.app</a> pour compresser gratuitement avant d&apos;uploader</li>
+          </ul>
+        </div>
+
         {/* Image de couverture */}
         <div>
           <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
             🖼️ Image de couverture
             <span className="ml-2 text-xs font-normal text-gray-400">1200×630px · JPG/PNG/WebP · max 5MB</span>
           </label>
-          
+          <div className="flex items-center gap-3 mb-3">
             <label className="px-4 py-2 rounded text-sm font-black cursor-pointer" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: uploadingCover ? '#f3f4f6' : '#111', color: uploadingCover ? '#888' : '#F5C400', border: '2px solid #111', boxShadow: uploadingCover ? 'none' : '3px 3px 0 #E8151B' }}>
               {uploadingCover ? '⏳ Upload...' : '📁 Uploader une image'}
               <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={handleCoverUpload} style={{ display: 'none' }} disabled={uploadingCover || !tokenReady} />
@@ -182,7 +197,7 @@ export default function AdminNewArticlePage() {
           </div>
           <input type="text" name="cover_image_url" value={form.cover_image_url} onChange={handleChange} placeholder="https://... (rempli automatiquement après upload)" className="w-full px-4 py-3 rounded text-sm font-medium outline-none mb-2" style={{ border: '2px solid #111' }} />
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">Texte alternatif SEO — décrit l'image pour Google</label>
+            <label className="block text-xs font-bold text-gray-500 mb-1">Texte alternatif SEO — décrit l&apos;image pour Google</label>
             <input type="text" name="cover_image_alt" value={form.cover_image_alt} onChange={handleChange} placeholder="Ex : Robot ATS filtrant des CV automatiquement" className="w-full px-4 py-2 rounded text-sm font-medium outline-none" style={{ border: '1px solid #ddd', backgroundColor: '#fafafa' }} />
           </div>
           {form.cover_image_url && (
@@ -195,7 +210,7 @@ export default function AdminNewArticlePage() {
 
         {/* Éditeur */}
         <div>
-          <label className="block text-sm font-black mb-2" style={{ fontFamily: 'Montserrat, sans-serif' }}>Contenu de l'article</label>
+          <label className="block text-sm font-black mb-2" style={{ fontFamily: 'Montserrat, sans-serif' }}>Contenu de l&apos;article</label>
           <RichEditor
             content={form.content}
             onChange={html => setForm(f => ({ ...f, content: html }))}
