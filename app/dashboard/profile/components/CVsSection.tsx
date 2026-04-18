@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 
 interface CV {
@@ -231,6 +232,36 @@ export default function CVsSection({ token }: { token: string }) {
             {cvs.length} CV{cvs.length > 1 ? 's' : ''}
           </span>
         )}
+      </div>
+
+      {/* ─── Notice RGPD permanente ─── */}
+      <div style={{
+        background: '#FAFAF7',
+        border: '1.5px solid #E8E8E0',
+        borderRadius: 8,
+        padding: '12px 14px',
+        marginBottom: 18,
+        fontSize: 12,
+        color: '#444',
+        lineHeight: 1.65,
+        fontFamily: FONT,
+        fontWeight: 500,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>🔒</span>
+          <div>
+            <strong style={{ color: '#111', fontWeight: 800 }}>Conservation et sécurité de vos documents</strong>
+            <div style={{ marginTop: 4 }}>
+              Vos CV et lettres de motivation sont stockés de manière sécurisée (base chiffrée AES-256, hébergement en Union Européenne via Supabase) et conservés <strong>2 ans après votre dernière connexion</strong> (délibération CNIL n°2002-017 + Article 5(1)(e) RGPD).
+            </div>
+            <div style={{ marginTop: 6 }}>
+              Vous pouvez supprimer un document à tout moment avec le bouton 🗑️ ci-dessous.{' '}
+              <Link href="/confidentialite" style={{ color: '#E8151B', fontWeight: 700, textDecoration: 'underline' }}>
+                En savoir plus sur la protection de vos données →
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
 
       {error && (

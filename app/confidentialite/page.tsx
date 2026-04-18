@@ -61,12 +61,14 @@ export default function ConfidentialitePage() {
             content: `Vos CVs et documents sont stockés de manière chiffrée et sécurisée. L'accès est strictement limité à votre compte personnel — aucun autre utilisateur, aucun employeur, aucun recruteur ne peut y accéder.
 
 Nos sous-traitants techniques sont soigneusement sélectionnés et liés par des obligations contractuelles de confidentialité (Article 28 du RGPD) :
-- Supabase (base de données, authentification, stockage des fichiers) — chiffrement AES-256, hébergement EU
-- Vercel (hébergement web) — infrastructure sécurisée, hébergement EU
-- Anthropic Claude (analyse IA du score ATS) — traitement ponctuel, sans stockage de vos données
-- Resend (envoi d'emails transactionnels) — conforme RGPD
+- Supabase (base de données, authentification, stockage des fichiers) — chiffrement AES-256, hébergement en Union Européenne (région eu-west-1)
+- Vercel (hébergement web) — infrastructure sécurisée avec hébergement en Union Européenne
+- Anthropic Claude (analyse IA du score ATS) — société américaine, traitement ponctuel des données aux États-Unis, sans stockage de vos données au-delà de la requête
+- Resend (envoi d'emails transactionnels) — société américaine, routage des emails via leurs serveurs
 
-Aucun de ces sous-traitants n'est autorisé à utiliser vos données à ses propres fins commerciales.`
+Aucun de ces sous-traitants n'est autorisé à utiliser vos données à ses propres fins commerciales.
+
+🌍 Transferts de données hors Union Européenne : deux de nos sous-traitants (Anthropic et Resend) sont des sociétés américaines qui traitent ou routent des données aux États-Unis. Ces transferts sont limités au strict nécessaire au fonctionnement du service (génération du score ATS, envoi d'emails de confirmation) et encadrés par les garanties appropriées prévues aux articles 44 à 49 du RGPD, notamment les Clauses Contractuelles Types (CCT) de la Commission Européenne et, le cas échéant, la certification au Data Privacy Framework UE-US. Vous disposez d'un droit d'opposition à ces transferts (voir section 7).`
           },
           {
             title: '5. Durée de conservation',
@@ -104,7 +106,7 @@ Ce consentement est renouvelé à chaque upload afin de vous garantir une inform
 📦 Droit à la portabilité (article 20) — récupérer vos données dans un format lisible et transférable.
 • Procédure : demande par email à hello@jeanfindmyjob.fr — nous vous fournissons vos données au format JSON dans les délais légaux.
 
-✋ Droit d'opposition (article 21) — vous opposer au traitement de vos données pour des finalités spécifiques (newsletter, analyses statistiques).
+✋ Droit d'opposition (article 21) — vous opposer au traitement de vos données pour des finalités spécifiques (newsletter, analyses statistiques, transferts hors UE).
 • Procédure : désinscription newsletter en un clic dans chaque email envoyé. Autres oppositions par email à hello@jeanfindmyjob.fr.
 
 ⏸️ Droit à la limitation du traitement (article 18) — demander le gel temporaire du traitement de vos données (par exemple en cas de contestation de leur exactitude).
