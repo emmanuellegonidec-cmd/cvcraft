@@ -14,6 +14,9 @@ import JobStepActions from './components/JobStepActions'
 import EditJobModal from './components/EditJobModal'
 import ParcoursBannerModal from './components/ParcoursBannerModal'
 import JobArchivedDetails from './components/JobArchivedDetails'
+import RgpdConsentModal from '@/components/RgpdConsentModal'
+import SecureStorageNotice from '@/components/SecureStorageNotice'
+
 const FONT = "'Montserrat', sans-serif"
 
 const BASE_STEPS = [
@@ -177,6 +180,10 @@ export default function JobDetailPage() {
   const [uploadingDoc, setUploadingDoc] = useState<'cv' | 'cover_letter' | null>(null)
   const cvInputRef = useRef<HTMLInputElement>(null)
   const coverLetterInputRef = useRef<HTMLInputElement>(null)
+
+  // ─── RGPD : fichier en attente + état modale ────────────────────────────────
+  const [pendingUpload, setPendingUpload] = useState<{ file: File, docType: 'cv' | 'cover_letter' } | null>(null)
+  const [rgpdModalOpen, setRgpdModalOpen] = useState(false)
 
   const [showEditModal, setShowEditModal] = useState(false)
  const [editForm, setEditForm] = useState({
@@ -379,6 +386,29 @@ export default function JobDetailPage() {
     notesTimer.current = setTimeout(async () => {
       await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ notes: val }) })
     }, 800)
+  }
+
+  // ─── RGPD : upload après acceptation ────────────────────────────────────────
+  // Flow : clic "Charger" → file picker → user choisit un fichier →
+  //        handleFileSelected() stocke le fichier et ouvre la modale →
+  //        user coche + accepte → handleRgpdAccept() → vrai upload
+  const handleFileSelected = (file: File, docType: 'cv' | 'cover_letter') => {
+    if (!file) return
+    setPendingUpload({ file, docType })
+    setRgpdModalOpen(true)
+  }
+
+  const handleRgpdAccept = () => {
+    if (pendingUpload) {
+      handleDocumentUpload(pendingUpload.file, pendingUpload.docType)
+    }
+    setPendingUpload(null)
+    setRgpdModalOpen(false)
+  }
+
+  const handleRgpdClose = () => {
+    setPendingUpload(null)
+    setRgpdModalOpen(false)
   }
 
   const handleDocumentUpload = async (file: File, docType: 'cv' | 'cover_letter') => {
@@ -662,8 +692,29 @@ export default function JobDetailPage() {
         <div className="jfmj-docs-grid">
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={sectionLabel}>Documents</span>
-            <input ref={cvInputRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) handleDocumentUpload(e.target.files[0], 'cv') }} />
-            <input ref={coverLetterInputRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) handleDocumentUpload(e.target.files[0], 'cover_letter') }} />
+            <input
+              ref={cvInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) handleFileSelected(file, 'cv')
+                // Reset l'input pour permettre de re-choisir le même fichier si l'utilisateur annule la modale RGPD
+                e.target.value = ''
+              }}
+            />
+            <input
+              ref={coverLetterInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) handleFileSelected(file, 'cover_letter')
+                e.target.value = ''
+              }}
+            />
             {docItems.map(doc => (
               <div key={doc.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F5F5F0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -686,6 +737,8 @@ export default function JobDetailPage() {
                 </div>
               </div>
             ))}
+            {/* Notice RGPD permanente sous la liste des documents */}
+            <SecureStorageNotice compact />
           </div>
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={sectionLabel}>Mes notes</span>
@@ -802,6 +855,14 @@ export default function JobDetailPage() {
           </div>
         </div>
       )}
+
+      {/* ─── Modale RGPD — s'affiche avant CHAQUE upload CV/LM ─── */}
+      <RgpdConsentModal
+        isOpen={rgpdModalOpen}
+        onClose={handleRgpdClose}
+        onAccept={handleRgpdAccept}
+        documentType={pendingUpload?.docType === 'cover_letter' ? 'lettre de motivation' : 'CV'}
+      />
     </div>
   )
 }
