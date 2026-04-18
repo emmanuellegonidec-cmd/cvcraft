@@ -179,21 +179,53 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             <div className="article-content" dangerouslySetInnerHTML={{ __html: article.content }} />
           )}
 
-          {/* CTA sobre en fin d'article */}
-          <div style={{ marginTop: '4rem', padding: '2.5rem', background: '#FAFAFA', borderRadius: 12, border: '2.5px solid #111', boxShadow: '4px 4px 0 #111', display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                Prêt à passer à l'action ?
-              </div>
-              <h3 style={{ color: '#111', fontSize: '1.3rem', fontWeight: 900, marginBottom: 8, letterSpacing: '-0.02em' }}>
-                Organisez votre recherche avec Jean find my Job
-              </h3>
-              <p style={{ color: '#555', fontSize: 14, fontWeight: 500, lineHeight: 1.6, margin: 0 }}>
-                Tableau de bord, suivi de candidatures, CV IA — tout gratuit.
-              </p>
-            </div>
-            <Link href="/auth/signup" style={{ display: 'inline-block', background: '#111', color: '#F5C400', border: '2.5px solid #111', borderRadius: 8, padding: '14px 28px', fontSize: 14, fontWeight: 900, textDecoration: 'none', boxShadow: '4px 4px 0 #E8151B', letterSpacing: '0.02em', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              Go Jean find my Job ! →
+          {/* CTA fin d'article — simple, centré, charte neo-brutalist */}
+          <div style={{
+            marginTop: '4rem',
+            padding: '3rem 2rem',
+            background: '#F5C400',
+            borderRadius: 12,
+            border: '2.5px solid #111',
+            boxShadow: '5px 5px 0 #111',
+            textAlign: 'center'
+          }}>
+            <h3 style={{
+              color: '#111',
+              fontSize: '1.6rem',
+              fontWeight: 900,
+              margin: '0 0 12px',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.2
+            }}>
+              Prêt à organiser votre recherche d'emploi ?
+            </h3>
+            <p style={{
+              color: '#111',
+              fontSize: 15,
+              fontWeight: 500,
+              lineHeight: 1.6,
+              margin: '0 auto 1.75rem',
+              maxWidth: 480
+            }}>
+              Suivez vos candidatures, mesurez vos résultats, optimisez votre CV. Gratuit, sans carte bancaire.
+            </p>
+            <Link
+              href="/auth/signup"
+              style={{
+                display: 'inline-block',
+                background: '#111',
+                color: '#F5C400',
+                border: '2.5px solid #111',
+                borderRadius: 8,
+                padding: '14px 32px',
+                fontSize: 15,
+                fontWeight: 900,
+                textDecoration: 'none',
+                boxShadow: '4px 4px 0 #E8151B',
+                letterSpacing: '0.02em'
+              }}
+            >
+              Créer mon compte gratuit →
             </Link>
           </div>
         </article>
