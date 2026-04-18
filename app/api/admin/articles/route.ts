@@ -28,6 +28,21 @@ async function checkAdmin(req: NextRequest): Promise<boolean> {
   return !!data
 }
 
+// --- Fix HTTPS : filet de sécurité côté API ---
+// Force https:// sur tous les liens et images qui pointent vers jeanfindmyjob.fr
+// Couvre les cas de copier-coller depuis ailleurs (où l'éditeur n'a pas intercepté)
+function normalizeInternalLinksHTML(html: string | null | undefined): string | null {
+  if (!html) return html ?? null
+  return html
+    .replace(/href=(["'])http:\/\/(www\.)?jeanfindmyjob\.fr/gi, 'href=$1https://$2jeanfindmyjob.fr')
+    .replace(/src=(["'])http:\/\/(www\.)?jeanfindmyjob\.fr/gi, 'src=$1https://$2jeanfindmyjob.fr')
+}
+
+function normalizeInternalUrl(url: string | null | undefined): string | null {
+  if (!url) return url ?? null
+  return url.replace(/^http:\/\/(www\.)?jeanfindmyjob\.fr/i, 'https://$1jeanfindmyjob.fr')
+}
+
 // GET : récupère un article par ID
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -63,8 +78,8 @@ export async function POST(req: NextRequest) {
       title: title.trim(),
       slug: slug.trim(),
       excerpt: excerpt?.trim() ?? null,
-      content: content?.trim() ?? null,
-      cover_image_url: cover_image_url?.trim() ?? null,
+      content: normalizeInternalLinksHTML(content?.trim() ?? null),
+      cover_image_url: normalizeInternalUrl(cover_image_url?.trim() ?? null),
       category: category ?? 'Conseils',
       published: published ?? false,
       published_at: published_at ?? null,
@@ -85,10 +100,19 @@ export async function PATCH(req: NextRequest) {
   const { id, ...updates } = body
   if (!id) return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
 
+  // Applique la sanitisation HTTPS uniquement sur les champs envoyés
+  const sanitized: Record<string, unknown> = { ...updates }
+  if (sanitized.content !== undefined) {
+    sanitized.content = normalizeInternalLinksHTML(sanitized.content as string | null)
+  }
+  if (sanitized.cover_image_url !== undefined) {
+    sanitized.cover_image_url = normalizeInternalUrl(sanitized.cover_image_url as string | null)
+  }
+
   const adminClient = getAdminClient()
   const { data, error } = await adminClient
     .from('articles')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...sanitized, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()

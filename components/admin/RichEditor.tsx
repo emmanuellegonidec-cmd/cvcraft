@@ -15,6 +15,21 @@ interface RichEditorProps {
   token?: string
 }
 
+// --- Fix HTTPS : force https:// sur les liens/images vers jeanfindmyjob.fr ---
+// Cible uniquement notre propre domaine, laisse intacts les liens externes en http://
+function normalizeInternalLinksHTML(html: string): string {
+  if (!html) return html
+  return html
+    .replace(/href=(["'])http:\/\/(www\.)?jeanfindmyjob\.fr/gi, 'href=$1https://$2jeanfindmyjob.fr')
+    .replace(/src=(["'])http:\/\/(www\.)?jeanfindmyjob\.fr/gi, 'src=$1https://$2jeanfindmyjob.fr')
+}
+
+// Idem pour une URL seule (utilisé dans les inputs lien/image/CTA)
+function normalizeInternalUrl(url: string): string {
+  if (!url) return url
+  return url.replace(/^http:\/\/(www\.)?jeanfindmyjob\.fr/i, 'https://$1jeanfindmyjob.fr')
+}
+
 const ToolbarButton = ({ onClick, active, title, children }: { onClick: () => void; active?: boolean; title: string; children: React.ReactNode }) => (
   <button type="button" onClick={onClick} title={title} className="px-2 py-1 rounded text-sm font-bold transition-all" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: active ? '#F5C400' : 'transparent', color: active ? '#111' : '#444', border: active ? '1px solid #111' : '1px solid transparent' }}>
     {children}
@@ -39,6 +54,9 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
   const [pendingAlt, setPendingAlt] = useState('')
   const [showAltPopup, setShowAltPopup] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const altPopupRef = useRef<HTMLDivElement>(null)
+  const altInputRef = useRef<HTMLInputElement>(null)
+  const uploadErrorRef = useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
     extensions: [
@@ -61,23 +79,24 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
       Placeholder.configure({ placeholder: 'Commence à écrire ton article ici...' }),
     ],
     content,
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    onUpdate: ({ editor }) => onChange(normalizeInternalLinksHTML(editor.getHTML())),
     editorProps: { attributes: { class: 'prose-editor' } },
   })
 
   const addLink = useCallback(() => {
     if (!editor || !linkUrl) return
+    const safeUrl = normalizeInternalUrl(linkUrl)
     if (editor.state.selection.empty) {
-      editor.chain().focus().insertContent(`<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${linkUrl}</a>`).run()
+      editor.chain().focus().insertContent(`<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`).run()
     } else {
-      editor.chain().focus().setLink({ href: linkUrl }).run()
+      editor.chain().focus().setLink({ href: safeUrl }).run()
     }
     setLinkUrl(''); setShowLinkInput(false)
   }, [editor, linkUrl])
 
   const addImageFromUrl = useCallback(() => {
     if (!editor || !imageUrl) return
-    editor.chain().focus().setImage({ src: imageUrl, alt: imageAlt || '' }).run()
+    editor.chain().focus().setImage({ src: normalizeInternalUrl(imageUrl), alt: imageAlt || '' }).run()
     setImageUrl(''); setImageAlt(''); setShowImageInput(false)
   }, [editor, imageUrl, imageAlt])
 
@@ -94,14 +113,23 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData,
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Erreur upload')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? `Erreur upload (${res.status})`)
+      if (!data.url) throw new Error('URL manquante dans la réponse')
       // Ouvre le popup pour saisir le alt SEO
       setPendingImageUrl(data.url)
       setPendingAlt(data.alt || '')
       setShowAltPopup(true)
+      // Scroll auto vers le popup pour qu'il soit visible même si on était en bas de l'éditeur
+      setTimeout(() => {
+        altPopupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        altInputRef.current?.focus()
+      }, 100)
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setTimeout(() => {
+        uploadErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -116,7 +144,8 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
 
   const addCta = useCallback(() => {
     if (!editor || !ctaText || !ctaUrl) return
-    const ctaHtml = `<a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#F5C400;color:#111;font-weight:900;padding:12px 24px;border:2px solid #111;box-shadow:3px 3px 0 #111;text-decoration:none;font-family:Montserrat,sans-serif;border-radius:4px;">${ctaText}</a>`
+    const safeUrl = normalizeInternalUrl(ctaUrl)
+    const ctaHtml = `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#F5C400;color:#111;font-weight:900;padding:12px 24px;border:2px solid #111;box-shadow:3px 3px 0 #111;text-decoration:none;font-family:Montserrat,sans-serif;border-radius:4px;">${ctaText}</a>`
     editor.chain().focus().insertContent(ctaHtml).run()
     setCtaText(''); setCtaUrl(''); setShowCtaInput(false)
   }, [editor, ctaText, ctaUrl])
@@ -158,16 +187,17 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
 
       {/* Erreur upload */}
       {uploadError && (
-        <div className="px-3 py-2 text-xs font-semibold" style={{ backgroundColor: '#fee2e2', color: '#E8151B', borderBottom: '1px solid #E8151B' }}>
+        <div ref={uploadErrorRef} className="px-3 py-2 text-xs font-semibold" style={{ backgroundColor: '#fee2e2', color: '#E8151B', borderBottom: '1px solid #E8151B' }}>
           ❌ {uploadError}
         </div>
       )}
 
       {/* Popup alt SEO après upload */}
       {showAltPopup && (
-        <div className="px-4 py-3 flex items-center gap-3 flex-wrap" style={{ backgroundColor: '#f0fdf4', borderBottom: '2px solid #16a34a' }}>
+        <div ref={altPopupRef} className="px-4 py-3 flex items-center gap-3 flex-wrap" style={{ backgroundColor: '#f0fdf4', borderBottom: '2px solid #16a34a' }}>
           <span className="text-xs font-black" style={{ color: '#16a34a', fontFamily: 'Montserrat, sans-serif' }}>✅ Image uploadée — Texte alternatif SEO :</span>
           <input
+            ref={altInputRef}
             type="text"
             value={pendingAlt}
             onChange={e => setPendingAlt(e.target.value)}
