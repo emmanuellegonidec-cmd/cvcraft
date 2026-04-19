@@ -273,13 +273,13 @@ export default function DashboardPage() {
     };
   }, [accessToken, refetchFirstName]);
 
+  // Stats : 5 indicateurs opérationnels
   const stats = {
     total: jobs.length,
-    responseRate: jobs.length
-      ? Math.round((jobs.filter(j => isInterviewStage(j.status, stages) || j.status === 'offer').length / jobs.length) * 100)
-      : 0,
+    toApply: jobs.filter(j => j.status === 'to_apply').length,
+    applied: jobs.filter(j => j.status === 'applied').length,
     interviews: jobs.filter(j => isInterviewStage(j.status, stages)).length,
-    offers: jobs.filter(j => j.status === 'offer').length,
+    archived: jobs.filter(j => j.status === 'archived').length,
   };
 
   function openAddJobModal(defaultStatus?: string) {
@@ -583,11 +583,11 @@ export default function DashboardPage() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)' }}>
                 {[
-                  { l: "Nombre d'offres", v: stats.total,              c: '#111' },
-                  { l: 'Taux de réponse', v: stats.responseRate + '%', c: '#E8151B' },
-                  { l: 'Entretiens',      v: stats.interviews,          c: '#1A7A4A' },
-                  { l: 'Proposition',     v: stats.offers,              c: '#B8900A' },
-                  { l: 'Contacts',        v: contacts.length,           c: '#888' },
+                  { l: "Nombre d'offres",          v: stats.total,      c: '#111'    },
+                  { l: 'Offres envie de postuler', v: stats.toApply,    c: '#B8900A' },
+                  { l: 'Offres postulées',         v: stats.applied,    c: '#1B4F72' },
+                  { l: 'Offres en cours',          v: stats.interviews, c: '#1A7A4A' },
+                  { l: 'Offres archivées',         v: stats.archived,   c: '#888'    },
                 ].map((s, i, arr) => (
                   <div key={s.l} style={{ padding: '14px 16px', borderRight: i < arr.length - 1 ? '1px solid #E0E0E0' : 'none' }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
