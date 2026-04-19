@@ -35,6 +35,14 @@ export default function SignupPage() {
     });
     setLoading(false);
     if (err) { setError(err.message); return; }
+
+    // GA4 : tracker l'inscription réussie (événement standard GA4)
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'sign_up', {
+        method: 'email',
+      });
+    }
+
     setSuccess(true);
   }
 
