@@ -239,6 +239,19 @@ export default function ScoreAtsPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
       />
 
+      {/* NAV */}
+      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: '#fff', borderBottom: '2.5px solid #111', position: 'sticky', top: 0, zIndex: 100, fontFamily: "'Montserrat', sans-serif" }}>
+        <Link href="/" style={{ textDecoration: 'none', fontSize: '0.95rem', fontWeight: 900, color: '#111' }}>
+          Jean <span style={{ color: '#E8151B' }}>find my Job</span>
+        </Link>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <Link href="/" style={{ fontSize: 13, color: '#555', textDecoration: 'none', fontWeight: 600 }}>← Retour à l&apos;accueil</Link>
+          <Link href="/auth/signup" style={{ background: '#111', color: '#F5C400', border: '2px solid #111', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 800, textDecoration: 'none', boxShadow: '3px 3px 0 #E8151B' }}>
+            Commencer →
+          </Link>
+        </div>
+      </nav>
+
       <main className="min-h-screen bg-white text-[#111]">
         {/* HERO */}
         <section className="border-b-2 border-[#111] bg-white">
@@ -640,6 +653,14 @@ export default function ScoreAtsPage() {
           </div>
         </section>
       </main>
+
+      {/* FOOTER */}
+      <div style={{ borderTop: '2.5px solid #111', padding: '2rem', textAlign: 'center', background: '#fff' }}>
+        <p style={{ fontSize: 13, color: '#888', fontWeight: 500, fontFamily: "'Montserrat', sans-serif" }}>
+          © 2026 Jean find my Job ·{' '}
+          <Link href="/" style={{ color: '#E8151B', textDecoration: 'none', fontWeight: 700 }}>Retour à l&apos;accueil</Link>
+        </p>
+      </div>
     </>
   )
 }
