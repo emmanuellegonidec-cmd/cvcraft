@@ -150,7 +150,7 @@ export default async function LandingPage() {
           </span>
         </Link>
         <div className="nav-desktop" style={{ display:'flex',gap:'2rem',alignItems:'center' }}>
-         {[['#score-ats','Score ATS'],['#comment','Comment ça marche'],['#fonctionnalites','Fonctionnalités'],['#faq','FAQ']].map(([h,l]) => (
+         {[['/score-ats','Score ATS'],['#comment','Comment ça marche'],['#fonctionnalites','Fonctionnalités'],['#faq','FAQ']].map(([h,l]) => (
             <a key={h} href={h} style={{ fontFamily:"'Montserrat', sans-serif",fontSize:13,color:'#111',textDecoration:'none',fontWeight:700,letterSpacing:'0.02em',textTransform:'uppercase' }}>{l}</a>
           ))}
         </div>
@@ -316,7 +316,12 @@ export default async function LandingPage() {
               </li>
             ))}
           </ul>
-         <CTAButton href="/auth/signup" label="Tester mon CV →" eventName="cta_tester_cv" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }} />
+         <div style={{ marginTop:'1.5rem', display:'flex', gap:16, alignItems:'center', flexWrap:'wrap' }}>
+            <CTAButton href="/auth/signup" label="Tester mon CV →" eventName="cta_tester_cv" className="btn-black" style={{ display:'inline-flex' }} />
+            <Link href="/score-ats" style={{ fontFamily:"'Montserrat', sans-serif", fontSize:13, fontWeight:700, color:'#111', textDecoration:'none', borderBottom:'2px solid #E8151B', paddingBottom:2 }}>
+              En savoir plus sur le Score ATS →
+            </Link>
+          </div>
         </div>
         <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ fontFamily:"'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#111',fontSize:12,fontWeight:800,color:'#F5C400',textTransform:'uppercase',letterSpacing:'0.04em' }}>🎯 Score ATS — Résultat en direct</div>
@@ -519,7 +524,7 @@ export default async function LandingPage() {
           </div>
           <div>
             <h5 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Produit</h5>
-           {[['Tableau de bord','#fonctionnalites'],['Votre parcours par candidature','#fonctionnalites'],['Suivi contacts','#fonctionnalites'],['Statistiques','#fonctionnalites']].map(([label,href]) => (
+           {[['Tableau de bord','#fonctionnalites'],['Score ATS','/score-ats'],['Votre parcours par candidature','#fonctionnalites'],['Suivi contacts','#fonctionnalites'],['Statistiques','#fonctionnalites']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
           </div>
