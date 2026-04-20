@@ -504,13 +504,13 @@ export default function ScoreAtsPage() {
           </div>
         </section>
 
-        {/* 8 POINTS À VÉRIFIER */}
-        <section className="border-b-2 border-[#111] bg-[#111] text-white">
+       {/* 8 POINTS À VÉRIFIER */}
+        <section className="border-b-2 border-[#111] bg-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
-            <h2 className="font-['Montserrat'] text-3xl font-black text-[#F5C400] md:text-4xl">
+            <h2 className="font-['Montserrat'] text-3xl font-black md:text-4xl">
               8 points à vérifier sur votre CV avant de postuler
             </h2>
-            <p className="mt-4 max-w-3xl text-lg text-gray-200">
+            <p className="mt-4 max-w-3xl text-lg">
               Quelques bonnes pratiques simples qui améliorent la lecture de votre CV par les
               ATS et par les recruteurs.
             </p>
@@ -519,15 +519,15 @@ export default function ScoreAtsPage() {
               {points.map((p) => (
                 <div
                   key={p.num}
-                  className="flex flex-col items-center border-2 border-[#333] bg-[#1a1a1a] p-6 text-center"
+                  className="flex flex-col items-center border-2 border-[#111] bg-white p-6 text-center shadow-[3px_3px_0_#111]"
                 >
                   <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#111] bg-[#F5C400] font-['Montserrat'] text-2xl font-black text-[#111]">
                     {p.num}
                   </div>
-                  <h3 className="mt-4 font-['Montserrat'] text-base font-black text-white">
+                  <h3 className="mt-4 font-['Montserrat'] text-base font-black text-[#111]">
                     {p.titre}
                   </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-gray-300">{p.desc}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-[#555]">{p.desc}</p>
                 </div>
               ))}
             </div>
