@@ -88,6 +88,13 @@ const webPageSchema = {
   },
 }
 
+const stats = [
+  { main: "Gratuit", sub: "sans carte bancaire" },
+  { main: "6", sub: "notes détaillées" },
+  { main: "1:1", sub: "CV comparé à l'offre" },
+  { main: "RGPD", sub: "données protégées" },
+]
+
 const points = [
   {
     num: "1",
@@ -206,6 +213,20 @@ const recommandations = [
   { severity: "MINEURE", text: "Adéquation culturelle à renforcer" },
 ]
 
+/* Composant badge de numérotation réutilisable */
+function NumBadge({ num, label }: { num: string; label: string }) {
+  return (
+    <div className="mb-6 inline-flex items-center gap-3 border-2 border-[#111] bg-[#F5C400] px-4 py-2 shadow-[3px_3px_0_#111]">
+      <span className="font-['Montserrat'] text-2xl font-black leading-none text-[#111]">
+        {num}
+      </span>
+      <span className="font-['Montserrat'] text-sm font-black tracking-widest text-[#111]">
+        {label}
+      </span>
+    </div>
+  )
+}
+
 export default function ScoreAtsPage() {
   return (
     <>
@@ -238,7 +259,7 @@ export default function ScoreAtsPage() {
                 CRÉER MON COMPTE GRATUIT
               </Link>
               <Link
-                href="#analyse-complete"
+                href="#le-probleme"
                 className="inline-block border-2 border-[#111] bg-white px-8 py-4 text-center font-black text-[#111] shadow-[3px_3px_0_#E8151B] transition hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_#E8151B]"
               >
                 EN SAVOIR PLUS ↓
@@ -247,9 +268,29 @@ export default function ScoreAtsPage() {
           </div>
         </section>
 
-        {/* PROBLÈME ATS GÉNÉRIQUE */}
-        <section className="border-b-2 border-[#111] bg-white">
+        {/* BANDEAU CHIFFRES CLÉS */}
+        <section className="border-b-2 border-[#111] bg-[#111] text-white">
+          <div className="mx-auto max-w-5xl px-6 py-10">
+            <p className="mb-6 text-center text-sm italic text-[#F5C400] md:text-base">
+              Un outil, toutes vos candidatures. C'est aussi simple que ça.
+            </p>
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+              {stats.map((s) => (
+                <div key={s.main} className="text-center">
+                  <div className="font-['Montserrat'] text-3xl font-black leading-none text-[#F5C400] md:text-4xl">
+                    {s.main}
+                  </div>
+                  <div className="mt-3 text-xs text-gray-400 md:text-sm">{s.sub}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 01 - LE PROBLÈME */}
+        <section id="le-probleme" className="border-b-2 border-[#111] bg-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
+            <NumBadge num="01" label="LE PROBLÈME" />
             <h2 className="font-['Montserrat'] text-3xl font-black md:text-4xl">
               Un score ATS « dans le vide » ne sert à rien
             </h2>
@@ -276,9 +317,10 @@ export default function ScoreAtsPage() {
           </div>
         </section>
 
-        {/* ANALYSE COMPLÈTE */}
-        <section id="analyse-complete" className="border-b-2 border-[#111] bg-white">
+        {/* 02 - NOTRE ANALYSE */}
+        <section className="border-b-2 border-[#111] bg-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
+            <NumBadge num="02" label="NOTRE ANALYSE" />
             <h2 className="font-['Montserrat'] text-3xl font-black md:text-4xl">
               Une analyse complète et contextualisée
             </h2>
@@ -303,13 +345,14 @@ export default function ScoreAtsPage() {
           </div>
         </section>
 
-        {/* RAPPORT D'ANALYSE - RECONSTITUTION HTML DES 3 CAPTURES */}
-        <section className="border-b-2 border-[#111] bg-white">
+        {/* 03 - LE RAPPORT (FOND NOIR) */}
+        <section className="border-b-2 border-[#111] bg-[#111] text-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
-            <h2 className="font-['Montserrat'] text-3xl font-black md:text-4xl">
+            <NumBadge num="03" label="LE RAPPORT" />
+            <h2 className="font-['Montserrat'] text-3xl font-black text-[#F5C400] md:text-4xl">
               Un rapport d'analyse clair et actionnable
             </h2>
-            <p className="mt-4 max-w-3xl text-lg">
+            <p className="mt-4 max-w-3xl text-lg text-gray-200">
               Après l'analyse, vous recevez un rapport complet directement dans votre espace.
               Score global, notes détaillées, points forts, points à améliorer et
               recommandations hiérarchisées.
@@ -317,7 +360,7 @@ export default function ScoreAtsPage() {
 
             {/* Bloc 1 : Score global + 6 dimensions */}
             <div className="mt-12">
-              <div className="rounded-lg bg-[#1a1a1a] p-6 md:p-8">
+              <div className="rounded-lg border border-[#333] bg-[#1a1a1a] p-6 md:p-8">
                 <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
                   <div className="relative h-24 w-24 shrink-0">
                     <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
@@ -386,7 +429,7 @@ export default function ScoreAtsPage() {
                 ))}
               </div>
 
-              <p className="mt-4 text-center text-sm italic text-gray-600">
+              <p className="mt-4 text-center text-sm italic text-gray-400">
                 Un score global sur 100 et 6 notes détaillées pour mesurer précisément la
                 compatibilité.
               </p>
@@ -396,7 +439,7 @@ export default function ScoreAtsPage() {
             <div className="mt-12 grid gap-8 md:grid-cols-2">
               {/* Bloc 2 : Points forts et points faibles */}
               <div>
-                <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 rounded-lg bg-white p-4 sm:grid-cols-2">
                   <div className="rounded-md border border-[#1A7A4A] bg-[#E6F4EA] p-4">
                     <div className="font-['Montserrat'] text-xs font-black tracking-wider text-[#1A7A4A]">
                       POINTS FORTS
@@ -424,7 +467,7 @@ export default function ScoreAtsPage() {
                     </ul>
                   </div>
                 </div>
-                <p className="mt-4 text-center text-sm italic text-gray-600">
+                <p className="mt-4 text-center text-sm italic text-gray-400">
                   Points forts et points à améliorer, avec des exemples concrets issus de votre
                   CV.
                 </p>
@@ -432,7 +475,7 @@ export default function ScoreAtsPage() {
 
               {/* Bloc 3 : Recommandations hiérarchisées */}
               <div>
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
+                <div className="rounded-lg bg-white p-5">
                   <div className="font-['Montserrat'] text-xs font-black tracking-wider text-gray-700">
                     RECOMMANDATIONS
                   </div>
@@ -453,7 +496,7 @@ export default function ScoreAtsPage() {
                     ))}
                   </ul>
                 </div>
-                <p className="mt-4 text-center text-sm italic text-gray-600">
+                <p className="mt-4 text-center text-sm italic text-gray-400">
                   Des recommandations hiérarchisées pour prioriser vos actions avant de postuler.
                 </p>
               </div>
@@ -461,7 +504,7 @@ export default function ScoreAtsPage() {
           </div>
         </section>
 
-        {/* 8 POINTS À VÉRIFIER - STYLE HOMEPAGE */}
+        {/* 8 POINTS À VÉRIFIER */}
         <section className="border-b-2 border-[#111] bg-[#111] text-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
             <h2 className="font-['Montserrat'] text-3xl font-black text-[#F5C400] md:text-4xl">
@@ -514,7 +557,7 @@ export default function ScoreAtsPage() {
           </div>
         </section>
 
-        {/* AU-DELÀ DU SCORE : FOND NOIR COMME LA HOME */}
+        {/* AU-DELÀ DU SCORE */}
         <section className="border-b-2 border-[#111] bg-[#111] text-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
             <h2 className="font-['Montserrat'] text-3xl font-black text-[#F5C400] md:text-4xl">
