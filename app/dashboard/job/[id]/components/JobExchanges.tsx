@@ -78,7 +78,7 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
             )}
           </div>
           <span style={{ fontSize: 11, color: '#888', fontFamily: FONT, fontWeight: 500 }}>
-            Journal de tous les échanges (debrief, questions-réponses) par étape de cette candidature.
+            Journal de tous les échanges (debrief, questions, réponses) par étape de cette candidature.
           </span>
         </div>
         <span style={{ fontSize: 10, color: '#bbb', display: 'inline-block', transform: sectionOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
@@ -159,18 +159,18 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                       </div>
 
                       {[
-                        { field: 'content', label: 'Déroulement & impressions', placeholder: "Comment s'est passé l'échange ?", minHeight: 76 },
-                        { field: 'questions_answers', label: "Questions-réponses de l'entretien", placeholder: "Ce qui a été abordé et ce que j'ai répondu…", minHeight: 90 },
-                        { field: 'next_step', label: 'Prochaine étape annoncée', placeholder: 'Suite du process, délai, contact...', minHeight: 52 },
-                      ].map(({ field, label, placeholder, minHeight }) => (
+                        { field: 'content', label: 'Déroulement & impressions', placeholder: "Comment s'est passé l'échange ?" },
+                        { field: 'questions', label: 'Questions posées', placeholder: 'Ce qui a été abordé...' },
+                        { field: 'answers', label: 'Mes réponses & points à améliorer', placeholder: "Ce que j'ai bien dit, ce que je reformulerais..." },
+                        { field: 'next_step', label: 'Prochaine étape annoncée', placeholder: 'Suite du process, délai, contact...' },
+                      ].map(({ field, label, placeholder }) => (
                         <div key={field} style={{ marginBottom: 10 }}>
                           <label style={{ ...fieldLabel, marginBottom: 5 }}>{label}</label>
                           <textarea
-                            key={`${ex.id}-${field}`}
                             defaultValue={(ex as any)[field] ?? ''}
                             placeholder={placeholder}
                             onBlur={e => onUpdate(ex.id, field, e.target.value)}
-                            style={{ ...ta, minHeight }}
+                            style={{ ...ta, minHeight: field === 'next_step' ? 52 : 76 }}
                             onFocus={e => { e.target.style.borderColor = '#F5C400' }}
                           />
                         </div>
