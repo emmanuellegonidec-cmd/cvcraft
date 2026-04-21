@@ -33,7 +33,6 @@ const SOURCE_MAP: Record<string, { bg: string; color: string; label: string }> =
 };
 
 // Ordre des colonnes pour détecter les déplacements en arrière
-// NB : "archived" retiré du Kanban, "to_process" (À traiter) inséré entre in_progress et offer
 const COLUMN_ORDER = ['to_apply', 'applied', 'in_progress', 'to_process', 'offer']
 
 const COLUMN_LABELS: Record<string, string> = {
@@ -51,6 +50,26 @@ function getSourceBadge(source?: string) {
   if (SOURCE_MAP[key]) return SOURCE_MAP[key];
   const label = source.length > 18 ? source.slice(0, 16) + '…' : source;
   return { bg: '#666', color: '#fff', label };
+}
+
+// ─── Détecte si une offre a au moins une relance dépassée ─────────────────────
+// On regarde toutes les étapes où une relance a été configurée et activée.
+// Si au moins une date est <= aujourd'hui, on affiche le badge "À relancer".
+function hasOverdueFollowUp(job: Job): boolean {
+  const dates = (job as any).follow_up_dates as Record<string, string> | null
+  const enabled = (job as any).follow_up_enabled as Record<string, boolean> | null
+  if (!dates || Object.keys(dates).length === 0) return false
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  for (const stepId of Object.keys(dates)) {
+    const date = dates[stepId]
+    if (!date) continue
+    // par défaut activée si pas explicitement désactivée
+    const isEnabled = !enabled || enabled[stepId] !== false
+    if (!isEnabled) continue
+    const followUp = new Date(date); followUp.setHours(0, 0, 0, 0)
+    if (followUp.getTime() <= today.getTime()) return true
+  }
+  return false
 }
 
 // ─── Carte draggable ───────────────────────────────────────────────────────────
@@ -73,6 +92,9 @@ function DraggableCard({ job, colId, stages, stagesLabelMap, onClick }: {
   }
 
   const sourceBadge = getSourceBadge((job as any).source_platform);
+
+  // ── Badge "À relancer" si au moins une relance est dépassée ──
+  const showFollowUpBadge = hasOverdueFollowUp(job)
 
   // ── Calcul date à afficher ──
   const stepDatesMap = (job as any).step_dates as Record<string, string> | null;
@@ -107,13 +129,26 @@ function DraggableCard({ job, colId, stages, stagesLabelMap, onClick }: {
         transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
         cursor: isDragging ? 'grabbing' : 'grab',
         touchAction: 'none',
+        // Liseré rouge si relance dépassée
+        ...(showFollowUpBadge ? { borderLeft: '4px solid #E8151B' } : {}),
       }}
     >
       <div style={{ fontSize: 12, color: '#555', fontWeight: 600, marginBottom: 3 }}>{job.company}</div>
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{job.title}</div>
 
-      {(sourceBadge || subLabel) && (
+      {(sourceBadge || subLabel || showFollowUpBadge) && (
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5, alignItems: 'center' }}>
+          {showFollowUpBadge && (
+            <span style={{
+              background: '#E8151B', color: '#fff',
+              fontSize: 10, fontWeight: 800,
+              padding: '2px 8px', borderRadius: 20,
+              lineHeight: 1.4, whiteSpace: 'nowrap',
+              fontFamily: FONT,
+            }}>
+              ⚠️ À relancer
+            </span>
+          )}
           {sourceBadge && (
             <span style={{
               background: sourceBadge.bg, color: sourceBadge.color,
@@ -192,7 +227,6 @@ function DroppableColumn({ col, jobs, stages, stagesLabelMap, onCardClick, onAdd
           onClick={() => onCardClick(job)}
         />
       ))}
-      {/* Pas de bouton "+ Ajouter" dans "À traiter" — colonne auto uniquement */}
       {!isToProcess && (
         <div className="add-card" onClick={() => onAddJob(col.id)}>+ Ajouter</div>
       )}
@@ -226,7 +260,6 @@ function BackwardMoveModal({ job, fromCol, toCol, onConfirm, onCancel }: {
         width: '100%', maxWidth: 460,
         border: '2px solid #F5C400', boxShadow: '4px 4px 0 #111',
       }}>
-        {/* Titre */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <span style={{ fontSize: 28 }}>⚠️</span>
           <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: 0, fontFamily: FONT }}>
@@ -234,13 +267,11 @@ function BackwardMoveModal({ job, fromCol, toCol, onConfirm, onCancel }: {
           </h3>
         </div>
 
-        {/* Offre concernée */}
         <div style={{ background: '#F9F9F7', border: '1.5px solid #E0E0E0', borderRadius: 8, padding: '10px 14px', marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#111', fontFamily: FONT }}>{job.title}</div>
           <div style={{ fontSize: 12, color: '#666', fontWeight: 500, fontFamily: FONT }}>{job.company}</div>
         </div>
 
-        {/* Flèche mouvement */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
           <span style={{ fontSize: 12, fontWeight: 800, padding: '4px 12px', borderRadius: 20, background: '#E8F0FE', color: '#1A6FDB', fontFamily: FONT }}>
             {COLUMN_LABELS[fromCol]}
@@ -251,7 +282,6 @@ function BackwardMoveModal({ job, fromCol, toCol, onConfirm, onCancel }: {
           </span>
         </div>
 
-        {/* Message d'avertissement */}
         <div style={{ background: '#FFF8E1', border: '1.5px solid #F5C400', borderRadius: 8, padding: '12px 14px', marginBottom: 20 }}>
           <p style={{ fontSize: 13, color: '#111', margin: '0 0 8px', fontWeight: 700, fontFamily: FONT }}>
             ℹ️ Vos données ne sont pas perdues
@@ -264,7 +294,6 @@ function BackwardMoveModal({ job, fromCol, toCol, onConfirm, onCancel }: {
           </p>
         </div>
 
-        {/* Boutons */}
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={onCancel}
             style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
@@ -295,7 +324,6 @@ export default function KanbanView({ jobs, stages, stagesLabelMap, contactJobIds
   const [activeJob, setActiveJob] = useState<Job | null>(null);
   const [overColId, setOverColId] = useState<string | null>(null);
 
-  // Modale confirmation déplacement en arrière
   const [pendingMove, setPendingMove] = useState<{ job: Job; fromCol: string; toCol: string } | null>(null)
 
   useEffect(() => {
@@ -309,9 +337,6 @@ export default function KanbanView({ jobs, stages, stagesLabelMap, contactJobIds
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   );
 
-  // Répartit les jobs entre les colonnes, avec gestion spéciale de "À traiter"
-  // et de "Postulé" : les offres "applied" anciennes sans contact basculent
-  // virtuellement dans "À traiter".
   const jobsByStatus = (s: string): Job[] => {
     if (s === 'to_process') {
       return jobs.filter(j => isJobToProcess(j, contactJobIds));
@@ -338,24 +363,16 @@ export default function KanbanView({ jobs, stages, stagesLabelMap, contactJobIds
     const toColId = over.id as string;
     if (!job || fromColId === toColId) return;
 
-    // Blocage 1 : on ne peut pas déposer manuellement dans "À traiter"
-    // (colonne exclusivement alimentée par la règle automatique)
     if (toColId === 'to_process') return;
-
-    // Blocage 2 : depuis "À traiter", on ne peut pas retomber en "Postulé"
-    // (ça créerait un effet magique où la carte reviendrait aussitôt en "À traiter")
     if (fromColId === 'to_process' && toColId === 'applied') return;
 
-    // Détecter si c'est un déplacement en arrière (basé sur COLUMN_ORDER)
     const fromIndex = COLUMN_ORDER.indexOf(fromColId)
     const toIndex = COLUMN_ORDER.indexOf(toColId)
     const isBackward = toIndex < fromIndex
 
     if (isBackward) {
-      // Bloquer et afficher la modale de confirmation
       setPendingMove({ job, fromCol: fromColId, toCol: toColId })
     } else {
-      // Déplacement en avant : instantané, pas de confirmation
       onStatusChange(job.id, toColId);
     }
   }
