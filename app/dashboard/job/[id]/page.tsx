@@ -8,6 +8,7 @@ import { JobExchange, EXCHANGE_TYPE_LABELS } from '@/lib/types'
 import JobHeader from './components/JobHeader'
 import JobCompanySection from './components/JobCompanySection'
 import JobInterviewDetails from './components/JobInterviewDetails'
+import JobInterviewDebrief from './components/JobInterviewDebrief'
 import JobExchanges from './components/JobExchanges'
 import JobStepProgress from './components/JobStepProgress'
 import JobStepActions from './components/JobStepActions'
@@ -136,7 +137,7 @@ function PhaseBanner({ phase, stepNum, stepLabel }: { phase: 'before' | 'after';
           {phase === 'before' ? 'Avant' : 'Après'} — {stepLabel}
         </div>
         <div style={{ fontSize: 11, color: '#666', marginTop: 3, fontFamily: FONT, fontWeight: 500 }}>
-          {phase === 'before' ? 'Tout ce qui te prépare au RDV' : 'Email de remerciement et relance à programmer'}
+          {phase === 'before' ? 'Tout ce qui te prépare au RDV' : 'Debrief, email de remerciement et relance'}
         </div>
       </div>
     </div>
@@ -552,6 +553,7 @@ export default function JobDetailPage() {
     router.push('/dashboard')
   }
 
+  // Ajoute un échange générique (depuis le bouton "+ Ajouter un échange" de l'historique)
   const addExchange = async () => {
     const step = allSteps.find(s => s.id === currentStepId)
     const res = await fetch('/api/jobs/exchanges', {
@@ -561,6 +563,25 @@ export default function JobDetailPage() {
         job_id: jobId,
         title: 'Nouvel échange',
         exchange_type: 'autre',
+        exchange_date: new Date().toISOString().split('T')[0],
+        step_label: step?.label ?? null,
+        step_number: step?.num ?? null,
+      })
+    })
+    if (res.ok) { const newEx = await res.json(); setExchanges(prev => [...prev, newEx]) }
+  }
+
+  // Ajoute un échange pré-titré pour le debrief de l'étape en cours
+  // (appelé depuis le bloc Debrief de la Phase 2, quand aucun debrief n'existe encore)
+  const addDebriefExchange = async () => {
+    const step = allSteps.find(s => s.id === currentStepId)
+    const res = await fetch('/api/jobs/exchanges', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        job_id: jobId,
+        title: `Debrief — ${step?.label ?? 'Entretien'}`,
+        exchange_type: 'rdv',
         exchange_date: new Date().toISOString().split('T')[0],
         step_label: step?.label ?? null,
         step_number: step?.num ?? null,
@@ -779,6 +800,14 @@ export default function JobDetailPage() {
 
             {/* ─── PHASE 2 : APRÈS L'ENTRETIEN ─── */}
             <PhaseBanner phase="after" stepNum={currentStepIndex + 1} stepLabel={currentStepLabel} />
+
+            {/* Debrief : 3 champs liés à l'échange en cours pour cette étape */}
+            <JobInterviewDebrief
+              exchanges={exchanges}
+              currentStepLabel={currentStepLabel}
+              onAdd={addDebriefExchange}
+              onUpdate={updateExchange}
+            />
 
             <JobInterviewDetails section="followup" {...interviewSectionProps} />
           </>
