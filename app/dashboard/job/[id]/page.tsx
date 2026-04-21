@@ -32,13 +32,8 @@ const BASE_STEPS = [
 ]
 
 const BASE_STEP_POSITIONS: Record<string, number> = {
-  to_apply:          1000,
-  applied:           2000,
-  phone_interview:   3000,
-  hr_interview:      4000,
-  manager_interview: 5000,
-  offer:             6000,
-  archived:          7000,
+  to_apply: 1000, applied: 2000, phone_interview: 3000,
+  hr_interview: 4000, manager_interview: 5000, offer: 6000, archived: 7000,
 }
 
 const INTERVIEW_STEP_IDS = ['phone_interview', 'hr_interview', 'manager_interview']
@@ -48,12 +43,10 @@ const STATUS_MAP: Record<string, string> = {
   phone_interview: 'in_progress', hr_interview: 'in_progress',
   manager_interview: 'in_progress', offer: 'offer', archived: 'archived',
 }
-
 const STATUS_LABELS: Record<string, string> = {
   to_apply: 'Envie de postuler', applied: 'Postulé',
   in_progress: 'En cours', offer: 'Offre reçue', archived: 'Archivé',
 }
-
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   to_apply:    { bg: '#F5F5F0', color: '#888' },
   applied:     { bg: '#E8F0FE', color: '#1A6FDB' },
@@ -61,7 +54,6 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   offer:       { bg: '#E8F5E9', color: '#1A7A4A' },
   archived:    { bg: '#F5F5F5', color: '#aaa' },
 }
-
 const SUB_STATUS_LABELS: Record<string, string> = {
   to_apply: 'Envie de postuler', applied: 'Postulé',
   phone_interview: 'Entretien tél.', hr_interview: 'Entretien RH',
@@ -79,6 +71,10 @@ interface Job {
   interview_type: string | null; interview_contact_id: string | null
   interview_contacts: Record<string, string> | null
   interview_location: string | null; interview_link: string | null; interview_phone: string | null
+  interview_preparations: Record<string, string> | null
+  interview_syntheses: Record<string, string> | null
+  follow_up_dates: Record<string, string> | null
+  follow_up_enabled: Record<string, boolean> | null
   company_description: string | null; company_website: string | null
   company_size: string | null; department: string | null; source_platform: string | null
   recruitment_process: string | null
@@ -106,40 +102,75 @@ function extractTransmittedBy(notes: string | null): string | null {
   return match ? match[1].trim() : null
 }
 
-// ─── Bandeau de phase (AVANT / APRÈS l'entretien) ────────────────────────────
-// Affiche le rond noir + chiffre jaune identique au step "en cours" du parcours,
-// pour que l'utilisateur fasse instantanément le lien visuel.
-function PhaseBanner({ phase, stepNum, stepLabel }: { phase: 'before' | 'after'; stepNum: number; stepLabel: string }) {
+// ─── Bandeau collapsible de phase (AVANT / APRÈS) ──────────────────────────
+// Le bandeau est cliquable : au clic il déploie le contenu de la phase.
+// Ouverture par défaut : AVANT si RDV à venir, APRÈS si RDV passé (logique intelligente dans le parent).
+function PhaseBlock({
+  phase, stepNum, stepLabel, open, onToggle, children,
+}: {
+  phase: 'before' | 'after'
+  stepNum: number
+  stepLabel: string
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
   return (
     <div style={{
-      background: '#FFFDF5',
-      border: '1.5px solid #111',
-      borderRadius: 10,
-      padding: '12px 18px',
-      marginBottom: 10,
-      marginTop: 4,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
+      background: '#fff',
+      border: '2px solid #111',
+      borderRadius: 12,
+      marginBottom: 14,
+      overflow: 'hidden',
     }}>
-      <div style={{
-        width: 32, height: 32, borderRadius: '50%',
-        background: '#111', color: '#F5C400',
-        border: '2px solid #111',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 13, fontWeight: 900, flexShrink: 0,
-        fontFamily: FONT,
-      }}>
-        {stepNum}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: '#111', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: FONT }}>
-          {phase === 'before' ? 'Avant' : 'Après'} — {stepLabel}
+      <div
+        onClick={onToggle}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '14px 18px', cursor: 'pointer',
+          background: '#fff',
+        }}
+      >
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%',
+          background: '#111', color: '#F5C400',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 900, flexShrink: 0, fontFamily: FONT,
+        }}>
+          {stepNum}
         </div>
-        <div style={{ fontSize: 11, color: '#666', marginTop: 3, fontFamily: FONT, fontWeight: 500 }}>
-          {phase === 'before' ? 'Tout ce qui te prépare au RDV' : 'Debrief, email de remerciement et relance'}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 12, fontWeight: 800, color: '#111',
+            letterSpacing: '1.3px', textTransform: 'uppercase', fontFamily: FONT,
+          }}>
+            {phase === 'before' ? 'Avant' : 'Après'} — {stepLabel}
+          </div>
+          <div style={{
+            fontSize: 11, color: '#666', marginTop: 3,
+            fontFamily: FONT, fontWeight: 500,
+          }}>
+            {phase === 'before'
+              ? 'Tout ce qui te prépare au RDV'
+              : 'Debrief, email de remerciement et relance'}
+          </div>
         </div>
+        <span style={{
+          fontSize: 11, color: '#888',
+          display: 'inline-block',
+          transform: open ? 'rotate(180deg)' : 'none',
+          transition: 'transform .2s',
+        }}>▼</span>
       </div>
+      {open && (
+        <div style={{
+          padding: '10px 14px 14px',
+          background: '#FAFAF7',
+          borderTop: '1px solid #F0F0F0',
+        }}>
+          {children}
+        </div>
+      )}
     </div>
   )
 }
@@ -174,8 +205,8 @@ function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect
           const isActive = job.id === currentJobId
           const statusColor = STATUS_COLORS[job.status] ?? STATUS_COLORS['to_apply']
           const stepLabel = job.sub_status
-  ? (SUB_STATUS_LABELS[job.sub_status] ?? stagesLabelMap[job.sub_status] ?? STATUS_LABELS[job.status])
-  : STATUS_LABELS[job.status]
+            ? (SUB_STATUS_LABELS[job.sub_status] ?? stagesLabelMap[job.sub_status] ?? STATUS_LABELS[job.status])
+            : STATUS_LABELS[job.status]
           const dateRef = job.applied_at || job.created_at
           return (
             <div key={job.id} onClick={() => onSelect(job.id)}
@@ -222,12 +253,16 @@ export default function JobDetailPage() {
   const cvInputRef = useRef<HTMLInputElement>(null)
   const coverLetterInputRef = useRef<HTMLInputElement>(null)
 
-  // ─── RGPD : fichier en attente + état modale ────────────────────────────────
+  // ─── States phases AVANT / APRÈS (collapsibles) ────────────────────────────
+  const [beforeOpen, setBeforeOpen] = useState(true)
+  const [afterOpen, setAfterOpen] = useState(false)
+  const phaseInitRef = useRef(false)
+
   const [pendingUpload, setPendingUpload] = useState<{ file: File, docType: 'cv' | 'cover_letter' } | null>(null)
   const [rgpdModalOpen, setRgpdModalOpen] = useState(false)
 
   const [showEditModal, setShowEditModal] = useState(false)
- const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState({
     title: '', company: '', location: '', job_type: 'CDI',
     salary_text: '', description: '',
     company_description: '', company_website: '', company_size: '',
@@ -248,7 +283,6 @@ export default function JobDetailPage() {
   const [contactSaving, setContactSaving] = useState(false)
   const [contactSaved, setContactSaved] = useState(false)
 
-  // ─── Chargement ────────────────────────────────────────────────────────────
   const loadJob = useCallback(async () => {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
@@ -284,7 +318,6 @@ export default function JobDetailPage() {
     if (data) setContacts(data)
   }, [])
 
-  // ─── Chargement des contacts LIÉS à cette offre (enrichis) ─────────────────
   const loadJobContacts = useCallback(async () => {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
@@ -315,13 +348,9 @@ export default function JobDetailPage() {
     }
 
     setJobContacts(cd.map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      role: c.role ?? null,
-      company: c.company ?? null,
-      email: c.email ?? null,
-      phone: c.phone ?? null,
-      linkedin: c.linkedin ?? null,
+      id: c.id, name: c.name,
+      role: c.role ?? null, company: c.company ?? null,
+      email: c.email ?? null, phone: c.phone ?? null, linkedin: c.linkedin ?? null,
       notes_count: counts[c.id] ?? 0,
       last_note_date: lasts[c.id] ?? null,
     })))
@@ -378,7 +407,6 @@ export default function JobDetailPage() {
     })
   }, [exchanges.length, customSteps.length, hiddenSteps.length])
 
-  // ─── Construction de allSteps ──────────────────────────────────────────────
   const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
 
   const allStepsMerged = [
@@ -406,35 +434,36 @@ export default function JobDetailPage() {
     (INTERVIEW_STEP_IDS.includes(currentStepId) || customSteps.some(cs => cs.id === currentStepId))
     && !hiddenSteps.includes(currentStepId)
 
+  // ─── Logique intelligente : si RDV passé → AVANT fermé / APRÈS ouvert ────
+  useEffect(() => {
+    if (!job || phaseInitRef.current || !isInterviewStep) return
+    phaseInitRef.current = true
+    const rdvDate = job.interview_at ? new Date(job.interview_at) : null
+    if (rdvDate && rdvDate < new Date()) {
+      setBeforeOpen(false)
+      setAfterOpen(true)
+    }
+  }, [job, isInterviewStep])
+
   useEffect(() => {
     if (currentStepId) loadCoverLetterVisibility(currentStepId)
   }, [currentStepId, loadCoverLetterVisibility])
 
-  // ─── FIX : handleStepClick avec refresh session + filet de sécurité API ───
   const handleStepClick = async (stepId: string) => {
     if (!job) return
     const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
     const patch = { sub_status: stepId, status: globalStatus, updated_at: new Date().toISOString() }
-
-    // Mise à jour optimiste de l'UI immédiatement
     setJob(prev => prev ? { ...prev, ...patch } : prev)
 
-    // 1. Rafraîchir la session pour éviter les échecs silencieux à la réouverture
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
     if (session && typeof window !== 'undefined') {
       (window as any).__jfmj_token = session.access_token
     }
-
-    // 2. Sauvegarde directe Supabase
     const { error } = await supabase.from('jobs').update(patch).eq('id', jobId)
-
-    // 3. Si la sauvegarde directe échoue → filet de sécurité via API
     if (error) {
-      console.error('Erreur sauvegarde étape (direct Supabase):', error)
       await fetch(`/api/jobs?id=${jobId}`, {
-        method: 'PATCH',
-        headers: authHeaders(),
+        method: 'PATCH', headers: authHeaders(),
         body: JSON.stringify({ sub_status: stepId, status: globalStatus }),
       })
     }
@@ -444,8 +473,7 @@ export default function JobDetailPage() {
     const updated = [...hiddenSteps, stepId]
     setHiddenSteps(updated)
     await fetch(`/api/jobs?id=${jobId}`, {
-      method: 'PATCH',
-      headers: authHeaders(),
+      method: 'PATCH', headers: authHeaders(),
       body: JSON.stringify({ hidden_steps: updated }),
     })
   }, [hiddenSteps, jobId])
@@ -453,8 +481,7 @@ export default function JobDetailPage() {
   const handleStepDatesChange = useCallback(async (dates: Record<string, string>) => {
     setStepDates(dates)
     await fetch(`/api/jobs?id=${jobId}`, {
-      method: 'PATCH',
-      headers: authHeaders(),
+      method: 'PATCH', headers: authHeaders(),
       body: JSON.stringify({ step_dates: dates }),
     })
   }, [jobId])
@@ -472,25 +499,16 @@ export default function JobDetailPage() {
     }, 800)
   }
 
-  // ─── RGPD : upload après acceptation ────────────────────────────────────────
   const handleFileSelected = (file: File, docType: 'cv' | 'cover_letter') => {
     if (!file) return
     setPendingUpload({ file, docType })
     setRgpdModalOpen(true)
   }
-
   const handleRgpdAccept = () => {
-    if (pendingUpload) {
-      handleDocumentUpload(pendingUpload.file, pendingUpload.docType)
-    }
-    setPendingUpload(null)
-    setRgpdModalOpen(false)
+    if (pendingUpload) { handleDocumentUpload(pendingUpload.file, pendingUpload.docType) }
+    setPendingUpload(null); setRgpdModalOpen(false)
   }
-
-  const handleRgpdClose = () => {
-    setPendingUpload(null)
-    setRgpdModalOpen(false)
-  }
+  const handleRgpdClose = () => { setPendingUpload(null); setRgpdModalOpen(false) }
 
   const handleDocumentUpload = async (file: File, docType: 'cv' | 'cover_letter') => {
     if (!file || !userId) return
@@ -499,13 +517,9 @@ export default function JobDetailPage() {
       const supabase = createClient()
       const ext = file.name.split('.').pop()
       const path = `${userId}/${jobId}/${docType}.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('job-documents')
-        .upload(path, file, { upsert: true })
+      const { error: uploadError } = await supabase.storage.from('job-documents').upload(path, file, { upsert: true })
       if (uploadError) throw uploadError
-      const { data: signedData } = await supabase.storage
-        .from('job-documents')
-        .createSignedUrl(path, 60 * 60 * 24 * 365)
+      const { data: signedData } = await supabase.storage.from('job-documents').createSignedUrl(path, 60 * 60 * 24 * 365)
       if (!signedData?.signedUrl) throw new Error('URL non générée')
       const urlField = docType === 'cv' ? 'cv_url' : 'cover_letter_url'
       await fetch(`/api/jobs?id=${jobId}`, {
@@ -553,38 +567,30 @@ export default function JobDetailPage() {
     router.push('/dashboard')
   }
 
-  // Ajoute un échange générique (depuis le bouton "+ Ajouter un échange" de l'historique)
   const addExchange = async () => {
     const step = allSteps.find(s => s.id === currentStepId)
     const res = await fetch('/api/jobs/exchanges', {
-      method: 'POST',
-      headers: authHeaders(),
+      method: 'POST', headers: authHeaders(),
       body: JSON.stringify({
-        job_id: jobId,
-        title: 'Nouvel échange',
+        job_id: jobId, title: 'Nouvel échange',
         exchange_type: 'autre',
         exchange_date: new Date().toISOString().split('T')[0],
-        step_label: step?.label ?? null,
-        step_number: step?.num ?? null,
+        step_label: step?.label ?? null, step_number: step?.num ?? null,
       })
     })
     if (res.ok) { const newEx = await res.json(); setExchanges(prev => [...prev, newEx]) }
   }
 
-  // Ajoute un échange pré-titré pour le debrief de l'étape en cours
-  // (appelé depuis le bloc Debrief de la Phase 2, quand aucun debrief n'existe encore)
   const addDebriefExchange = async () => {
     const step = allSteps.find(s => s.id === currentStepId)
     const res = await fetch('/api/jobs/exchanges', {
-      method: 'POST',
-      headers: authHeaders(),
+      method: 'POST', headers: authHeaders(),
       body: JSON.stringify({
         job_id: jobId,
         title: `Debrief — ${step?.label ?? 'Entretien'}`,
         exchange_type: 'rdv',
         exchange_date: new Date().toISOString().split('T')[0],
-        step_label: step?.label ?? null,
-        step_number: step?.num ?? null,
+        step_label: step?.label ?? null, step_number: step?.num ?? null,
       })
     })
     if (res.ok) { const newEx = await res.json(); setExchanges(prev => [...prev, newEx]) }
@@ -632,18 +638,11 @@ export default function JobDetailPage() {
   const atsScore = job.ats_score ?? null
   const atsKw = job.ats_keywords ?? { present: [], missing: [] }
   const card: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '1.5px solid #EBEBEB' }
-
   const sectionLabel: React.CSSProperties = {
-    fontSize: 12,
-    fontWeight: 800,
-    textTransform: 'uppercase',
-    letterSpacing: '1.5px',
-    color: '#555',
-    marginBottom: 14,
-    display: 'block',
-    fontFamily: FONT,
+    fontSize: 11, fontWeight: 800, textTransform: 'uppercase',
+    letterSpacing: '1.3px', color: '#555',
+    marginBottom: 14, display: 'block', fontFamily: FONT,
   }
-
   const inp: React.CSSProperties = { width: '100%', border: '1.5px solid #eee', borderRadius: 8, padding: '9px 12px', fontSize: 14, fontFamily: FONT, outline: 'none', background: '#fff', color: '#111', boxSizing: 'border-box', fontWeight: 500 }
   const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 80, lineHeight: '1.6' }
 
@@ -657,7 +656,6 @@ export default function JobDetailPage() {
     { docType: 'cover_letter' as const, sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url, inputRef: coverLetterInputRef },
   ]
 
-  // Props communs passés aux 3 instances de JobInterviewDetails
   const interviewSectionProps = {
     job,
     contacts,
@@ -679,14 +677,6 @@ export default function JobDetailPage() {
         @media (max-width: 600px) { .jfmj-docs-grid { grid-template-columns: 1fr; } }
         .jfmj-back-mobile { display: none; }
         @media (max-width: 900px) { .jfmj-back-mobile { display: flex !important; } }
-        .interview-type-btn { flex: 1; padding: 8px 6px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 2px solid #E0E0E0; background: #fff; color: #888; cursor: pointer; font-family: ${FONT}; transition: all 0.15s; }
-        .interview-type-btn.active { border-color: #F5C400; background: #FEF9E0; color: #111; }
-        .interview-inp { width: 100%; border: 1.5px solid #eee; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: ${FONT}; outline: none; background: #fff; color: #111; box-sizing: border-box; font-weight: 500; }
-        .interview-inp:focus { border-color: #F5C400; }
-        .btn-edit { background: #F9F9F7; color: #111; font-size: 12px; font-weight: 800; padding: 8px 16px; border-radius: 8px; border: 1.5px solid #ccc; cursor: pointer; font-family: ${FONT}; white-space: nowrap; transition: all 0.15s; }
-        .btn-edit:hover { background: #fff; border-color: #111; }
-        .btn-delete { background: transparent; color: #E8151B; font-size: 12px; font-weight: 800; padding: 8px 16px; border-radius: 8px; border: 1.5px solid #E8151B; cursor: pointer; font-family: ${FONT}; white-space: nowrap; transition: all 0.15s; }
-        .btn-delete:hover { background: #FEF2F2; }
         .fi { width: 100%; border: 1.5px solid #E0E0E0; border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: ${FONT}; outline: none; background: #fff; color: #111; box-sizing: border-box; font-weight: 500; margin-bottom: 12px; }
         .fi:focus { border-color: #111; }
         .fl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #888; display: block; margin-bottom: 5px; font-family: ${FONT}; }
@@ -714,7 +704,6 @@ export default function JobDetailPage() {
         {transmittedBy && !transmittedByAlreadyContact && (
           <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 12, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 18 }}>👤</span>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 800, color: '#5B21B6' }}>Offre transmise par <strong>{transmittedBy}</strong></div>
                 <div style={{ fontSize: 11, color: '#7C3AED', fontWeight: 500 }}>Ce contact n&apos;est pas encore dans vos contacts.</div>
@@ -777,44 +766,49 @@ export default function JobDetailPage() {
           />
         )}
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* ÉTAPE D'ENTRETIEN : Phase AVANT / Phase APRÈS avec bandeaux dédiés  */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ═══ ÉTAPE D'ENTRETIEN : Phase AVANT / Phase APRÈS collapsibles ═══ */}
         {isInterviewStep && (
           <>
-            {/* ─── PHASE 1 : AVANT L'ENTRETIEN ─── */}
-            <PhaseBanner phase="before" stepNum={currentStepIndex + 1} stepLabel={currentStepLabel} />
+            <PhaseBlock
+              phase="before"
+              stepNum={currentStepIndex + 1}
+              stepLabel={currentStepLabel}
+              open={beforeOpen}
+              onToggle={() => setBeforeOpen(v => !v)}
+            >
+              <JobInterviewDetails section="logistics" {...interviewSectionProps} />
 
-            <JobInterviewDetails section="logistics" {...interviewSectionProps} />
+              <JobStepActions
+                jobId={jobId}
+                userId={userId}
+                currentStepId={currentStepId}
+                currentStepLabel={currentStepLabel}
+                currentStepIndex={currentStepIndex}
+                jobTitle={job.title}
+              />
 
-            <JobStepActions
-              jobId={jobId}
-              userId={userId}
-              currentStepId={currentStepId}
-              currentStepLabel={currentStepLabel}
-              currentStepIndex={currentStepIndex}
-              jobTitle={job.title}
-            />
+              <JobInterviewDetails section="preparation" {...interviewSectionProps} />
+            </PhaseBlock>
 
-            <JobInterviewDetails section="preparation" {...interviewSectionProps} />
-
-            {/* ─── PHASE 2 : APRÈS L'ENTRETIEN ─── */}
-            <PhaseBanner phase="after" stepNum={currentStepIndex + 1} stepLabel={currentStepLabel} />
-
-            {/* Debrief : 3 champs liés à l'échange en cours pour cette étape */}
-            <JobInterviewDebrief
-              exchanges={exchanges}
-              currentStepLabel={currentStepLabel}
-              onAdd={addDebriefExchange}
-              onUpdate={updateExchange}
-            />
-
-            <JobInterviewDetails section="followup" {...interviewSectionProps} />
+            <PhaseBlock
+              phase="after"
+              stepNum={currentStepIndex + 1}
+              stepLabel={currentStepLabel}
+              open={afterOpen}
+              onToggle={() => setAfterOpen(v => !v)}
+            >
+              <JobInterviewDebrief
+                exchanges={exchanges}
+                currentStepLabel={currentStepLabel}
+                onAdd={addDebriefExchange}
+                onUpdate={updateExchange}
+              />
+              <JobInterviewDetails section="followup" {...interviewSectionProps} />
+            </PhaseBlock>
           </>
         )}
 
-        {/* Pour les étapes hors entretien (to_apply, applied, offer…) et non archivées : */}
-        {/* on affiche simplement les actions à faire, sans les bandeaux de phase. */}
+        {/* Hors étape d'entretien : actions seulement, sans phases */}
         {!isInterviewStep && currentStepId !== 'archived' && (
           <JobStepActions
             jobId={jobId}
@@ -833,7 +827,6 @@ export default function JobDetailPage() {
           onDelete={deleteExchange}
         />
 
-        {/* ─── Bloc CONTACTS liés à cette offre ─── */}
         <JobContacts
           contacts={jobContacts}
           interviewContacts={job.interview_contacts ?? {}}
@@ -845,28 +838,10 @@ export default function JobDetailPage() {
         <div className="jfmj-docs-grid">
           <div style={{ ...card, marginBottom: 0 }}>
             <span style={sectionLabel}>Documents</span>
-            <input
-              ref={cvInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx"
-              style={{ display: 'none' }}
-              onChange={e => {
-                const file = e.target.files?.[0]
-                if (file) handleFileSelected(file, 'cv')
-                e.target.value = ''
-              }}
-            />
-            <input
-              ref={coverLetterInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx"
-              style={{ display: 'none' }}
-              onChange={e => {
-                const file = e.target.files?.[0]
-                if (file) handleFileSelected(file, 'cover_letter')
-                e.target.value = ''
-              }}
-            />
+            <input ref={cvInputRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }}
+              onChange={e => { const file = e.target.files?.[0]; if (file) handleFileSelected(file, 'cv'); e.target.value = '' }} />
+            <input ref={coverLetterInputRef} type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }}
+              onChange={e => { const file = e.target.files?.[0]; if (file) handleFileSelected(file, 'cover_letter'); e.target.value = '' }} />
             {docItems.map(doc => (
               <div key={doc.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F5F5F0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -876,7 +851,7 @@ export default function JobDetailPage() {
                   <div>
                     <p style={{ fontSize: 13, fontWeight: 700, color: '#222', margin: 0, fontFamily: FONT }}>{doc.name}</p>
                     <p style={{ fontSize: 11, color: doc.url ? '#1A7A4A' : '#aaa', margin: 0, fontFamily: FONT, fontWeight: 500 }}>
-                      {uploadingDoc === doc.docType ? '⏳ Chargement…' : doc.url ? '✓ Fichier chargé' : 'Aucun fichier'}
+                      {uploadingDoc === doc.docType ? 'Chargement…' : doc.url ? 'Fichier chargé' : 'Aucun fichier'}
                     </p>
                   </div>
                 </div>
@@ -900,10 +875,8 @@ export default function JobDetailPage() {
         <div style={card}>
           <span style={sectionLabel}>Description du poste</span>
           <div style={{ position: 'relative', maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden' }}>
-            <div
-              dangerouslySetInnerHTML={{ __html: job.description }}
-              style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500 }}
-            />
+            <div dangerouslySetInnerHTML={{ __html: job.description }}
+              style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500 }} />
             {!descExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(transparent, #fff)' }} />}
           </div>
           <span onClick={() => setDescExpanded(v => !v)} style={{ fontSize: 13, fontWeight: 700, color: '#111', textDecoration: 'underline', cursor: 'pointer', marginTop: 12, display: 'inline-block', fontFamily: FONT }}>
@@ -945,7 +918,6 @@ export default function JobDetailPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 30, width: '100%', maxWidth: 420, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B' }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
               <h3 style={{ fontSize: 18, fontWeight: 900, color: '#E8151B', margin: '0 0 8px', fontFamily: FONT }}>Suppression définitive</h3>
               <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>Cette action est <strong>irréversible</strong>.<br />Toutes les données seront supprimées.</p>
             </div>
@@ -970,15 +942,14 @@ export default function JobDetailPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 480, border: '2px solid #111', boxShadow: '4px 4px 0 #7C3AED', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: 0, fontFamily: FONT }}>👤 Créer une fiche contact</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: 0, fontFamily: FONT }}>Créer une fiche contact</h3>
               <button onClick={() => setShowCreateContact(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
             </div>
             <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 12, fontWeight: 700, color: '#5B21B6', fontFamily: FONT }}>
-              🔗 Ce contact sera lié à : <strong>{job.title}</strong> — {job.company}
+              Ce contact sera lié à : <strong>{job.title}</strong> — {job.company}
             </div>
             {contactSaved ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ fontSize: 36, marginBottom: 10 }}>✅</div>
                 <div style={{ fontSize: 14, fontWeight: 800, color: '#1A7A4A', fontFamily: FONT }}>Contact créé avec succès !</div>
               </div>
             ) : (
@@ -1007,7 +978,6 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* ─── Modale RGPD — s'affiche avant CHAQUE upload CV/LM ─── */}
       <RgpdConsentModal
         isOpen={rgpdModalOpen}
         onClose={handleRgpdClose}

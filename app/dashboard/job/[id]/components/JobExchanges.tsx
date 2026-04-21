@@ -28,7 +28,6 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
       return next
     })
   }
-
   const close = (id: string) => {
     setOpenExchanges(prev => {
       const next = new Set(Array.from(prev))
@@ -44,12 +43,10 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
     boxSizing: 'border-box', fontWeight: 500,
   }
   const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 80, lineHeight: '1.6' }
-
   const mainSectionLabel: React.CSSProperties = {
-    fontSize: 12, fontWeight: 800, textTransform: 'uppercase',
-    letterSpacing: '1.5px', color: '#555', display: 'block', fontFamily: FONT,
+    fontSize: 11, fontWeight: 800, textTransform: 'uppercase',
+    letterSpacing: '1.3px', color: '#555', display: 'block', fontFamily: FONT,
   }
-
   const fieldLabel: React.CSSProperties = {
     fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
     letterSpacing: '1.5px', color: '#666', display: 'block', fontFamily: FONT,
@@ -57,20 +54,17 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
 
   return (
     <div style={{ background: '#fff', borderRadius: 12, marginBottom: 14, border: '1.5px solid #EBEBEB', overflow: 'hidden' }}>
-
-      {/* En-tête cliquable */}
       <div
         onClick={() => setSectionOpen(p => !p)}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 24px', cursor: 'pointer',
-          background: '#fff',
+          padding: '14px 18px', cursor: 'pointer', background: '#fff',
           borderBottom: sectionOpen ? '1.5px solid #EBEBEB' : 'none',
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={mainSectionLabel}>📚 Historique des échanges</span>
+            <span style={mainSectionLabel}>Historique des échanges</span>
             {exchanges.length > 0 && (
               <span style={{ background: '#F5C400', color: '#111', fontSize: 12, fontWeight: 800, borderRadius: 20, padding: '1px 8px', fontFamily: FONT }}>
                 {exchanges.length}
@@ -81,11 +75,11 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
             Journal de tous les échanges (debrief, questions-réponses) par étape de cette candidature.
           </span>
         </div>
-        <span style={{ fontSize: 10, color: '#bbb', display: 'inline-block', transform: sectionOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
+        <span style={{ fontSize: 10, color: '#999', display: 'inline-block', transform: sectionOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
       </div>
 
       {sectionOpen && (
-        <div style={{ padding: '20px 24px' }}>
+        <div style={{ padding: '16px 18px 18px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {exchanges.map((ex, idx) => {
               const isOpen = openExchanges.has(ex.id)
@@ -97,8 +91,6 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
 
               return (
                 <div key={ex.id} style={{ border: `1.5px solid ${isLatest ? '#F5C400' : '#EBEBEB'}`, borderRadius: 10, overflow: 'hidden' }}>
-
-                  {/* Header rangée échange */}
                   <div
                     onClick={() => toggle(ex.id)}
                     style={{
@@ -128,11 +120,10 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                       <span style={{ background: '#F5C400', color: '#111', fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 20, fontFamily: FONT }}>
                         {EXCHANGE_TYPE_LABELS[ex.exchange_type]}
                       </span>
-                      <span style={{ fontSize: 10, color: '#bbb', display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
+                      <span style={{ fontSize: 10, color: '#999', display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
                     </div>
                   </div>
 
-                  {/* Contenu échange ouvert */}
                   {isOpen && (
                     <div style={{ padding: 14, borderTop: '1px solid #F0F0F0' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 10, marginBottom: 12 }}>
@@ -176,7 +167,6 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                         </div>
                       ))}
 
-                      {/* Barre d'actions */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '1px solid #F0F0F0' }}>
                         <button
                           onClick={() => setDeleteTargetId(ex.id)}
@@ -185,16 +175,12 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
                           Supprimer cet échange
                         </button>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            onClick={() => close(ex.id)}
-                            style={{ background: '#F9F9F7', color: '#555', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}
-                          >
+                          <button onClick={() => close(ex.id)}
+                            style={{ background: '#F9F9F7', color: '#555', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 8, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
                             Fermer
                           </button>
-                          <button
-                            onClick={() => close(ex.id)}
-                            style={{ background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #F5C400' }}
-                          >
+                          <button onClick={() => close(ex.id)}
+                            style={{ background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, boxShadow: '2px 2px 0 #F5C400' }}>
                             Enregistrer →
                           </button>
                         </div>
@@ -216,28 +202,22 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
         </div>
       )}
 
-      {/* ── Modale confirmation suppression échange ── */}
       {deleteTargetId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '0 20px' }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 28, width: '100%', maxWidth: 380, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B' }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ fontSize: 32, marginBottom: 10 }}>🗑️</div>
               <h3 style={{ fontSize: 16, fontWeight: 900, color: '#E8151B', margin: '0 0 8px', fontFamily: FONT }}>Supprimer cet échange ?</h3>
               <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>
                 Cette action est <strong>irréversible</strong>.<br />Les données de cet échange seront perdues.
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => setDeleteTargetId(null)}
-                style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}
-              >
+              <button onClick={() => setDeleteTargetId(null)}
+                style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>
                 Annuler
               </button>
-              <button
-                onClick={() => { onDelete(deleteTargetId); setDeleteTargetId(null) }}
-                style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: FONT }}
-              >
+              <button onClick={() => { onDelete(deleteTargetId); setDeleteTargetId(null) }}
+                style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: FONT }}>
                 Supprimer
               </button>
             </div>

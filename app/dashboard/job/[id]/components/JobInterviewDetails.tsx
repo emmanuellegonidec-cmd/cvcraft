@@ -1,281 +1,236 @@
 'use client'
 
+import { useState } from 'react'
+
 const FONT = "'Montserrat', sans-serif"
 
-interface Contact {
-  id: string
-  name: string
-  role?: string | null
-  company?: string | null
-}
-
 interface Job {
+  id: string
   interview_at: string | null
   interview_time: string | null
   interview_time_end: string | null
   interview_type: string | null
-  interview_contact_id: string | null
-  interview_contacts: Record<string, string> | null
   interview_location: string | null
   interview_link: string | null
   interview_phone: string | null
-  interview_preparations?: Record<string, string> | null
-  interview_syntheses?: Record<string, string> | null
-  follow_up_dates?: Record<string, string> | null
-  follow_up_enabled?: Record<string, boolean> | null
+  interview_contacts: Record<string, string> | null
+  interview_contact_id: string | null
+  interview_preparations: Record<string, string> | null
+  interview_syntheses: Record<string, string> | null
+  follow_up_dates: Record<string, string> | null
+  follow_up_enabled: Record<string, boolean> | null
 }
+
+interface ContactMin { id: string; name: string; role?: string | null; company?: string | null }
 
 interface Props {
   job: Job
-  contacts: Contact[]
+  contacts: ContactMin[]
   onPatch: (field: string, value: any) => void
   onJobChange: (field: string, value: any) => void
   onCreateContact: () => void
-  currentStepLabel: string
   currentStepId: string
-  /**
-   * Quelle partie du bloc afficher :
-   * - 'logistics'    : date / heure / type / lieu / contact           (Phase 1)
-   * - 'preparation'  : notes de préparation                           (Phase 1)
-   * - 'followup'     : email de remerciement + relance à programmer   (Phase 2)
-   */
+  currentStepLabel: string
   section: 'logistics' | 'preparation' | 'followup'
 }
 
-function addFourWeeks(isoDate: string): string {
-  const d = new Date(isoDate)
-  d.setDate(d.getDate() + 28)
-  return d.toISOString().slice(0, 10)
+function formatDateFR(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+function typeLabel(t: string | null): string {
+  if (t === 'phone') return 'Téléphone'
+  if (t === 'visio') return 'Visio'
+  if (t === 'rdv') return 'Présentiel'
+  return ''
+}
+function buildLogisticsSummary(job: Job): string {
+  const parts: string[] = []
+  if (job.interview_at) parts.push(formatDateFR(job.interview_at))
+  if (job.interview_time) {
+    const timeBit = job.interview_time_end ? `${job.interview_time} – ${job.interview_time_end}` : job.interview_time
+    parts.push(timeBit)
+  }
+  if (job.interview_type) parts.push(typeLabel(job.interview_type))
+  return parts.join(' · ')
 }
 
-function todayISO(): string {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.toISOString().slice(0, 10)
-}
-
-function formatDisplayDate(dateStr: string): string {
-  if (!dateStr) return ''
-  const [y, m, d] = dateStr.split('-')
-  const months = ['jan.','fév.','mar.','avr.','mai','juin','juil.','aoû.','sep.','oct.','nov.','déc.']
-  return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`
+function Collapsible({
+  title, summary, open, onToggle, children,
+}: {
+  title: string
+  summary?: string
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div style={{
+      background: '#fff', borderRadius: 12, marginBottom: 10,
+      border: '1.5px solid #EBEBEB', overflow: 'hidden',
+    }}>
+      <div
+        onClick={onToggle}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '14px 18px', cursor: 'pointer',
+          background: '#fff',
+          borderBottom: open ? '1px solid #F0F0F0' : 'none',
+        }}
+      >
+        <span style={{
+          fontSize: 11, fontWeight: 800, color: '#555',
+          letterSpacing: '1.3px', textTransform: 'uppercase',
+          fontFamily: FONT, flexShrink: 0,
+        }}>
+          {title}
+        </span>
+        <div style={{ flex: 1 }} />
+        {summary && (
+          <span style={{
+            fontSize: 11, color: '#666', fontWeight: 600,
+            fontFamily: FONT, marginRight: 10,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {summary}
+          </span>
+        )}
+        <span style={{
+          fontSize: 10, color: '#999',
+          display: 'inline-block',
+          transform: open ? 'rotate(180deg)' : 'none',
+          transition: 'transform .2s',
+        }}>▼</span>
+      </div>
+      {open && <div style={{ padding: '14px 18px' }}>{children}</div>}
+    </div>
+  )
 }
 
 export default function JobInterviewDetails({
-  job, contacts, onPatch, onJobChange,
-  onCreateContact, currentStepLabel, currentStepId, section,
+  job, contacts, onPatch, onJobChange, onCreateContact, currentStepId, currentStepLabel, section,
 }: Props) {
 
-  // Contact spécifique à cette étape
-  const interviewContacts = job.interview_contacts || {}
-  const stepContactId = interviewContacts[currentStepId] || job.interview_contact_id || ''
-  const selectedContact = contacts.find(c => c.id === stepContactId)
+  const [logisticsOpen, setLogisticsOpen] = useState(false)
+  const [preparationOpen, setPreparationOpen] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [relanceOpen, setRelanceOpen] = useState(false)
 
-  // Valeurs par étape pour les champs JSONB
-  const preparations = job.interview_preparations || {}
-  const syntheses = job.interview_syntheses || {}
-  const followUpDates = job.follow_up_dates || {}
-  const followUpEnabled = job.follow_up_enabled || {}
+  const interviewContacts = job.interview_contacts ?? {}
+  const preparations = job.interview_preparations ?? {}
+  const syntheses = job.interview_syntheses ?? {}
+  const followUpDates = job.follow_up_dates ?? {}
+  const followUpEnabled = job.follow_up_enabled ?? {}
 
-  const stepPreparation = preparations[currentStepId] || ''
-  const stepSynthesis = syntheses[currentStepId] || ''
-  const stepFollowUpDate = followUpDates[currentStepId] || ''
-  const stepFollowUpEnabled = followUpEnabled[currentStepId] !== false
-
-  function handleContactChange(contactId: string) {
-    const updated = { ...interviewContacts, [currentStepId]: contactId || '' }
-    onJobChange('interview_contacts', updated)
-    onPatch('interview_contacts', updated)
-  }
-
-  function handlePreparationChange(text: string) {
-    const updated = { ...preparations, [currentStepId]: text }
-    onJobChange('interview_preparations', updated)
-  }
-  function handlePreparationBlur(text: string) {
-    const updated = { ...preparations, [currentStepId]: text }
-    onPatch('interview_preparations', updated)
-  }
-
-  function handleSynthesisChange(text: string) {
-    const updated = { ...syntheses, [currentStepId]: text }
-    onJobChange('interview_syntheses', updated)
-  }
-  function handleSynthesisBlur(text: string) {
-    const updated = { ...syntheses, [currentStepId]: text }
-    onPatch('interview_syntheses', updated)
-  }
-
-  function handleFollowUpDateChange(date: string) {
-    const updated = { ...followUpDates, [currentStepId]: date }
-    onJobChange('follow_up_dates', updated)
-    onPatch('follow_up_dates', updated)
-  }
-
-  function handleFollowUpToggle(enabled: boolean) {
-    const updated = { ...followUpEnabled, [currentStepId]: enabled }
-    onJobChange('follow_up_enabled', updated)
-    onPatch('follow_up_enabled', updated)
-
-    if (enabled && !stepFollowUpDate) {
-      const baseDate = job.interview_at ? job.interview_at.slice(0, 10) : todayISO()
-      const defaultDate = addFourWeeks(baseDate)
-      const updatedDates = { ...followUpDates, [currentStepId]: defaultDate }
-      onJobChange('follow_up_dates', updatedDates)
-      onPatch('follow_up_dates', updatedDates)
-    }
-  }
-
-  function getFollowUpStatus(): 'overdue' | 'soon' | 'ok' | null {
-    if (!stepFollowUpEnabled || !stepFollowUpDate) return null
-    const today = new Date(); today.setHours(0, 0, 0, 0)
-    const followUp = new Date(stepFollowUpDate); followUp.setHours(0, 0, 0, 0)
-    const diffDays = Math.round((followUp.getTime() - today.getTime()) / 86400000)
-    if (diffDays < 0) return 'overdue'
-    if (diffDays <= 3) return 'soon'
-    return 'ok'
-  }
-  const followUpStatus = getFollowUpStatus()
-
-  // ───── Styles communs ─────
-  const card: React.CSSProperties = {
-    background: '#fff', borderRadius: 12, padding: '20px 24px',
-    marginBottom: 14, border: '1.5px solid #EBEBEB',
-  }
-
-  const sectionLabel: React.CSSProperties = {
-    fontSize: 12, fontWeight: 800, textTransform: 'uppercase',
-    letterSpacing: '1.5px', color: '#555', display: 'block',
-    marginBottom: 14, fontFamily: FONT,
-  }
+  const contactIdForStep = interviewContacts[currentStepId] ?? ''
+  const preparationValue = preparations[currentStepId] ?? ''
+  const synthesisValue = syntheses[currentStepId] ?? ''
+  const followUpDate = followUpDates[currentStepId] ?? ''
+  const followUpIsEnabled = followUpEnabled[currentStepId] !== false
 
   const inp: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', border: '1.5px solid #ddd',
-    borderRadius: 7, fontSize: 13, fontWeight: 600, fontFamily: FONT,
-    color: '#111', outline: 'none', background: '#fff',
-    boxSizing: 'border-box' as const,
+    width: '100%', border: '1.5px solid #eee', borderRadius: 8,
+    padding: '9px 12px', fontSize: 13, fontFamily: FONT, outline: 'none',
+    background: '#fff', color: '#111', boxSizing: 'border-box', fontWeight: 500,
   }
-
-  const ta: React.CSSProperties = {
-    ...inp, resize: 'vertical', minHeight: 90, lineHeight: '1.6',
-    fontWeight: 500,
-  }
-
+  const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 76, lineHeight: '1.6' }
   const fieldLabel: React.CSSProperties = {
-    fontSize: 10, fontWeight: 700, color: '#888', display: 'block',
+    fontSize: 10, fontWeight: 800, color: '#888', display: 'block',
     marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.08em',
     fontFamily: FONT,
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
-  // SECTION 'logistics' : Logistique du RDV (date, heure, type, lieu, contact)
-  // ═════════════════════════════════════════════════════════════════════════
+  // ─── SECTION LOGISTICS ─────────────────────────────────────────────
   if (section === 'logistics') {
-    return (
-      <div style={card}>
-        <span style={sectionLabel}>📋 Logistique du RDV</span>
+    const summary = buildLogisticsSummary(job) || 'Non renseigné'
+    const updateInterviewContact = (newContactId: string) => {
+      const next = { ...interviewContacts, [currentStepId]: newContactId }
+      onJobChange('interview_contacts', next)
+      onPatch('interview_contacts', next)
+    }
 
-        {/* Date / Début / Fin */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-          {[
-            { label: 'Date',  type: 'date', field: 'interview_at',        value: job.interview_at ? job.interview_at.slice(0, 10) : '' },
-            { label: 'Début', type: 'time', field: 'interview_time',      value: job.interview_time || '' },
-            { label: 'Fin',   type: 'time', field: 'interview_time_end',  value: job.interview_time_end || '' },
-          ].map(({ label: lbl, type, field, value }) => (
-            <div key={field}>
-              <label style={fieldLabel}>{lbl}</label>
-              <input
-                type={type}
-                value={value}
-                style={inp}
-                onChange={e => onJobChange(field, e.target.value || null)}
-                onBlur={e => onPatch(field, e.target.value || null)}
-              />
-            </div>
-          ))}
+    return (
+      <Collapsible
+        title="Logistique du RDV"
+        summary={summary}
+        open={logisticsOpen}
+        onToggle={() => setLogisticsOpen(v => !v)}
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
+          <div>
+            <label style={fieldLabel}>Date</label>
+            <input type="date" defaultValue={job.interview_at ? job.interview_at.split('T')[0] : ''}
+              onBlur={e => onPatch('interview_at', e.target.value || null)} style={inp}
+              onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
+          </div>
+          <div>
+            <label style={fieldLabel}>Début</label>
+            <input type="time" defaultValue={job.interview_time ?? ''}
+              onBlur={e => onPatch('interview_time', e.target.value || null)} style={inp}
+              onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
+          </div>
+          <div>
+            <label style={fieldLabel}>Fin</label>
+            <input type="time" defaultValue={job.interview_time_end ?? ''}
+              onBlur={e => onPatch('interview_time_end', e.target.value || null)} style={inp}
+              onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
+          </div>
         </div>
 
-        {/* Type d'entretien */}
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 12 }}>
           <label style={fieldLabel}>Type d&apos;entretien</label>
           <div style={{ display: 'flex', gap: 8 }}>
-            {[
-              { id: 'telephone',  label: '📞 Téléphone' },
-              { id: 'visio',      label: '💻 Visio' },
-              { id: 'presentiel', label: '🏢 Présentiel' },
-            ].map(t => (
-              <button key={t.id}
-                onClick={() => onPatch('interview_type', job.interview_type === t.id ? null : t.id)}
-                style={{
-                  flex: 1, padding: '7px 4px', fontSize: 11, fontWeight: 700, borderRadius: 7, fontFamily: FONT,
-                  border: `2px solid ${job.interview_type === t.id ? '#111' : '#E0E0E0'}`,
-                  background: job.interview_type === t.id ? '#F5C400' : '#fff',
-                  color: '#111', cursor: 'pointer',
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
+            {[{ id: 'phone', label: 'Téléphone' }, { id: 'visio', label: 'Visio' }, { id: 'rdv', label: 'Présentiel' }].map(t => {
+              const active = job.interview_type === t.id
+              return (
+                <button key={t.id} onClick={() => onPatch('interview_type', t.id)}
+                  style={{
+                    flex: 1, padding: '8px 6px', fontSize: 12, fontWeight: 700,
+                    borderRadius: 8, cursor: 'pointer', fontFamily: FONT,
+                    border: `2px solid ${active ? '#F5C400' : '#E0E0E0'}`,
+                    background: active ? '#FFFDE7' : '#fff',
+                    color: active ? '#111' : '#888', transition: 'all 0.15s',
+                  }}>
+                  {t.label}
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* Lieu / Lien / Téléphone selon type */}
-        {job.interview_type === 'presentiel' && (
-          <div style={{ marginBottom: 16 }}>
+        {job.interview_type === 'rdv' && (
+          <div style={{ marginBottom: 12 }}>
             <label style={fieldLabel}>Adresse</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={job.interview_location || ''} style={{ ...inp, flex: 1 }}
-                onChange={e => onJobChange('interview_location', e.target.value || null)}
-                onBlur={e => onPatch('interview_location', e.target.value || null)}
-                placeholder="Adresse de l'entretien" />
-              {job.interview_location && (
-                <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(job.interview_location!)}`, '_blank')}
-                  style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT }}>
-                  Maps →
-                </button>
-              )}
-            </div>
+            <input defaultValue={job.interview_location ?? ''}
+              onBlur={e => onPatch('interview_location', e.target.value || null)}
+              placeholder="Adresse de l'entretien" style={inp}
+              onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
           </div>
         )}
-
         {job.interview_type === 'visio' && (
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 12 }}>
             <label style={fieldLabel}>Lien visio</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={job.interview_link || ''} style={{ ...inp, flex: 1 }}
-                onChange={e => onJobChange('interview_link', e.target.value || null)}
-                onBlur={e => onPatch('interview_link', e.target.value || null)}
-                placeholder="https://meet.google.com/..." />
-              {job.interview_link && (
-                <button onClick={() => window.open(job.interview_link!, '_blank')}
-                  style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT }}>
-                  Rejoindre →
-                </button>
-              )}
-            </div>
+            <input defaultValue={job.interview_link ?? ''}
+              onBlur={e => onPatch('interview_link', e.target.value || null)}
+              placeholder="https://..." style={inp}
+              onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
           </div>
         )}
-
-        {job.interview_type === 'telephone' && (
-          <div style={{ marginBottom: 16 }}>
+        {job.interview_type === 'phone' && (
+          <div style={{ marginBottom: 12 }}>
             <label style={fieldLabel}>Numéro de téléphone</label>
-            <input value={job.interview_phone || ''} style={inp}
-              onChange={e => onJobChange('interview_phone', e.target.value || null)}
+            <input defaultValue={job.interview_phone ?? ''}
               onBlur={e => onPatch('interview_phone', e.target.value || null)}
-              placeholder="+33 6 00 00 00 00" />
+              placeholder="+33..." style={inp}
+              onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
           </div>
         )}
 
-        {/* Contact pour cet entretien */}
         <div>
-          <label style={fieldLabel}>👤 Contact pour cet entretien ({currentStepLabel})</label>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <select
-              value={stepContactId}
-              onChange={e => handleContactChange(e.target.value)}
-              style={{ ...inp, flex: 1 }}
-            >
-              <option value="">— Aucun contact —</option>
+          <label style={fieldLabel}>Contact pour cet entretien ({currentStepLabel})</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select value={contactIdForStep} onChange={e => updateInterviewContact(e.target.value)}
+              style={{ ...inp, flex: 1, background: '#fff' }}>
+              <option value="">— Aucun —</option>
               {contacts.map(c => (
                 <option key={c.id} value={c.id}>
                   {c.name}{c.role ? ` – ${c.role}` : ''}{c.company ? ` (${c.company})` : ''}
@@ -283,132 +238,126 @@ export default function JobInterviewDetails({
               ))}
             </select>
             <button onClick={onCreateContact}
-              style={{ flexShrink: 0, background: '#111', color: '#F5C400', fontSize: 12, fontWeight: 800, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap', boxShadow: '2px 2px 0 #F5C400' }}>
+              style={{
+                background: '#111', color: '#F5C400', fontSize: 12,
+                fontWeight: 800, padding: '8px 14px', borderRadius: 8,
+                border: 'none', cursor: 'pointer', fontFamily: FONT,
+                whiteSpace: 'nowrap', boxShadow: '2px 2px 0 #F5C400',
+              }}>
               + Nouveau
             </button>
           </div>
-          {selectedContact && (
-            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#B8900A', fontFamily: FONT }}>
-              👤 {selectedContact.name}{selectedContact.role ? ` – ${selectedContact.role}` : ''}{selectedContact.company ? ` · ${selectedContact.company}` : ''}
-            </div>
-          )}
+          {contactIdForStep && (() => {
+            const c = contacts.find(c => c.id === contactIdForStep)
+            if (!c) return null
+            return (
+              <p style={{ fontSize: 11, color: '#555', marginTop: 7, fontFamily: FONT, fontWeight: 600 }}>
+                {c.name}{c.role ? ` – ${c.role}` : ''}{c.company ? ` · ${c.company}` : ''}
+              </p>
+            )
+          })()}
         </div>
-      </div>
+      </Collapsible>
     )
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
-  // SECTION 'preparation' : Mes notes de préparation
-  // ═════════════════════════════════════════════════════════════════════════
+  // ─── SECTION PREPARATION ───────────────────────────────────────────
   if (section === 'preparation') {
+    const updatePreparation = (val: string) => {
+      const next = { ...preparations, [currentStepId]: val }
+      onJobChange('interview_preparations', next)
+      onPatch('interview_preparations', next)
+    }
     return (
-      <div style={card}>
-        <span style={sectionLabel}>📝 Mes notes de préparation</span>
-        <p style={{ fontSize: 11, color: '#888', margin: '0 0 8px', fontFamily: FONT, lineHeight: 1.5 }}>
+      <Collapsible
+        title="Mes notes de préparation"
+        open={preparationOpen}
+        onToggle={() => setPreparationOpen(v => !v)}
+      >
+        <p style={{ fontSize: 11, color: '#666', marginBottom: 8, fontFamily: FONT, fontWeight: 500, lineHeight: 1.5 }}>
           Ce que tu veux retenir de ton travail de préparation (points à mettre en avant, questions à poser, exemples STAR, recherches sur l&apos;entreprise…).
         </p>
         <textarea
           key={`prep-${currentStepId}`}
-          defaultValue={stepPreparation}
-          onChange={e => handlePreparationChange(e.target.value)}
-          onBlur={e => handlePreparationBlur(e.target.value)}
-          placeholder="Points à mettre en avant, questions à poser, exemples STAR, recherches sur l'entreprise…"
-          style={ta}
+          defaultValue={preparationValue}
+          onBlur={e => updatePreparation(e.target.value)}
+          placeholder="Points à mettre en avant, questions à poser, exemples STAR, recherches sur l'entreprise..."
+          style={{ ...ta, minHeight: 120 }}
           onFocus={e => { e.target.style.borderColor = '#F5C400' }}
         />
-      </div>
+      </Collapsible>
     )
   }
 
-  // ═════════════════════════════════════════════════════════════════════════
-  // SECTION 'followup' : Email de remerciement + Relance à programmer
-  // ═════════════════════════════════════════════════════════════════════════
+  // ─── SECTION FOLLOWUP — 2 collapsibles : email + relance ───────────
   if (section === 'followup') {
+    const updateSynthesis = (val: string) => {
+      const next = { ...syntheses, [currentStepId]: val }
+      onJobChange('interview_syntheses', next)
+      onPatch('interview_syntheses', next)
+    }
+    const updateFollowUpDate = (val: string) => {
+      const next = { ...followUpDates, [currentStepId]: val }
+      onJobChange('follow_up_dates', next)
+      onPatch('follow_up_dates', next)
+    }
+    const updateFollowUpEnabled = (val: boolean) => {
+      const next = { ...followUpEnabled, [currentStepId]: val }
+      onJobChange('follow_up_enabled', next)
+      onPatch('follow_up_enabled', next)
+    }
+
+    const relanceSummary = followUpIsEnabled
+      ? (followUpDate ? formatDateFR(followUpDate) : 'À planifier')
+      : 'Désactivée'
+
     return (
       <>
-        {/* Email de remerciement */}
-        <div style={card}>
-          <span style={sectionLabel}>✉️ Email de remerciement</span>
-          <p style={{ fontSize: 11, color: '#888', margin: '0 0 8px', fontFamily: FONT, lineHeight: 1.5 }}>
+        <Collapsible
+          title="Email de remerciement"
+          open={emailOpen}
+          onToggle={() => setEmailOpen(v => !v)}
+        >
+          <p style={{ fontSize: 11, color: '#666', marginBottom: 8, fontFamily: FONT, fontWeight: 500, lineHeight: 1.5 }}>
             Le message que tu envoies au recruteur après le RDV (remerciements, rappel des points clés, enjeux compris…).
           </p>
           <textarea
-            key={`synth-${currentStepId}`}
-            defaultValue={stepSynthesis}
-            onChange={e => handleSynthesisChange(e.target.value)}
-            onBlur={e => handleSynthesisBlur(e.target.value)}
-            placeholder="Bonjour [nom],&#10;&#10;Merci pour notre échange d'aujourd'hui concernant le poste de…"
-            style={{ ...ta, minHeight: 110 }}
+            key={`email-${currentStepId}`}
+            defaultValue={synthesisValue}
+            onBlur={e => updateSynthesis(e.target.value)}
+            placeholder="Bonjour [nom], merci pour notre échange d'aujourd'hui concernant le poste de..."
+            style={{ ...ta, minHeight: 140 }}
             onFocus={e => { e.target.style.borderColor = '#F5C400' }}
           />
-        </div>
+        </Collapsible>
 
-        {/* Relance à programmer */}
-        <div style={{
-          padding: '14px 16px',
-          marginBottom: 14,
-          background: followUpStatus === 'overdue' ? '#FFF0F0'
-                    : followUpStatus === 'soon' ? '#FFFDE7'
-                    : '#F9F9F7',
-          border: `1.5px solid ${
-            followUpStatus === 'overdue' ? '#E8151B'
-            : followUpStatus === 'soon' ? '#F5C400'
-            : '#E0E0E0'
-          }`,
-          borderRadius: 12,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: stepFollowUpEnabled ? 10 : 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
-              <input
-                type="checkbox"
-                checked={stepFollowUpEnabled}
-                onChange={e => handleFollowUpToggle(e.target.checked)}
-                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#111' }}
-              />
-              <span style={{ fontSize: 12, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '1.5px', fontFamily: FONT }}>
-                🔔 Relance à programmer
-              </span>
-            </label>
-            {stepFollowUpEnabled && followUpStatus === 'overdue' && (
-              <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: '#E8151B', padding: '3px 8px', borderRadius: 20, fontFamily: FONT, whiteSpace: 'nowrap' }}>
-                ⚠️ À relancer
-              </span>
-            )}
-            {stepFollowUpEnabled && followUpStatus === 'soon' && (
-              <span style={{ fontSize: 10, fontWeight: 800, color: '#B8900A', background: '#FFFDE7', border: '1.5px solid #F5C400', padding: '2px 8px', borderRadius: 20, fontFamily: FONT, whiteSpace: 'nowrap' }}>
-                ⏰ Bientôt
-              </span>
-            )}
-          </div>
-
-          {stepFollowUpEnabled && (
+        <Collapsible
+          title="Relance à programmer"
+          summary={relanceSummary}
+          open={relanceOpen}
+          onToggle={() => setRelanceOpen(v => !v)}
+        >
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 10 }}>
+            <input type="checkbox" checked={followUpIsEnabled}
+              onChange={e => updateFollowUpEnabled(e.target.checked)}
+              style={{ width: 16, height: 16, cursor: 'pointer' }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#111', fontFamily: FONT }}>
+              Activer la relance
+            </span>
+          </label>
+          {followUpIsEnabled && (
             <div>
-              <label style={{ ...fieldLabel, marginBottom: 5 }}>Date de relance</label>
-              <input
-                type="date"
-                value={stepFollowUpDate}
-                onChange={e => handleFollowUpDateChange(e.target.value)}
-                style={{
-                  ...inp,
-                  borderColor: followUpStatus === 'overdue' ? '#E8151B'
-                            : followUpStatus === 'soon' ? '#F5C400'
-                            : '#ddd',
-                  color: followUpStatus === 'overdue' ? '#E8151B' : '#111',
-                  fontWeight: 700,
-                }}
-              />
-              <p style={{ fontSize: 11, color: '#888', margin: '6px 0 0', fontFamily: FONT, lineHeight: 1.5 }}>
-                {stepFollowUpDate
-                  ? (followUpStatus === 'overdue'
-                      ? `Date dépassée — un badge "À relancer" apparaît sur la carte du kanban.`
-                      : followUpStatus === 'soon'
-                        ? `Dans moins de 3 jours.`
-                        : `Prévue le ${formatDisplayDate(stepFollowUpDate)}.`)
-                  : `Par défaut : date de l'entretien + 4 semaines. Modifiable.`}
+              <label style={fieldLabel}>Date de relance</label>
+              <input type="date" defaultValue={followUpDate}
+                onBlur={e => updateFollowUpDate(e.target.value)}
+                style={{ ...inp, maxWidth: 220 }}
+                onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
+              <p style={{ fontSize: 11, color: '#666', marginTop: 7, fontFamily: FONT, fontWeight: 500, lineHeight: 1.5 }}>
+                Par défaut 4 semaines après le RDV. Tu peux ajuster cette date à tout moment.
               </p>
             </div>
           )}
-        </div>
+        </Collapsible>
       </>
     )
   }
