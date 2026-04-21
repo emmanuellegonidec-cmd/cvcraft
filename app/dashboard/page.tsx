@@ -1,7 +1,7 @@
 'use client';
 import OnboardingModal from './components/OnboardingModal';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { Job, Contact, JobStatus } from '@/lib/jobs';
@@ -91,6 +91,14 @@ export default function DashboardPage() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     timeZone: 'Europe/Paris',
   });
+
+  // Set des job_id qui ont au moins un contact lié — utilisé par le Kanban
+  // pour décider si une offre "Postulé" doit basculer virtuellement en "À traiter"
+  const contactJobIds = useMemo(() => {
+    const s = new Set<string>();
+    contacts.forEach(c => { if ((c as any).job_id) s.add((c as any).job_id); });
+    return s;
+  }, [contacts]);
 
   function authFetch(url: string, options: RequestInit = {}) {
     return fetch(url, {
@@ -341,6 +349,10 @@ export default function DashboardPage() {
   }
 
   async function updateJobStatus(id: string, newStatus: string) {
+    // Garde-fou : "to_process" est une colonne virtuelle, pas un vrai statut.
+    // Si on arrive ici avec cette valeur, on ignore (KanbanView bloque déjà en amont).
+    if (newStatus === 'to_process') return;
+
     const subStatus = STATUS_TO_SUB[newStatus] ?? newStatus;
     setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus as JobStatus, sub_status: subStatus } as any : j));
     if (selectedJob?.id === id) setSelectedJob(prev => prev ? { ...prev, status: newStatus as JobStatus } : prev);
@@ -622,6 +634,7 @@ export default function DashboardPage() {
               <KanbanView
                 jobs={jobs} stages={stages}
                 stagesLabelMap={stagesLabelMap}
+                contactJobIds={contactJobIds}
                 onJobClick={setSelectedJob} onAddJob={openAddJobModal}
                 onOpenSettings={() => setShowSettings(true)}
                 onRefresh={handleRefresh} onStatusChange={updateJobStatus}

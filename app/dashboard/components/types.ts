@@ -11,16 +11,22 @@ export type Stage = {
   global_status?: string;
 };
 
-// ── Kanban global (5 grandes étapes) ──────────────────────────────────────────
+// ── Kanban global (5 colonnes) ────────────────────────────────────────────────
+// NB : "Archivé" n'est plus une colonne du Kanban global (les offres archivées
+//      restent accessibles en vue Liste / Candidatures avec filtre).
+//      "À traiter" (to_process) est une colonne virtuelle alimentée
+//      automatiquement par KanbanView.tsx — ce n'est PAS un statut en base.
 export const DEFAULT_STAGES: Stage[] = [
   { id: 'to_apply',     label: 'Envie de postuler',  color: '#888',    position: 1,  is_default: true, global_status: 'to_apply' },
   { id: 'applied',      label: 'Postulé',             color: '#1A6FDB', position: 2,  is_default: true, global_status: 'applied' },
   { id: 'in_progress',  label: 'En cours',            color: '#B8900A', position: 3,  is_default: true, global_status: 'in_progress' },
+  { id: 'to_process',   label: 'À traiter',           color: '#888',    position: 5,  is_default: true, global_status: 'applied' },
   { id: 'offer',        label: 'Offre reçue',         color: '#1A7A4A', position: 6,  is_default: true, global_status: 'offer' },
-  { id: 'archived',     label: 'Archivé',             color: '#aaa',    position: 99, is_default: true, global_status: 'archived' },
 ];
 
-// ── Pipeline détaillé (panneau par offre) ─────────────────────────────────────
+// ── Pipeline détaillé (panneau par offre) — INCHANGÉ ──────────────────────────
+// Le pipeline détaillé d'une offre garde l'étape "Archivé" car l'utilisateur
+// peut toujours archiver depuis la fiche offre (étape 7).
 export const DETAIL_STAGES: Stage[] = [
   { id: 'to_apply',           label: 'Envie de postuler',       color: '#888',    position: 1,  global_status: 'to_apply' },
   { id: 'applied',            label: 'Postulé',                 color: '#1A6FDB', position: 2,  global_status: 'applied' },
@@ -30,6 +36,10 @@ export const DETAIL_STAGES: Stage[] = [
   { id: 'offer',              label: 'Offre reçue',             color: '#1A7A4A', position: 6,  global_status: 'offer' },
   { id: 'archived',           label: 'Archivé',                 color: '#aaa',    position: 99, global_status: 'archived' },
 ];
+
+// Seuil d'ancienneté (en jours) avant qu'une offre "Postulé" bascule
+// virtuellement dans "À traiter" (si aucun contact lié).
+export const TO_PROCESS_THRESHOLD_DAYS = 28;
 
 export function getGlobalStatus(subStatus: string, customStages: Stage[]): string {
   const detail = DETAIL_STAGES.find(s => s.id === subStatus);
@@ -123,6 +133,24 @@ export function isInterviewStage(status: string, stages: Stage[]): boolean {
   return status === 'in_progress' ||
     ['phone_interview', 'hr_interview', 'manager_interview'].includes(status) ||
     !!stages.find(s => s.id === status && !s.is_default);
+}
+
+// Détecte si une offre "Postulé" doit apparaître dans la colonne virtuelle
+// "À traiter" : ancienneté dépassée ET aucun contact lié à l'offre.
+// NB : on ne checke pas les job_exchanges car l'ajout d'un échange déclenche
+//      la bascule auto applied → in_progress côté fiche offre, donc un job
+//      encore en "applied" n'a par construction pas d'échange récent.
+export function isJobToProcess(
+  job: Job,
+  contactJobIds: Set<string>,
+  thresholdDays = TO_PROCESS_THRESHOLD_DAYS,
+): boolean {
+  if (job.status !== 'applied') return false;
+  if (contactJobIds.has(job.id)) return false;
+  const referenceDate = (job as any).applied_at || job.created_at;
+  if (!referenceDate) return false;
+  const days = Math.floor((Date.now() - new Date(referenceDate).getTime()) / 86400000);
+  return days >= thresholdDays;
 }
 
 export const GLOBAL_STYLES = `

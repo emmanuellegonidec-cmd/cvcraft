@@ -8,7 +8,7 @@ import {
 } from '@dnd-kit/core';
 import { useState } from 'react';
 import { Job } from '@/lib/jobs';
-import { Stage, formatRelative, getSubStatusLabel } from './types';
+import { Stage, formatRelative, getSubStatusLabel, isJobToProcess } from './types';
 import { HeartDisplay } from './HeartComponents';
 
 const FONT = "'Montserrat', sans-serif"
@@ -33,12 +33,14 @@ const SOURCE_MAP: Record<string, { bg: string; color: string; label: string }> =
 };
 
 // Ordre des colonnes pour détecter les déplacements en arrière
-const COLUMN_ORDER = ['to_apply', 'applied', 'in_progress', 'offer', 'archived']
+// NB : "archived" retiré du Kanban, "to_process" (À traiter) inséré entre in_progress et offer
+const COLUMN_ORDER = ['to_apply', 'applied', 'in_progress', 'to_process', 'offer']
 
 const COLUMN_LABELS: Record<string, string> = {
   to_apply:    'Envie de postuler',
   applied:     'Postulé',
   in_progress: 'En cours',
+  to_process:  'À traiter',
   offer:       'Offre reçue',
   archived:    'Archivé',
 }
@@ -167,6 +169,7 @@ function DroppableColumn({ col, jobs, stages, stagesLabelMap, onCardClick, onAdd
   onCardClick: (job: Job) => void; onAddJob: (stageId: string) => void; isDragOver: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id: col.id });
+  const isToProcess = col.id === 'to_process'
   return (
     <div ref={setNodeRef} style={{
       background: isDragOver ? '#FFFDE7' : '#F4F4F4',
@@ -189,7 +192,10 @@ function DroppableColumn({ col, jobs, stages, stagesLabelMap, onCardClick, onAdd
           onClick={() => onCardClick(job)}
         />
       ))}
-      <div className="add-card" onClick={() => onAddJob(col.id)}>+ Ajouter</div>
+      {/* Pas de bouton "+ Ajouter" dans "À traiter" — colonne auto uniquement */}
+      {!isToProcess && (
+        <div className="add-card" onClick={() => onAddJob(col.id)}>+ Ajouter</div>
+      )}
     </div>
   );
 }
@@ -278,12 +284,13 @@ function BackwardMoveModal({ job, fromCol, toCol, onConfirm, onCancel }: {
 type Props = {
   jobs: Job[]; stages: Stage[];
   stagesLabelMap: Record<string, string>;
+  contactJobIds: Set<string>;
   onJobClick: (job: Job) => void; onAddJob: (stageId: string) => void;
   onOpenSettings: () => void; onRefresh: () => void;
   onStatusChange: (id: string, newStatus: string) => void;
 };
 
-export default function KanbanView({ jobs, stages, stagesLabelMap, onJobClick, onAddJob, onRefresh, onStatusChange }: Props) {
+export default function KanbanView({ jobs, stages, stagesLabelMap, contactJobIds, onJobClick, onAddJob, onRefresh, onStatusChange }: Props) {
   const router = useRouter();
   const [activeJob, setActiveJob] = useState<Job | null>(null);
   const [overColId, setOverColId] = useState<string | null>(null);
@@ -302,7 +309,18 @@ export default function KanbanView({ jobs, stages, stagesLabelMap, onJobClick, o
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   );
 
-  const jobsByStatus = (s: string) => jobs.filter(j => j.status === s);
+  // Répartit les jobs entre les colonnes, avec gestion spéciale de "À traiter"
+  // et de "Postulé" : les offres "applied" anciennes sans contact basculent
+  // virtuellement dans "À traiter".
+  const jobsByStatus = (s: string): Job[] => {
+    if (s === 'to_process') {
+      return jobs.filter(j => isJobToProcess(j, contactJobIds));
+    }
+    if (s === 'applied') {
+      return jobs.filter(j => j.status === 'applied' && !isJobToProcess(j, contactJobIds));
+    }
+    return jobs.filter(j => j.status === s);
+  };
 
   function handleDragStart(event: DragStartEvent) {
     const job = (event.active.data.current as any)?.job as Job;
@@ -320,7 +338,15 @@ export default function KanbanView({ jobs, stages, stagesLabelMap, onJobClick, o
     const toColId = over.id as string;
     if (!job || fromColId === toColId) return;
 
-    // Détecter si c'est un déplacement en arrière
+    // Blocage 1 : on ne peut pas déposer manuellement dans "À traiter"
+    // (colonne exclusivement alimentée par la règle automatique)
+    if (toColId === 'to_process') return;
+
+    // Blocage 2 : depuis "À traiter", on ne peut pas retomber en "Postulé"
+    // (ça créerait un effet magique où la carte reviendrait aussitôt en "À traiter")
+    if (fromColId === 'to_process' && toColId === 'applied') return;
+
+    // Détecter si c'est un déplacement en arrière (basé sur COLUMN_ORDER)
     const fromIndex = COLUMN_ORDER.indexOf(fromColId)
     const toIndex = COLUMN_ORDER.indexOf(toColId)
     const isBackward = toIndex < fromIndex
