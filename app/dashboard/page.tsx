@@ -1,891 +1,1019 @@
-'use client';
-import OnboardingModal from './components/OnboardingModal';
+'use client'
 
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
-import { Job, Contact, JobStatus } from '@/lib/jobs';
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
+import { JobExchange, EXCHANGE_TYPE_LABELS } from '@/lib/types'
 
-import Sidebar from './components/Sidebar';
-import KanbanView from './components/KanbanView';
-import ListView from './components/ListView';
-import ContactsView from './components/ContactsView';
-import { AgendaView, StatsView } from './components/AgendaStatsViews';
-import JobDetailPanel from './components/JobDetailPanel';
-import JobModal from './components/JobModal';
-import { SettingsModal } from './components/Modals';
-import DashboardCalendar from './components/DashboardCalendar';
-import ActionsSection from './components/ActionsSection';
-import PersonalActionsSection from './components/PersonalActionsSection';
-import ActionDetailPanel from './components/ActionDetailPanel';
+import JobHeader from './components/JobHeader'
+import JobCompanySection from './components/JobCompanySection'
+import JobInterviewDetails from './components/JobInterviewDetails'
+import JobInterviewDebrief from './components/JobInterviewDebrief'
+import JobExchanges from './components/JobExchanges'
+import JobStepProgress from './components/JobStepProgress'
+import JobStepActions from './components/JobStepActions'
+import EditJobModal from './components/EditJobModal'
+import ParcoursBannerModal from './components/ParcoursBannerModal'
+import JobArchivedDetails from './components/JobArchivedDetails'
+import JobContacts, { JobContactEnriched } from './components/JobContacts'
+import RgpdConsentModal from '@/components/RgpdConsentModal'
+import SecureStorageNotice from '@/components/SecureStorageNotice'
 
-import {
-  View, Stage, NewJobState,
-  DEFAULT_STAGES, EMPTY_JOB, GLOBAL_STYLES,
-  capitalize, cleanJobTitle, cleanLocation, detectSource, isInterviewStage,
-} from './components/types';
+const FONT = "'Montserrat', sans-serif"
 
-const STATUS_TO_SUB: Record<string, string> = {
-  to_apply:    'to_apply',
-  applied:     'applied',
-  in_progress: 'phone_interview',
-  offer:       'offer',
-  archived:    'archived',
-};
+const BASE_STEPS = [
+  { id: 'to_apply',          label: 'Envie de postuler',      num: 1 },
+  { id: 'applied',           label: 'Postulé',                num: 2 },
+  { id: 'phone_interview',   label: 'Entretien téléphonique', num: 3 },
+  { id: 'hr_interview',      label: 'Entretien RH',           num: 4 },
+  { id: 'manager_interview', label: 'Entretien manager',      num: 5 },
+  { id: 'offer',             label: 'Offre reçue',            num: 6 },
+  { id: 'archived',          label: 'Archivé',                num: 7 },
+]
 
-const FONT = "'Montserrat', sans-serif";
+const BASE_STEP_POSITIONS: Record<string, number> = {
+  to_apply:          1000,
+  applied:           2000,
+  phone_interview:   3000,
+  hr_interview:      4000,
+  manager_interview: 5000,
+  offer:             6000,
+  archived:          7000,
+}
 
-export default function DashboardPage() {
-  const router = useRouter();
+const INTERVIEW_STEP_IDS = ['phone_interview', 'hr_interview', 'manager_interview']
 
-  const [accessToken, setAccessToken]     = useState<string | null>(null);
-  const [userId, setUserId]               = useState<string | null>(null);
-  const [userEmail, setUserEmail]         = useState('');
-  const [firstName, setFirstName]         = useState('');
-  const [jobs, setJobs]                   = useState<Job[]>([]);
-  const [contacts, setContacts]           = useState<Contact[]>([]);
-  const [stages, setStages]               = useState<Stage[]>(DEFAULT_STAGES);
-  const [loading, setLoading]             = useState(true);
-  const [view, setView]                   = useState<View>('kanban');
-  const [selectedJob, setSelectedJob]     = useState<Job | null>(null);
-  const [selectedActionDetail, setSelectedActionDetail] = useState<{ kind: 'personal_action' | 'event'; data: any } | null>(null);
-  const [showAddJob, setShowAddJob]       = useState(false);
-  const [showSettings, setShowSettings]   = useState(false);
-  const [triggerAddContact, setTriggerAddContact] = useState(0);
-  const [triggerAddAction, setTriggerAddAction] = useState(0);
-  const [triggerAddPersonalAction, setTriggerAddPersonalAction] = useState(0);
-  const [newJob, setNewJob]               = useState<NewJobState>({ ...EMPTY_JOB });
-  const [editingJobId, setEditingJobId]   = useState<string | null>(null);
-  const [addJobMode, setAddJobMode]       = useState<null | 'url' | 'manual' | 'file' | 'spontaneous'>(null);
-  const [importUrl, setImportUrl]         = useState('');
-  const [importError, setImportError]     = useState(false);
-  const [importLoading, setImportLoading] = useState(false);
-  const extraJobFields = useRef<Record<string, string>>({});
-  const [newStageName, setNewStageName]   = useState('');
-  const [newStageColor, setNewStageColor] = useState('#E8151B');
-  const [newStagePosition, setNewStagePosition] = useState(3);
-  const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, string>>({});
-  const newJobRef = useRef<NewJobState>({ ...EMPTY_JOB });
+const STATUS_MAP: Record<string, string> = {
+  to_apply: 'to_apply', applied: 'applied',
+  phone_interview: 'in_progress', hr_interview: 'in_progress',
+  manager_interview: 'in_progress', offer: 'offer', archived: 'archived',
+}
 
-  const [actionsVisible, setActionsVisible] = useState(false);
-  const [actionsCount, setActionsCount] = useState(0);
-  const [personalActionsVisible, setPersonalActionsVisible] = useState(false);
-  const [personalActionsCount, setPersonalActionsCount] = useState(0);
+const STATUS_LABELS: Record<string, string> = {
+  to_apply: 'Envie de postuler', applied: 'Postulé',
+  in_progress: 'En cours', offer: 'Offre reçue', archived: 'Archivé',
+}
 
-  const [deleteJobTarget, setDeleteJobTarget] = useState<Job | null>(null);
-  const [deleteJobLoading, setDeleteJobLoading] = useState(false);
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  to_apply:    { bg: '#F5F5F0', color: '#888' },
+  applied:     { bg: '#E8F0FE', color: '#1A6FDB' },
+  in_progress: { bg: '#FFF8E1', color: '#B8900A' },
+  offer:       { bg: '#E8F5E9', color: '#1A7A4A' },
+  archived:    { bg: '#F5F5F5', color: '#aaa' },
+}
 
-  const [slotCreationTarget, setSlotCreationTarget] = useState<{ date: Date; hasTime: boolean } | null>(null);
-  const [personalActionInitialData, setPersonalActionInitialData] = useState<{ date: string; heure?: string } | null>(null);
-  const [eventInitialData, setEventInitialData] = useState<{ date: string; heure?: string } | null>(null);
+const SUB_STATUS_LABELS: Record<string, string> = {
+  to_apply: 'Envie de postuler', applied: 'Postulé',
+  phone_interview: 'Entretien tél.', hr_interview: 'Entretien RH',
+  manager_interview: 'Entretien manager', offer: 'Offre reçue',
+}
 
-  useEffect(() => { newJobRef.current = newJob; }, [newJob]);
-  useEffect(() => { if (accessToken) (window as any).__jfmj_token = accessToken; }, [accessToken]);
+interface Job {
+  id: string; title: string; company: string; location: string; job_type: string
+  status: string; sub_status: string; description: string; notes: string; source_url: string
+  salary_text: string | null; salary_min: number | null; salary_max: number | null; currency: string | null
+  cv_sent: boolean; cover_letter_sent: boolean; cv_url: string | null; cover_letter_url: string | null
+  ats_score: number | null; ats_keywords: { present: string[]; missing: string[] } | null
+  created_at: string; applied_at: string | null
+  interview_at: string | null; interview_time: string | null; interview_time_end: string | null
+  interview_type: string | null; interview_contact_id: string | null
+  interview_contacts: Record<string, string> | null
+  interview_location: string | null; interview_link: string | null; interview_phone: string | null
+  company_description: string | null; company_website: string | null
+  company_size: string | null; department: string | null; source_platform: string | null
+  recruitment_process: string | null
+  hidden_steps: string[] | null
+  step_dates: Record<string, string> | null
+}
 
-  useEffect(() => {
-    setTriggerAddAction(0);
-    setTriggerAddPersonalAction(0);
-  }, [view]);
+interface ContactMin { id: string; name: string; role?: string | null; company?: string | null }
+interface CustomStep { id: string; label: string; position: number }
 
-  const today = new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-    timeZone: 'Europe/Paris',
-  });
+function formatDateShort(iso: string) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+}
+function getToken(): string | null {
+  if (typeof window !== 'undefined') return (window as any).__jfmj_token ?? null
+  return null
+}
+function authHeaders(): HeadersInit {
+  const token = getToken()
+  return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
+}
+function extractTransmittedBy(notes: string | null): string | null {
+  if (!notes) return null
+  const match = notes.match(/Transmis par\s*:\s*(.+?)(?:\n|$)/i)
+  return match ? match[1].trim() : null
+}
 
-  // Set des job_id qui ont au moins un contact lié — utilisé par le Kanban
-  // pour décider si une offre "Postulé" doit basculer virtuellement en "À traiter"
-  const contactJobIds = useMemo(() => {
-    const s = new Set<string>();
-    contacts.forEach(c => { if ((c as any).job_id) s.add((c as any).job_id); });
-    return s;
-  }, [contacts]);
-
-  function authFetch(url: string, options: RequestInit = {}) {
-    return fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        ...(options.headers || {}),
-      },
-    });
-  }
-
-  const fetchJobs = useCallback(async (token: string) => {
-    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
-    const jr = await fetch('/api/jobs', { headers: h });
-    const jd = await jr.json();
-    setJobs(jd.jobs || []);
-  }, []);
-
-  const handleRefresh = useCallback(() => {
-    if (accessToken) fetchJobs(accessToken);
-  }, [accessToken, fetchJobs]);
-
-  // NOUVEAU : re-fetch du prénom depuis /api/profile (source de vérité)
-  const refetchFirstName = useCallback(async (token: string) => {
-    try {
-      const res = await fetch('/api/profile', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.profile?.first_name) {
-          setFirstName(capitalize(data.profile.first_name));
-        }
-      }
-    } catch {
-      // silencieux, pas bloquant
-    }
-  }, []);
-
-  const fetchContacts = useCallback(async () => {
-    if (!accessToken) return;
-    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` };
-    const cr = await fetch('/api/contacts', { headers: h });
-    const cd = await cr.json();
-    const contactsList = cd.contacts || [];
-    const sbNotes = createClient();
-    const { data: notesData } = await sbNotes
-      .from('contact_notes')
-      .select('contact_id')
-      .in('contact_id', contactsList.map((c: any) => c.id));
-    const countMap: Record<string, number> = {};
-    (notesData || []).forEach((n: any) => {
-      countMap[n.contact_id] = (countMap[n.contact_id] || 0) + 1;
-    });
-    setContacts(contactsList.map((c: any) => ({
-      ...c,
-      notes_count: countMap[c.id] ?? 0,
-    })));
-    const sbJobs = createClient();
-    const { data: jobsData } = await sbJobs.from('jobs').select('id, title, company');
-    const jobMap: Record<string, string> = {};
-    (jobsData || []).forEach((j: any) => {
-      jobMap[j.id] = j.title + (j.company ? ' — ' + j.company : '');
-    });
-    setContacts(prev => prev.map(c => ({
-      ...c,
-      job_manual: c.job_manual || (c.job_id ? jobMap[c.job_id] : null) || null,
-    })));
-  }, [accessToken]);
-
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { router.push('/auth/login'); return; }
-      setAccessToken(session.access_token);
-      setUserId(session.user.id);
-      setUserEmail(session.user.email || '');
-
-      // Fallback initial rapide : on prend le prénom depuis les metadata Supabase
-      const meta = session.user.user_metadata;
-      setFirstName(capitalize(
-        meta?.first_name || meta?.full_name?.split(' ')[0] ||
-        session.user.email?.split('@')[0] || ''
-      ));
-
-      const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
-
-      // NOUVEAU : on fetch aussi /api/profile pour avoir la version à jour du prénom
-      // (la table user_profiles est source de vérité, les metadata peuvent être en retard)
-      const [jr, cr, pr] = await Promise.all([
-        fetch('/api/jobs', { headers: h }),
-        fetch('/api/contacts', { headers: h }),
-        fetch('/api/profile', { headers: h }),
-      ]);
-      const jd = await jr.json();
-      const cd = await cr.json();
-
-      // Si /api/profile renvoie un prénom, on écrase le fallback
-      try {
-        const pd = await pr.json();
-        if (pd?.profile?.first_name) {
-          setFirstName(capitalize(pd.profile.first_name));
-        }
-      } catch {
-        // silencieux
-      }
-
-      setJobs(jd.jobs || []);
-      const contactsList = cd.contacts || [];
-      const { data: notesData2 } = await supabase
-        .from('contact_notes')
-        .select('contact_id')
-        .in('contact_id', contactsList.map((c: any) => c.id));
-      const countMap2: Record<string, number> = {};
-      (notesData2 || []).forEach((n: any) => {
-        countMap2[n.contact_id] = (countMap2[n.contact_id] || 0) + 1;
-      });
-      const { data: jobsData2 } = await supabase.from('jobs').select('id, title, company');
-      const jobMap2: Record<string, string> = {};
-      (jobsData2 || []).forEach((j: any) => {
-        jobMap2[j.id] = j.title + (j.company ? ' — ' + j.company : '');
-      });
-      const { data: interviewData } = await supabase
-        .from('jobs')
-        .select('interview_contact_id')
-        .in('interview_contact_id', contactsList.map((c: any) => c.id));
-      const interviewMap: Record<string, number> = {};
-      (interviewData || []).forEach((j: any) => {
-        if (j.interview_contact_id) interviewMap[j.interview_contact_id] = (interviewMap[j.interview_contact_id] || 0) + 1;
-      });
-      setContacts(contactsList.map((c: any) => ({
-        ...c,
-        notes_count: (countMap2[c.id] ?? 0) + (interviewMap[c.id] ?? 0),
-        job_manual: c.job_manual || (c.job_id ? jobMap2[c.job_id] : null) || null,
-      })));
-
-      const { data: customStages } = await supabase
-        .from('pipeline_stages').select('*')
-        .eq('user_id', session.user.id).is('job_id', null).order('position');
-      if (customStages && customStages.length > 0) {
-        const all = [
-          ...DEFAULT_STAGES,
-          ...customStages.map((s: any) => ({ id: s.id, label: s.label, color: s.color, position: s.position, is_default: false })),
-        ].sort((a, b) => a.position - b.position);
-        setStages(all);
-      }
-
-      const { data: allPipelineStages } = await supabase
-        .from('pipeline_stages').select('id, label')
-        .eq('user_id', session.user.id);
-      if (allPipelineStages) {
-        const map: Record<string, string> = {};
-        allPipelineStages.forEach((s: any) => { map[s.id] = s.label; });
-        setStagesLabelMap(map);
-      }
-      setLoading(false);
-      setTimeout(() => fetchContacts(), 500);
-    }
-    load();
-  }, [router]);
-
-  // NOUVEAU : re-fetch du prénom au retour sur l'onglet/fenêtre (après modif dans /profile)
-  useEffect(() => {
-    if (!accessToken) return;
-    function onFocus() {
-      refetchFirstName(accessToken!);
-    }
-    function onVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        refetchFirstName(accessToken!);
-      }
-    }
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    };
-  }, [accessToken, refetchFirstName]);
-
-  // Stats : 5 indicateurs opérationnels
-  const stats = {
-    total: jobs.length,
-    toApply: jobs.filter(j => j.status === 'to_apply').length,
-    applied: jobs.filter(j => j.status === 'applied').length,
-    interviews: jobs.filter(j => isInterviewStage(j.status, stages)).length,
-    archived: jobs.filter(j => j.status === 'archived').length,
-  };
-
-  function openAddJobModal(defaultStatus?: string) {
-    setNewJob({ ...EMPTY_JOB, status: (defaultStatus || 'to_apply') as JobStatus });
-    extraJobFields.current = {};
-    setImportUrl(''); setImportError(false); setAddJobMode(null);
-    setEditingJobId(null); setShowAddJob(true);
-  }
-
-  function openEditJobModal(job: Job) {
-    setNewJob({
-      status: job.status, job_type: job.job_type || 'CDI',
-      title: job.title || '', company: job.company || '',
-      location: job.location || '', description: job.description || '',
-      notes: job.notes || '', salary: (job as any).salary_text || '',
-      source: (job as any).source_platform || '', url: (job as any).source_url || '',
-      favorite: (job as any).favorite || 0,
-    });
-    setEditingJobId(job.id); setAddJobMode('manual');
-    setImportUrl(''); setImportError(false);
-    setSelectedJob(null); setShowAddJob(true);
-  }
-
-  async function saveJob() {
-    const job = newJobRef.current;
-    if (!job.title || !job.company) return;
-    const extras = extraJobFields.current || {};
-    const payload = {
-      title: job.title, company: job.company,
-      location: job.location || '', description: job.description || '',
-      job_type: job.job_type || 'CDI', status: job.status || 'to_apply',
-      notes: job.notes || '',
-      ...(job.salary   ? { salary_text: job.salary }             : {}),
-      ...(job.source   ? { source_platform: job.source }         : {}),
-      ...(job.url      ? { source_url: job.url }                 : {}),
-      ...(job.favorite !== undefined ? { favorite: job.favorite } : {}),
-      company_description: extras.company_description || (job as any).company_description || '',
-      company_website:     extras.company_website     || (job as any).company_website     || '',
-      company_size:        extras.company_size        || (job as any).company_size        || '',
-      recruitment_process: extras.recruitment_process || (job as any).recruitment_process || '',
-      ...((job as any).transmitted_by_contact_id ? { transmitted_by_contact_id: (job as any).transmitted_by_contact_id } : {}),
-    };
-    if (!payload.company_description) delete (payload as any).company_description;
-    if (!payload.company_website)     delete (payload as any).company_website;
-    if (!payload.company_size)        delete (payload as any).company_size;
-    if (!(payload as any).recruitment_process) delete (payload as any).recruitment_process;
-
-    if (editingJobId) {
-      const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id: editingJobId, ...payload }) });
-      const data = await res.json();
-      if (data.job) { setJobs(prev => prev.map(j => j.id === editingJobId ? data.job : j)); setShowAddJob(false); setEditingJobId(null); }
-      else alert('Erreur : ' + (data.error || 'inconnue'));
-    } else {
-      const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify(payload) });
-      const data = await res.json();
-      if (data.job) { setJobs(prev => [data.job, ...prev]); setShowAddJob(false); setNewJob({ ...EMPTY_JOB }); extraJobFields.current = {}; }
-      else alert('Erreur : ' + (data.error || 'inconnue'));
-    }
-  }
-
-  async function updateJobStatus(id: string, newStatus: string) {
-    // Garde-fou : "to_process" est une colonne virtuelle, pas un vrai statut.
-    // Si on arrive ici avec cette valeur, on ignore (KanbanView bloque déjà en amont).
-    if (newStatus === 'to_process') return;
-
-    const subStatus = STATUS_TO_SUB[newStatus] ?? newStatus;
-    setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus as JobStatus, sub_status: subStatus } as any : j));
-    if (selectedJob?.id === id) setSelectedJob(prev => prev ? { ...prev, status: newStatus as JobStatus } : prev);
-    const res = await authFetch(`/api/jobs?id=${id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus, sub_status: subStatus }) });
-    const data = await res.json();
-    if (data.job) {
-      setJobs(prev => prev.map(j => j.id === id ? data.job : j));
-      if (selectedJob?.id === id) setSelectedJob(data.job);
-    }
-  }
-
-  async function updateJobField(id: string, field: string, value: any) {
-    const res = await authFetch('/api/jobs', { method: 'POST', body: JSON.stringify({ id, [field]: value }) });
-    const data = await res.json();
-    if (data.job) {
-      setJobs(prev => prev.map(j => j.id === id ? data.job : j));
-      if (selectedJob?.id === id) setSelectedJob(data.job);
-    }
-  }
-
-  async function handleCalendarDateChange(jobId: string, field: string, newDate: Date) {
-    const iso = newDate.toISOString();
-    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, [field]: iso } as any : j));
-    if (selectedJob?.id === jobId) setSelectedJob(prev => prev ? { ...prev, [field]: iso } as any : prev);
-    const res = await authFetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', body: JSON.stringify({ [field]: iso }) });
-    const data = await res.json();
-    if (data.job) {
-      setJobs(prev => prev.map(j => j.id === jobId ? data.job : j));
-      if (selectedJob?.id === jobId) setSelectedJob(data.job);
-    }
-  }
-
-  function handleCalendarJobClick(jobId: string) {
-    const job = jobs.find(j => j.id === jobId);
-    if (job) setSelectedJob(job);
-  }
-
-  function handleCalendarActionClick(kind: 'personal_action' | 'event', data: any) {
-    setSelectedActionDetail({ kind, data });
-  }
-
-  function handleEmptySlotClick(date: Date, hasTime: boolean) {
-    setSlotCreationTarget({ date, hasTime });
-  }
-
-  function buildInitialFromSlot(target: { date: Date; hasTime: boolean }) {
-    const y = target.date.getFullYear();
-    const m = String(target.date.getMonth() + 1).padStart(2, '0');
-    const d = String(target.date.getDate()).padStart(2, '0');
-    const isoDate = `${y}-${m}-${d}`;
-    const heure = target.hasTime
-      ? `${String(target.date.getHours()).padStart(2, '0')}:${String(target.date.getMinutes()).padStart(2, '0')}`
-      : undefined;
-    return { date: isoDate, heure };
-  }
-
-  function openEventFromSlot() {
-    if (!slotCreationTarget) return;
-    const initial = buildInitialFromSlot(slotCreationTarget);
-    setEventInitialData(initial);
-    setPersonalActionInitialData(null);
-    setActionsVisible(true);
-    setSlotCreationTarget(null);
-    setTimeout(() => setTriggerAddAction(n => n + 1), 50);
-  }
-
-  function openActionFromSlot() {
-    if (!slotCreationTarget) return;
-    const initial = buildInitialFromSlot(slotCreationTarget);
-    setPersonalActionInitialData(initial);
-    setEventInitialData(null);
-    setPersonalActionsVisible(true);
-    setSlotCreationTarget(null);
-    setTimeout(() => setTriggerAddPersonalAction(n => n + 1), 50);
-  }
-
-  function deleteJob(id: string) {
-    const job = jobs.find(j => j.id === id);
-    if (job) setDeleteJobTarget(job);
-  }
-
-  async function confirmDeleteJob() {
-    if (!deleteJobTarget) return;
-    setDeleteJobLoading(true);
-    await authFetch('/api/jobs?id=' + deleteJobTarget.id, { method: 'DELETE' });
-    setJobs(prev => prev.filter(j => j.id !== deleteJobTarget.id));
-    if (selectedJob?.id === deleteJobTarget.id) setSelectedJob(null);
-    setDeleteJobTarget(null);
-    setDeleteJobLoading(false);
-  }
-
-  async function importJobFromUrl(url: string) {
-    if (!url) return;
-    setImportLoading(true); setImportError(false);
-    try {
-      const res = await authFetch('/api/jobs/import', { method: 'POST', body: JSON.stringify({ url }) });
-      const data = await res.json();
-      if (!res.ok || !data.success) { setImportError(true); return; }
-      if (data.savedJobId) {
-        if (accessToken) await fetchJobs(accessToken);
-        setShowAddJob(false); setNewJob({ ...EMPTY_JOB });
-        router.push(`/dashboard/job/${data.savedJobId}`); return;
-      }
-      const job = data.job || {};
-      const description = (job.description && job.description.length > 150)
-        ? job.description : (job.raw_text || job.description || '');
-      setNewJob({
-        title: cleanJobTitle(job.title), company: job.company_name || '',
-        location: cleanLocation(job.location_text), description,
-        job_type: 'CDI', status: 'to_apply', notes: '',
-        salary: job.salary_text || '', source: detectSource(url), url, favorite: 0,
-      });
-      setAddJobMode('manual');
-    } catch { setImportError(true); }
-    finally { setImportLoading(false); }
-  }
-
-  async function deleteContact(id: string) {
-    await authFetch('/api/contacts?id=' + id, { method: 'DELETE' });
-    setContacts(prev => prev.filter(c => c.id !== id));
-  }
-
-  async function addCustomStage() {
-    if (!newStageName.trim() || !userId) return;
-    const supabase = createClient();
-    const { data } = await supabase.from('pipeline_stages').insert({
-      user_id: userId, label: newStageName.trim(), color: newStageColor, position: newStagePosition,
-    }).select().single();
-    if (data) {
-      const updated = [...stages, { id: data.id, label: data.label, color: data.color, position: data.position, is_default: false }]
-        .sort((a, b) => a.position - b.position);
-      setStages(updated); setNewStageName('');
-    }
-  }
-
-  async function deleteCustomStage(stageId: string) {
-    if (!confirm('Supprimer cette étape ?')) return;
-    const supabase = createClient();
-    await supabase.from('pipeline_stages').delete().eq('id', stageId);
-    setStages(prev => prev.filter(s => s.id !== stageId));
-  }
-
-  function getMainButtonLabel() {
-    if (view === 'contacts') return '+ Ajouter un contact';
-    if (view === 'actions') return '+ Ajouter un événement';
-    if (view === 'personal_actions') return '+ Ajouter une action';
-    return '+ Ajouter une offre';
-  }
-
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: FONT }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 32 }}>⚡</div>
-        <div style={{ fontWeight: 700, color: '#888' }}>Chargement...</div>
+// ─── Bandeau de phase (AVANT / APRÈS l'entretien) ────────────────────────────
+// Affiche le rond noir + chiffre jaune identique au step "en cours" du parcours,
+// pour que l'utilisateur fasse instantanément le lien visuel.
+function PhaseBanner({ phase, stepNum, stepLabel }: { phase: 'before' | 'after'; stepNum: number; stepLabel: string }) {
+  return (
+    <div style={{
+      background: '#FFFDF5',
+      border: '1.5px solid #111',
+      borderRadius: 10,
+      padding: '12px 18px',
+      marginBottom: 10,
+      marginTop: 4,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+    }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: '50%',
+        background: '#111', color: '#F5C400',
+        border: '2px solid #111',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 13, fontWeight: 900, flexShrink: 0,
+        fontFamily: FONT,
+      }}>
+        {stepNum}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: '#111', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: FONT }}>
+          {phase === 'before' ? 'Avant' : 'Après'} — {stepLabel}
+        </div>
+        <div style={{ fontSize: 11, color: '#666', marginTop: 3, fontFamily: FONT, fontWeight: 500 }}>
+          {phase === 'before' ? 'Tout ce qui te prépare au RDV' : 'Debrief, email de remerciement et relance'}
+        </div>
       </div>
     </div>
-  );
+  )
+}
 
-  const mainButtonLabel = getMainButtonLabel();
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect: (id: string) => void }) {
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, string>>({})
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('jobs').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      if (data) setJobs(data)
+    })
+    supabase.from('pipeline_stages').select('id, label').then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {}
+        data.forEach((s: any) => { map[s.id] = s.label })
+        setStagesLabelMap(map)
+      }
+    })
+  }, [])
+  return (
+    <div style={{ width: 280, flexShrink: 0, position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', overflowX: 'hidden', background: '#fff', borderRight: '1.5px solid #EBEBEB', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
+      <div style={{ padding: '18px 16px 14px', borderBottom: '1.5px solid #EBEBEB', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#111', letterSpacing: '-0.2px' }}>Tableau de bord</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#888', background: '#F5F5F0', padding: '2px 8px', borderRadius: 20 }}>{jobs.length}</span>
+        </div>
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {jobs.map(job => {
+          const isActive = job.id === currentJobId
+          const statusColor = STATUS_COLORS[job.status] ?? STATUS_COLORS['to_apply']
+          const stepLabel = job.sub_status
+  ? (SUB_STATUS_LABELS[job.sub_status] ?? stagesLabelMap[job.sub_status] ?? STATUS_LABELS[job.status])
+  : STATUS_LABELS[job.status]
+          const dateRef = job.applied_at || job.created_at
+          return (
+            <div key={job.id} onClick={() => onSelect(job.id)}
+              style={{ padding: '12px 16px', borderBottom: '1px solid #F5F5F0', cursor: 'pointer', background: isActive ? '#111' : 'transparent', transition: 'background 0.1s' }}
+              onMouseOver={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#F9F9F7' }}
+              onMouseOut={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 4, color: isActive ? '#fff' : '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+              <div style={{ fontSize: 12, color: isActive ? '#aaa' : '#666', marginBottom: 7, fontWeight: 500 }}>{job.company}{job.location ? ` · ${job.location}` : ''}</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: isActive ? '#222' : statusColor.bg, color: isActive ? '#F5C400' : statusColor.color }}>{stepLabel}</span>
+                <span style={{ fontSize: 10, color: isActive ? '#666' : '#bbb', fontWeight: 600, flexShrink: 0 }}>{formatDateShort(dateRef)}</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
-  const jobOptionsForPanel = jobs.map(j => ({ id: j.id, title: j.title || '', company: j.company || '' }));
+// ─── Page principale ──────────────────────────────────────────────────────────
+export default function JobDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const jobId = params.id as string
 
-  function formatSlotDate(date: Date, hasTime: boolean): string {
-    const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    if (hasTime) {
-      const h = String(date.getHours()).padStart(2, '0');
-      const m = String(date.getMinutes()).padStart(2, '0');
-      return `${dateStr} — ${h}h${m}`;
+  const [job, setJob] = useState<Job | null>(null)
+  const [exchanges, setExchanges] = useState<JobExchange[]>([])
+  const [customSteps, setCustomSteps] = useState<CustomStep[]>([])
+  const [hiddenSteps, setHiddenSteps] = useState<string[]>([])
+  const [stepDates, setStepDates] = useState<Record<string, string>>({})
+  const [userId, setUserId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [descExpanded, setDescExpanded] = useState(false)
+  const [recruitmentExpanded, setRecruitmentExpanded] = useState(false)
+  const [companyExpanded, setCompanyExpanded] = useState(true)
+  const [notes, setNotes] = useState('')
+  const [contacts, setContacts] = useState<ContactMin[]>([])
+  const [jobContacts, setJobContacts] = useState<JobContactEnriched[]>([])
+  const [showCoverLetter, setShowCoverLetter] = useState(true)
+  const notesTimer = useRef<NodeJS.Timeout | null>(null)
+  const savedExchangeDatesRef = useRef<string>('')
+  const [uploadingDoc, setUploadingDoc] = useState<'cv' | 'cover_letter' | null>(null)
+  const cvInputRef = useRef<HTMLInputElement>(null)
+  const coverLetterInputRef = useRef<HTMLInputElement>(null)
+
+  // ─── RGPD : fichier en attente + état modale ────────────────────────────────
+  const [pendingUpload, setPendingUpload] = useState<{ file: File, docType: 'cv' | 'cover_letter' } | null>(null)
+  const [rgpdModalOpen, setRgpdModalOpen] = useState(false)
+
+  const [showEditModal, setShowEditModal] = useState(false)
+ const [editForm, setEditForm] = useState({
+    title: '', company: '', location: '', job_type: 'CDI',
+    salary_text: '', description: '',
+    company_description: '', company_website: '', company_size: '',
+    recruitment_process: '',
+  })
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  const [showCreateContact, setShowCreateContact] = useState(false)
+  const [contactFirstName, setContactFirstName] = useState('')
+  const [contactLastName, setContactLastName] = useState('')
+  const [contactRole, setContactRole] = useState('')
+  const [contactCompany, setContactCompany] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+  const [contactLinkedin, setContactLinkedin] = useState('')
+  const [contactSaving, setContactSaving] = useState(false)
+  const [contactSaved, setContactSaved] = useState(false)
+
+  // ─── Chargement ────────────────────────────────────────────────────────────
+  const loadJob = useCallback(async () => {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      setUserId(session.user.id)
+      if (typeof window !== 'undefined') (window as any).__jfmj_token = session.access_token
     }
-    return dateStr;
+    const { data } = await supabase.from('jobs').select('*').eq('id', jobId).single()
+    if (data) {
+      setJob(data)
+      setNotes(data.notes ?? '')
+      setHiddenSteps(data.hidden_steps ?? [])
+      setStepDates(data.step_dates ?? {})
+    }
+  }, [jobId])
+
+  const loadCustomSteps = useCallback(async () => {
+    const supabase = createClient()
+    const { data } = await supabase.from('pipeline_stages').select('*').eq('job_id', jobId).order('position')
+    if (data && data.length > 0) setCustomSteps(data.map((s: any) => ({ id: s.id, label: s.label, position: s.position })))
+  }, [jobId])
+
+  const loadExchanges = useCallback(async () => {
+    const res = await fetch(`/api/jobs/exchanges?job_id=${jobId}`, { headers: authHeaders() })
+    if (res.ok) setExchanges(await res.json())
+  }, [jobId])
+
+  const loadContacts = useCallback(async () => {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const { data } = await supabase.from('contacts').select('id, name, role, company').eq('user_id', session.user.id).order('name')
+    if (data) setContacts(data)
+  }, [])
+
+  // ─── Chargement des contacts LIÉS à cette offre (enrichis) ─────────────────
+  const loadJobContacts = useCallback(async () => {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setJobContacts([]); return }
+
+    const { data: cd } = await supabase
+      .from('contacts')
+      .select('id, name, role, company, email, phone, linkedin')
+      .eq('user_id', session.user.id)
+      .eq('job_id', jobId)
+      .order('name')
+
+    if (!cd || cd.length === 0) { setJobContacts([]); return }
+
+    const ids = cd.map(c => c.id)
+    const { data: nd } = await supabase
+      .from('contact_notes')
+      .select('contact_id, date')
+      .in('contact_id', ids)
+
+    const counts: Record<string, number> = {}
+    const lasts: Record<string, string> = {}
+    for (const n of (nd ?? [])) {
+      counts[n.contact_id] = (counts[n.contact_id] ?? 0) + 1
+      if (n.date && (!lasts[n.contact_id] || n.date > lasts[n.contact_id])) {
+        lasts[n.contact_id] = n.date
+      }
+    }
+
+    setJobContacts(cd.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      role: c.role ?? null,
+      company: c.company ?? null,
+      email: c.email ?? null,
+      phone: c.phone ?? null,
+      linkedin: c.linkedin ?? null,
+      notes_count: counts[c.id] ?? 0,
+      last_note_date: lasts[c.id] ?? null,
+    })))
+  }, [jobId])
+
+  const loadCoverLetterVisibility = useCallback(async (stepId: string) => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('job_step_actions')
+      .select('id')
+      .eq('job_id', jobId)
+      .eq('step_id', stepId)
+      .ilike('title', '%LM%')
+    setShowCoverLetter(data === null || data.length > 0)
+  }, [jobId])
+
+  useEffect(() => {
+    loadJob().then(() => {
+      Promise.all([loadCustomSteps(), loadExchanges(), loadContacts(), loadJobContacts()]).finally(() => setLoading(false))
+    })
+  }, [loadJob, loadCustomSteps, loadExchanges, loadContacts, loadJobContacts])
+
+  useEffect(() => { if (userId) loadContacts() }, [userId])
+
+  useEffect(() => {
+    if (!exchanges.length) return
+    const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
+    const stepsByLabel: Record<string, string> = {}
+    for (const s of visibleBase) stepsByLabel[s.label] = s.id
+    for (const s of customSteps) stepsByLabel[s.label] = s.id
+
+    const fromExchanges: Record<string, string> = {}
+    for (const exchange of exchanges) {
+      if (!exchange.step_label || !exchange.exchange_date) continue
+      const stepId = stepsByLabel[exchange.step_label]
+      if (!stepId) continue
+      if (!fromExchanges[stepId] || exchange.exchange_date > fromExchanges[stepId]) {
+        fromExchanges[stepId] = exchange.exchange_date
+      }
+    }
+    const toSave: Record<string, string> = {}
+    for (const [stepId, date] of Object.entries(fromExchanges)) {
+      if (!stepDates[stepId]) toSave[stepId] = date
+    }
+    if (!Object.keys(toSave).length) return
+    const key = JSON.stringify(toSave)
+    if (key === savedExchangeDatesRef.current) return
+    savedExchangeDatesRef.current = key
+    const merged = { ...stepDates, ...toSave }
+    setStepDates(merged)
+    fetch(`/api/jobs?id=${jobId}`, {
+      method: 'PATCH', headers: authHeaders(),
+      body: JSON.stringify({ step_dates: merged }),
+    })
+  }, [exchanges.length, customSteps.length, hiddenSteps.length])
+
+  // ─── Construction de allSteps ──────────────────────────────────────────────
+  const visibleBase = BASE_STEPS.filter(s => !hiddenSteps.includes(s.id))
+
+  const allStepsMerged = [
+    ...visibleBase.map(s => ({ id: s.id, label: s.label, sortPos: BASE_STEP_POSITIONS[s.id] })),
+    ...customSteps.map(cs => ({ id: cs.id, label: cs.label, sortPos: cs.position })),
+  ].sort((a, b) => a.sortPos - b.sortPos)
+
+  const allSteps = allStepsMerged.map((s, i) => ({ id: s.id, label: s.label, num: i + 1 }))
+
+  const stepDatesFromExchanges: Record<string, string> = {}
+  for (const exchange of exchanges) {
+    if (!exchange.step_label || !exchange.exchange_date) continue
+    const step = allSteps.find(s => s.label === exchange.step_label)
+    if (!step) continue
+    if (!stepDatesFromExchanges[step.id] || exchange.exchange_date < stepDatesFromExchanges[step.id]) {
+      stepDatesFromExchanges[step.id] = exchange.exchange_date
+    }
+  }
+  const mergedStepDates = { ...stepDates, ...stepDatesFromExchanges }
+
+  const currentStepId = job?.sub_status || job?.status || 'to_apply'
+  const currentStepIndex = allSteps.findIndex(s => s.id === currentStepId)
+  const currentStepLabel = allSteps.find(s => s.id === currentStepId)?.label ?? ''
+  const isInterviewStep =
+    (INTERVIEW_STEP_IDS.includes(currentStepId) || customSteps.some(cs => cs.id === currentStepId))
+    && !hiddenSteps.includes(currentStepId)
+
+  useEffect(() => {
+    if (currentStepId) loadCoverLetterVisibility(currentStepId)
+  }, [currentStepId, loadCoverLetterVisibility])
+
+  // ─── FIX : handleStepClick avec refresh session + filet de sécurité API ───
+  const handleStepClick = async (stepId: string) => {
+    if (!job) return
+    const globalStatus = STATUS_MAP[stepId] ?? 'in_progress'
+    const patch = { sub_status: stepId, status: globalStatus, updated_at: new Date().toISOString() }
+
+    // Mise à jour optimiste de l'UI immédiatement
+    setJob(prev => prev ? { ...prev, ...patch } : prev)
+
+    // 1. Rafraîchir la session pour éviter les échecs silencieux à la réouverture
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session && typeof window !== 'undefined') {
+      (window as any).__jfmj_token = session.access_token
+    }
+
+    // 2. Sauvegarde directe Supabase
+    const { error } = await supabase.from('jobs').update(patch).eq('id', jobId)
+
+    // 3. Si la sauvegarde directe échoue → filet de sécurité via API
+    if (error) {
+      console.error('Erreur sauvegarde étape (direct Supabase):', error)
+      await fetch(`/api/jobs?id=${jobId}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ sub_status: stepId, status: globalStatus }),
+      })
+    }
+  }
+
+  const handleHideBaseStep = useCallback(async (stepId: string) => {
+    const updated = [...hiddenSteps, stepId]
+    setHiddenSteps(updated)
+    await fetch(`/api/jobs?id=${jobId}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ hidden_steps: updated }),
+    })
+  }, [hiddenSteps, jobId])
+
+  const handleStepDatesChange = useCallback(async (dates: Record<string, string>) => {
+    setStepDates(dates)
+    await fetch(`/api/jobs?id=${jobId}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ step_dates: dates }),
+    })
+  }, [jobId])
+
+  const patchJob = useCallback(async (field: string, value: any) => {
+    setJob(prev => prev ? { ...prev, [field]: value } : prev)
+    await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }) })
+  }, [jobId])
+
+  const handleNotesChange = (val: string) => {
+    setNotes(val)
+    if (notesTimer.current) clearTimeout(notesTimer.current)
+    notesTimer.current = setTimeout(async () => {
+      await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ notes: val }) })
+    }, 800)
+  }
+
+  // ─── RGPD : upload après acceptation ────────────────────────────────────────
+  const handleFileSelected = (file: File, docType: 'cv' | 'cover_letter') => {
+    if (!file) return
+    setPendingUpload({ file, docType })
+    setRgpdModalOpen(true)
+  }
+
+  const handleRgpdAccept = () => {
+    if (pendingUpload) {
+      handleDocumentUpload(pendingUpload.file, pendingUpload.docType)
+    }
+    setPendingUpload(null)
+    setRgpdModalOpen(false)
+  }
+
+  const handleRgpdClose = () => {
+    setPendingUpload(null)
+    setRgpdModalOpen(false)
+  }
+
+  const handleDocumentUpload = async (file: File, docType: 'cv' | 'cover_letter') => {
+    if (!file || !userId) return
+    setUploadingDoc(docType)
+    try {
+      const supabase = createClient()
+      const ext = file.name.split('.').pop()
+      const path = `${userId}/${jobId}/${docType}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('job-documents')
+        .upload(path, file, { upsert: true })
+      if (uploadError) throw uploadError
+      const { data: signedData } = await supabase.storage
+        .from('job-documents')
+        .createSignedUrl(path, 60 * 60 * 24 * 365)
+      if (!signedData?.signedUrl) throw new Error('URL non générée')
+      const urlField = docType === 'cv' ? 'cv_url' : 'cover_letter_url'
+      await fetch(`/api/jobs?id=${jobId}`, {
+        method: 'PATCH', headers: authHeaders(),
+        body: JSON.stringify({ [urlField]: signedData.signedUrl }),
+      })
+      setJob(prev => prev ? { ...prev, [urlField]: signedData.signedUrl } : prev)
+    } catch (err) {
+      console.error('Erreur upload document:', err)
+      alert('Erreur lors du chargement du fichier. Veuillez réessayer.')
+    } finally {
+      setUploadingDoc(null)
+    }
+  }
+
+  const handleDeleteDocument = async (docType: 'cv' | 'cover_letter') => {
+    if (!confirm('Supprimer ce document ?')) return
+    const urlField = docType === 'cv' ? 'cv_url' : 'cover_letter_url'
+    await fetch(`/api/jobs?id=${jobId}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [urlField]: null }) })
+    setJob(prev => prev ? { ...prev, [urlField]: null } : prev)
+  }
+
+  function openEditModal() {
+    if (!job) return
+    setEditForm({
+      title: job.title || '', company: job.company || '', location: job.location || '',
+      job_type: job.job_type || 'CDI', salary_text: job.salary_text || '',
+      description: job.description || '', company_description: job.company_description || '',
+      company_website: job.company_website || '', company_size: job.company_size || '',
+      recruitment_process: job.recruitment_process || '',
+    })
+    setShowEditModal(true)
+  }
+
+  async function saveEdit() {
+    const res = await fetch('/api/jobs', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: jobId, ...editForm }) })
+    const data = await res.json()
+    if (data.job) { setJob(data.job); setShowEditModal(false) }
+  }
+
+  async function deleteJob() {
+    if (deleteConfirmText !== 'SUPPRIMER') return
+    setDeleteLoading(true)
+    await fetch(`/api/jobs?id=${jobId}`, { method: 'DELETE', headers: authHeaders() })
+    router.push('/dashboard')
+  }
+
+  // Ajoute un échange générique (depuis le bouton "+ Ajouter un échange" de l'historique)
+  const addExchange = async () => {
+    const step = allSteps.find(s => s.id === currentStepId)
+    const res = await fetch('/api/jobs/exchanges', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        job_id: jobId,
+        title: 'Nouvel échange',
+        exchange_type: 'autre',
+        exchange_date: new Date().toISOString().split('T')[0],
+        step_label: step?.label ?? null,
+        step_number: step?.num ?? null,
+      })
+    })
+    if (res.ok) { const newEx = await res.json(); setExchanges(prev => [...prev, newEx]) }
+  }
+
+  // Ajoute un échange pré-titré pour le debrief de l'étape en cours
+  // (appelé depuis le bloc Debrief de la Phase 2, quand aucun debrief n'existe encore)
+  const addDebriefExchange = async () => {
+    const step = allSteps.find(s => s.id === currentStepId)
+    const res = await fetch('/api/jobs/exchanges', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        job_id: jobId,
+        title: `Debrief — ${step?.label ?? 'Entretien'}`,
+        exchange_type: 'rdv',
+        exchange_date: new Date().toISOString().split('T')[0],
+        step_label: step?.label ?? null,
+        step_number: step?.num ?? null,
+      })
+    })
+    if (res.ok) { const newEx = await res.json(); setExchanges(prev => [...prev, newEx]) }
+  }
+
+  const updateExchange = async (id: string, field: string, value: string) => {
+    setExchanges(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e))
+    await fetch(`/api/jobs/exchanges?id=${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ [field]: value }) })
+  }
+
+  const deleteExchange = async (id: string) => {
+    await fetch(`/api/jobs/exchanges?id=${id}`, { method: 'DELETE', headers: authHeaders() })
+    setExchanges(prev => prev.filter(e => e.id !== id))
+  }
+
+  function openCreateContact(transmittedBy: string) {
+    const parts = transmittedBy.trim().split(/\s+/)
+    setContactFirstName(parts[0] || ''); setContactLastName(parts.slice(1).join(' ') || '')
+    setContactRole(''); setContactCompany(job?.company || '')
+    setContactEmail(''); setContactPhone(''); setContactLinkedin('')
+    setContactSaved(false); setShowCreateContact(true)
+  }
+
+  async function saveContact() {
+    setContactSaving(true)
+    const fullName = [contactFirstName.trim(), contactLastName.trim()].filter(Boolean).join(' ')
+    const token = getToken()
+    const res = await fetch('/api/contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ name: fullName, role: contactRole.trim() || null, company: contactCompany.trim() || null, email: contactEmail.trim() || null, phone: contactPhone.trim() || null, linkedin: contactLinkedin.trim() || null, job_id: jobId }),
+    })
+    setContactSaving(false)
+    if (res.ok) {
+      setContactSaved(true)
+      await loadContacts()
+      await loadJobContacts()
+      setTimeout(() => setShowCreateContact(false), 1500)
+    }
+  }
+
+  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#999', fontWeight: 700, fontSize: 15 }}>Chargement…</p></div>
+  if (!job) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#E8151B', fontWeight: 700, fontSize: 15 }}>Offre introuvable.</p></div>
+
+  const atsScore = job.ats_score ?? null
+  const atsKw = job.ats_keywords ?? { present: [], missing: [] }
+  const card: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '1.5px solid #EBEBEB' }
+
+  const sectionLabel: React.CSSProperties = {
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '1.5px',
+    color: '#555',
+    marginBottom: 14,
+    display: 'block',
+    fontFamily: FONT,
+  }
+
+  const inp: React.CSSProperties = { width: '100%', border: '1.5px solid #eee', borderRadius: 8, padding: '9px 12px', fontSize: 14, fontFamily: FONT, outline: 'none', background: '#fff', color: '#111', boxSizing: 'border-box', fontWeight: 500 }
+  const ta: React.CSSProperties = { ...inp, resize: 'vertical', minHeight: 80, lineHeight: '1.6' }
+
+  const transmittedBy = extractTransmittedBy(job.notes)
+  const transmittedByAlreadyContact = transmittedBy
+    ? contacts.some(c => c.name.toLowerCase().includes(transmittedBy.toLowerCase().split(' ')[0].toLowerCase()))
+    : false
+
+  const docItems = [
+    { docType: 'cv' as const, sent: job.cv_sent, name: 'CV', url: job.cv_url, inputRef: cvInputRef },
+    { docType: 'cover_letter' as const, sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url, inputRef: coverLetterInputRef },
+  ]
+
+  // Props communs passés aux 3 instances de JobInterviewDetails
+  const interviewSectionProps = {
+    job,
+    contacts,
+    onPatch: patchJob,
+    onJobChange: (field: string, value: any) => setJob(prev => prev ? { ...prev, [field]: value } : prev),
+    onCreateContact: () => openCreateContact(''),
+    currentStepId,
+    currentStepLabel,
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: FONT }}>
-      <style>{GLOBAL_STYLES}</style>
+    <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, display: 'flex' }}>
+      <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+      <style>{`
+        .jfmj-sidebar { display: flex; }
+        .jfmj-main { flex: 1; padding: 24px 28px 64px; min-width: 0; }
+        @media (max-width: 900px) { .jfmj-sidebar { display: none; } .jfmj-main { padding: 16px 16px 48px; } }
+        .jfmj-docs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+        @media (max-width: 600px) { .jfmj-docs-grid { grid-template-columns: 1fr; } }
+        .jfmj-back-mobile { display: none; }
+        @media (max-width: 900px) { .jfmj-back-mobile { display: flex !important; } }
+        .interview-type-btn { flex: 1; padding: 8px 6px; font-size: 12px; font-weight: 700; border-radius: 8px; border: 2px solid #E0E0E0; background: #fff; color: #888; cursor: pointer; font-family: ${FONT}; transition: all 0.15s; }
+        .interview-type-btn.active { border-color: #F5C400; background: #FEF9E0; color: #111; }
+        .interview-inp { width: 100%; border: 1.5px solid #eee; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: ${FONT}; outline: none; background: #fff; color: #111; box-sizing: border-box; font-weight: 500; }
+        .interview-inp:focus { border-color: #F5C400; }
+        .btn-edit { background: #F9F9F7; color: #111; font-size: 12px; font-weight: 800; padding: 8px 16px; border-radius: 8px; border: 1.5px solid #ccc; cursor: pointer; font-family: ${FONT}; white-space: nowrap; transition: all 0.15s; }
+        .btn-edit:hover { background: #fff; border-color: #111; }
+        .btn-delete { background: transparent; color: #E8151B; font-size: 12px; font-weight: 800; padding: 8px 16px; border-radius: 8px; border: 1.5px solid #E8151B; cursor: pointer; font-family: ${FONT}; white-space: nowrap; transition: all 0.15s; }
+        .btn-delete:hover { background: #FEF2F2; }
+        .fi { width: 100%; border: 1.5px solid #E0E0E0; border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: ${FONT}; outline: none; background: #fff; color: #111; box-sizing: border-box; font-weight: 500; margin-bottom: 12px; }
+        .fi:focus { border-color: #111; }
+        .fl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #888; display: block; margin-bottom: 5px; font-family: ${FONT}; }
+        .doc-upload-btn { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 7px; border: 1.5px solid #EBEBEB; cursor: pointer; font-family: ${FONT}; transition: all 0.15s; }
+        .doc-upload-btn:hover { border-color: #111; }
+      `}</style>
 
-      <Sidebar
-        view={view} setView={setView} firstName={firstName} userEmail={userEmail}
-        jobCount={jobs.length} contactCount={contacts.length}
-        interviewCount={stats.interviews} onSettings={() => setShowSettings(true)}
-      />
+      <div className="jfmj-sidebar">
+        <JobSidebar currentJobId={jobId} onSelect={(id) => router.push(`/dashboard/job/${id}`)} />
+      </div>
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', flexShrink: 0 }}>
-          <div>
-            <div style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
-            <div style={{ fontSize: '2rem', fontWeight: 900, color: '#111' }}>
-              Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            {view === 'kanban' && (
-              <>
-                <button
-                  className="btn-main"
-                  style={{ background: '#F5C400', boxShadow: '2px 2px 0 #111', color: '#111' }}
-                  onClick={() => {
-                    setEventInitialData(null);
-                    setActionsVisible(true);
-                    setTimeout(() => setTriggerAddAction(n => n + 1), 50);
-                  }}
-                >
-                  + Ajouter un événement
-                </button>
-                <button
-                  className="btn-main"
-                  style={{ background: '#fff', boxShadow: '2px 2px 0 #111', color: '#111' }}
-                  onClick={() => {
-                    setPersonalActionInitialData(null);
-                    setPersonalActionsVisible(true);
-                    setTimeout(() => setTriggerAddPersonalAction(n => n + 1), 50);
-                  }}
-                >
-                  + Ajouter une action
-                </button>
-              </>
-            )}
-            {mainButtonLabel && (
-              <button className="btn-main" onClick={() => {
-                if (view === 'contacts') setTriggerAddContact(n => n + 1);
-                else if (view === 'actions') { setEventInitialData(null); setTriggerAddAction(n => n + 1); }
-                else if (view === 'personal_actions') { setPersonalActionInitialData(null); setTriggerAddPersonalAction(n => n + 1); }
-                else openAddJobModal();
-              }}>
-                {mainButtonLabel}
-              </button>
-            )}
-          </div>
+      <div className="jfmj-main">
+        <div className="jfmj-back-mobile" style={{ display: 'none', marginBottom: 14 }}>
+          <button onClick={() => router.push('/dashboard')} style={{ background: '#fff', border: '1.5px solid #EBEBEB', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: '#111', cursor: 'pointer', fontFamily: FONT }}>← Tableau de bord</button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
+        <JobHeader
+          job={job} jobId={jobId}
+          onBack={() => router.back()}
+          onEdit={openEditModal}
+          onDelete={() => { setDeleteConfirmText(''); setShowDeleteModal(true) }}
+          onGenerateCV={() => router.push(`/dashboard/editor?job_id=${jobId}`)}
+        />
 
-          {['kanban', 'list', 'stats'].includes(view) && (
-            <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
-              <div style={{ padding: '10px 16px', borderBottom: '2px solid #111', background: '#FAFAFA' }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
-                  📊 Statistiques
-                </span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)' }}>
-                {[
-                  { l: "Nombre d'offres",          v: stats.total,      c: '#111'    },
-                  { l: 'Offres envie de postuler', v: stats.toApply,    c: '#B8900A' },
-                  { l: 'Offres postulées',         v: stats.applied,    c: '#1B4F72' },
-                  { l: 'Offres en cours',          v: stats.interviews, c: '#1A7A4A' },
-                  { l: 'Offres archivées',         v: stats.archived,   c: '#888'    },
-                ].map((s, i, arr) => (
-                  <div key={s.l} style={{ padding: '14px 16px', borderRight: i < arr.length - 1 ? '1px solid #E0E0E0' : 'none' }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: s.c }}>{s.v}</div>
-                  </div>
-                ))}
+        {transmittedBy && !transmittedByAlreadyContact && (
+          <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 12, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>👤</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#5B21B6' }}>Offre transmise par <strong>{transmittedBy}</strong></div>
+                <div style={{ fontSize: 11, color: '#7C3AED', fontWeight: 500 }}>Ce contact n&apos;est pas encore dans vos contacts.</div>
               </div>
             </div>
-          )}
+            <button onClick={() => openCreateContact(transmittedBy)}
+              style={{ background: '#7C3AED', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap', boxShadow: '2px 2px 0 #111' }}>
+              + Créer la fiche contact
+            </button>
+          </div>
+        )}
 
-          {['kanban', 'list'].includes(view) && (
-            <DashboardCalendar
-              jobs={jobs}
-              stagesLabelMap={stagesLabelMap}
-              onJobClick={handleCalendarJobClick}
-              onActionClick={handleCalendarActionClick}
-              onDateChange={handleCalendarDateChange}
-              onEmptySlotClick={handleEmptySlotClick}
+        {(atsScore !== null || atsKw.present.length > 0 || atsKw.missing.length > 0) && (
+          <div style={{ ...card, border: '1.5px solid #F5C400', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+            {atsScore !== null && (
+              <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
+                <svg width="72" height="72" viewBox="0 0 72 72" style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+                  <circle cx="36" cy="36" r="28" fill="none" stroke="#F0F0F0" strokeWidth="6" />
+                  <circle cx="36" cy="36" r="28" fill="none" stroke="#F5C400" strokeWidth="6" strokeDasharray="176" strokeDashoffset={176 - (176 * atsScore / 100)} strokeLinecap="round" />
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 20, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
+                  <small style={{ fontSize: 10, color: '#999', fontWeight: 700, fontFamily: FONT }}>/100</small>
+                </div>
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 4, fontFamily: FONT }}>Score ATS — Compatibilité avec l&apos;offre</h3>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, marginBottom: 8, fontFamily: FONT }}>{atsScore !== null && atsScore >= 70 ? 'Bonne compatibilité. Quelques mots-clés à ajouter.' : 'Des mots-clés importants manquent dans votre CV.'}</p>
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {atsKw.present.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: '#E8F5E9', color: '#2E7D32', fontFamily: FONT }}>{k} ✓</span>)}
+                {atsKw.missing.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: '#FFEBEE', color: '#C62828', fontFamily: FONT }}>{k} ✗</span>)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <JobStepProgress
+          jobId={jobId}
+          userId={userId}
+          currentStepId={currentStepId}
+          customSteps={customSteps}
+          allSteps={allSteps}
+          allStepsMerged={allStepsMerged}
+          currentStepIndex={currentStepIndex}
+          onStepClick={handleStepClick}
+          onCustomStepsChange={setCustomSteps}
+          onHideBaseStep={handleHideBaseStep}
+          stepDates={mergedStepDates}
+          onStepDatesChange={handleStepDatesChange}
+        />
+
+        {currentStepId === 'archived' && (
+          <JobArchivedDetails
+            archivedReason={(job as any).archived_reason ?? null}
+            archivedNote={(job as any).archived_note ?? null}
+            onPatch={patchJob}
+            onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
+            currentStepNum={currentStepIndex + 1}
+          />
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ÉTAPE D'ENTRETIEN : Phase AVANT / Phase APRÈS avec bandeaux dédiés  */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {isInterviewStep && (
+          <>
+            {/* ─── PHASE 1 : AVANT L'ENTRETIEN ─── */}
+            <PhaseBanner phase="before" stepNum={currentStepIndex + 1} stepLabel={currentStepLabel} />
+
+            <JobInterviewDetails section="logistics" {...interviewSectionProps} />
+
+            <JobStepActions
+              jobId={jobId}
+              userId={userId}
+              currentStepId={currentStepId}
+              currentStepLabel={currentStepLabel}
+              currentStepIndex={currentStepIndex}
+              jobTitle={job.title}
             />
-          )}
 
-          {view === 'kanban' && (
-            <div style={{ marginBottom: '0.75rem', marginTop: '0.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, boxShadow: '3px 3px 0 #111', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#FAFAFA', borderBottom: '2px solid #111' }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
-                  📋 Candidatures
-                </span>
-                <span style={{ fontSize: 12, color: '#aaa', fontWeight: 600 }}>
-                  {jobs.length} offre{jobs.length > 1 ? 's' : ''}
-                </span>
-              </div>
-              <KanbanView
-                jobs={jobs} stages={stages}
-                stagesLabelMap={stagesLabelMap}
-                contactJobIds={contactJobIds}
-                onJobClick={setSelectedJob} onAddJob={openAddJobModal}
-                onOpenSettings={() => setShowSettings(true)}
-                onRefresh={handleRefresh} onStatusChange={updateJobStatus}
-              />
-            </div>
-          )}
+            <JobInterviewDetails section="preparation" {...interviewSectionProps} />
 
-          {view === 'list' && (
-            <ListView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onDeleteJob={deleteJob} onAddJob={openAddJobModal} />
-          )}
-          {view === 'contacts' && (
-            <ContactsView contacts={contacts} onAddContact={() => setTriggerAddContact(n => n + 1)} onDeleteContact={deleteContact} onRefresh={fetchContacts} />
-          )}
-          {view === 'agenda' && (
-            <AgendaView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onBackToKanban={() => setView('kanban')} />
-          )}
-          {view === 'stats' && (
-            <StatsView jobs={jobs} stages={stages} contactCount={contacts.length} />
-          )}
+            {/* ─── PHASE 2 : APRÈS L'ENTRETIEN ─── */}
+            <PhaseBanner phase="after" stepNum={currentStepIndex + 1} stepLabel={currentStepLabel} />
 
-          {view === 'kanban' && (
-            <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 16px',
-                borderBottom: actionsVisible ? '2px solid #111' : 'none',
-                background: '#FAFAFA',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
-                    ⚡ Événements
-                  </span>
-                  {actionsCount > 0 && (
-                    <span style={{ background: '#111', color: '#fff', fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 10 }}>
-                      {actionsCount}
-                    </span>
-                  )}
+            {/* Debrief : 3 champs liés à l'échange en cours pour cette étape */}
+            <JobInterviewDebrief
+              exchanges={exchanges}
+              currentStepLabel={currentStepLabel}
+              onAdd={addDebriefExchange}
+              onUpdate={updateExchange}
+            />
+
+            <JobInterviewDetails section="followup" {...interviewSectionProps} />
+          </>
+        )}
+
+        {/* Pour les étapes hors entretien (to_apply, applied, offer…) et non archivées : */}
+        {/* on affiche simplement les actions à faire, sans les bandeaux de phase. */}
+        {!isInterviewStep && currentStepId !== 'archived' && (
+          <JobStepActions
+            jobId={jobId}
+            userId={userId}
+            currentStepId={currentStepId}
+            currentStepLabel={currentStepLabel}
+            currentStepIndex={currentStepIndex}
+            jobTitle={job.title}
+          />
+        )}
+
+        <JobExchanges
+          exchanges={exchanges}
+          onAdd={addExchange}
+          onUpdate={updateExchange}
+          onDelete={deleteExchange}
+        />
+
+        {/* ─── Bloc CONTACTS liés à cette offre ─── */}
+        <JobContacts
+          contacts={jobContacts}
+          interviewContacts={job.interview_contacts ?? {}}
+          allSteps={allSteps}
+          onAddContact={() => openCreateContact('')}
+          onContactsChanged={() => { loadJobContacts(); loadContacts() }}
+        />
+
+        <div className="jfmj-docs-grid">
+          <div style={{ ...card, marginBottom: 0 }}>
+            <span style={sectionLabel}>Documents</span>
+            <input
+              ref={cvInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) handleFileSelected(file, 'cv')
+                e.target.value = ''
+              }}
+            />
+            <input
+              ref={coverLetterInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) handleFileSelected(file, 'cover_letter')
+                e.target.value = ''
+              }}
+            />
+            {docItems.map(doc => (
+              <div key={doc.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F5F5F0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <div style={{ width: 22, height: 22, background: doc.url ? '#111' : '#eee', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {doc.url && <svg viewBox="0 0 12 12" fill="none" width="10" height="10"><path d="M2 6l3 3 5-5" stroke="#F5C400" strokeWidth="2.5" strokeLinecap="round" /></svg>}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: '#222', margin: 0, fontFamily: FONT }}>{doc.name}</p>
+                    <p style={{ fontSize: 11, color: doc.url ? '#1A7A4A' : '#aaa', margin: 0, fontFamily: FONT, fontWeight: 500 }}>
+                      {uploadingDoc === doc.docType ? '⏳ Chargement…' : doc.url ? '✓ Fichier chargé' : 'Aucun fichier'}
+                    </p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setActionsVisible(v => !v)}
-                  style={{ fontSize: 11, fontWeight: 800, fontFamily: FONT, background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}
-                >
-                  {actionsVisible ? 'Masquer' : 'Afficher'}
-                </button>
-              </div>
-              {actionsVisible && (
-                <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} compact initialDateTime={eventInitialData} />
-              )}
-            </div>
-          )}
-
-          {view === 'kanban' && (
-            <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 16px',
-                borderBottom: personalActionsVisible ? '2px solid #111' : 'none',
-                background: '#FAFAFA',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
-                    ⚡ Actions
-                  </span>
-                  {personalActionsCount > 0 && (
-                    <span style={{ background: '#111', color: '#fff', fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 10 }}>
-                      {personalActionsCount}
-                    </span>
-                  )}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {doc.url && <button className="doc-upload-btn" onClick={() => window.open(doc.url!, '_blank')} style={{ background: '#F9F9F7', color: '#111' }}>Voir</button>}
+                  <button className="doc-upload-btn" onClick={() => doc.inputRef.current?.click()} disabled={uploadingDoc !== null} style={{ background: doc.url ? '#F9F9F7' : '#111', color: doc.url ? '#111' : '#F5C400' }}>
+                    {uploadingDoc === doc.docType ? '…' : doc.url ? 'Remplacer' : 'Charger'}
+                  </button>
+                  {doc.url && <button className="doc-upload-btn" onClick={() => handleDeleteDocument(doc.docType)} style={{ background: 'transparent', color: '#E8151B', borderColor: '#E8151B' }}>✕</button>}
                 </div>
-                <button
-                  onClick={() => setPersonalActionsVisible(v => !v)}
-                  style={{ fontSize: 11, fontWeight: 800, fontFamily: FONT, background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}
-                >
-                  {personalActionsVisible ? 'Masquer' : 'Afficher'}
-                </button>
               </div>
-              {personalActionsVisible && (
-                <PersonalActionsSection triggerOpen={triggerAddPersonalAction} onCountChange={setPersonalActionsCount} compact initialDateTime={personalActionInitialData} />
-              )}
-            </div>
-          )}
-
-          {view === 'actions' && (
-            <ActionsSection triggerOpen={triggerAddAction} onCountChange={setActionsCount} />
-          )}
-
-          {view === 'personal_actions' && (
-            <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
-              <div style={{ padding: '10px 16px', borderBottom: '2px solid #111', background: '#FAFAFA', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: FONT }}>
-                  ⚡ Actions
-                </span>
-                {personalActionsCount > 0 && (
-                  <span style={{ background: '#111', color: '#fff', fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 10 }}>
-                    {personalActionsCount}
-                  </span>
-                )}
-              </div>
-              <PersonalActionsSection triggerOpen={triggerAddPersonalAction} onCountChange={setPersonalActionsCount} />
-            </div>
-          )}
+            ))}
+            <SecureStorageNotice compact />
+          </div>
+          <div style={{ ...card, marginBottom: 0 }}>
+            <span style={sectionLabel}>Mes notes</span>
+            <textarea value={notes} onChange={e => handleNotesChange(e.target.value)} placeholder="Impressions générales, contacts, points à surveiller..." style={{ ...ta, minHeight: 100 }} onFocus={e => { e.target.style.borderColor = '#F5C400' }} onBlur={e => { e.target.style.borderColor = '#eee' }} />
+          </div>
         </div>
-      </main>
 
-      {selectedJob && (
-        <JobDetailPanel
-          job={selectedJob} stages={stages} userId={userId} accessToken={accessToken}
-          onClose={() => setSelectedJob(null)} onStatusChange={updateJobStatus}
-          onFieldUpdate={updateJobField} onEdit={openEditJobModal} onDelete={deleteJob}
+        <div style={card}>
+          <span style={sectionLabel}>Description du poste</span>
+          <div style={{ position: 'relative', maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden' }}>
+            <div
+              dangerouslySetInnerHTML={{ __html: job.description }}
+              style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500 }}
+            />
+            {!descExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(transparent, #fff)' }} />}
+          </div>
+          <span onClick={() => setDescExpanded(v => !v)} style={{ fontSize: 13, fontWeight: 700, color: '#111', textDecoration: 'underline', cursor: 'pointer', marginTop: 12, display: 'inline-block', fontFamily: FONT }}>
+            {descExpanded ? 'Réduire ↑' : 'Lire la suite →'}
+          </span>
+        </div>
+
+        {(job.recruitment_process) && (
+          <div style={card}>
+            <span style={sectionLabel}>Processus de recrutement</span>
+            <div style={{ position: 'relative', maxHeight: recruitmentExpanded ? 'none' : 120, overflow: 'hidden' }}>
+              <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500, whiteSpace: 'pre-wrap' }}>
+                {job.recruitment_process}
+              </div>
+              {!recruitmentExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, background: 'linear-gradient(transparent, #fff)' }} />}
+            </div>
+            <span onClick={() => setRecruitmentExpanded(v => !v)} style={{ fontSize: 13, fontWeight: 700, color: '#111', textDecoration: 'underline', cursor: 'pointer', marginTop: 10, display: 'inline-block', fontFamily: FONT }}>
+              {recruitmentExpanded ? 'Réduire ↑' : 'Lire la suite →'}
+            </span>
+          </div>
+        )}
+
+        <JobCompanySection job={job} expanded={companyExpanded} onToggle={() => setCompanyExpanded(v => !v)} />
+      </div>
+
+      {job && (
+        <ParcoursBannerModal
+          jobId={jobId}
+          status={job.status}
+          stepDates={mergedStepDates}
         />
       )}
 
-      {selectedActionDetail && (
-        <ActionDetailPanel
-          kind={selectedActionDetail.kind}
-          data={selectedActionDetail.data}
-          jobs={jobOptionsForPanel}
-          onClose={() => setSelectedActionDetail(null)}
-        />
+      {showEditModal && (
+        <EditJobModal editForm={editForm} onChange={(field, value) => setEditForm(p => ({ ...p, [field]: value }))} onSave={saveEdit} onClose={() => setShowEditModal(false)} />
       )}
 
-      {showAddJob && (
-        <JobModal
-          editingJobId={editingJobId} newJob={newJob} setNewJob={setNewJob} stages={stages}
-          importUrl={importUrl} setImportUrl={setImportUrl}
-          addJobMode={addJobMode} setAddJobMode={setAddJobMode}
-          importError={importError} setImportError={setImportError}
-          importLoading={importLoading} onImport={importJobFromUrl} onSave={saveJob}
-          onSetExtra={(d: Record<string, string>) => { extraJobFields.current = d; }}
-          onClose={() => setShowAddJob(false)}
-        />
-      )}
-
-      {showSettings && (
-        <SettingsModal
-          stages={stages} newStageName={newStageName} setNewStageName={setNewStageName}
-          newStageColor={newStageColor} setNewStageColor={setNewStageColor}
-          newStagePosition={newStagePosition} setNewStagePosition={setNewStagePosition}
-          onAddStage={addCustomStage} onDeleteStage={deleteCustomStage}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
-
-      {deleteJobTarget && (
+      {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 30, width: '100%', maxWidth: 420, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B', fontFamily: FONT }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 30, width: '100%', maxWidth: 420, border: '2px solid #E8151B', boxShadow: '4px 4px 0 #E8151B' }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
-              <h3 style={{ fontSize: 18, fontWeight: 900, color: '#E8151B', margin: '0 0 8px', fontFamily: FONT }}>Supprimer cette offre ?</h3>
-              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>
-                Cette action est <strong>irréversible</strong>.<br />Toutes les données seront supprimées.
-              </p>
+              <h3 style={{ fontSize: 18, fontWeight: 900, color: '#E8151B', margin: '0 0 8px', fontFamily: FONT }}>Suppression définitive</h3>
+              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, margin: 0, fontFamily: FONT }}>Cette action est <strong>irréversible</strong>.<br />Toutes les données seront supprimées.</p>
             </div>
-            <div style={{ background: '#FEF2F2', borderRadius: 8, padding: '12px 14px', marginBottom: 20 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#111', margin: '0 0 2px', fontFamily: FONT }}>{deleteJobTarget.title}</p>
-              <p style={{ fontSize: 12, color: '#888', margin: 0, fontFamily: FONT }}>{deleteJobTarget.company}</p>
+            <div style={{ background: '#FEF2F2', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#111', margin: '0 0 4px', fontFamily: FONT }}>{job.title}</p>
+              <p style={{ fontSize: 12, color: '#888', margin: 0, fontFamily: FONT }}>{job.company}</p>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => setDeleteJobTarget(null)}
-                style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}
-              >
-                Annuler
-              </button>
-              <button
-                onClick={confirmDeleteJob}
-                disabled={deleteJobLoading}
-                style={{ flex: 1, background: '#E8151B', color: '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: FONT, opacity: deleteJobLoading ? 0.7 : 1 }}
-              >
-                {deleteJobLoading ? '…' : 'Supprimer'}
+            <p style={{ fontSize: 12, color: '#555', marginBottom: 8, fontFamily: FONT }}>Pour confirmer, tapez : <strong style={{ color: '#E8151B' }}>SUPPRIMER</strong></p>
+            <input className="fi" value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder="SUPPRIMER" style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em', borderColor: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#E0E0E0' }} autoFocus />
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={() => setShowDeleteModal(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
+              <button onClick={deleteJob} disabled={deleteConfirmText !== 'SUPPRIMER' || deleteLoading}
+                style={{ flex: 1, background: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#eee', color: deleteConfirmText === 'SUPPRIMER' ? '#fff' : '#aaa', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: deleteConfirmText === 'SUPPRIMER' ? 'pointer' : 'not-allowed', fontFamily: FONT }}>
+                {deleteLoading ? '…' : 'Supprimer définitivement'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {slotCreationTarget && (
-        <div
-          onClick={() => setSlotCreationTarget(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: 20 }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 460, border: '2px solid #111', boxShadow: '5px 5px 0 #111', fontFamily: FONT }}
-          >
-            <div style={{ padding: '18px 24px', borderBottom: '2px solid #111', background: '#FAFAFA', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Créer à cette date</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginTop: 2, textTransform: 'capitalize' }}>
-                  📅 {formatSlotDate(slotCreationTarget.date, slotCreationTarget.hasTime)}
+      {showCreateContact && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 480, border: '2px solid #111', boxShadow: '4px 4px 0 #7C3AED', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: 0, fontFamily: FONT }}>👤 Créer une fiche contact</h3>
+              <button onClick={() => setShowCreateContact(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
+            </div>
+            <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 12, fontWeight: 700, color: '#5B21B6', fontFamily: FONT }}>
+              🔗 Ce contact sera lié à : <strong>{job.title}</strong> — {job.company}
+            </div>
+            {contactSaved ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>✅</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#1A7A4A', fontFamily: FONT }}>Contact créé avec succès !</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Prénom *</label><input className="fi" value={contactFirstName} onChange={e => setContactFirstName(e.target.value)} placeholder="Philippe" autoFocus /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Nom *</label><input className="fi" value={contactLastName} onChange={e => setContactLastName(e.target.value)} placeholder="Martin" /></div>
                 </div>
-              </div>
-              <button
-                onClick={() => setSlotCreationTarget(null)}
-                style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#888', lineHeight: 1, padding: 0 }}
-              >×</button>
-            </div>
-
-            <div style={{ padding: 24 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#111', marginBottom: 14 }}>Que souhaitez-vous créer ?</div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <button
-                  onClick={openEventFromSlot}
-                  style={{
-                    background: '#F5C400', border: '2px solid #111', borderRadius: 10,
-                    padding: '20px 14px', cursor: 'pointer', textAlign: 'left',
-                    fontFamily: FONT, boxShadow: '3px 3px 0 #111',
-                  }}
-                >
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>📅</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: '#111', marginBottom: 4 }}>Événement</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#111', opacity: 0.75, lineHeight: 1.4 }}>
-                    Atelier, formation, RDV conseil, bilan de compétences…
-                  </div>
-                </button>
-
-                <button
-                  onClick={openActionFromSlot}
-                  style={{
-                    background: '#fff', border: '2px solid #111', borderRadius: 10,
-                    padding: '20px 14px', cursor: 'pointer', textAlign: 'left',
-                    fontFamily: FONT, boxShadow: '3px 3px 0 #111',
-                  }}
-                >
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>⚡</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: '#111', marginBottom: 4 }}>Action</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#555', lineHeight: 1.4 }}>
-                    Candidature externe, prise de contact réseau, mise à jour profil…
-                  </div>
-                </button>
-              </div>
-
-              <div style={{ textAlign: 'center', marginTop: 18 }}>
-                <button
-                  onClick={() => setSlotCreationTarget(null)}
-                  style={{
-                    background: 'none', border: 'none', color: '#888',
-                    fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                    fontFamily: FONT, padding: '6px 12px',
-                  }}
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
+                <div style={{ marginBottom: 14 }}><label className="fl">Fonction / Poste</label><input className="fi" value={contactRole} onChange={e => setContactRole(e.target.value)} placeholder="Ex : DRH, Directeur Marketing..." /></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Entreprise</label><input className="fi" value={contactCompany} onChange={e => setContactCompany(e.target.value)} /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Email</label><input className="fi" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">Téléphone</label><input className="fi" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} /></div>
+                  <div style={{ marginBottom: 14 }}><label className="fl">LinkedIn</label><input className="fi" value={contactLinkedin} onChange={e => setContactLinkedin(e.target.value)} /></div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                  <button onClick={() => setShowCreateContact(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
+                  <button onClick={saveContact} disabled={!contactFirstName.trim() || contactSaving}
+                    style={{ flex: 2, background: (!contactFirstName.trim() || contactSaving) ? '#eee' : '#7C3AED', color: (!contactFirstName.trim() || contactSaving) ? '#aaa' : '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: contactFirstName.trim() ? 'pointer' : 'not-allowed', fontFamily: FONT, boxShadow: contactFirstName.trim() ? '2px 2px 0 #111' : 'none' }}>
+                    {contactSaving ? '…' : 'Créer le contact →'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      <OnboardingModal onAddJob={() => setAddJobMode('url')} />
+      {/* ─── Modale RGPD — s'affiche avant CHAQUE upload CV/LM ─── */}
+      <RgpdConsentModal
+        isOpen={rgpdModalOpen}
+        onClose={handleRgpdClose}
+        onAccept={handleRgpdAccept}
+        documentType={pendingUpload?.docType === 'cover_letter' ? 'lettre de motivation' : 'CV'}
+      />
     </div>
-  );
+  )
 }
