@@ -14,6 +14,7 @@ import JobStepActions from './components/JobStepActions'
 import EditJobModal from './components/EditJobModal'
 import ParcoursBannerModal from './components/ParcoursBannerModal'
 import JobArchivedDetails from './components/JobArchivedDetails'
+import JobContacts, { JobContactEnriched } from './components/JobContacts'
 import RgpdConsentModal from '@/components/RgpdConsentModal'
 import SecureStorageNotice from '@/components/SecureStorageNotice'
 
@@ -174,6 +175,7 @@ export default function JobDetailPage() {
   const [companyExpanded, setCompanyExpanded] = useState(true)
   const [notes, setNotes] = useState('')
   const [contacts, setContacts] = useState<ContactMin[]>([])
+  const [jobContacts, setJobContacts] = useState<JobContactEnriched[]>([])
   const [showCoverLetter, setShowCoverLetter] = useState(true)
   const notesTimer = useRef<NodeJS.Timeout | null>(null)
   const savedExchangeDatesRef = useRef<string>('')
@@ -243,6 +245,49 @@ export default function JobDetailPage() {
     if (data) setContacts(data)
   }, [])
 
+  // ─── Chargement des contacts LIÉS à cette offre (enrichis) ─────────────────
+  const loadJobContacts = useCallback(async () => {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setJobContacts([]); return }
+
+    const { data: cd } = await supabase
+      .from('contacts')
+      .select('id, name, role, company, email, phone, linkedin')
+      .eq('user_id', session.user.id)
+      .eq('job_id', jobId)
+      .order('name')
+
+    if (!cd || cd.length === 0) { setJobContacts([]); return }
+
+    const ids = cd.map(c => c.id)
+    const { data: nd } = await supabase
+      .from('contact_notes')
+      .select('contact_id, date')
+      .in('contact_id', ids)
+
+    const counts: Record<string, number> = {}
+    const lasts: Record<string, string> = {}
+    for (const n of (nd ?? [])) {
+      counts[n.contact_id] = (counts[n.contact_id] ?? 0) + 1
+      if (n.date && (!lasts[n.contact_id] || n.date > lasts[n.contact_id])) {
+        lasts[n.contact_id] = n.date
+      }
+    }
+
+    setJobContacts(cd.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      role: c.role ?? null,
+      company: c.company ?? null,
+      email: c.email ?? null,
+      phone: c.phone ?? null,
+      linkedin: c.linkedin ?? null,
+      notes_count: counts[c.id] ?? 0,
+      last_note_date: lasts[c.id] ?? null,
+    })))
+  }, [jobId])
+
   const loadCoverLetterVisibility = useCallback(async (stepId: string) => {
     const supabase = createClient()
     const { data } = await supabase
@@ -256,9 +301,9 @@ export default function JobDetailPage() {
 
   useEffect(() => {
     loadJob().then(() => {
-      Promise.all([loadCustomSteps(), loadExchanges(), loadContacts()]).finally(() => setLoading(false))
+      Promise.all([loadCustomSteps(), loadExchanges(), loadContacts(), loadJobContacts()]).finally(() => setLoading(false))
     })
-  }, [loadJob, loadCustomSteps, loadExchanges, loadContacts])
+  }, [loadJob, loadCustomSteps, loadExchanges, loadContacts, loadJobContacts])
 
   useEffect(() => { if (userId) loadContacts() }, [userId])
 
@@ -517,7 +562,12 @@ export default function JobDetailPage() {
       body: JSON.stringify({ name: fullName, role: contactRole.trim() || null, company: contactCompany.trim() || null, email: contactEmail.trim() || null, phone: contactPhone.trim() || null, linkedin: contactLinkedin.trim() || null, job_id: jobId }),
     })
     setContactSaving(false)
-    if (res.ok) { setContactSaved(true); await loadContacts(); setTimeout(() => setShowCreateContact(false), 1500) }
+    if (res.ok) {
+      setContactSaved(true)
+      await loadContacts()
+      await loadJobContacts()
+      setTimeout(() => setShowCreateContact(false), 1500)
+    }
   }
 
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#999', fontWeight: 700, fontSize: 15 }}>Chargement…</p></div>
@@ -687,6 +737,15 @@ export default function JobDetailPage() {
           onAdd={addExchange}
           onUpdate={updateExchange}
           onDelete={deleteExchange}
+        />
+
+        {/* ─── NOUVEAU : Bloc CONTACTS liés à cette offre ─── */}
+        <JobContacts
+          contacts={jobContacts}
+          interviewContacts={job.interview_contacts ?? {}}
+          allSteps={allSteps}
+          onAddContact={() => openCreateContact('')}
+          onContactsChanged={() => { loadJobContacts(); loadContacts() }}
         />
 
         <div className="jfmj-docs-grid">
