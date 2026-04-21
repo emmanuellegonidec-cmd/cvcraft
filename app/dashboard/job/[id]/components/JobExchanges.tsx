@@ -68,13 +68,18 @@ export default function JobExchanges({ exchanges, onAdd, onUpdate, onDelete }: P
           borderBottom: sectionOpen ? '1.5px solid #EBEBEB' : 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={mainSectionLabel}>Synthèse des échanges</span>
-          {exchanges.length > 0 && (
-            <span style={{ background: '#F5C400', color: '#111', fontSize: 12, fontWeight: 800, borderRadius: 20, padding: '1px 8px', fontFamily: FONT }}>
-              {exchanges.length}
-            </span>
-          )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={mainSectionLabel}>📚 Historique des échanges</span>
+            {exchanges.length > 0 && (
+              <span style={{ background: '#F5C400', color: '#111', fontSize: 12, fontWeight: 800, borderRadius: 20, padding: '1px 8px', fontFamily: FONT }}>
+                {exchanges.length}
+              </span>
+            )}
+          </div>
+          <span style={{ fontSize: 11, color: '#888', fontFamily: FONT, fontWeight: 500 }}>
+            Journal de tous les échanges (debrief, questions, réponses) par étape de cette candidature.
+          </span>
         </div>
         <span style={{ fontSize: 10, color: '#bbb', display: 'inline-block', transform: sectionOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
       </div>

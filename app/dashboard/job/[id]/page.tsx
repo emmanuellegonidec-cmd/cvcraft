@@ -105,6 +105,44 @@ function extractTransmittedBy(notes: string | null): string | null {
   return match ? match[1].trim() : null
 }
 
+// ─── Bandeau de phase (AVANT / APRÈS l'entretien) ────────────────────────────
+// Affiche le rond noir + chiffre jaune identique au step "en cours" du parcours,
+// pour que l'utilisateur fasse instantanément le lien visuel.
+function PhaseBanner({ phase, stepNum, stepLabel }: { phase: 'before' | 'after'; stepNum: number; stepLabel: string }) {
+  return (
+    <div style={{
+      background: '#FFFDF5',
+      border: '1.5px solid #111',
+      borderRadius: 10,
+      padding: '12px 18px',
+      marginBottom: 10,
+      marginTop: 4,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+    }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: '50%',
+        background: '#111', color: '#F5C400',
+        border: '2px solid #111',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 13, fontWeight: 900, flexShrink: 0,
+        fontFamily: FONT,
+      }}>
+        {stepNum}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: '#111', letterSpacing: '1.5px', textTransform: 'uppercase', fontFamily: FONT }}>
+          {phase === 'before' ? 'Avant' : 'Après'} — {stepLabel}
+        </div>
+        <div style={{ fontSize: 11, color: '#666', marginTop: 3, fontFamily: FONT, fontWeight: 500 }}>
+          {phase === 'before' ? 'Tout ce qui te prépare au RDV' : 'Email de remerciement et relance à programmer'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 function JobSidebar({ currentJobId, onSelect }: { currentJobId: string; onSelect: (id: string) => void }) {
   const [jobs, setJobs] = useState<Job[]>([])
@@ -434,9 +472,6 @@ export default function JobDetailPage() {
   }
 
   // ─── RGPD : upload après acceptation ────────────────────────────────────────
-  // Flow : clic "Charger" → file picker → user choisit un fichier →
-  //        handleFileSelected() stocke le fichier et ouvre la modale →
-  //        user coche + accepte → handleRgpdAccept() → vrai upload
   const handleFileSelected = (file: File, docType: 'cv' | 'cover_letter') => {
     if (!file) return
     setPendingUpload({ file, docType })
@@ -601,6 +636,17 @@ export default function JobDetailPage() {
     { docType: 'cover_letter' as const, sent: job.cover_letter_sent, name: 'Lettre de motivation', url: job.cover_letter_url, inputRef: coverLetterInputRef },
   ]
 
+  // Props communs passés aux 3 instances de JobInterviewDetails
+  const interviewSectionProps = {
+    job,
+    contacts,
+    onPatch: patchJob,
+    onJobChange: (field: string, value: any) => setJob(prev => prev ? { ...prev, [field]: value } : prev),
+    onCreateContact: () => openCreateContact(''),
+    currentStepId,
+    currentStepLabel,
+  }
+
   return (
     <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, display: 'flex' }}>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -699,38 +745,57 @@ export default function JobDetailPage() {
           stepDates={mergedStepDates}
           onStepDatesChange={handleStepDatesChange}
         />
-{currentStepId === 'archived' && (
-  <JobArchivedDetails
-    archivedReason={(job as any).archived_reason ?? null}
-    archivedNote={(job as any).archived_note ?? null}
-    onPatch={patchJob}
-    onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
-    currentStepNum={currentStepIndex + 1}
-  />
-)}
-       {isInterviewStep && (
-          <JobInterviewDetails
-            job={job}
-            contacts={contacts}
+
+        {currentStepId === 'archived' && (
+          <JobArchivedDetails
+            archivedReason={(job as any).archived_reason ?? null}
+            archivedNote={(job as any).archived_note ?? null}
             onPatch={patchJob}
             onJobChange={(field, value) => setJob(prev => prev ? { ...prev, [field]: value } : prev)}
-            onCreateContact={() => openCreateContact('')}
             currentStepNum={currentStepIndex + 1}
-            currentStepId={currentStepId}
-            currentStepLabel={currentStepLabel}
           />
         )}
 
-       {currentStepId !== 'archived' && (
-  <JobStepActions
-    jobId={jobId}
-    userId={userId}
-    currentStepId={currentStepId}
-    currentStepLabel={currentStepLabel}
-    currentStepIndex={currentStepIndex}
-    jobTitle={job.title}
-  />
-)}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* ÉTAPE D'ENTRETIEN : Phase AVANT / Phase APRÈS avec bandeaux dédiés  */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {isInterviewStep && (
+          <>
+            {/* ─── PHASE 1 : AVANT L'ENTRETIEN ─── */}
+            <PhaseBanner phase="before" stepNum={currentStepIndex + 1} stepLabel={currentStepLabel} />
+
+            <JobInterviewDetails section="logistics" {...interviewSectionProps} />
+
+            <JobStepActions
+              jobId={jobId}
+              userId={userId}
+              currentStepId={currentStepId}
+              currentStepLabel={currentStepLabel}
+              currentStepIndex={currentStepIndex}
+              jobTitle={job.title}
+            />
+
+            <JobInterviewDetails section="preparation" {...interviewSectionProps} />
+
+            {/* ─── PHASE 2 : APRÈS L'ENTRETIEN ─── */}
+            <PhaseBanner phase="after" stepNum={currentStepIndex + 1} stepLabel={currentStepLabel} />
+
+            <JobInterviewDetails section="followup" {...interviewSectionProps} />
+          </>
+        )}
+
+        {/* Pour les étapes hors entretien (to_apply, applied, offer…) et non archivées : */}
+        {/* on affiche simplement les actions à faire, sans les bandeaux de phase. */}
+        {!isInterviewStep && currentStepId !== 'archived' && (
+          <JobStepActions
+            jobId={jobId}
+            userId={userId}
+            currentStepId={currentStepId}
+            currentStepLabel={currentStepLabel}
+            currentStepIndex={currentStepIndex}
+            jobTitle={job.title}
+          />
+        )}
 
         <JobExchanges
           exchanges={exchanges}
@@ -739,7 +804,7 @@ export default function JobDetailPage() {
           onDelete={deleteExchange}
         />
 
-        {/* ─── NOUVEAU : Bloc CONTACTS liés à cette offre ─── */}
+        {/* ─── Bloc CONTACTS liés à cette offre ─── */}
         <JobContacts
           contacts={jobContacts}
           interviewContacts={job.interview_contacts ?? {}}
@@ -759,7 +824,6 @@ export default function JobDetailPage() {
               onChange={e => {
                 const file = e.target.files?.[0]
                 if (file) handleFileSelected(file, 'cv')
-                // Reset l'input pour permettre de re-choisir le même fichier si l'utilisateur annule la modale RGPD
                 e.target.value = ''
               }}
             />
@@ -796,7 +860,6 @@ export default function JobDetailPage() {
                 </div>
               </div>
             ))}
-            {/* Notice RGPD permanente sous la liste des documents */}
             <SecureStorageNotice compact />
           </div>
           <div style={{ ...card, marginBottom: 0 }}>
