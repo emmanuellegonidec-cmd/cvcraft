@@ -9,11 +9,25 @@ interface Props {
   photo?: string;
 }
 
+// ✅ Normalisation ATS — nettoie les caractères Unicode (em-dashes, smart quotes, NBSP, zero-width chars)
+// qui cassent silencieusement les parsers ATS FR et peuvent pénaliser un CV sans que le candidat le sache.
 function cleanText(text: string): string {
   return (text || '')
-    .replace(/=[^\x00-\x7F]/g, '')
+    // Nettoyage markdown résiduel
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
+    // Dashes : em-dash (—) et en-dash (–) → tiret ASCII
+    .replace(/\u2014/g, '-')
+    .replace(/\u2013/g, '-')
+    // Smart quotes → guillemets ASCII
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    // Ellipsis unicode (…) → trois points ASCII
+    .replace(/\u2026/g, '...')
+    // Zero-width chars (invisibles qui cassent la recherche keywords des ATS)
+    .replace(/[\u200B\u200C\u200D\u2060\uFEFF]/g, '')
+    // NBSP (espace insécable) → espace normal
+    .replace(/\u00A0/g, ' ')
     .trim();
 }
 
