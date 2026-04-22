@@ -6,12 +6,14 @@ import { CVFormData } from '@/lib/types';
 const FONT = 'Montserrat, sans-serif';
 
 interface Props {
+  form: CVFormData;
+  onFormChange: (form: CVFormData) => void;
   onImportSuccess: (data: Partial<CVFormData>) => void;
   onNext: () => void;
   onSkip: () => void;
 }
 
-export function Step2Import({ onImportSuccess, onNext, onSkip }: Props) {
+export function Step2Import({ form, onFormChange, onImportSuccess, onNext, onSkip }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const linkedinRef = useRef<HTMLInputElement>(null);
   const [isDragOverPdf, setIsDragOverPdf] = useState(false);
@@ -94,6 +96,57 @@ export function Step2Import({ onImportSuccess, onNext, onSkip }: Props) {
 
   return (
     <div style={{ fontFamily: FONT }}>
+
+      {/* ── BARRE PARAMÉTRAGE IA (déplacée ici depuis l'étape 3) ── */}
+      <div style={{
+        background: '#fff', border: '2px solid #111', borderRadius: 10,
+        padding: '16px 20px', marginBottom: 22, boxShadow: '3px 3px 0 #111',
+      }}>
+        <div style={{
+          fontSize: 13, fontWeight: 900, textTransform: 'uppercase',
+          letterSpacing: '0.08em', color: '#111', fontFamily: FONT, marginBottom: 12,
+        }}>
+          ⚡ Paramétrage de l'optimisation IA
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5, color: '#111', fontFamily: FONT }}>Poste visé (optimise le CV)</label>
+            <input
+              style={{ width: '100%', padding: '8px 10px', fontSize: 13, fontFamily: FONT, border: '2px solid #111', borderRadius: 6, background: '#fff', color: '#111', outline: 'none', boxSizing: 'border-box' }}
+              value={form.targetJob || ''}
+              onChange={e => onFormChange({ ...form, targetJob: e.target.value })}
+              placeholder="Directrice Marketing dans une scale-up"
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5, color: '#111', fontFamily: FONT }}>Langue du CV</label>
+            <select
+              style={{ width: '100%', padding: '8px 10px', fontSize: 13, fontFamily: FONT, border: '2px solid #111', borderRadius: 6, background: '#fff', color: '#111', outline: 'none', boxSizing: 'border-box' }}
+              value={form.lang || 'français'}
+              onChange={e => onFormChange({ ...form, lang: e.target.value })}
+            >
+              <option value="français">Français</option>
+              <option value="anglais">Anglais</option>
+              <option value="espagnol">Espagnol</option>
+              <option value="allemand">Allemand</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5, color: '#111', fontFamily: FONT }}>Ton</label>
+            <select
+              style={{ width: '100%', padding: '8px 10px', fontSize: 13, fontFamily: FONT, border: '2px solid #111', borderRadius: 6, background: '#fff', color: '#111', outline: 'none', boxSizing: 'border-box' }}
+              value={form.tone || 'professionnel'}
+              onChange={e => onFormChange({ ...form, tone: e.target.value })}
+            >
+              <option value="professionnel">Professionnel</option>
+              <option value="moderne et dynamique">Dynamique</option>
+              <option value="académique">Académique</option>
+              <option value="créatif">Créatif</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 16 }}>
         Importe ton CV
       </div>

@@ -280,6 +280,8 @@ function EditorContent() {
               {step === 2 && (
                 <div style={{ padding: '1.5rem' }}>
                   <Step2Import
+                    form={form}
+                    onFormChange={setForm}
                     onImportSuccess={data => setForm(prev => ({ ...prev, ...data }))}
                     onNext={next}
                     onSkip={next}
@@ -290,51 +292,6 @@ function EditorContent() {
               {/* ÉTAPE 3 */}
               {step === 3 && (
                 <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-
-                  {/* ── BARRE PARAMÉTRAGE ── */}
-                  <div style={{ padding: '14px 1.5rem', borderBottom: '2px solid #111', background: '#fff', flexShrink: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#111', fontFamily: FONT, marginBottom: 12 }}>
-                      ⚡ Paramétrage de l'optimisation IA
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 14 }}>
-                      <div>
-                        <label style={{ ...labelStyle, fontFamily: FONT }}>Poste visé (optimise le CV)</label>
-                        <input
-                          style={{ ...fieldStyle, fontFamily: FONT }}
-                          value={form.targetJob || ''}
-                          onChange={e => setForm({ ...form, targetJob: e.target.value })}
-                          placeholder="Directrice Marketing dans une scale-up"
-                        />
-                      </div>
-                      <div>
-                        <label style={{ ...labelStyle, fontFamily: FONT }}>Langue du CV</label>
-                        <select
-                          style={{ ...fieldStyle, fontFamily: FONT }}
-                          value={form.lang || 'français'}
-                          onChange={e => setForm({ ...form, lang: e.target.value })}
-                        >
-                          <option value="français">Français</option>
-                          <option value="anglais">Anglais</option>
-                          <option value="espagnol">Espagnol</option>
-                          <option value="allemand">Allemand</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label style={{ ...labelStyle, fontFamily: FONT }}>Ton</label>
-                        <select
-                          style={{ ...fieldStyle, fontFamily: FONT }}
-                          value={form.tone || 'professionnel'}
-                          onChange={e => setForm({ ...form, tone: e.target.value })}
-                        >
-                          <option value="professionnel">Professionnel</option>
-                          <option value="moderne et dynamique">Dynamique</option>
-                          <option value="académique">Académique</option>
-                          <option value="créatif">Créatif</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* ── FORMULAIRE + APERÇU ── */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', flex: 1, overflow: 'hidden' }}>
                     <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto' }}>
