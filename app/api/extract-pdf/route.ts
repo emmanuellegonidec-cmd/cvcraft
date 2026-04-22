@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { buildExtractPrompt } from '@/lib/prompts';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -7,38 +8,12 @@ export async function POST(req: NextRequest) {
   try {
     const { text } = await req.json();
 
-    // Tronque le texte à 6000 caractères pour éviter les dépassements
-    const safeText = (text || '').slice(0, 6000).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    // Nettoyage des caractères de contrôle qui peuvent casser le parsing JSON.
+    // ⚠️ On ne tronque PAS ici : la fonction buildExtractPrompt gère sa propre
+    // limite (100 000 caractères), largement suffisante pour n'importe quel CV.
+    const cleanedText = (text || '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
-    const prompt = `Tu es un extracteur de données CV. Analyse ce texte et retourne UNIQUEMENT un objet JSON valide, sans markdown, sans backticks, sans texte avant ou après.
-
-Le JSON doit avoir exactement cette structure :
-{
-  "firstName": "",
-  "lastName": "",
-  "title": "",
-  "email": "",
-  "phone": "",
-  "city": "",
-  "linkedin": "",
-  "summary": "",
-  "experiences": [
-    { "role": "", "company": "", "start": "", "end": "", "description": "" }
-  ],
-  "education": [
-    { "degree": "", "school": "", "year": "" }
-  ],
-  "skills": ""
-}
-
-Règles importantes :
-- Toutes les valeurs doivent être des strings simples sans guillemets internes
-- Le champ skills est une liste de compétences séparées par des virgules
-- Ne mets aucun caractère spécial dans les valeurs
-- Retourne UNIQUEMENT le JSON, rien d'autre
-
-Texte du CV :
-${safeText}`;
+    const prompt = buildExtractPrompt(cleanedText);
 
     const message = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -48,7 +23,7 @@ ${safeText}`;
 
     const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
 
-    // Nettoyage robuste du JSON
+    // Nettoyage robuste du JSON retourné par Claude
     const cleaned = raw
       .replace(/```json/g, '')
       .replace(/```/g, '')
