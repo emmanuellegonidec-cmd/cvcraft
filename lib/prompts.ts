@@ -1,68 +1,77 @@
 import { CVFormData } from './types';
 
+// ⚠️ Prompt de génération : demande à Claude un JSON structuré (même forme que CVFormData)
+// pour que les enrichissements IA (summary retravaillé, descriptions d'expériences orientées résultats,
+// compétences reformulées) alimentent directement les templates PDF.
 export function buildGeneratePrompt(data: CVFormData): string {
-  let p = `Tu es un expert en rédaction de CV ATS-friendly. Génère un CV professionnel en ${data.lang}, ton ${data.tone}.\n`;
+  let p = `Tu es un expert en rédaction de CV ATS-friendly. Optimise ce CV en ${data.lang}, ton ${data.tone}.\n`;
 
   if (data.targetJob) {
     p += `\nPOSTE VISÉ : "${data.targetJob}"
 Adapte le vocabulaire, les verbes d'action et le cadrage du contenu pour ce type de poste. Mets en avant en priorité les expériences et compétences les plus pertinentes pour ce poste (sans jamais en inventer).\n`;
   } else {
-    p += `\nAucun poste visé spécifique n'est renseigné — génère un CV générique, professionnel et ATS-friendly, en restant fidèle aux données fournies.\n`;
+    p += `\nAucun poste visé spécifique n'est renseigné — optimise le CV de manière générique, professionnelle et ATS-friendly, en restant fidèle aux données fournies.\n`;
   }
 
-  p += `\n⚠️ RÈGLES ANTI-HALLUCINATION (ABSOLUES) :
+  p += `
+⚠️ FORMAT DE SORTIE OBLIGATOIRE :
+Tu retournes UNIQUEMENT un objet JSON valide, sans markdown, sans backticks, sans texte avant ou après.
+
+Structure exacte attendue (mêmes champs qu'en entrée) :
+{
+  "firstName": "",
+  "lastName": "",
+  "title": "",
+  "email": "",
+  "phone": "",
+  "city": "",
+  "linkedin": "",
+  "summary": "",
+  "experiences": [
+    { "role": "", "company": "", "start": "", "end": "", "description": "" }
+  ],
+  "education": [
+    { "degree": "", "school": "", "year": "" }
+  ],
+  "skills": ""
+}
+
+⚠️ RÈGLES DE TRANSFORMATION :
+- Tu réécris et optimises les champs textuels ("summary", "experiences[].description", "skills") pour qu'ils soient plus dense en mots-clés du métier, plus orientés résultat, plus ATS-friendly.
+- Les champs factuels ("firstName", "lastName", "email", "phone", "city", "linkedin", "experiences[].role", "experiences[].company", "experiences[].start", "experiences[].end", "education[].degree", "education[].school", "education[].year", "title") sont REPRIS TELS QUELS, sans modification.
+- Tu conserves le MÊME NOMBRE d'expériences et de formations qu'en entrée, dans le MÊME ORDRE. Tu ne supprimes ni n'ajoutes aucune expérience, aucune formation.
+
+⚠️ RÈGLES ANTI-HALLUCINATION (ABSOLUES) :
 - Utilise UNIQUEMENT les informations fournies ci-dessous. N'invente AUCUN chiffre, AUCUNE donnée, AUCUN fait.
 - Ne jamais ajouter une compétence, un outil, une méthodologie ou une certification absents du CV source. Tu peux reformuler les acquis réels avec un vocabulaire plus pertinent, mais pas inventer un savoir-faire.
-- Si une information est absente, ne la mentionne pas. Ne complète pas avec des exemples.
+- Si une information est absente en entrée, renvoie une chaîne vide "" dans le JSON. Ne complète PAS avec des exemples ou des placeholders.
 - Les seuls chiffres autorisés sont ceux explicitement mentionnés dans les données fournies.
 - Ne mets pas de placeholder comme [X années] ou [chiffre].
 
-⚠️ RÈGLES ATS (optimisation pour les robots de tri des CV) :
-- Format : une seule page, sections claires dans l'ordre : En-tête → Profil → Expériences → Formation → Compétences.
-- Pas de tableaux imbriqués, pas de colonnes parallèles dans le texte, pas de caractères décoratifs exotiques.
-- Utiliser des verbes d'action forts en début de bullet (Pilote, Déploie, Optimise, Accompagne, Structure, Coordonne…).
-- Quand un résultat mesurable est présent dans les données source, l'inclure explicitement dans le bullet (ex : "Augmentation du CA de 30%", "Équipe de 12 personnes pilotée").
-
 ⚠️ RÈGLES DE CONTENU :
-- PROFIL : 3 à 4 lignes maximum, dense en mots-clés du métier, sans phrases creuses ni adjectifs gratuits (éviter "dynamique", "passionné", "motivé" sans contexte).
-- EXPÉRIENCES : 3 à 5 bullets par expérience, orientés résultat plutôt que tâche (répondre à "qu'est-ce que j'ai produit ?" plus qu'à "qu'est-ce que j'ai fait ?").
-- FORMATION : concise, chronologique inverse (plus récente en premier).
-- COMPÉTENCES : liste lisible, groupée par thème si pertinent (ex : "Management", "Outils", "Langues").
+- summary : 3 à 4 lignes maximum, dense en mots-clés du métier, sans phrases creuses ni adjectifs gratuits (éviter "dynamique", "passionné", "motivé" sans contexte).
+- experiences[].description : 3 à 5 lignes séparées par des retours à la ligne "\\n". Chaque ligne est un bullet orienté résultat plutôt que tâche. Verbes d'action forts en début (Pilote, Déploie, Optimise, Accompagne, Structure, Coordonne…). Quand un résultat mesurable est présent dans les données source, l'inclure explicitement (ex : "Augmentation du CA de 30%", "Équipe de 12 personnes pilotée").
+- skills : liste séparée par des virgules, items courts (1 à 4 mots maximum par item), groupés par thème si pertinent.
 
---- DONNÉES DU CV ---\n`;
+--- DONNÉES DU CV EN ENTRÉE ---
 
-  p += `\nNom : ${data.firstName} ${data.lastName}`;
-  if (data.title) p += ` | Titre : ${data.title}`;
-  if (data.email) p += ` | Email : ${data.email}`;
-  if (data.phone) p += ` | Tél : ${data.phone}`;
-  if (data.city) p += ` | Ville : ${data.city}`;
-  if (data.linkedin) p += ` | LinkedIn : ${data.linkedin}`;
+{
+  "firstName": ${JSON.stringify(data.firstName || '')},
+  "lastName": ${JSON.stringify(data.lastName || '')},
+  "title": ${JSON.stringify(data.title || '')},
+  "email": ${JSON.stringify(data.email || '')},
+  "phone": ${JSON.stringify(data.phone || '')},
+  "city": ${JSON.stringify(data.city || '')},
+  "linkedin": ${JSON.stringify(data.linkedin || '')},
+  "summary": ${JSON.stringify(data.summary || '')},
+  "experiences": ${JSON.stringify(data.experiences || [])},
+  "education": ${JSON.stringify(data.education || [])},
+  "skills": ${JSON.stringify(data.skills || '')}
+}
 
-  if (data.summary) p += `\n\nPROFIL PROFESSIONNEL :\n${data.summary}`;
+--- FIN DES DONNÉES ---
 
-  if (data.experiences.length) {
-    p += `\n\nEXPÉRIENCES PROFESSIONNELLES :`;
-    data.experiences.forEach(e => {
-      p += `\n• ${e.role} chez ${e.company} (${e.start} – ${e.end})`;
-      if (e.description) p += `\n  ${e.description}`;
-    });
-  }
-
-  if (data.education.length) {
-    p += `\n\nFORMATION :`;
-    data.education.forEach(e => {
-      p += `\n• ${e.degree} — ${e.school}`;
-      if (e.year) p += ` (${e.year})`;
-    });
-  }
-
-  if (data.skills) p += `\n\nCOMPÉTENCES :\n${data.skills}`;
-
-  p += `\n\n--- FIN DES DONNÉES ---
-
-Génère maintenant le CV en respectant strictement TOUTES les règles ci-dessus.
-Structure de sortie : En-tête → Profil → Expériences → Formation → Compétences.
-Longueur : maximum une page (environ 500 mots).`;
+Retourne maintenant l'objet JSON optimisé, en respectant strictement TOUTES les règles ci-dessus.`;
 
   return p;
 }

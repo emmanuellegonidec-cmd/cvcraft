@@ -314,7 +314,12 @@ function EditorContent() {
               {/* ÉTAPE 4 */}
               {step === 4 && (
                 <div style={{ padding: '1.5rem' }}>
-                  <Step4Generate form={form} onGenerated={setGeneratedCV} onNext={next} />
+                  <Step4Generate
+                    form={form}
+                    onGenerated={setGeneratedCV}
+                    onFormUpdate={enriched => setForm(prev => ({ ...prev, ...enriched }))}
+                    onNext={next}
+                  />
                 </div>
               )}
 

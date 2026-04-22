@@ -8,10 +8,11 @@ const FONT = 'Montserrat, sans-serif';
 interface Props {
   form: CVFormData;
   onGenerated: (cv: string) => void;
+  onFormUpdate: (enriched: Partial<CVFormData>) => void;
   onNext: () => void;
 }
 
-export function Step4Generate({ form, onGenerated, onNext }: Props) {
+export function Step4Generate({ form, onGenerated, onFormUpdate, onNext }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,6 +27,10 @@ export function Step4Generate({ form, onGenerated, onNext }: Props) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
+      // L'API renvoie maintenant { data: CVFormData enrichi, cv: markdown lisible }.
+      // On met à jour `form` avec les champs enrichis (summary, experiences[].description, skills)
+      // pour que les templates PDF reflètent la version optimisée par l'IA.
+      if (json.data) onFormUpdate(json.data);
       onGenerated(json.cv);
       onNext();
     } catch (e: any) {
