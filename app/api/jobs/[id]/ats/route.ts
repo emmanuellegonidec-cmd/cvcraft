@@ -7,7 +7,8 @@ import Anthropic from '@anthropic-ai/sdk'
 // SYSTEM PROMPT — Grille ATS cachée côté serveur (non exposée au user/concurrent)
 // ============================================================================
 const ATS_SYSTEM_PROMPT = `Tu es un système ATS (Applicant Tracking System) professionnel.
-Ta mission : évaluer rigoureusement et de manière REPRODUCTIBLE un CV face à une description de poste.
+Ta mission : évaluer rigoureusement et de manière REPRODUCTIBLE un CV face à une description de poste,
+ET produire une analyse RICHE et DENSE qui donne au candidat une vraie valeur pédagogique.
 
 ====================
 RÈGLES TOUJOURS
@@ -16,6 +17,7 @@ RÈGLES TOUJOURS
 2. Utiliser UNIQUEMENT les maximums fixés dans la grille ci-dessous
 3. Justifier chaque sous-score par un critère précis de la grille
 4. Retourner uniquement du JSON valide, sans markdown ni texte avant ou après
+5. Produire une analyse DENSE : minimum 5 points forts, 5 points faibles, 4 recommandations
 
 ====================
 RÈGLES JAMAIS
@@ -25,6 +27,7 @@ RÈGLES JAMAIS
 3. Ne jamais donner un score "par défaut" sans justification
 4. Ne jamais ajuster arbitrairement pour atteindre un score rond
 5. Ne jamais confondre "absent" et "à améliorer" dans les erreurs
+6. Ne jamais rester vague — chaque point doit être SPÉCIFIQUE au CV analysé
 
 ====================
 PIPELINE D'ÉVALUATION (3 étapes forcées)
@@ -93,6 +96,30 @@ GRILLE DE NOTATION — 7 dimensions, total /100
 • Compétences essentielles du JD toutes présentes : +2
 
 ====================
+CONSIGNES DE RÉDACTION (pour valeur perçue maximale)
+====================
+
+POINTS FORTS (5 à 8 items) :
+- Chacun doit citer un élément PRÉCIS du CV (ex: "Résultats chiffrés dans 4 expériences sur 5 : +32% CA, -15% churn")
+- Éviter les généralités ("bon CV", "bien structuré")
+- Mixer : contenu, structure, format, matching
+
+POINTS FAIBLES (5 à 8 items) :
+- Chacun doit pointer un élément MANQUANT ou AMÉLIORABLE du CV
+- Être précis : pas "le profil est faible" mais "le résumé professionnel fait seulement 2 lignes et ne mentionne pas le secteur visé"
+- Mixer : contenu, format, matching
+
+ERREURS (ne laisser aucune catégorie vide si possible) :
+- critiques : bloquent le passage ATS (scan, 2 colonnes, texte en image, infos dans footer)
+- majeures : impact fort sur le match (keywords manquants critiques, compétences clés absentes)
+- mineures : améliorations souhaitables (formatage dates, densité skills, etc.)
+
+RECOMMANDATIONS (4 à 6 items, triées par priorité croissante 1=plus urgent) :
+- Chaque recommandation doit être ACTIONNABLE immédiatement
+- Format : verbe d'action + cible précise (ex: "Ajouter 'Next.js' dans la section Compétences et dans au moins une expérience pour combler le gap critique")
+- Impact : "critique" = sans quoi le CV sera rejeté / "majeur" = gain de match significatif / "mineur" = polish
+
+====================
 FORMAT DE RÉPONSE (JSON strict)
 ====================
 {
@@ -114,28 +141,27 @@ FORMAT DE RÉPONSE (JSON strict)
     "couverture_pct": <0-100>
   },
   "analyse_contenu": {
-    "points_forts": ["Point fort 1", "Point fort 2", "Point fort 3"],
-    "points_faibles": ["Point faible 1", "Point faible 2", "Point faible 3"]
+    "points_forts": ["Point fort 1 très spécifique", "Point fort 2", "...", "Point fort 5 au minimum"],
+    "points_faibles": ["Point faible 1 très spécifique", "Point faible 2", "...", "Point faible 5 au minimum"]
   },
   "erreurs": {
-    "critiques": ["Erreur qui bloque l'ATS, ex: CV en image"],
-    "majeures": ["Erreur à fort impact sur le match"],
-    "mineures": ["Amélioration souhaitable"]
+    "critiques": ["..."],
+    "majeures": ["..."],
+    "mineures": ["..."]
   },
   "recommandations": [
-    {
-      "priorite": 1,
-      "impact": "critique",
-      "action": "Action concrète et spécifique, pas une généralité"
-    }
+    { "priorite": 1, "impact": "critique", "action": "Action concrète et spécifique" },
+    { "priorite": 2, "impact": "majeur", "action": "..." },
+    { "priorite": 3, "impact": "majeur", "action": "..." },
+    { "priorite": 4, "impact": "mineur", "action": "..." }
   ]
 }
 
 NE PAS inclure 'analyse_fichier' dans ta réponse — ce champ est calculé côté serveur.
-Les recommandations doivent être triées par priorité croissante (1 = le plus important).`
+Les recommandations sont triées par priorité croissante (1 = le plus urgent).`
 
 // ============================================================================
-// AUTH HELPER (inchangé)
+// AUTH HELPER
 // ============================================================================
 async function getAuth(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -161,7 +187,7 @@ async function getAuth(request: NextRequest) {
 }
 
 // ============================================================================
-// HELPERS — Analyse fichier côté serveur (vraies valeurs, pas de ✅ bidons)
+// HELPERS — Analyse fichier côté serveur
 // ============================================================================
 function formatPoids(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`
@@ -179,15 +205,9 @@ function extractFilename(url: string): string {
   }
 }
 
-/**
- * Compte les pages d'un PDF via regex sur le buffer (méthode légère sans dépendance).
- * Pas 100% fiable sur les PDFs compressés/chiffrés mais suffisant dans 95% des cas.
- * Retourne 0 si le comptage échoue (fallback affiché en "n/d" côté UI).
- */
 function countPdfPages(buffer: Buffer): number {
   try {
     const text = buffer.toString('latin1')
-    // Regex qui matche /Type /Page (sans le /s à la fin pour Pages)
     const matches = text.match(/\/Type\s*\/Page[^s]/g) || []
     return matches.length
   } catch {
@@ -218,7 +238,6 @@ export async function POST(
 
     const jobId = params.id
 
-    // Récupérer l'offre + compteur d'analyses
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .select('id, title, company, description, user_id, cv_url, ats_analysis_count')
@@ -237,7 +256,6 @@ export async function POST(
       )
     }
 
-    // Vérifier la limite de 3 analyses par offre
     const currentCount = job.ats_analysis_count || 0
     if (currentCount >= 3) {
       return NextResponse.json(
@@ -246,7 +264,6 @@ export async function POST(
       )
     }
 
-    // Télécharger le CV
     const cvResponse = await fetch(job.cv_url)
     if (!cvResponse.ok) {
       return NextResponse.json({ error: 'Impossible de télécharger le CV' }, { status: 500 })
@@ -256,12 +273,10 @@ export async function POST(
     const buffer = Buffer.from(arrayBuffer)
     const base64 = buffer.toString('base64')
 
-    // Analyses serveur : métadonnées réelles du fichier
     const nbPages = countPdfPages(buffer)
     const poids = formatPoids(arrayBuffer.byteLength)
     const nomFichier = extractFilename(job.cv_url)
 
-    // Construire le prompt user
     const userPrompt = `Analyse ce CV face à l'offre ci-dessous en suivant le pipeline strict défini dans tes instructions système.
 
 **Poste :** ${job.title}
@@ -271,16 +286,18 @@ export async function POST(
 ${job.description || 'Description non disponible — signale-le dans erreurs.majeures et fixe matching à 0.'}
 
 Le CV au format PDF est joint. Applique rigoureusement la grille de notation /100.
-Rappel : compte bien la couverture keywords (étape 2) avant de scorer la dimension matching.`
+Rappel : 
+- Compte bien la couverture keywords (étape 2) avant de scorer la dimension matching
+- Produis minimum 5 points forts, 5 points faibles et 4 recommandations priorisées
+- Chaque point doit être SPÉCIFIQUE au CV analysé (pas de généralités)`
 
-    // Appel Claude API
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY!,
     })
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 3000,
+      max_tokens: 4000,
       system: ATS_SYSTEM_PROMPT,
       messages: [
         {
@@ -308,7 +325,6 @@ Rappel : compte bien la couverture keywords (étape 2) avant de scorer la dimens
       .map((b) => (b as any).text)
       .join('')
 
-    // Parsing JSON robuste
     const clean = rawText.replace(/```json|```/g, '').trim()
     const jsonMatch = clean.match(/\{[\s\S]*\}/)
     const jsonStr = jsonMatch ? jsonMatch[0] : clean
@@ -324,7 +340,6 @@ Rappel : compte bien la couverture keywords (étape 2) avant de scorer la dimens
       )
     }
 
-    // Injecter l'analyse_fichier calculée côté serveur
     atsResult.analyse_fichier = {
       format_pdf: atsResult.format_pdf_eval || 'PDF (évaluation indisponible)',
       poids: poids,
@@ -332,10 +347,8 @@ Rappel : compte bien la couverture keywords (étape 2) avant de scorer la dimens
       nombre_pages: nbPages,
       structure_pages: evaluateStructurePages(nbPages),
     }
-    // Retirer le champ temporaire format_pdf_eval de la racine
     delete atsResult.format_pdf_eval
 
-    // Recalculer score_global côté serveur pour garantir la cohérence somme des sous-scores
     const s = atsResult.scores || {}
     atsResult.score_global =
       (s.format || 0) +
@@ -346,7 +359,6 @@ Rappel : compte bien la couverture keywords (étape 2) avant de scorer la dimens
       (s.competences || 0) +
       (s.matching || 0)
 
-    // Sauvegarder + incrémenter le compteur d'analyses
     const { error: updateError } = await supabase
       .from('jobs')
       .update({

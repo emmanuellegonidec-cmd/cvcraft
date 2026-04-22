@@ -2,17 +2,45 @@
 
 import { useState, useEffect } from 'react'
 
+// ============================================================================
+// TYPES — avec rétrocompatibilité (anciens ats_result stockés en BDD)
+// ============================================================================
+interface ATSScores {
+  format: number
+  lisibilite_ats: number
+  infos_obligatoires?: number
+  structure: number
+  experiences: number
+  competences: number
+  matching: number
+}
+
+interface ATSAnalyseFichier {
+  format_pdf?: string
+  poids?: string
+  nom_fichier?: string
+  nombre_pages?: number
+  structure_pages?: string
+}
+
+interface ATSKeywords {
+  extraits_du_poste?: string[]
+  presents_dans_cv?: string[]
+  manquants_critiques?: string[]
+  couverture_pct?: number
+}
+
+interface ATSRecommandation {
+  priorite: number
+  impact: 'critique' | 'majeur' | 'mineur'
+  action: string
+}
+
 interface ATSResult {
   score_global: number
-  scores: {
-    format: number
-    lisibilite_ats: number
-    infos_obligatoires: number
-    structure: number
-    experiences: number
-    competences: number
-    matching: number
-  }
+  scores: ATSScores
+  analyse_fichier?: ATSAnalyseFichier
+  keywords?: ATSKeywords
   analyse_contenu: {
     points_forts: string[]
     points_faibles: string[]
@@ -22,7 +50,8 @@ interface ATSResult {
     majeures: string[]
     mineures: string[]
   }
-  recommandations: string[]
+  // Peut être soit string[] (ancien format) soit ATSRecommandation[] (nouveau)
+  recommandations: (string | ATSRecommandation)[]
 }
 
 interface ATSScoreModalProps {
@@ -63,8 +92,8 @@ export default function ATSScoreModal({
 
   const scoreColor = (score: number, max: number) => {
     const pct = score / max
-    if (pct >= 0.75) return '#22a322'
-    if (pct >= 0.5) return '#cc9900'
+    if (pct >= 0.75) return '#1A7A4A'
+    if (pct >= 0.5) return '#B8900A'
     return '#E8151B'
   }
 
@@ -88,15 +117,16 @@ export default function ATSScoreModal({
 
     const messages = [
       'Lecture du CV...',
-      "Analyse de l'offre...",
+      'Extraction des mots-clés du poste...',
+      'Matching CV vs offre...',
       'Calcul du score ATS...',
       'Génération des recommandations...',
     ]
     let msgIdx = 0
     const interval = setInterval(() => {
       setProgress((p) => {
-        const next = Math.min(p + 1.5, 90)
-        if (next > msgIdx * 25 && msgIdx < messages.length) {
+        const next = Math.min(p + 1.2, 90)
+        if (next > msgIdx * 20 && msgIdx < messages.length) {
           setProgressMsg(messages[msgIdx])
           msgIdx++
         }
@@ -135,16 +165,28 @@ export default function ATSScoreModal({
     }
   }
 
+  // 7 sous-scores avec les BONS maximums (corrige les bugs historiques)
   const subScores = result ? [
     { label: 'Format', val: result.scores.format, max: 15 },
-    { label: 'Lisibilité', val: result.scores.lisibilite_ats, max: 15 },
+    { label: 'Lisibilité ATS', val: result.scores.lisibilite_ats, max: 15 },
+    { label: 'Infos obligatoires', val: result.scores.infos_obligatoires || 0, max: 10 },
     { label: 'Structure', val: result.scores.structure, max: 10 },
-    { label: 'Expériences', val: result.scores.experiences, max: 30 },
-    { label: 'Compétences', val: result.scores.competences, max: 10 },
+    { label: 'Expériences', val: result.scores.experiences, max: 25 },
+    { label: 'Compétences', val: result.scores.competences, max: 15 },
     { label: 'Matching', val: result.scores.matching, max: 10 },
   ] : []
 
   const essaisRestants = MAX_ANALYSES - count
+
+  // Helper : détecte le format d'une recommandation (string ancien, objet nouveau)
+  const isRecoObj = (r: string | ATSRecommandation): r is ATSRecommandation =>
+    typeof r === 'object' && r !== null && 'action' in r
+
+  const impactColor = (impact: string) => {
+    if (impact === 'critique') return { bg: '#E8151B', text: '#fff' }
+    if (impact === 'majeur') return { bg: '#F5C400', text: '#111' }
+    return { bg: '#888', text: '#fff' }
+  }
 
   return (
     <div
@@ -153,14 +195,14 @@ export default function ATSScoreModal({
     >
       <div style={{
         background: '#f5f5f3', border: '2.5px solid #111', boxShadow: '6px 6px 0 #111',
-        width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto',
+        width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto',
         fontFamily: FONT, borderRadius: 12,
       }}>
 
         {/* Header */}
-        <div style={{ background: '#111', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, borderRadius: '9px 9px 0 0' }}>
+        <div style={{ background: '#111', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, borderRadius: '9px 9px 0 0', position: 'sticky', top: 0, zIndex: 2 }}>
           <span style={{ color: '#F5C400', fontWeight: 800, fontSize: 12, letterSpacing: '1.5px' }}>SCORE ATS</span>
-          <span style={{ color: '#fff', fontSize: 12, opacity: 0.6, flex: 1 }}>{jobTitle}</span>
+          <span style={{ color: '#fff', fontSize: 12, opacity: 0.6, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{jobTitle}</span>
           {count > 0 && (
             <span style={{ color: essaisRestants > 0 ? '#aaa' : '#E8151B', fontSize: 10, fontWeight: 700 }}>
               {essaisRestants > 0 ? `${essaisRestants} essai${essaisRestants > 1 ? 's' : ''} restant${essaisRestants > 1 ? 's' : ''}` : 'Limite atteinte'}
@@ -171,11 +213,11 @@ export default function ATSScoreModal({
 
         <div style={{ padding: '16px' }}>
 
-          {/* État vide */}
+          {/* ======================== ÉTAT VIDE ======================== */}
           {!result && !loading && (
             <div style={{ background: '#fff', borderRadius: 10, padding: '24px 20px', textAlign: 'center', border: '0.5px solid #e0e0e0' }}>
               <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
-                Analysez votre CV par rapport à cette offre pour obtenir un score de compatibilité et des recommandations personnalisées.
+                Analysez votre CV par rapport à cette offre pour obtenir un score de compatibilité détaillé, la liste des mots-clés du poste et des recommandations personnalisées.
               </p>
               {error && (
                 <div style={{ background: '#fff5f5', border: '1.5px solid #E8151B', padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#E8151B', borderRadius: 6 }}>
@@ -192,7 +234,7 @@ export default function ATSScoreModal({
             </div>
           )}
 
-          {/* Chargement */}
+          {/* ======================== CHARGEMENT ======================== */}
           {loading && (
             <div style={{ background: '#fff', borderRadius: 10, padding: '24px 20px', textAlign: 'center', border: '0.5px solid #e0e0e0' }}>
               <p style={{ fontSize: 13, color: '#555', marginBottom: 14 }}>{progressMsg}</p>
@@ -203,10 +245,10 @@ export default function ATSScoreModal({
             </div>
           )}
 
-          {/* Résultat */}
+          {/* ======================== RÉSULTAT ======================== */}
           {result && !loading && (
             <>
-              {/* Score global avec cercle */}
+              {/* --- Score global avec cercle --- */}
               <div style={{ background: '#111', borderRadius: 10, padding: '18px 20px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 20 }}>
                 <div style={{ position: 'relative', width: 84, height: 84, flexShrink: 0 }}>
                   <svg viewBox="0 0 80 80" style={{ width: 84, height: 84, transform: 'rotate(-90deg)' }}>
@@ -234,7 +276,7 @@ export default function ATSScoreModal({
                       </span>
                     )}
                     {result.erreurs.majeures.length > 0 && (
-                      <span style={{ background: '#cc9900', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4 }}>
+                      <span style={{ background: '#B8900A', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4 }}>
                         {result.erreurs.majeures.length} majeure{result.erreurs.majeures.length > 1 ? 's' : ''}
                       </span>
                     )}
@@ -244,13 +286,13 @@ export default function ATSScoreModal({
                       </span>
                     )}
                     {result.erreurs.critiques.length === 0 && result.erreurs.majeures.length === 0 && (
-                      <span style={{ background: '#22a322', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4 }}>Aucun problème critique</span>
+                      <span style={{ background: '#1A7A4A', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4 }}>Aucun problème critique</span>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Sous-scores */}
+              {/* --- Sous-scores : 7 dimensions --- */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 12 }}>
                 {subScores.map((s) => (
                   <div key={s.label} style={{ background: '#fff', borderRadius: 8, padding: '10px 12px', border: '0.5px solid #e0e0e0' }}>
@@ -265,52 +307,176 @@ export default function ATSScoreModal({
                 ))}
               </div>
 
-              {/* Points forts / faibles */}
+              {/* --- NOUVELLE SECTION : Mots-clés du poste --- */}
+              {result.keywords && (result.keywords.extraits_du_poste?.length || 0) > 0 && (
+                <div style={{ background: '#fff', borderRadius: 8, padding: 14, border: '0.5px solid #e0e0e0', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: '#999', letterSpacing: '1.5px' }}>MOTS-CLÉS DU POSTE</div>
+                    {typeof result.keywords.couverture_pct === 'number' && (
+                      <div style={{ fontSize: 11, fontWeight: 800, color: scoreColor(result.keywords.couverture_pct, 100) }}>
+                        {result.keywords.couverture_pct}% couverture
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Barre de couverture */}
+                  {typeof result.keywords.couverture_pct === 'number' && (
+                    <div style={{ background: '#e8e8e8', height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 12 }}>
+                      <div style={{ height: '100%', width: `${result.keywords.couverture_pct}%`, background: scoreColor(result.keywords.couverture_pct, 100), borderRadius: 3 }} />
+                    </div>
+                  )}
+
+                  {/* Présents dans le CV */}
+                  {(result.keywords.presents_dans_cv?.length || 0) > 0 && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#1A7A4A', marginBottom: 6 }}>✓ Présents dans votre CV ({result.keywords.presents_dans_cv!.length})</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {result.keywords.presents_dans_cv!.map((kw, i) => (
+                          <span key={`p-${i}`} style={{ background: '#e8f5e9', color: '#1A7A4A', fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, border: '1px solid #a5d6a7' }}>
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manquants critiques */}
+                  {(result.keywords.manquants_critiques?.length || 0) > 0 && (
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#E8151B', marginBottom: 6 }}>✗ Manquants dans votre CV ({result.keywords.manquants_critiques!.length})</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {result.keywords.manquants_critiques!.map((kw, i) => (
+                          <span key={`m-${i}`} style={{ background: '#fff5f5', color: '#E8151B', fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4, border: '1px solid #ffcdd2' }}>
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* --- NOUVELLE SECTION : Analyse du fichier --- */}
+              {result.analyse_fichier && (
+                <div style={{ background: '#fff', borderRadius: 8, padding: 14, border: '0.5px solid #e0e0e0', marginBottom: 12 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: '#999', letterSpacing: '1.5px', marginBottom: 10 }}>ANALYSE DU FICHIER</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, fontSize: 11 }}>
+                    {result.analyse_fichier.nom_fichier && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <span style={{ color: '#999', fontWeight: 600, minWidth: 60 }}>Nom :</span>
+                        <span style={{ color: '#111', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.analyse_fichier.nom_fichier}</span>
+                      </div>
+                    )}
+                    {result.analyse_fichier.poids && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <span style={{ color: '#999', fontWeight: 600, minWidth: 60 }}>Poids :</span>
+                        <span style={{ color: '#111', fontWeight: 500 }}>{result.analyse_fichier.poids}</span>
+                      </div>
+                    )}
+                    {typeof result.analyse_fichier.nombre_pages === 'number' && result.analyse_fichier.nombre_pages > 0 && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <span style={{ color: '#999', fontWeight: 600, minWidth: 60 }}>Pages :</span>
+                        <span style={{ color: '#111', fontWeight: 500 }}>{result.analyse_fichier.nombre_pages}</span>
+                      </div>
+                    )}
+                    {result.analyse_fichier.structure_pages && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <span style={{ color: '#999', fontWeight: 600, minWidth: 60 }}>Format :</span>
+                        <span style={{ color: '#111', fontWeight: 500 }}>{result.analyse_fichier.structure_pages}</span>
+                      </div>
+                    )}
+                  </div>
+                  {result.analyse_fichier.format_pdf && (
+                    <div style={{ marginTop: 8, padding: '6px 10px', background: '#fafafa', borderRadius: 4, fontSize: 10, color: '#555' }}>
+                      {result.analyse_fichier.format_pdf}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* --- Points forts / faibles (boucle sur tous les items, pas de limite) --- */}
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 8, marginBottom: 12 }}>
                 <div style={{ background: '#f0faf0', borderRadius: 8, padding: 12, border: '0.5px solid #a5d6a7' }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, color: '#2E7D32', letterSpacing: '1px', marginBottom: 8 }}>POINTS FORTS</div>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: '#1A7A4A', letterSpacing: '1px', marginBottom: 8 }}>POINTS FORTS ({result.analyse_contenu.points_forts.length})</div>
                   {result.analyse_contenu.points_forts.map((p, i) => (
-                    <div key={i} style={{ fontSize: 11, color: '#2E7D32', display: 'flex', gap: 6, marginBottom: 4, lineHeight: 1.4 }}>
+                    <div key={i} style={{ fontSize: 11, color: '#1A7A4A', display: 'flex', gap: 6, marginBottom: 6, lineHeight: 1.45 }}>
                       <span style={{ fontWeight: 800, flexShrink: 0 }}>+</span><span>{p}</span>
                     </div>
                   ))}
                 </div>
                 <div style={{ background: '#fff5f5', borderRadius: 8, padding: 12, border: '0.5px solid #ffcdd2' }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, color: '#c62828', letterSpacing: '1px', marginBottom: 8 }}>POINTS FAIBLES</div>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: '#c62828', letterSpacing: '1px', marginBottom: 8 }}>POINTS FAIBLES ({result.analyse_contenu.points_faibles.length})</div>
                   {result.analyse_contenu.points_faibles.map((p, i) => (
-                    <div key={i} style={{ fontSize: 11, color: '#c62828', display: 'flex', gap: 6, marginBottom: 4, lineHeight: 1.4 }}>
+                    <div key={i} style={{ fontSize: 11, color: '#c62828', display: 'flex', gap: 6, marginBottom: 6, lineHeight: 1.45 }}>
                       <span style={{ fontWeight: 800, flexShrink: 0 }}>-</span><span>{p}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Recommandations */}
-              <div style={{ background: '#fff', borderRadius: 8, padding: 14, border: '0.5px solid #e0e0e0', marginBottom: 12 }}>
-                <div style={{ fontSize: 9, fontWeight: 800, color: '#999', letterSpacing: '1.5px', marginBottom: 10 }}>RECOMMANDATIONS</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {result.erreurs.critiques.map((r, i) => (
-                    <div key={`c-${i}`} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px', background: '#fff5f5', borderLeft: '3px solid #E8151B', borderRadius: '0 6px 6px 0' }}>
-                      <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 3, flexShrink: 0, marginTop: 1 }}>CRITIQUE</span>
-                      <span style={{ fontSize: 11, lineHeight: 1.5 }}>{r}</span>
-                    </div>
-                  ))}
-                  {result.erreurs.majeures.map((r, i) => (
-                    <div key={`m-${i}`} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px', background: '#fffae0', borderLeft: '3px solid #F5C400', borderRadius: '0 6px 6px 0' }}>
-                      <span style={{ background: '#F5C400', color: '#111', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 3, flexShrink: 0, marginTop: 1 }}>MAJEURE</span>
-                      <span style={{ fontSize: 11, lineHeight: 1.5 }}>{r}</span>
-                    </div>
-                  ))}
-                  {result.erreurs.mineures.map((r, i) => (
-                    <div key={`mn-${i}`} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px', background: '#f5f5f5', borderLeft: '3px solid #bbb', borderRadius: '0 6px 6px 0' }}>
-                      <span style={{ background: '#ddd', color: '#555', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 3, flexShrink: 0, marginTop: 1 }}>MINEURE</span>
-                      <span style={{ fontSize: 11, lineHeight: 1.5 }}>{r}</span>
+              {/* --- NOUVELLE SECTION : Recommandations prioritaires (nouveau format) --- */}
+              {result.recommandations && result.recommandations.length > 0 && result.recommandations.some(isRecoObj) && (
+                <div style={{ background: '#fff', borderRadius: 8, padding: 14, border: '0.5px solid #e0e0e0', marginBottom: 12 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: '#999', letterSpacing: '1.5px', marginBottom: 10 }}>ACTIONS PRIORITAIRES</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {result.recommandations
+                      .filter(isRecoObj)
+                      .sort((a, b) => a.priorite - b.priorite)
+                      .map((r, i) => {
+                        const col = impactColor(r.impact)
+                        return (
+                          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px', background: '#fafafa', borderLeft: `3px solid ${col.bg}`, borderRadius: '0 6px 6px 0' }}>
+                            <span style={{ background: col.bg, color: col.text, fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 3, flexShrink: 0, marginTop: 1, minWidth: 18, textAlign: 'center' }}>
+                              {r.priorite}
+                            </span>
+                            <span style={{ fontSize: 11, lineHeight: 1.5, flex: 1 }}>{r.action}</span>
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* --- Erreurs détaillées (critiques / majeures / mineures) --- */}
+              {(result.erreurs.critiques.length > 0 || result.erreurs.majeures.length > 0 || result.erreurs.mineures.length > 0) && (
+                <div style={{ background: '#fff', borderRadius: 8, padding: 14, border: '0.5px solid #e0e0e0', marginBottom: 12 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: '#999', letterSpacing: '1.5px', marginBottom: 10 }}>ERREURS DÉTECTÉES</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {result.erreurs.critiques.map((r, i) => (
+                      <div key={`c-${i}`} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px', background: '#fff5f5', borderLeft: '3px solid #E8151B', borderRadius: '0 6px 6px 0' }}>
+                        <span style={{ background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 3, flexShrink: 0, marginTop: 1 }}>CRITIQUE</span>
+                        <span style={{ fontSize: 11, lineHeight: 1.5 }}>{r}</span>
+                      </div>
+                    ))}
+                    {result.erreurs.majeures.map((r, i) => (
+                      <div key={`m-${i}`} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px', background: '#fffae0', borderLeft: '3px solid #F5C400', borderRadius: '0 6px 6px 0' }}>
+                        <span style={{ background: '#F5C400', color: '#111', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 3, flexShrink: 0, marginTop: 1 }}>MAJEURE</span>
+                        <span style={{ fontSize: 11, lineHeight: 1.5 }}>{r}</span>
+                      </div>
+                    ))}
+                    {result.erreurs.mineures.map((r, i) => (
+                      <div key={`mn-${i}`} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px', background: '#f5f5f5', borderLeft: '3px solid #bbb', borderRadius: '0 6px 6px 0' }}>
+                        <span style={{ background: '#ddd', color: '#555', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 3, flexShrink: 0, marginTop: 1 }}>MINEURE</span>
+                        <span style={{ fontSize: 11, lineHeight: 1.5 }}>{r}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* --- Fallback pour anciens résultats (recommandations = string[]) --- */}
+              {result.recommandations && result.recommandations.length > 0 && !result.recommandations.some(isRecoObj) && (
+                <div style={{ background: '#fff', borderRadius: 8, padding: 14, border: '0.5px solid #e0e0e0', marginBottom: 12 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: '#999', letterSpacing: '1.5px', marginBottom: 10 }}>RECOMMANDATIONS</div>
+                  {result.recommandations.map((r, i) => (
+                    <div key={i} style={{ fontSize: 11, color: '#333', marginBottom: 6, lineHeight: 1.5 }}>
+                      • {typeof r === 'string' ? r : (r as ATSRecommandation).action}
                     </div>
                   ))}
                 </div>
-              </div>
+              )}
 
-              {/* Actions */}
+              {/* --- Actions --- */}
               <div style={{ display: 'flex', gap: 8 }}>
                 {essaisRestants > 0 ? (
                   <button onClick={handleAnalyse} style={{
