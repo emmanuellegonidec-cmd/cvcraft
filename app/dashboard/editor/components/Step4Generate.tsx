@@ -15,6 +15,7 @@ interface Props {
 export function Step4Generate({ form, onGenerated, onFormUpdate, onNext }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   async function generate() {
     setIsGenerating(true);
@@ -32,7 +33,19 @@ export function Step4Generate({ form, onGenerated, onFormUpdate, onNext }: Props
       // pour que les templates PDF reflètent la version optimisée par l'IA.
       if (json.data) onFormUpdate(json.data);
       onGenerated(json.cv);
-      onNext();
+      // 🐞 DEBUG TEMPORAIRE : capture avant/après pour diagnostiquer
+      setDebugInfo({
+        inputSummary: form.summary || '(vide)',
+        outputSummary: json.data?.summary || '(manquant dans réponse)',
+        inputFirstExpDesc: form.experiences?.[0]?.description || '(vide)',
+        outputFirstExpDesc: json.data?.experiences?.[0]?.description || '(manquant dans réponse)',
+        inputSkills: form.skills || '(vide)',
+        outputSkills: json.data?.skills || '(manquant dans réponse)',
+        hasData: !!json.data,
+        rawCvPreview: (json.cv || '').substring(0, 200),
+      });
+      // Auto-next désactivé en mode debug pour qu'on puisse lire les infos
+      // onNext();
     } catch (e: any) {
       setError(e.message || 'Erreur lors de la génération.');
     } finally {
@@ -119,6 +132,56 @@ export function Step4Generate({ form, onGenerated, onFormUpdate, onNext }: Props
           maxWidth: 420,
         }}>
           ❌ {error}
+        </div>
+      )}
+
+      {/* 🐞 DEBUG TEMPORAIRE — à retirer après diagnostic */}
+      {debugInfo && (
+        <div style={{
+          background: '#FFF9E6', border: '2px solid #E8151B',
+          borderRadius: 8, padding: '16px 20px',
+          fontSize: 11, fontFamily: 'monospace',
+          lineHeight: 1.5, textAlign: 'left',
+          boxShadow: '3px 3px 0 #111', width: '100%', maxWidth: 700,
+        }}>
+          <div style={{ fontWeight: 900, color: '#E8151B', marginBottom: 10, fontSize: 13, fontFamily: FONT }}>
+            🐞 DEBUG — réponse de l'IA
+          </div>
+          <div style={{ marginBottom: 8 }}><strong>hasData:</strong> {String(debugInfo.hasData)}</div>
+
+          <div style={{ marginTop: 12, fontWeight: 700, color: '#E8151B' }}>SUMMARY</div>
+          <div><strong>Avant (input) :</strong> {debugInfo.inputSummary}</div>
+          <div><strong>Après (IA) :</strong> {debugInfo.outputSummary}</div>
+          <div style={{ marginTop: 4, color: debugInfo.inputSummary === debugInfo.outputSummary ? '#E8151B' : '#1A7A4A', fontWeight: 700 }}>
+            {debugInfo.inputSummary === debugInfo.outputSummary ? '⚠️ IDENTIQUE' : '✅ TRANSFORMÉ'}
+          </div>
+
+          <div style={{ marginTop: 12, fontWeight: 700, color: '#E8151B' }}>1ère EXPÉRIENCE (description)</div>
+          <div><strong>Avant :</strong> {debugInfo.inputFirstExpDesc}</div>
+          <div><strong>Après :</strong> {debugInfo.outputFirstExpDesc}</div>
+          <div style={{ marginTop: 4, color: debugInfo.inputFirstExpDesc === debugInfo.outputFirstExpDesc ? '#E8151B' : '#1A7A4A', fontWeight: 700 }}>
+            {debugInfo.inputFirstExpDesc === debugInfo.outputFirstExpDesc ? '⚠️ IDENTIQUE' : '✅ TRANSFORMÉ'}
+          </div>
+
+          <div style={{ marginTop: 12, fontWeight: 700, color: '#E8151B' }}>SKILLS</div>
+          <div><strong>Avant :</strong> {debugInfo.inputSkills}</div>
+          <div><strong>Après :</strong> {debugInfo.outputSkills}</div>
+          <div style={{ marginTop: 4, color: debugInfo.inputSkills === debugInfo.outputSkills ? '#E8151B' : '#1A7A4A', fontWeight: 700 }}>
+            {debugInfo.inputSkills === debugInfo.outputSkills ? '⚠️ IDENTIQUE' : '✅ TRANSFORMÉ'}
+          </div>
+
+          <button
+            onClick={onNext}
+            style={{
+              marginTop: 16, padding: '10px 20px',
+              background: '#111', color: '#fff',
+              border: '2px solid #111', borderRadius: 6,
+              fontSize: 13, fontWeight: 800, fontFamily: FONT,
+              cursor: 'pointer', boxShadow: '2px 2px 0 #E8151B',
+            }}
+          >
+            Continuer vers l'étape 5 →
+          </button>
         </div>
       )}
 
