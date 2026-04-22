@@ -67,24 +67,23 @@ Longueur : maximum une page (environ 500 mots).`;
   return p;
 }
 
-export function buildExtractPrompt(text: string): string {
-  return `Extrais les données de ce CV (texte brut issu d'un PDF) et retourne UNIQUEMENT un JSON valide sans markdown, sans backticks, sans texte avant ou après.
+// ⚠️ Prompt d'extraction pour Claude Vision : le PDF est attaché directement au message,
+// Claude le lit visuellement (plus besoin de passer par pdfjs + texte brut côté client).
+// La fonction ne prend donc plus de texte en paramètre.
+export function buildExtractPrompt(): string {
+  return `Analyse ce CV PDF et retourne UNIQUEMENT un JSON valide sans markdown, sans backticks, sans texte avant ou après.
 
 Format attendu :
 {"firstName":"","lastName":"","title":"","email":"","phone":"","city":"","linkedin":"","summary":"","skills":"","experiences":[{"role":"","company":"","start":"","end":"","description":""}],"education":[{"degree":"","school":"","year":""}]}
 
 Règles :
-- Extrais uniquement ce qui est présent dans le texte, n'invente rien.
-- Le texte peut être désordonné (layouts multi-colonnes Canva, sections en blocs séparés, ordre de lecture non linéaire) — reconstitue la structure logique en associant chaque information à la bonne section.
+- Extrais uniquement ce qui est présent dans le CV, n'invente rien.
+- Le CV peut utiliser un layout complexe (multi-colonnes Canva, sections dans des blocs séparés, éléments graphiques, icônes) — lis l'ensemble du document visuel et reconstitue la structure logique en associant chaque information à la bonne section.
 - Recherche ACTIVEMENT les sections "Formation", "Études", "Education", "Diplômes", "Cursus" pour remplir "education" — ne saute JAMAIS cette section, même si elle est en bas du CV ou dans une colonne latérale.
 - Recherche ACTIVEMENT les sections "Compétences", "Skills", "Outils", "Technologies", "Logiciels", "Langues" pour remplir "skills".
-- Pour "experiences", capture TOUTES les expériences professionnelles présentes dans le texte, même celles en fin de CV ou dans une colonne secondaire. Chaque poste distinct doit être une entrée séparée.
+- Pour "experiences", capture TOUTES les expériences professionnelles présentes dans le CV, même celles en fin de document ou dans une colonne secondaire. Chaque poste distinct doit être une entrée séparée.
 - Pour "skills", joins toutes les compétences trouvées en une seule chaîne séparée par des virgules.
 - Pour "end", utilise "Présent" si c'est le poste actuel (indicateurs : "aujourd'hui", "présent", "actuel", pas de date de fin).
 - Pour "summary", extrais le résumé / profil / bio / accroche présent en haut du CV (généralement juste sous le nom ou le titre).
-- Pour les descriptions d'expériences, reprends fidèlement ce qui est écrit (bullets ou texte continu).
-- Si tu trouves des caractères bizarres ou des mots collés dus à l'extraction PDF (ex : "DirecteurMarketing"), sépare-les logiquement dans le texte final.
-
-Texte du CV :
-${text.substring(0, 100000)}`;
+- Pour les descriptions d'expériences, reprends fidèlement ce qui est écrit (bullets ou texte continu).`;
 }

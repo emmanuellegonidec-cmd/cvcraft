@@ -25,24 +25,25 @@ export function Step2Import({ onImportSuccess, onNext, onSkip }: Props) {
       setStatus({ type: 'error', msg: 'Sélectionne un fichier PDF.' });
       return;
     }
-    setStatus({ type: 'loading', msg: 'Lecture du PDF...' });
+    setStatus({ type: 'loading', msg: 'L\'IA analyse ton CV...' });
     try {
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      const buffer = await file.arrayBuffer();
-      const pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
-      let text = '';
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const page = await pdfDoc.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map((s: any) => s.str).join(' ') + '\n';
-      }
-      setStatus({ type: 'loading', msg: 'L\'IA analyse ton profil...' });
+      // ⚠️ Claude Vision : on envoie le PDF directement à Claude qui le lit visuellement.
+      // Bien plus fiable que pdfjs pour les layouts complexes (Canva, multi-colonnes, icônes).
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Format : "data:application/pdf;base64,XXXXX" — on ne garde que XXXXX
+          resolve(result.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
       const res = await fetch('/api/extract-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ pdfBase64: base64 }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);

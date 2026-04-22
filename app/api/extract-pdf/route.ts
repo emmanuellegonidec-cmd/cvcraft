@@ -6,19 +6,34 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
-    const { text } = await req.json();
+    const { pdfBase64 } = await req.json();
 
-    // Nettoyage des caractères de contrôle qui peuvent casser le parsing JSON.
-    // ⚠️ On ne tronque PAS ici : la fonction buildExtractPrompt gère sa propre
-    // limite (100 000 caractères), largement suffisante pour n'importe quel CV.
-    const cleanedText = (text || '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    if (!pdfBase64) {
+      return NextResponse.json({ error: 'PDF manquant' }, { status: 400 });
+    }
 
-    const prompt = buildExtractPrompt(cleanedText);
-
+    // ⚠️ Claude Vision : on envoie le PDF directement, Claude le lit visuellement.
+    // Bien supérieur à pdfjs pour les PDF complexes (multi-colonnes Canva, éléments graphiques).
     const message = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 4000,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: pdfBase64,
+            },
+          },
+          {
+            type: 'text',
+            text: buildExtractPrompt(),
+          },
+        ],
+      }],
     });
 
     const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
