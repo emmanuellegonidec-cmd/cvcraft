@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
-import { useEffect, useState } from 'react';
 
 type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats' | 'actions' | 'personal_actions';
 
@@ -38,14 +37,7 @@ export default function Sidebar({
   jobCount, contactCount, interviewCount, onSettings,
 }: SidebarProps) {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data }) => {
-      setIsAdmin(data.session?.user?.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID);
-    });
-  }, []);
+  const isAdmin = userEmail === 'emmanuelle.gonidec@gmail.com';
 
   const handleLogout = async () => {
     const supabase = createClient();
