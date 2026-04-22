@@ -68,50 +68,28 @@ Longueur : maximum une page (environ 500 mots).`;
 }
 
 // ⚠️ Prompt d'extraction pour Claude Vision : le PDF est attaché directement au message,
-// Claude le lit visuellement (plus besoin de pdfjs + texte brut côté client).
+// Claude le lit visuellement. Prompt volontairement simple pour éviter qu'il ré-interprète
+// ou redistribue du contenu entre les sections.
 export function buildExtractPrompt(): string {
-  return `Analyse ce CV PDF et retourne UNIQUEMENT un JSON valide sans markdown, sans backticks, sans texte avant ou après.
+  return `Extrais les données de ce CV PDF et retourne UNIQUEMENT un JSON valide, sans markdown, sans backticks, sans texte avant ou après.
 
 Format attendu :
 {"firstName":"","lastName":"","title":"","email":"","phone":"","city":"","linkedin":"","summary":"","skills":"","experiences":[{"role":"","company":"","start":"","end":"","description":""}],"education":[{"degree":"","school":"","year":""}]}
 
-⚠️ RÈGLES GÉNÉRALES :
-- Extrais uniquement ce qui est présent dans le CV, n'invente rien.
-- Le CV peut utiliser un layout complexe (multi-colonnes Canva, icônes, blocs séparés) — lis l'ensemble du document visuel et associe chaque information à la bonne section du JSON.
-- ANTI-DOUBLON : une même information ne doit apparaître QU'UNE FOIS dans le JSON. Si un thème apparaît à la fois comme titre de section ET comme sous-bullet détaillé, garde UNIQUEMENT la version courte (titre) et place le détail chiffré dans le champ adapté (généralement experiences.description).
+Règles strictes :
 
-⚠️ SPÉCIFICATION PAR CHAMP :
+1. Extrais ce qui est écrit dans le CV, n'invente rien et ne déplace rien entre les sections.
 
-**summary** : 2 à 4 lignes MAXIMUM. L'accroche ou le profil personnel en haut du CV (généralement juste sous le nom ou le titre). Ne copie PAS la liste des compétences ni les expériences ici.
+2. Chaque expérience dans "experiences" = UN poste unique avec SES propres dates et SEULEMENT les bullets/texte qui lui sont directement associés dans le CV. Ne mélange JAMAIS le contenu de deux expériences différentes. Si tu as un doute, isole le contenu dans l'expérience la plus pertinente uniquement.
 
-**skills** : UNIQUEMENT des éléments COURTS (1 à 4 mots maximum par item) séparés par des virgules.
-Exemples corrects :
-  ✅ "HubSpot, Figma, SEO, Management d'équipe, Stratégie marketing 360°, Growth hacking, Anglais courant"
-Exemples INCORRECTS à éviter :
-  ❌ "Management et structuration d'équipes pluridisciplinaires avec OKRs" (trop long — condense en "Management d'équipe")
-  ❌ "Pilotage budgétaire : 1,4 M€ - PGW" (réalisation chiffrée → doit aller dans experiences.description)
-  ❌ "Optimisation de la relation client (CSM) : refonte des campagnes emailing" (bullet descriptif → doit aller dans experiences.description)
-Règle : si un CV contient un bloc "Compétences clés" avec des titres de thèmes ET des sous-bullets détaillés en dessous, garde UNIQUEMENT les titres des thèmes (condensés si nécessaire), et mets les sous-bullets dans experiences.description de l'expérience concernée.
+3. "skills" : UNIQUEMENT des items courts (1 à 4 mots maximum par item) séparés par des virgules. Typiquement : outils/logiciels, langues, compétences techniques courtes, thèmes de compétence condensés. N'inclus PAS de phrases descriptives longues, PAS de réalisations chiffrées, PAS de bullets détaillés. Si tu trouves des bullets longs dans une section "Compétences clés", condense-les en titre court ou ignore-les.
 
-**experiences[].role** : intitulé du poste uniquement (ex : "Directrice Marketing").
-**experiences[].company** : nom de l'entreprise seul, sans tags contextuels type "(CA : 230M€)" ou "SaaS B2B" (ces infos peuvent aller dans description).
-**experiences[].start / end** : format "YYYY" ou "YYYY/MM". Utilise "Présent" pour end si c'est le poste actuel.
-**experiences[].description** : les bullets/phrases des réalisations, avec chiffres et résultats. C'est ICI que vont les détails techniques et les résultats mesurables (ex : "Pilotage budgétaire 1,4 M€ sur PGW", "Taux d'ouverture email 12% → 50%").
+4. "education[].degree" : intitulé du diplôme SEUL. Exclus les parenthèses type "(8 mois)", exclus les préfixes "Réalisation : …" ou descriptions de projets d'école.
+   Exemple : "ESCP Extension (8 mois) — IA, No Code et transformation digitale — Réalisation : Plateforme IA de veille…" → degree = "IA, No Code et transformation digitale", school = "ESCP Extension".
 
-**education[].degree** : intitulé du diplôme ou du programme SEUL. N'inclus PAS :
-  ❌ Les parenthèses type "(8 mois)", "(2 mois)", "(18 mois)"
-  ❌ Les préfixes "Réalisation : …" ou les descriptions de projets d'école
-Exemples corrects :
-  ✅ "IA, No Code et transformation digitale"
-  ✅ "3ème cycle - Marketing, Commerce & Communication"
-  ✅ "Bachelor Growth hacking"
-**education[].school** : nom de l'école/institution seul (ex : "ESCP Extension", "ISC Paris", "Université de Rennes").
-**education[].year** : année principale (ex : "2025", "1999").
+5. "summary" : 2 à 4 lignes maximum, uniquement l'accroche/profil personnel en haut du CV. Ne copie pas les compétences ni les expériences.
 
-⚠️ SECTIONS À CHERCHER ACTIVEMENT DANS LE CV :
-- "Formation", "Études", "Education", "Diplômes", "Cursus" → education[] (ne saute JAMAIS, même si en bas ou colonne latérale)
-- "Compétences", "Skills", "Outils", "Technologies", "Logiciels", "Langues" → skills
-- "Expériences", "Parcours", "Work Experience" → experiences[]
+6. Cherche activement les sections "Formation/Études/Diplômes", "Compétences/Skills/Outils", "Expériences/Parcours", même si elles sont en colonne latérale ou en bas de page. Capture TOUTES les entrées.
 
-Capture TOUTES les expériences et TOUTES les formations présentes dans le CV, même en fin de document ou dans une colonne secondaire. Chaque poste/diplôme distinct = une entrée séparée.`;
+7. Dates d'expérience : utilise le format tel qu'écrit dans le CV (ex : "2021", "2021/24", "2025/26"). Pour "end", utilise "Présent" si pas de date de fin.`;
 }
