@@ -14,6 +14,8 @@ export async function POST(req: NextRequest) {
 
     // ⚠️ Claude Vision : on envoie le PDF directement, Claude le lit visuellement.
     // Bien supérieur à pdfjs pour les PDF complexes (multi-colonnes Canva, éléments graphiques).
+    // Le `as any` sur content contourne une limitation des types TypeScript du SDK Anthropic
+    // qui ne connaissent pas encore le type 'document' (l'API, elle, le supporte parfaitement).
     const message = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4000,
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
             type: 'text',
             text: buildExtractPrompt(),
           },
-        ],
+        ] as any,
       }],
     });
 
