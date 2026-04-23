@@ -38,6 +38,44 @@ export async function GET(req: NextRequest) {
   const { supabase, user } = await getAuth(req);
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
+  const { searchParams } = new URL(req.url);
+  const singleId = searchParams.get('id');
+
+  // ─────────────────────────────────────────────────────────────
+  // MODE "SINGLE CV" — si ?id=xxx est fourni, renvoie la ligne
+  // complète de la table cvs (title, template, content, form_data).
+  // Utilisé par l'éditeur pour charger un CV existant à éditer,
+  // et par la page Mes CV pour générer le PDF à la volée.
+  // ─────────────────────────────────────────────────────────────
+  if (singleId) {
+    try {
+      const { data, error } = await supabase
+        .from('cvs')
+        .select('id, title, template, content, form_data, created_at, updated_at')
+        .eq('id', singleId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('GET /api/cvs?id=... error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      if (!data) {
+        return NextResponse.json({ error: 'CV introuvable' }, { status: 404 });
+      }
+
+      return NextResponse.json({ cv: data });
+    } catch (err: any) {
+      console.error('GET /api/cvs?id=... exception:', err);
+      return NextResponse.json({ error: err.message || 'Erreur serveur' }, { status: 500 });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // MODE "LISTE AGRÉGÉE" — comportement historique inchangé.
+  // Retourne tous les CV (creator + uploads) avec leurs refs.
+  // ─────────────────────────────────────────────────────────────
   try {
     const { data: profile } = await supabase
       .from('user_profiles')
@@ -109,7 +147,6 @@ export async function GET(req: NextRequest) {
           const ref = `upload:${filePath}`;
           const job = jobsMap[jobId];
 
-          // NOUVEAU : on construit un titre enrichi qui intègre déjà l'offre liée
           const autoTitle = buildUploadTitle((file as any).name, job?.title, job?.company);
 
           uploadList.push({
@@ -165,7 +202,6 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
 
-    // UPDATE d'un CV existant
     if (id) {
       const { data, error } = await supabase
         .from('cvs')
@@ -187,14 +223,12 @@ export async function POST(req: NextRequest) {
       }
 
       if (!data) {
-        // Soit l'id n'existe pas, soit il n'appartient pas à l'utilisateur
         return NextResponse.json({ error: 'CV introuvable' }, { status: 404 });
       }
 
       return NextResponse.json({ cv: data });
     }
 
-    // INSERT d'un nouveau CV
     const { data, error } = await supabase
       .from('cvs')
       .insert({

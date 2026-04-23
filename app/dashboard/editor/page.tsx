@@ -41,19 +41,6 @@ const DEMO_FORM: Partial<CVFormData> = {
   tone: 'professionnel',
 };
 
-const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: 11, fontWeight: 700,
-  textTransform: 'uppercase', letterSpacing: '0.05em',
-  marginBottom: 5, color: '#111',
-};
-
-const fieldStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 10px', fontSize: 13,
-  fontFamily: 'Montserrat, sans-serif', border: '2px solid #111',
-  borderRadius: 6, background: '#fff', color: '#111',
-  outline: 'none', boxSizing: 'border-box' as const,
-};
-
 function EditorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -68,6 +55,7 @@ function EditorContent() {
   const [cvTitle, setCvTitle] = useState('');
   const [generatedCV, setGeneratedCV] = useState('');
   const [saveMsg, setSaveMsg] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -77,24 +65,44 @@ function EditorContent() {
       if (session?.access_token) (window as any).__jfmj_token = session.access_token;
       if (!user) { router.push('/auth/login'); return; }
       if (!cvId) return;
-      const res = await fetch('/api/cvs', {
-        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
-      });
-      const json = await res.json();
-      const cv = (json.cvs || []).find((c: any) => c.id === cvId);
-      if (!cv) return;
-      setCvTitle(cv.title);
-      setGeneratedCV(cv.content || '');
-      const fd = cv.form_data || {};
-      setForm({
-        ...defaultFormData, ...fd,
-        experiences: (fd.experiences || []).map((e: any) => ({ ...e, id: e.id || Math.random().toString(36).slice(2, 9) })),
-        education: (fd.education || []).map((e: any) => ({ ...e, id: e.id || Math.random().toString(36).slice(2, 9) })),
-      });
-      if (fd.accentColor) setAccentColor(fd.accentColor);
-      if (fd.font) setFont(fd.font as FontId);
-      if (cv.template) setTemplate(cv.template as TemplateId);
-      setStep(3);
+
+      try {
+        // Appel direct au mode "single CV" de l'API : /api/cvs?id=xxx
+        // renvoie { cv: { id, title, template, content, form_data, ... } }
+        const res = await fetch(`/api/cvs?id=${encodeURIComponent(cvId)}`, {
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+        });
+
+        // Parsing JSON défensif
+        const rawText = await res.text();
+        let json: any = null;
+        if (rawText) {
+          try { json = JSON.parse(rawText); } catch { json = null; }
+        }
+
+        if (!res.ok || !json?.cv) {
+          setLoadError(json?.error || `Impossible de charger le CV (${res.status})`);
+          return;
+        }
+
+        const cv = json.cv;
+        setCvTitle(cv.title || '');
+        setGeneratedCV(cv.content || '');
+        const fd = cv.form_data || {};
+        setForm({
+          ...defaultFormData, ...fd,
+          experiences: (fd.experiences || []).map((e: any) => ({ ...e, id: e.id || Math.random().toString(36).slice(2, 9) })),
+          education: (fd.education || []).map((e: any) => ({ ...e, id: e.id || Math.random().toString(36).slice(2, 9) })),
+        });
+        if (fd.accentColor) setAccentColor(fd.accentColor);
+        if (fd.font) setFont(fd.font as FontId);
+        if (fd.photo) setPhoto(fd.photo);
+        if (cv.template) setTemplate(cv.template as TemplateId);
+        setStep(3);
+      } catch (e: any) {
+        console.error('Erreur chargement CV:', e);
+        setLoadError(e?.message || 'Erreur inconnue');
+      }
     }
     load();
   }, [cvId, router]);
@@ -199,6 +207,7 @@ function EditorContent() {
               placeholder="Titre de mon CV"
             />
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              {loadError && <span style={{ fontSize: 12, fontWeight: 700, color: '#E8151B', fontFamily: FONT }}>⚠ {loadError}</span>}
               {saveMsg && <span style={{ fontSize: 12, fontWeight: 700, color: saveMsg.startsWith('✅') ? '#1A7A4A' : '#E8151B', fontFamily: FONT }}>{saveMsg}</span>}
             </div>
           </header>
@@ -292,7 +301,6 @@ function EditorContent() {
               {/* ÉTAPE 3 */}
               {step === 3 && (
                 <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                  {/* ── FORMULAIRE + APERÇU ── */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', flex: 1, overflow: 'hidden' }}>
                     <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto' }}>
                       <Step3Form
