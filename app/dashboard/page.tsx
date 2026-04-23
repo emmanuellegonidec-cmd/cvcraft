@@ -100,6 +100,12 @@ export default function DashboardPage() {
     return s;
   }, [contacts]);
 
+  // Le calendrier n'affiche PAS les offres archivées
+  const calendarJobs = useMemo(
+    () => jobs.filter(j => j.status !== 'archived'),
+    [jobs]
+  );
+
   function authFetch(url: string, options: RequestInit = {}) {
     return fetch(url, {
       ...options,
@@ -612,7 +618,7 @@ export default function DashboardPage() {
 
           {['kanban', 'list'].includes(view) && (
             <DashboardCalendar
-              jobs={jobs}
+              jobs={calendarJobs}
               stagesLabelMap={stagesLabelMap}
               onJobClick={handleCalendarJobClick}
               onActionClick={handleCalendarActionClick}
