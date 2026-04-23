@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase';
+import LinkedContactsBlock from '@/components/LinkedContactsBlock';
 
 const FONT = "'Montserrat', sans-serif";
 
@@ -40,6 +42,16 @@ const STATUTS = [
 
 interface JobOption { id: string; title: string; company: string; }
 
+interface LinkedContact {
+  id: string;
+  name: string;
+  role: string | null;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  linkedin: string | null;
+}
+
 interface Props {
   kind: 'personal_action' | 'event';
   data: any;
@@ -51,6 +63,12 @@ function notifyRefresh() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('jfmj-calendar-refresh'));
   }
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (parts[0]?.slice(0, 2) || '??').toUpperCase();
 }
 
 function formatDateLabel(d: string, h?: string | null) {
@@ -112,6 +130,8 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
   const [evNote, setEvNote] = useState(data.note || '');
 
   const [statut, setStatut] = useState(data.statut || 'a_faire');
+  const [contactIds, setContactIds] = useState<string[]>(data.contact_ids || []);
+  const [linkedContacts, setLinkedContacts] = useState<LinkedContact[]>([]);
 
   useEffect(() => {
     if (kind === 'event' && data.date_debut) {
@@ -124,6 +144,26 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
       if (data.date_fin) setEvDateFin(toLocalInput(data.date_fin));
     }
   }, [kind, data]);
+
+  // Charge les contacts liés pour l'affichage en mode view
+  useEffect(() => {
+    const ids = contactIds;
+    if (!ids || ids.length === 0) { setLinkedContacts([]); return; }
+    (async () => {
+      const supabase = createClient();
+      const { data: cd } = await supabase.from('contacts')
+        .select('id, name, role, company, email, phone, linkedin')
+        .in('id', ids);
+      const map = new Map<string, LinkedContact>();
+      (cd || []).forEach((c: any) => map.set(c.id, c as LinkedContact));
+      const ordered: LinkedContact[] = [];
+      for (const id of ids) {
+        const c = map.get(id);
+        if (c) ordered.push(c);
+      }
+      setLinkedContacts(ordered);
+    })();
+  }, [contactIds]);
 
   function getToken() {
     return typeof window !== 'undefined' ? (window as any).__jfmj_token : null;
@@ -158,6 +198,7 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
         note: paNote.trim() || null,
         job_id: paJobId || null,
         statut,
+        contact_ids: contactIds,
       };
       const res = await authFetch('/api/personal-actions', { method: 'POST', body: JSON.stringify(body) });
       const result = await res.json();
@@ -192,6 +233,7 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
         date_fin: evDateFin ? toISO(evDateFin) : null,
         note: evNote,
         statut,
+        contact_ids: contactIds,
       };
       const res = await authFetch('/api/actions', { method: 'PUT', body: JSON.stringify(body) });
       if (!res.ok) {
@@ -201,7 +243,7 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
       Object.assign(data, {
         nom: evNom, organisateur: evOrganisateur, categorie: evCategorie,
         date_debut: body.date_debut, date_fin: body.date_fin, note: evNote,
-        statut,
+        statut, contact_ids: contactIds,
       });
       notifyRefresh();
       setMode('view');
@@ -265,9 +307,9 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
 
   const headerLabel = kind === 'personal_action' ? 'Action' : 'Événement';
   const effectiveStatus = getEffectiveStatus(kind, data);
-
-  // Opacity seule sur le contenu principal (pas de barré)
   const contentOpacity = effectiveStatus === 'fait' ? 0.75 : effectiveStatus === 'annule' ? 0.6 : 1;
+  const linkToLabel = kind === 'personal_action' ? (paNom.trim() || 'cette action') : (evNom.trim() || 'cet événement');
+  const defaultCompany = kind === 'personal_action' ? (paPlateforme.trim() || undefined) : (evOrganisateur.trim() || undefined);
 
   return (
     <>
@@ -372,7 +414,7 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, opacity: contentOpacity }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, opacity: contentOpacity, marginBottom: 22 }}>
                 {kind === 'personal_action' && (
                   <>
                     <DetailRow label="Date" value={formatDateLabel(data.date_action, data.heure_action)} icon="📅" />
@@ -390,6 +432,45 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
                   </>
                 )}
               </div>
+
+              {/* Contacts liés — affichage lecture */}
+              {linkedContacts.length > 0 && (
+                <div style={{ opacity: contentOpacity }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT }}>
+                    👥 Contacts liés ({linkedContacts.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {linkedContacts.map(c => (
+                      <div key={c.id}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#FAFAFA', border: '1.5px solid #E0E0E0', borderRadius: 8, padding: '8px 10px' }}>
+                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#111', color: '#F5C400', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
+                          {initials(c.name)}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                          <div style={{ fontSize: 11, color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {c.role}{c.role && c.company ? ' — ' : ''}{c.company}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          {c.email && (
+                            <button onClick={() => window.open('mailto:' + c.email)} title="Email"
+                              style={{ width: 30, height: 30, border: '1.5px solid #111', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>@</button>
+                          )}
+                          {c.phone && (
+                            <button onClick={() => window.open('tel:' + c.phone)} title="Téléphone"
+                              style={{ width: 30, height: 30, border: '1.5px solid #111', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 9, fontWeight: 800 }}>TEL</button>
+                          )}
+                          {c.linkedin && (
+                            <button onClick={() => window.open(c.linkedin!, '_blank')} title="LinkedIn"
+                              style={{ width: 30, height: 30, border: '1.5px solid #111', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>in</button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -439,6 +520,17 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
                       ))}
                     </div>
                   </Field>
+
+                  {/* NOUVEAU : Contacts liés */}
+                  <div style={{ marginBottom: 14 }}>
+                    <LinkedContactsBlock
+                      contactIds={contactIds}
+                      onChange={setContactIds}
+                      linkToLabel={linkToLabel}
+                      defaultCompany={defaultCompany}
+                    />
+                  </div>
+
                   <Field label="Note (optionnel)">
                     <textarea value={paNote} onChange={e => setPaNote(e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' }} />
                   </Field>
@@ -484,6 +576,17 @@ export default function ActionDetailPanel({ kind, data, jobs = [], onClose }: Pr
                       ))}
                     </div>
                   </Field>
+
+                  {/* NOUVEAU : Contacts liés */}
+                  <div style={{ marginBottom: 14 }}>
+                    <LinkedContactsBlock
+                      contactIds={contactIds}
+                      onChange={setContactIds}
+                      linkToLabel={linkToLabel}
+                      defaultCompany={defaultCompany}
+                    />
+                  </div>
+
                   <Field label="Note">
                     <textarea value={evNote} onChange={e => setEvNote(e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' }} />
                   </Field>

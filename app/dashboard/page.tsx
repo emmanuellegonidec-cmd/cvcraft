@@ -652,7 +652,7 @@ export default function DashboardPage() {
             <ListView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onDeleteJob={deleteJob} onAddJob={openAddJobModal} />
           )}
           {view === 'contacts' && (
-            <ContactsView contacts={contacts} onAddContact={() => setTriggerAddContact(n => n + 1)} onDeleteContact={deleteContact} onRefresh={fetchContacts} />
+<ContactsView contacts={contacts} triggerAddContact={triggerAddContact} onAddContact={() => setTriggerAddContact(n => n + 1)} onDeleteContact={deleteContact} onRefresh={fetchContacts} />            
           )}
           {view === 'agenda' && (
             <AgendaView jobs={jobs} stages={stages} onJobClick={setSelectedJob} onBackToKanban={() => setView('kanban')} />

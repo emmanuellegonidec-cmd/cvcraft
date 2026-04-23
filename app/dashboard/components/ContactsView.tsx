@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import CreateContactModal from '@/components/CreateContactModal'
 
 const FONT = "'Montserrat', sans-serif"
 
@@ -20,9 +21,12 @@ interface Contact {
 
 interface Props {
   contacts: Contact[]
-  onAddContact: () => void
+  onAddContact?: () => void
   onDeleteContact: (id: string) => void
   onRefresh?: () => void
+  // NOUVEAU : compteur incrémenté par le parent quand on veut ouvrir le modal
+  // d'ajout (bouton "+ Ajouter un contact" du header dashboard)
+  triggerAddContact?: number
 }
 
 function EditModal({ contact, onClose, onSaved }: {
@@ -88,9 +92,15 @@ function EditModal({ contact, onClose, onSaved }: {
   )
 }
 
-export default function ContactsView({ contacts, onAddContact, onDeleteContact, onRefresh }: Props) {
+export default function ContactsView({ contacts, onDeleteContact, onRefresh, triggerAddContact }: Props) {
   const [search, setSearch] = useState('')
   const [editContact, setEditContact] = useState<Contact | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
+
+  // Bouton "+ Ajouter un contact" du header dashboard : écoute le compteur
+  useEffect(() => {
+    if ((triggerAddContact ?? 0) > 0) setShowCreate(true)
+  }, [triggerAddContact])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -210,7 +220,7 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
       </div>
 
       {/* AJOUTER */}
-      <div onClick={onAddContact}
+      <div onClick={() => setShowCreate(true)}
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #ccc', borderRadius: 8, padding: 14, marginTop: 10, cursor: 'pointer', color: '#aaa', fontSize: 13, fontWeight: 700, fontFamily: FONT }}
         onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#111'; el.style.color = '#111' }}
         onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#ccc'; el.style.color = '#aaa' }}>
@@ -218,6 +228,12 @@ export default function ContactsView({ contacts, onAddContact, onDeleteContact, 
       </div>
 
       {editContact && <EditModal contact={editContact} onClose={() => setEditContact(null)} onSaved={() => { setEditContact(null); onRefresh?.() }} />}
+
+      <CreateContactModal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={() => { onRefresh?.() }}
+      />
     </div>
   )
 }

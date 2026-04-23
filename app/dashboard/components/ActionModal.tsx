@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import LinkedContactsBlock from '@/components/LinkedContactsBlock'
 
 const CATEGORIES = [
   'Atelier',
@@ -27,6 +28,7 @@ interface Action {
   date_fin: string
   note: string
   statut?: string
+  contact_ids?: string[]
 }
 
 interface ActionModalProps {
@@ -46,6 +48,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
   const [dateFin, setDateFin] = useState('')
   const [note, setNote] = useState('')
   const [statut, setStatut] = useState('a_faire')
+  const [contactIds, setContactIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -60,6 +63,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
       setDateFin(action.date_fin ? toLocalInput(action.date_fin) : '')
       setNote(action.note || '')
       setStatut(action.statut || 'a_faire')
+      setContactIds(action.contact_ids || [])
     } else {
       // Mode création : vide OU pré-rempli depuis initialDateTime
       setNom('')
@@ -80,6 +84,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
       }
       setNote('')
       setStatut('a_faire')
+      setContactIds([])
     }
     setError('')
   }, [action, isOpen, initialDateTime])
@@ -103,6 +108,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
         date_fin: dateFin ? toISO(dateFin) : null,
         note,
         statut,
+        contact_ids: contactIds,
       }
       if (action?.id) body.id = action.id
 
@@ -239,6 +245,14 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
               ))}
             </div>
           </div>
+
+          {/* NOUVEAU : Contacts liés à l'événement */}
+          <LinkedContactsBlock
+            contactIds={contactIds}
+            onChange={setContactIds}
+            linkToLabel={nom.trim() || 'cet événement'}
+            defaultCompany={organisateur.trim() || undefined}
+          />
 
           <div>
             <label style={labelStyle}>Note</label>

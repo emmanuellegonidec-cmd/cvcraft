@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
+import LinkedContactsBlock from '@/components/LinkedContactsBlock';
 
 const FONT = "'Montserrat', sans-serif";
 
@@ -36,6 +37,7 @@ interface PersonalAction {
   note: string | null;
   job_id: string | null;
   statut: string;
+  contact_ids?: string[] | null;
   job_title?: string | null;
   job_company?: string | null;
 }
@@ -82,6 +84,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
   const [formNote, setFormNote] = useState('');
   const [formJobId, setFormJobId] = useState('');
   const [formStatut, setFormStatut] = useState('a_faire');
+  const [formContactIds, setFormContactIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   function getToken() {
@@ -148,6 +151,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
       setFormNote(action.note || '');
       setFormJobId(action.job_id || '');
       setFormStatut(action.statut || 'a_faire');
+      setFormContactIds(action.contact_ids || []);
     } else {
       // Mode création : vide OU pré-rempli depuis initialDateTime
       setEditAction(null);
@@ -159,6 +163,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
       setFormNote('');
       setFormJobId('');
       setFormStatut('a_faire');
+      setFormContactIds([]);
     }
     setShowModal(true);
   }
@@ -177,6 +182,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
         note: formNote.trim() || null,
         job_id: formJobId || null,
         statut: formStatut,
+        contact_ids: formContactIds,
       };
       const res = await authFetch('/api/personal-actions', { method: 'POST', body: JSON.stringify(body) });
       const data = await res.json();
@@ -308,6 +314,9 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
             {a.plateforme && <span style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>📍 {a.plateforme}</span>}
             <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>📅 {formatDate(a.date_action, a.heure_action)}</span>
             {a.job_title && <span style={{ fontSize: 11, color: '#111', fontWeight: 700, background: '#F5F5F0', border: '1px solid #DDD', borderRadius: 4, padding: '2px 8px' }}>🔗 {a.job_title}{a.job_company ? ` — ${a.job_company}` : ''}</span>}
+            {a.contact_ids && a.contact_ids.length > 0 && (
+              <span style={{ fontSize: 11, color: '#5B21B6', fontWeight: 700, background: '#F5F0FF', border: '1px solid #7C3AED', borderRadius: 4, padding: '2px 8px' }}>👥 {a.contact_ids.length} contact{a.contact_ids.length > 1 ? 's' : ''}</span>
+            )}
           </div>
           {a.note && <div style={{ fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' }}>{a.note}</div>}
         </div>
@@ -435,6 +444,17 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
                   {jobs.map(j => <option key={j.id} value={j.id}>{j.title}{j.company ? ` — ${j.company}` : ''}</option>)}
                 </select>
               </div>
+
+              {/* NOUVEAU : Contacts liés à l'action */}
+              <div style={{ marginBottom: 20 }}>
+                <LinkedContactsBlock
+                  contactIds={formContactIds}
+                  onChange={setFormContactIds}
+                  linkToLabel={formNom.trim() || 'cette action'}
+                  defaultCompany={formPlateforme.trim() || undefined}
+                />
+              </div>
+
               <div style={{ marginBottom: 24 }}>
                 <label style={labelStyle}>Note <span style={{ textTransform: 'none', fontWeight: 600, color: '#999' }}>(optionnel)</span></label>
                 <textarea value={formNote} onChange={e => setFormNote(e.target.value)} placeholder="Informations complémentaires, suite à donner..." rows={4} style={{ ...inputStyle, resize: 'vertical' }} />

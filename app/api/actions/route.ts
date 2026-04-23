@@ -45,20 +45,23 @@ export async function POST(request: NextRequest) {
     if (!userId) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
     const body = await request.json()
-    const { nom, organisateur, categorie, date_debut, date_fin, note, statut } = body
+    const { nom, organisateur, categorie, date_debut, date_fin, note, statut, contact_ids } = body
 
     if (!nom || !date_debut) {
       return NextResponse.json({ error: 'Nom et date requis' }, { status: 400 })
     }
 
+    const insertData: any = {
+      user_id: userId,
+      nom, organisateur, categorie, date_debut, date_fin, note,
+      statut: statut || 'a_faire',
+    }
+    if (Array.isArray(contact_ids)) insertData.contact_ids = contact_ids
+
     const admin = getAdminClient()
     const { data, error } = await admin
       .from('actions')
-      .insert([{
-        user_id: userId,
-        nom, organisateur, categorie, date_debut, date_fin, note,
-        statut: statut || 'a_faire',
-      }])
+      .insert([insertData])
       .select()
       .single()
 
@@ -75,7 +78,7 @@ export async function PUT(request: NextRequest) {
     if (!userId) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
     const body = await request.json()
-    const { id, nom, organisateur, categorie, date_debut, date_fin, note, statut } = body
+    const { id, nom, organisateur, categorie, date_debut, date_fin, note, statut, contact_ids } = body
 
     // Mise à jour partielle : on ne met à jour que les champs présents dans le body
     const updateData: any = {}
@@ -86,6 +89,7 @@ export async function PUT(request: NextRequest) {
     if (date_fin !== undefined) updateData.date_fin = date_fin
     if (note !== undefined) updateData.note = note
     if (statut !== undefined) updateData.statut = statut
+    if (contact_ids !== undefined) updateData.contact_ids = contact_ids
 
     const admin = getAdminClient()
     const { data, error } = await admin
