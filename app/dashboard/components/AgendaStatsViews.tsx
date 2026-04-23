@@ -13,6 +13,13 @@ type AgendaProps = {
 
 type ContactMin = { id: string; name: string; role?: string | null };
 
+type InterviewEntry = {
+  job: Job;
+  stageId: string;
+  date: Date;
+  isMainInterview: boolean; // vrai pour l'entretien qui correspond au sub_status actuel
+};
+
 const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   telephone:  { label: '📞 Téléphone',  color: '#1A6FA8', bg: '#E8F4FD' },
   visio:      { label: '💻 Visio',      color: '#6B35B5', bg: '#F0EBFB' },
@@ -48,28 +55,52 @@ function parseLocalDate(dateStr: string): Date {
   return new Date(dateStr);
 }
 
-// Calcule la date effective d'un entretien (même logique que DashboardCalendar)
-function getEffectiveDate(job: Job): Date | null {
-  const subStatus = (job as any).sub_status as string | null;
+// Pour un job donné, retourne TOUTES les étapes d'entretien (une entry par étape)
+function getAllInterviews(job: Job, stages: Stage[]): InterviewEntry[] {
+  const entries: InterviewEntry[] = [];
   const stepDates = (job as any).step_dates as Record<string, string> | null;
   const interviewAt = (job as any).interview_at as string | null;
+  const subStatus = (job as any).sub_status as string | null;
 
-  if ((job.status as string) === 'in_progress' && subStatus && stepDates?.[subStatus]) {
-    const stepDate = parseLocalDate(stepDates[subStatus]);
-    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
-    if (stepDate >= todayMidnight) return stepDate; // future → prochaine étape
-    if (interviewAt) return new Date(interviewAt);  // passée → interview_at prime
-    return stepDate;
+  // 1. Toutes les step_dates qui correspondent à un stage d'entretien
+  if (stepDates) {
+    Object.entries(stepDates).forEach(([stageId, dateStr]) => {
+      if (!dateStr) return;
+      if (!isInterviewStage(stageId, stages)) return;
+      try {
+        const date = parseLocalDate(dateStr);
+        entries.push({
+          job,
+          stageId,
+          date,
+          isMainInterview: stageId === subStatus,
+        });
+      } catch {}
+    });
   }
-  if (interviewAt) return new Date(interviewAt);
-  return null;
-}
 
-function isPast(job: Job): boolean {
-  const d = getEffectiveDate(job);
-  if (!d) return false;
-  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
-  return d < todayMidnight;
+  // 2. Fallback : pas de step_dates mais interview_at défini
+  if (entries.length === 0 && interviewAt) {
+    let stageId: string | null = null;
+    if (subStatus && isInterviewStage(subStatus, stages)) {
+      stageId = subStatus;
+    } else if (isInterviewStage(job.status, stages)) {
+      stageId = job.status;
+    } else {
+      // Archivé / refusé avec interview_at mais pas de stage d'entretien lisible
+      stageId = subStatus || (job.status as string);
+    }
+    if (stageId) {
+      entries.push({
+        job,
+        stageId,
+        date: new Date(interviewAt),
+        isMainInterview: true,
+      });
+    }
+  }
+
+  return entries;
 }
 
 // Label de section
@@ -102,23 +133,18 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
       .catch(() => {});
   }, []);
 
-  // Inclut tous les jobs ayant eu un entretien, y compris archivés / refusés
-  const interviewJobs = jobs.filter(j =>
-    isInterviewStage(j.status, stages) || !!(j as any).interview_at
-  );
-
-  // Tri par date effective croissante
-  const sorted = [...interviewJobs].sort((a, b) => {
-    const da = getEffectiveDate(a);
-    const db = getEffectiveDate(b);
-    if (!da && !db) return 0;
-    if (!da) return 1;
-    if (!db) return -1;
-    return da.getTime() - db.getTime();
+  // Génère une entry par étape d'entretien (tous jobs confondus, y compris archivés)
+  const allEntries: InterviewEntry[] = [];
+  jobs.forEach(j => {
+    allEntries.push(...getAllInterviews(j, stages));
   });
 
-  const upcoming = sorted.filter(j => !isPast(j));
-  const past     = sorted.filter(j => isPast(j));
+  // Tri par date croissante
+  const sorted = [...allEntries].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+  const upcoming = sorted.filter(e => e.date >= todayMidnight);
+  const past     = sorted.filter(e => e.date <  todayMidnight);
 
   if (sorted.length === 0) {
     return (
@@ -130,16 +156,18 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
     );
   }
 
-  function renderCard(job: Job, muted: boolean) {
-    const subStatusId = (job as any).sub_status || job.status;
-    const detailStage = stages.find(s => s.id === subStatusId);
-    const effectiveDate = getEffectiveDate(job);
-    const timeStart   = (job as any).interview_time as string | null;
-    const timeEnd     = (job as any).interview_time_end as string | null;
-    const iType       = (job as any).interview_type as string | null;
-    const contactId   = (job as any).interview_contact_id as string | null;
+  function renderCard(entry: InterviewEntry, muted: boolean) {
+    const { job, stageId, date, isMainInterview } = entry;
+    const detailStage = stages.find(s => s.id === stageId);
+
+    // Heure / type / contact : seulement pour l'entretien "principal" (sub_status actuel)
+    const timeStart   = isMainInterview ? ((job as any).interview_time as string | null) : null;
+    const timeEnd     = isMainInterview ? ((job as any).interview_time_end as string | null) : null;
+    const iType       = isMainInterview ? ((job as any).interview_type as string | null) : null;
+    const contactId   = isMainInterview ? ((job as any).interview_contact_id as string | null) : null;
     const contact     = contactId ? contactsMap[contactId] : null;
     const typeInfo    = iType ? TYPE_LABELS[iType] : null;
+    const isArchived  = (job.status as string) === 'archived';
 
     const timeLabel = timeStart
       ? (timeEnd ? `${fmtTime(timeStart)} – ${fmtTime(timeEnd)}` : fmtTime(timeStart))
@@ -151,7 +179,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
 
     return (
       <div
-        key={job.id}
+        key={`${job.id}-${stageId}-${date.getTime()}`}
         style={{
           background: '#fff',
           border: '2px solid #111',
@@ -173,10 +201,9 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
           borderRadius: 8,
           padding: '5px 10px', textAlign: 'center', minWidth: 90, flexShrink: 0,
         }}>
-          {effectiveDate
-            ? <div style={{ fontSize: 11, fontWeight: 800, color: muted ? '#888' : '#111', fontFamily: FONT }}>{fmtDate(effectiveDate.toISOString())}</div>
-            : <div style={{ fontSize: 10, fontWeight: 700, color: '#B8900A', fontFamily: FONT }}>Date à fixer</div>
-          }
+          <div style={{ fontSize: 11, fontWeight: 800, color: muted ? '#888' : '#111', fontFamily: FONT }}>
+            {fmtDate(date.toISOString())}
+          </div>
         </div>
 
         {/* HORAIRE */}
@@ -199,6 +226,17 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
             fontFamily: FONT,
           }}>
             {detailStage.label}
+          </span>
+        )}
+
+        {/* Badge Archivé */}
+        {isArchived && (
+          <span style={{
+            fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
+            background: '#EEE', color: '#666', border: '1.5px solid #CCC',
+            fontFamily: FONT,
+          }}>
+            📦 Archivé
           </span>
         )}
 
@@ -247,14 +285,14 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {upcoming.length > 0 && (
         <>
-          <SectionLabel label="À venir" past={false} />
-          {upcoming.map(job => renderCard(job, false))}
+          <SectionLabel label={`À venir (${upcoming.length})`} past={false} />
+          {upcoming.map(entry => renderCard(entry, false))}
         </>
       )}
       {past.length > 0 && (
         <>
-          <SectionLabel label="Passées" past={true} />
-          {past.map(job => renderCard(job, true))}
+          <SectionLabel label={`Passées (${past.length})`} past={true} />
+          {past.map(entry => renderCard(entry, true))}
         </>
       )}
     </div>
