@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Job } from '@/lib/jobs';
 import { Stage, isInterviewStage } from './types';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
 
 type AgendaProps = {
   jobs: Job[];
@@ -13,6 +14,13 @@ type AgendaProps = {
 
 type ContactMin = { id: string; name: string; role?: string | null };
 
+type InterviewEntry = {
+  job: Job;
+  stageId: string;
+  date: Date;
+  isMainInterview: boolean; // vrai si c'est l'entretien en cours (sub_status actuel)
+};
+
 const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   telephone:  { label: '📞 Téléphone',  color: '#1A6FA8', bg: '#E8F4FD' },
   visio:      { label: '💻 Visio',      color: '#6B35B5', bg: '#F0EBFB' },
@@ -20,6 +28,10 @@ const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> 
 };
 
 const FONT = "'Montserrat', sans-serif";
+
+// IDs de stages qui ne sont PAS des entretiens : tout le reste compte comme entretien
+// (y compris les étapes custom type "Entretien Directrice de la croissance")
+const NON_INTERVIEW_STAGES = new Set(['to_apply', 'applied', 'offer', 'archived']);
 
 function getAuthHeaders(): Record<string, string> {
   const token = (typeof window !== 'undefined') ? (window as any).__jfmj_token : null;
@@ -40,24 +52,48 @@ function fmtTime(t: string | null | undefined): string {
   return t.slice(0, 5);
 }
 
-// Un job n'est affiché dans l'agenda que s'il a date ET heure de RDV saisies
-function hasScheduledInterview(job: Job): boolean {
-  const interviewAt = (job as any).interview_at as string | null;
-  const timeStart = (job as any).interview_time as string | null;
-  return !!(interviewAt && timeStart);
+function parseLocalDate(dateStr: string): Date {
+  if (dateStr.length === 10) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(dateStr);
 }
 
-function getInterviewDate(job: Job): Date | null {
+// Pour un job donné, retourne toutes les entrées d'entretien depuis step_dates.
+// Fallback sur interview_at si step_dates est vide.
+function getAllInterviews(job: Job): InterviewEntry[] {
+  const entries: InterviewEntry[] = [];
+  const stepDates = (job as any).step_dates as Record<string, string> | null;
   const interviewAt = (job as any).interview_at as string | null;
-  if (!interviewAt) return null;
-  return new Date(interviewAt);
-}
+  const subStatus = (job as any).sub_status as string | null;
 
-function isPast(job: Job): boolean {
-  const d = getInterviewDate(job);
-  if (!d) return false;
-  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
-  return d < todayMidnight;
+  if (stepDates) {
+    Object.entries(stepDates).forEach(([stageId, dateStr]) => {
+      if (!dateStr) return;
+      if (NON_INTERVIEW_STAGES.has(stageId)) return;
+      try {
+        const date = parseLocalDate(dateStr);
+        entries.push({
+          job, stageId, date,
+          isMainInterview: stageId === subStatus,
+        });
+      } catch {}
+    });
+  }
+
+  if (entries.length === 0 && interviewAt) {
+    const stageId = subStatus || (job.status as string);
+    if (!NON_INTERVIEW_STAGES.has(stageId)) {
+      entries.push({
+        job, stageId,
+        date: new Date(interviewAt),
+        isMainInterview: true,
+      });
+    }
+  }
+
+  return entries;
 }
 
 function SectionLabel({ label, past }: { label: string; past: boolean }) {
@@ -76,6 +112,7 @@ function SectionLabel({ label, past }: { label: string; past: boolean }) {
 export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaProps) {
   const router = useRouter();
   const [contactsMap, setContactsMap] = useState<Record<string, ContactMin>>({});
+  const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, { label: string; color?: string }>>({});
 
   useEffect(() => {
     fetch('/api/contacts', { headers: getAuthHeaders() })
@@ -89,43 +126,81 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
       .catch(() => {});
   }, []);
 
-  // On garde TOUS les jobs ayant un RDV (date + heure), y compris archivés et refusés
-  const scheduled = jobs.filter(hasScheduledInterview);
+  // Charge le label de TOUS les stages (user-level + job-level) pour retrouver les étapes custom
+  useEffect(() => {
+    async function loadAllStages() {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data } = await supabase
+        .from('pipeline_stages')
+        .select('id, label, color')
+        .eq('user_id', session.user.id);
+      if (data) {
+        const map: Record<string, { label: string; color?: string }> = {};
+        data.forEach((s: any) => { map[s.id] = { label: s.label, color: s.color }; });
+        setStagesLabelMap(map);
+      }
+    }
+    loadAllStages();
+  }, []);
 
-  // Tri par date croissante
-  const sorted = [...scheduled].sort((a, b) => {
-    const da = getInterviewDate(a)!.getTime();
-    const db = getInterviewDate(b)!.getTime();
-    return da - db;
+  // Une entry par étape d'entretien de chaque job (tous jobs, y compris archivés)
+  const allEntries: InterviewEntry[] = [];
+  jobs.forEach(j => {
+    allEntries.push(...getAllInterviews(j));
   });
 
-  const upcoming = sorted.filter(j => !isPast(j));
-  const past     = sorted.filter(j => isPast(j));
+  // Tri chronologique par date
+  const sorted = [...allEntries].sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+  const upcoming = sorted.filter(e => e.date >= todayMidnight);
+  const past     = sorted.filter(e => e.date <  todayMidnight);
 
   if (sorted.length === 0) {
     return (
       <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '3rem', textAlign: 'center', color: '#888', boxShadow: '3px 3px 0 #111' }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>📅</div>
         <div style={{ fontSize: 15, fontWeight: 700, color: '#111', marginBottom: 8, fontFamily: FONT }}>Aucun entretien planifié</div>
-        <p style={{ fontSize: 12, color: '#888', marginBottom: 16, fontFamily: FONT }}>
-          Seuls les entretiens avec une date <strong>et</strong> une heure saisies apparaissent ici.
-        </p>
         <button className="btn-main" onClick={onBackToKanban}>Voir le tableau de bord</button>
       </div>
     );
   }
 
-  function renderCard(job: Job, muted: boolean) {
-    const subStatusId = (job as any).sub_status || job.status;
-    const detailStage = stages.find(s => s.id === subStatusId);
-    const interviewDate = getInterviewDate(job);
-    const timeStart   = (job as any).interview_time as string | null;
-    const timeEnd     = (job as any).interview_time_end as string | null;
-    const iType       = (job as any).interview_type as string | null;
-    const contactId   = (job as any).interview_contact_id as string | null;
-    const contact     = contactId ? contactsMap[contactId] : null;
-    const typeInfo    = iType ? TYPE_LABELS[iType] : null;
-    const isArchived  = (job.status as string) === 'archived';
+  // Cherche le label et la couleur d'un stage, en essayant d'abord `stages` props puis la map custom
+  function getStageDisplay(stageId: string): { label: string; color: string } {
+    const fromProps = stages.find(s => s.id === stageId);
+    if (fromProps) return { label: fromProps.label, color: fromProps.color };
+    const fromMap = stagesLabelMap[stageId];
+    if (fromMap) return { label: fromMap.label, color: fromMap.color || '#888' };
+    // Fallback pour les stages de base connus
+    const DEFAULT_LABELS: Record<string, string> = {
+      phone_interview: 'Entretien téléphonique',
+      hr_interview: 'Entretien RH',
+      manager_interview: 'Entretien manager',
+    };
+    return { label: DEFAULT_LABELS[stageId] || 'Entretien', color: '#888' };
+  }
+
+  function renderCard(entry: InterviewEntry, muted: boolean) {
+    const { job, stageId, date, isMainInterview } = entry;
+    const stageDisplay = getStageDisplay(stageId);
+
+    // Heure, type : uniquement pour l'entretien en cours (sub_status)
+    const timeStart   = isMainInterview ? ((job as any).interview_time as string | null) : null;
+    const timeEnd     = isMainInterview ? ((job as any).interview_time_end as string | null) : null;
+    const iType       = isMainInterview ? ((job as any).interview_type as string | null) : null;
+
+    // Contact : on regarde d'abord interview_contacts[stageId] (par étape),
+    // sinon interview_contact_id (global) si c'est l'entretien en cours
+    const contactsByStep = (job as any).interview_contacts as Record<string, string> | null;
+    const contactId = (contactsByStep && contactsByStep[stageId])
+      || (isMainInterview ? ((job as any).interview_contact_id as string | null) : null);
+    const contact = contactId ? contactsMap[contactId] : null;
+
+    const typeInfo = iType ? TYPE_LABELS[iType] : null;
+    const isArchived = (job.status as string) === 'archived';
 
     const timeLabel = timeStart
       ? (timeEnd ? `${fmtTime(timeStart)} – ${fmtTime(timeEnd)}` : fmtTime(timeStart))
@@ -137,7 +212,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
 
     return (
       <div
-        key={job.id}
+        key={`${job.id}-${stageId}-${date.getTime()}`}
         style={{
           background: '#fff',
           border: '2px solid #111',
@@ -159,14 +234,12 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
           borderRadius: 8,
           padding: '5px 10px', textAlign: 'center', minWidth: 90, flexShrink: 0,
         }}>
-          {interviewDate && (
-            <div style={{ fontSize: 11, fontWeight: 800, color: muted ? '#888' : '#111', fontFamily: FONT }}>
-              {fmtDate(interviewDate.toISOString())}
-            </div>
-          )}
+          <div style={{ fontSize: 11, fontWeight: 800, color: muted ? '#888' : '#111', fontFamily: FONT }}>
+            {fmtDate(date.toISOString())}
+          </div>
         </div>
 
-        {/* HORAIRE */}
+        {/* HORAIRE (uniquement pour l'entretien en cours) */}
         {timeLabel && (
           <div style={{
             background: muted ? '#F5F5F0' : '#FFF8EC',
@@ -178,16 +251,14 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
         )}
 
         {/* ÉTAPE */}
-        {detailStage && (
-          <span style={{
-            fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
-            background: detailStage.color + '22', color: detailStage.color,
-            border: `1.5px solid ${detailStage.color}55`,
-            fontFamily: FONT,
-          }}>
-            {detailStage.label}
-          </span>
-        )}
+        <span style={{
+          fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '3px 8px', flexShrink: 0,
+          background: stageDisplay.color + '22', color: stageDisplay.color,
+          border: `1.5px solid ${stageDisplay.color}55`,
+          fontFamily: FONT,
+        }}>
+          {stageDisplay.label}
+        </span>
 
         {/* Badge Archivé */}
         {isArchived && (
@@ -246,13 +317,13 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
       {upcoming.length > 0 && (
         <>
           <SectionLabel label={`À venir (${upcoming.length})`} past={false} />
-          {upcoming.map(job => renderCard(job, false))}
+          {upcoming.map(entry => renderCard(entry, false))}
         </>
       )}
       {past.length > 0 && (
         <>
           <SectionLabel label={`Passées (${past.length})`} past={true} />
-          {past.map(job => renderCard(job, true))}
+          {past.map(entry => renderCard(entry, true))}
         </>
       )}
     </div>
