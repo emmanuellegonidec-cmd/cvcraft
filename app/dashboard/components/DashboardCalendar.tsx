@@ -314,6 +314,7 @@ function EventCard({
 
 export default function DashboardCalendar({
   jobs, onJobClick, onActionClick, onDateChange, onEmptySlotClick, stagesLabelMap = {},
+  alwaysVisible = false,
 }: {
   jobs: Job[];
   stagesLabelMap?: Record<string, string>;
@@ -323,10 +324,15 @@ export default function DashboardCalendar({
   // NOUVEAU : clic sur un créneau libre du calendrier
   // hasTime = true en vue semaine (heure précise), false en vue mois (juste date)
   onEmptySlotClick?: (date: Date, hasTime: boolean) => void;
+  // NOUVEAU : si true, le calendrier est toujours affiché et le header
+  // (titre + bouton Afficher/Masquer) est masqué. Utilisé par la page Calendrier
+  // dédiée accessible depuis la sidebar.
+  alwaysVisible?: boolean;
 }) {
   const [calView, setCalView]   = useState<'week' | 'month'>('week');
   const [offset, setOffset]     = useState(0);
-  const [visible, setVisible]   = useState(false);
+  const [visibleState, setVisibleState] = useState(false);
+  const visible = alwaysVisible ? true : visibleState;
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [deadlineEvents, setDeadlineEvents] = useState<CalEvent[]>([]);
   const [actionEvents, setActionEvents]     = useState<CalEvent[]>([]);
@@ -814,6 +820,18 @@ export default function DashboardCalendar({
     );
   }
 
+  // Si alwaysVisible, on n'affiche PAS le header (titre + bouton Masquer/Afficher)
+  // car la page dédiée Calendrier a déjà un grand titre "📅 Calendrier" au-dessus.
+  if (alwaysVisible) {
+    return (
+      <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
+        <div style={{ padding: '14px 16px' }}>
+          {calView === 'week' ? <WeekView /> : <MonthView />}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
       <div style={{
@@ -826,7 +844,7 @@ export default function DashboardCalendar({
             📅 Calendrier
           </span>
         </div>
-        <button onClick={() => setVisible(v => !v)} style={{
+        <button onClick={() => setVisibleState(v => !v)} style={{
           fontSize: 11, fontWeight: 800, fontFamily: 'Montserrat,sans-serif',
           background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6,
           padding: '3px 10px', cursor: 'pointer', color: '#555', whiteSpace: 'nowrap',

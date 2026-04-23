@@ -518,6 +518,7 @@ export default function DashboardPage() {
   );
 
   const mainButtonLabel = getMainButtonLabel();
+  const isCalendarView = view === 'calendar';
 
   const jobOptionsForPanel = jobs.map(j => ({ id: j.id, title: j.title || '', company: j.company || '' }));
 
@@ -546,9 +547,15 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
-            <div style={{ fontSize: '2rem', fontWeight: 900, color: '#111' }}>
-              Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
-            </div>
+            {isCalendarView ? (
+              <div style={{ fontSize: '2rem', fontWeight: 900, color: '#111' }}>
+                📅 Calendrier
+              </div>
+            ) : (
+              <div style={{ fontSize: '2rem', fontWeight: 900, color: '#111' }}>
+                Hello <span style={{ color: '#E8151B' }}>{firstName}</span> ! 👋
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {view === 'kanban' && (
@@ -624,6 +631,18 @@ export default function DashboardPage() {
               onActionClick={handleCalendarActionClick}
               onDateChange={handleCalendarDateChange}
               onEmptySlotClick={handleEmptySlotClick}
+            />
+          )}
+
+          {/* NOUVEAU : vue Calendrier dédiée — calendrier en grand, toujours ouvert, pas de stats/kanban autour */}
+          {isCalendarView && (
+            <DashboardCalendar
+              jobs={calendarJobs}
+              stagesLabelMap={stagesLabelMap}
+              onJobClick={handleCalendarJobClick}
+              onActionClick={handleCalendarActionClick}
+              onDateChange={handleCalendarDateChange}
+              alwaysVisible
             />
           )}
 

@@ -1,6 +1,6 @@
 import { Job, Contact, JobStatus, JobType } from '@/lib/jobs';
 
-export type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats' | 'actions' | 'personal_actions';
+export type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats' | 'actions' | 'personal_actions' | 'calendar';
 
 export type Stage = {
   id: string;

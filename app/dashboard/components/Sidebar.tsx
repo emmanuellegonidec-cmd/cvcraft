@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 
-type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats' | 'actions' | 'personal_actions';
+type View = 'kanban' | 'list' | 'contacts' | 'agenda' | 'stats' | 'actions' | 'personal_actions' | 'calendar';
 
 interface SidebarProps {
   view: View;
@@ -24,6 +24,7 @@ const SUIVI_ITEMS: { id: View; label: string }[] = [
 ];
 
 const AGENDA_ITEMS: { id: View; label: string }[] = [
+  { id: 'calendar',         label: 'Calendrier' },
   { id: 'actions',          label: 'Événements' },
   { id: 'personal_actions', label: 'Actions'    },
 ];
