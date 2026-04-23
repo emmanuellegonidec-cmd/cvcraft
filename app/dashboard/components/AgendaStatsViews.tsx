@@ -13,13 +13,6 @@ type AgendaProps = {
 
 type ContactMin = { id: string; name: string; role?: string | null };
 
-type InterviewEntry = {
-  job: Job;
-  stageId: string;
-  date: Date;
-  isMainInterview: boolean; // vrai pour l'entretien qui correspond au sub_status actuel
-};
-
 const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   telephone:  { label: '📞 Téléphone',  color: '#1A6FA8', bg: '#E8F4FD' },
   visio:      { label: '💻 Visio',      color: '#6B35B5', bg: '#F0EBFB' },
@@ -47,63 +40,26 @@ function fmtTime(t: string | null | undefined): string {
   return t.slice(0, 5);
 }
 
-function parseLocalDate(dateStr: string): Date {
-  if (dateStr.length === 10) {
-    const [y, m, d] = dateStr.split('-').map(Number);
-    return new Date(y, m - 1, d);
-  }
-  return new Date(dateStr);
-}
-
-// Pour un job donné, retourne TOUTES les étapes d'entretien (une entry par étape)
-function getAllInterviews(job: Job, stages: Stage[]): InterviewEntry[] {
-  const entries: InterviewEntry[] = [];
-  const stepDates = (job as any).step_dates as Record<string, string> | null;
+// Un job n'est affiché dans l'agenda que s'il a date ET heure de RDV saisies
+function hasScheduledInterview(job: Job): boolean {
   const interviewAt = (job as any).interview_at as string | null;
-  const subStatus = (job as any).sub_status as string | null;
-
-  // 1. Toutes les step_dates qui correspondent à un stage d'entretien
-  if (stepDates) {
-    Object.entries(stepDates).forEach(([stageId, dateStr]) => {
-      if (!dateStr) return;
-      if (!isInterviewStage(stageId, stages)) return;
-      try {
-        const date = parseLocalDate(dateStr);
-        entries.push({
-          job,
-          stageId,
-          date,
-          isMainInterview: stageId === subStatus,
-        });
-      } catch {}
-    });
-  }
-
-  // 2. Fallback : pas de step_dates mais interview_at défini
-  if (entries.length === 0 && interviewAt) {
-    let stageId: string | null = null;
-    if (subStatus && isInterviewStage(subStatus, stages)) {
-      stageId = subStatus;
-    } else if (isInterviewStage(job.status, stages)) {
-      stageId = job.status;
-    } else {
-      // Archivé / refusé avec interview_at mais pas de stage d'entretien lisible
-      stageId = subStatus || (job.status as string);
-    }
-    if (stageId) {
-      entries.push({
-        job,
-        stageId,
-        date: new Date(interviewAt),
-        isMainInterview: true,
-      });
-    }
-  }
-
-  return entries;
+  const timeStart = (job as any).interview_time as string | null;
+  return !!(interviewAt && timeStart);
 }
 
-// Label de section
+function getInterviewDate(job: Job): Date | null {
+  const interviewAt = (job as any).interview_at as string | null;
+  if (!interviewAt) return null;
+  return new Date(interviewAt);
+}
+
+function isPast(job: Job): boolean {
+  const d = getInterviewDate(job);
+  if (!d) return false;
+  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+  return d < todayMidnight;
+}
+
 function SectionLabel({ label, past }: { label: string; past: boolean }) {
   return (
     <p style={{
@@ -133,38 +89,40 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
       .catch(() => {});
   }, []);
 
-  // Génère une entry par étape d'entretien (tous jobs confondus, y compris archivés)
-  const allEntries: InterviewEntry[] = [];
-  jobs.forEach(j => {
-    allEntries.push(...getAllInterviews(j, stages));
-  });
+  // On garde TOUS les jobs ayant un RDV (date + heure), y compris archivés et refusés
+  const scheduled = jobs.filter(hasScheduledInterview);
 
   // Tri par date croissante
-  const sorted = [...allEntries].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const sorted = [...scheduled].sort((a, b) => {
+    const da = getInterviewDate(a)!.getTime();
+    const db = getInterviewDate(b)!.getTime();
+    return da - db;
+  });
 
-  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
-  const upcoming = sorted.filter(e => e.date >= todayMidnight);
-  const past     = sorted.filter(e => e.date <  todayMidnight);
+  const upcoming = sorted.filter(j => !isPast(j));
+  const past     = sorted.filter(j => isPast(j));
 
   if (sorted.length === 0) {
     return (
       <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '3rem', textAlign: 'center', color: '#888', boxShadow: '3px 3px 0 #111' }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>📅</div>
         <div style={{ fontSize: 15, fontWeight: 700, color: '#111', marginBottom: 8, fontFamily: FONT }}>Aucun entretien planifié</div>
+        <p style={{ fontSize: 12, color: '#888', marginBottom: 16, fontFamily: FONT }}>
+          Seuls les entretiens avec une date <strong>et</strong> une heure saisies apparaissent ici.
+        </p>
         <button className="btn-main" onClick={onBackToKanban}>Voir le tableau de bord</button>
       </div>
     );
   }
 
-  function renderCard(entry: InterviewEntry, muted: boolean) {
-    const { job, stageId, date, isMainInterview } = entry;
-    const detailStage = stages.find(s => s.id === stageId);
-
-    // Heure / type / contact : seulement pour l'entretien "principal" (sub_status actuel)
-    const timeStart   = isMainInterview ? ((job as any).interview_time as string | null) : null;
-    const timeEnd     = isMainInterview ? ((job as any).interview_time_end as string | null) : null;
-    const iType       = isMainInterview ? ((job as any).interview_type as string | null) : null;
-    const contactId   = isMainInterview ? ((job as any).interview_contact_id as string | null) : null;
+  function renderCard(job: Job, muted: boolean) {
+    const subStatusId = (job as any).sub_status || job.status;
+    const detailStage = stages.find(s => s.id === subStatusId);
+    const interviewDate = getInterviewDate(job);
+    const timeStart   = (job as any).interview_time as string | null;
+    const timeEnd     = (job as any).interview_time_end as string | null;
+    const iType       = (job as any).interview_type as string | null;
+    const contactId   = (job as any).interview_contact_id as string | null;
     const contact     = contactId ? contactsMap[contactId] : null;
     const typeInfo    = iType ? TYPE_LABELS[iType] : null;
     const isArchived  = (job.status as string) === 'archived';
@@ -179,7 +137,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
 
     return (
       <div
-        key={`${job.id}-${stageId}-${date.getTime()}`}
+        key={job.id}
         style={{
           background: '#fff',
           border: '2px solid #111',
@@ -201,9 +159,11 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
           borderRadius: 8,
           padding: '5px 10px', textAlign: 'center', minWidth: 90, flexShrink: 0,
         }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: muted ? '#888' : '#111', fontFamily: FONT }}>
-            {fmtDate(date.toISOString())}
-          </div>
+          {interviewDate && (
+            <div style={{ fontSize: 11, fontWeight: 800, color: muted ? '#888' : '#111', fontFamily: FONT }}>
+              {fmtDate(interviewDate.toISOString())}
+            </div>
+          )}
         </div>
 
         {/* HORAIRE */}
@@ -286,13 +246,13 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
       {upcoming.length > 0 && (
         <>
           <SectionLabel label={`À venir (${upcoming.length})`} past={false} />
-          {upcoming.map(entry => renderCard(entry, false))}
+          {upcoming.map(job => renderCard(job, false))}
         </>
       )}
       {past.length > 0 && (
         <>
           <SectionLabel label={`Passées (${past.length})`} past={true} />
-          {past.map(entry => renderCard(entry, true))}
+          {past.map(job => renderCard(job, true))}
         </>
       )}
     </div>
