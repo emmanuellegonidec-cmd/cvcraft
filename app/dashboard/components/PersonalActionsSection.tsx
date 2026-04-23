@@ -44,11 +44,17 @@ interface PersonalAction {
 
 interface JobOption { id: string; title: string; company: string; }
 
+interface Contact {
+  id: string;
+  name: string;
+  role?: string | null;
+  company?: string | null;
+}
+
 interface Props {
   triggerOpen?: number;
   onCountChange?: (n: number) => void;
   compact?: boolean;
-  // NOUVEAU : pré-remplissage de la date/heure pour création depuis clic calendrier
   initialDateTime?: { date: string; heure?: string } | null;
 }
 
@@ -56,6 +62,12 @@ function notifyCalendarRefresh() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('jfmj-calendar-refresh'));
   }
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (parts[0]?.slice(0, 2) || '??').toUpperCase();
 }
 
 function getEffectiveStatus(a: PersonalAction): 'fait' | 'annule' | 'a_faire' | 'en_retard' {
@@ -71,6 +83,7 @@ function getEffectiveStatus(a: PersonalAction): 'fait' | 'annule' | 'a_faire' | 
 export default function PersonalActionsSection({ triggerOpen, onCountChange, compact = false, initialDateTime = null }: Props) {
   const [actions, setActions] = useState<PersonalAction[]>([]);
   const [jobs, setJobs] = useState<JobOption[]>([]);
+  const [contactsMap, setContactsMap] = useState<Record<string, Contact>>({});
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editAction, setEditAction] = useState<PersonalAction | null>(null);
@@ -122,10 +135,24 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
     setJobs(data || []);
   }
 
-  useEffect(() => { loadActions(); loadJobs(); }, []);
+  async function loadContacts() {
+    try {
+      const supabase = createClient();
+      const { data } = await supabase.from('contacts').select('id, name, role, company');
+      if (data) {
+        const map: Record<string, Contact> = {};
+        (data as Contact[]).forEach((c) => { map[c.id] = c; });
+        setContactsMap(map);
+      }
+    } catch (err) {
+      console.error('Erreur chargement contacts:', err);
+    }
+  }
+
+  useEffect(() => { loadActions(); loadJobs(); loadContacts(); }, []);
 
   useEffect(() => {
-    const handler = () => loadActions();
+    const handler = () => { loadActions(); loadContacts(); };
     if (typeof window !== 'undefined') {
       window.addEventListener('jfmj-calendar-refresh', handler);
     }
@@ -153,7 +180,6 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
       setFormStatut(action.statut || 'a_faire');
       setFormContactIds(action.contact_ids || []);
     } else {
-      // Mode création : vide OU pré-rempli depuis initialDateTime
       setEditAction(null);
       setFormType('Candidature externe');
       setFormNom('');
@@ -270,6 +296,10 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
     const opacity = isDone ? 0.65 : isCancelled ? 0.55 : 1;
     const borderLeft = isLate ? '4px solid #E8151B' : '4px solid transparent';
 
+    const linkedContacts = (a.contact_ids || [])
+      .map((id) => contactsMap[id])
+      .filter((c): c is Contact => Boolean(c));
+
     return (
       <div key={a.id} style={{
         display: 'flex', alignItems: 'center', padding: '14px 20px',
@@ -314,10 +344,47 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
             {a.plateforme && <span style={{ fontSize: 12, color: '#666', fontWeight: 600 }}>📍 {a.plateforme}</span>}
             <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>📅 {formatDate(a.date_action, a.heure_action)}</span>
             {a.job_title && <span style={{ fontSize: 11, color: '#111', fontWeight: 700, background: '#F5F5F0', border: '1px solid #DDD', borderRadius: 4, padding: '2px 8px' }}>🔗 {a.job_title}{a.job_company ? ` — ${a.job_company}` : ''}</span>}
-            {a.contact_ids && a.contact_ids.length > 0 && (
-              <span style={{ fontSize: 11, color: '#5B21B6', fontWeight: 700, background: '#F5F0FF', border: '1px solid #7C3AED', borderRadius: 4, padding: '2px 8px' }}>👥 {a.contact_ids.length} contact{a.contact_ids.length > 1 ? 's' : ''}</span>
-            )}
           </div>
+
+          {linkedContacts.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
+              <span style={{ fontSize: 11, color: '#888', marginRight: 2, fontFamily: FONT }}>👥</span>
+              {linkedContacts.map((c) => (
+                <span
+                  key={c.id}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: '#fff',
+                    border: '1.5px solid #111',
+                    padding: '2px 8px 2px 2px',
+                    borderRadius: 20,
+                  }}
+                >
+                  <span style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    background: '#F5C400',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 9,
+                    fontWeight: 900,
+                    color: '#111',
+                    fontFamily: FONT,
+                  }}>
+                    {getInitials(c.name)}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#111', fontFamily: FONT }}>
+                    {c.name}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
+
           {a.note && <div style={{ fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' }}>{a.note}</div>}
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -445,7 +512,7 @@ export default function PersonalActionsSection({ triggerOpen, onCountChange, com
                 </select>
               </div>
 
-              {/* NOUVEAU : Contacts liés à l'action */}
+              {/* Contacts liés à l'action */}
               <div style={{ marginBottom: 20 }}>
                 <LinkedContactsBlock
                   contactIds={formContactIds}
