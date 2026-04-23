@@ -29,19 +29,25 @@ const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> 
 
 const FONT = "'Montserrat', sans-serif";
 
-// IDs par défaut connus
 const INTERVIEW_DEFAULT_IDS = new Set(['phone_interview', 'hr_interview', 'manager_interview']);
 const NON_INTERVIEW_DEFAULT_IDS = new Set(['to_apply', 'applied', 'offer', 'archived']);
 
-// Un stage est un entretien si :
-// - C'est un ID par défaut d'entretien (phone_interview, hr_interview, manager_interview), OU
-// - Son label contient "entretien" (pour les étapes custom type "Entretien DRH")
-// Les étapes custom sans "entretien" dans le label (Refus, Offre reçue, Abandon...) sont exclues.
+// Mapping label → id pour les étapes de base (comme dans la fiche détail)
+const BASE_LABELS_TO_ID: Record<string, string> = {
+  'Envie de postuler': 'to_apply',
+  'Postulé': 'applied',
+  'Entretien téléphonique': 'phone_interview',
+  'Entretien RH': 'hr_interview',
+  'Entretien manager': 'manager_interview',
+  'Offre reçue': 'offer',
+  'Archivé': 'archived',
+};
+
 function isInterviewByLabel(stageId: string, label: string | null | undefined): boolean {
   if (NON_INTERVIEW_DEFAULT_IDS.has(stageId)) return false;
   if (INTERVIEW_DEFAULT_IDS.has(stageId)) return true;
   if (label) return label.toLowerCase().includes('entretien');
-  return false; // Stage custom sans label connu : on n'affiche pas par prudence
+  return false;
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -88,8 +94,11 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
   const router = useRouter();
   const [contactsMap, setContactsMap] = useState<Record<string, ContactMin>>({});
   const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, { label: string; color?: string }>>({});
+  const [exchangesByJob, setExchangesByJob] = useState<Record<string, any[]>>({});
   const [stagesReady, setStagesReady] = useState(false);
+  const [exchangesReady, setExchangesReady] = useState(false);
 
+  // Fetch contacts
   useEffect(() => {
     fetch('/api/contacts', { headers: getAuthHeaders() })
       .then(r => r.json())
@@ -102,7 +111,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
       .catch(() => {});
   }, []);
 
-  // Charge tous les pipeline_stages de l'utilisateur (user-level + job-level)
+  // Fetch tous les labels de stages (user-level + job-level)
   useEffect(() => {
     async function loadAllStages() {
       try {
@@ -124,7 +133,31 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
     loadAllStages();
   }, []);
 
-  // Récupère label + couleur d'un stage en cherchant dans les sources disponibles
+  // Fetch les exchanges de chaque job (en parallèle)
+  useEffect(() => {
+    async function loadExchanges() {
+      if (jobs.length === 0) { setExchangesByJob({}); setExchangesReady(true); return; }
+      const map: Record<string, any[]> = {};
+      await Promise.all(
+        jobs.map(async j => {
+          try {
+            const res = await fetch(`/api/jobs/exchanges?job_id=${j.id}`, { headers: getAuthHeaders() });
+            if (res.ok) {
+              const data = await res.json();
+              map[j.id] = Array.isArray(data) ? data : [];
+            } else {
+              map[j.id] = [];
+            }
+          } catch { map[j.id] = []; }
+        })
+      );
+      setExchangesByJob(map);
+      setExchangesReady(true);
+    }
+    setExchangesReady(false);
+    loadExchanges();
+  }, [jobs.map(j => j.id).join(',')]);
+
   function getStageDisplay(stageId: string): { label: string; color: string } {
     const fromProps = stages.find(s => s.id === stageId);
     if (fromProps) return { label: fromProps.label, color: fromProps.color };
@@ -138,32 +171,54 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
     return { label: DEFAULT_LABELS[stageId] || 'Entretien', color: '#888' };
   }
 
-  // Pour un job, retourne toutes les entries correspondant à des entretiens
+  // Pour un job donné, retourne toutes les étapes d'entretien avec date,
+  // en utilisant la même logique que la fiche détail (merge avec exchanges)
   function getAllInterviews(job: Job): InterviewEntry[] {
     const entries: InterviewEntry[] = [];
-    const stepDates = (job as any).step_dates as Record<string, string> | null;
+    const stepDates = ((job as any).step_dates as Record<string, string> | null) || {};
     const interviewAt = (job as any).interview_at as string | null;
     const subStatus = (job as any).sub_status as string | null;
+    const hiddenSteps = ((job as any).hidden_steps as string[] | null) || [];
+    const jobExchanges = exchangesByJob[job.id] || [];
 
-    if (stepDates) {
-      Object.entries(stepDates).forEach(([stageId, dateStr]) => {
-        if (!dateStr) return;
-        const { label } = getStageDisplay(stageId);
-        if (!isInterviewByLabel(stageId, label)) return;
-        try {
-          const date = parseLocalDate(dateStr);
-          entries.push({
-            job, stageId, date,
-            isMainInterview: stageId === subStatus,
-          });
-        } catch {}
-      });
+    // Construire le mapping label → stageId (base + user-level + job-level)
+    const stepsByLabel: Record<string, string> = { ...BASE_LABELS_TO_ID };
+    stages.forEach(s => { stepsByLabel[s.label] = s.id; });
+    Object.entries(stagesLabelMap).forEach(([id, info]) => { stepsByLabel[info.label] = id; });
+
+    // Dates depuis les exchanges : on prend la date MIN par étape (= la première trace)
+    const stepDatesFromExchanges: Record<string, string> = {};
+    for (const exchange of jobExchanges) {
+      if (!exchange.step_label || !exchange.exchange_date) continue;
+      const stepId = stepsByLabel[exchange.step_label];
+      if (!stepId) continue;
+      if (!stepDatesFromExchanges[stepId] || exchange.exchange_date < stepDatesFromExchanges[stepId]) {
+        stepDatesFromExchanges[stepId] = exchange.exchange_date;
+      }
     }
 
+    // Merge : les dates d'exchanges l'emportent sur step_dates (même logique que la fiche détail)
+    const merged = { ...stepDates, ...stepDatesFromExchanges };
+
+    Object.entries(merged).forEach(([stageId, dateStr]) => {
+      if (!dateStr) return;
+      if (hiddenSteps.includes(stageId)) return; // étape masquée dans la fiche
+      const { label } = getStageDisplay(stageId);
+      if (!isInterviewByLabel(stageId, label)) return;
+      try {
+        const date = parseLocalDate(dateStr);
+        entries.push({
+          job, stageId, date,
+          isMainInterview: stageId === subStatus,
+        });
+      } catch {}
+    });
+
+    // Fallback : pas de step_dates mais interview_at présent
     if (entries.length === 0 && interviewAt) {
       const stageId = subStatus || (job.status as string);
       const { label } = getStageDisplay(stageId);
-      if (isInterviewByLabel(stageId, label)) {
+      if (!hiddenSteps.includes(stageId) && isInterviewByLabel(stageId, label)) {
         entries.push({
           job, stageId,
           date: new Date(interviewAt),
@@ -175,19 +230,15 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
     return entries;
   }
 
-  // On attend que les labels soient chargés avant de filtrer
-  // (sinon on risque d'exclure des entretiens custom non-résolus)
-  const allEntries: InterviewEntry[] = stagesReady
-    ? jobs.flatMap(getAllInterviews)
-    : [];
-
+  const ready = stagesReady && exchangesReady;
+  const allEntries: InterviewEntry[] = ready ? jobs.flatMap(getAllInterviews) : [];
   const sorted = [...allEntries].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
   const upcoming = sorted.filter(e => e.date >= todayMidnight);
   const past     = sorted.filter(e => e.date <  todayMidnight);
 
-  if (!stagesReady) {
+  if (!ready) {
     return (
       <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '2rem', textAlign: 'center', color: '#888', boxShadow: '3px 3px 0 #111' }}>
         <div style={{ fontSize: 13, fontWeight: 700, fontFamily: FONT }}>Chargement des entretiens…</div>
