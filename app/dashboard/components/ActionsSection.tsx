@@ -12,6 +12,17 @@ interface Action {
   date_fin: string
   note: string
   statut: string
+  contact_ids?: string[]
+}
+
+interface Contact {
+  id: string
+  prenom?: string
+  nom?: string
+  first_name?: string
+  last_name?: string
+  name?: string
+  email?: string
 }
 
 const CATEGORIE_COLORS: Record<string, string> = {
@@ -22,6 +33,17 @@ const CATEGORIE_COLORS: Record<string, string> = {
   'Rendez-vous conseil': '#9b59b6',
   'Bilan de compétences': '#e67e22',
   'Autre': '#888',
+}
+
+function getContactDisplay(c: Contact | undefined) {
+  if (!c) return null
+  const first = c.prenom ?? c.first_name ?? ''
+  const last = c.nom ?? c.last_name ?? c.name ?? ''
+  const fullName = `${first} ${last}`.trim() || c.email || 'Contact'
+  const initials = (
+    (first.charAt(0) || '') + (last.charAt(0) || '')
+  ).toUpperCase() || fullName.charAt(0).toUpperCase() || '?'
+  return { fullName, initials }
 }
 
 function getEffectiveStatus(a: Action): 'fait' | 'annule' | 'a_faire' | 'en_retard' {
@@ -42,10 +64,10 @@ export default function ActionsSection({
   triggerOpen?: number
   onCountChange?: (count: number) => void
   compact?: boolean
-  // NOUVEAU : pré-remplissage date/heure pour création depuis clic calendrier
   initialDateTime?: { date: string; heure?: string } | null
 }) {
   const [actions, setActions] = useState<Action[]>([])
+  const [contactsMap, setContactsMap] = useState<Record<string, Contact>>({})
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedAction, setSelectedAction] = useState<Action | null>(null)
@@ -73,10 +95,33 @@ export default function ActionsSection({
     }
   }
 
-  useEffect(() => { fetchActions() }, [])
+  const fetchContacts = async () => {
+    try {
+      const token = getToken()
+      const res = await fetch('/api/contacts', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (res.ok) {
+        const data: Contact[] = await res.json()
+        const map: Record<string, Contact> = {}
+        data.forEach((c) => { map[c.id] = c })
+        setContactsMap(map)
+      }
+    } catch (err) {
+      console.error('Erreur chargement contacts:', err)
+    }
+  }
 
   useEffect(() => {
-    const handler = () => fetchActions()
+    fetchActions()
+    fetchContacts()
+  }, [])
+
+  useEffect(() => {
+    const handler = () => {
+      fetchActions()
+      fetchContacts()
+    }
     if (typeof window !== 'undefined') {
       window.addEventListener('jfmj-calendar-refresh', handler)
     }
@@ -165,6 +210,7 @@ export default function ActionsSection({
                 <ActionCard
                   key={action.id}
                   action={action}
+                  contactsMap={contactsMap}
                   formatDate={formatDate}
                   onEdit={() => { setSelectedAction(action); setModalOpen(true) }}
                   onDelete={() => setDeleteTarget(action)}
@@ -182,6 +228,7 @@ export default function ActionsSection({
                 <ActionCard
                   key={action.id}
                   action={action}
+                  contactsMap={contactsMap}
                   formatDate={formatDate}
                   onEdit={() => { setSelectedAction(action); setModalOpen(true) }}
                   onDelete={() => setDeleteTarget(action)}
@@ -221,8 +268,9 @@ export default function ActionsSection({
   )
 }
 
-function ActionCard({ action, formatDate, onEdit, onDelete, onQuickStatus }: {
+function ActionCard({ action, contactsMap, formatDate, onEdit, onDelete, onQuickStatus }: {
   action: Action
+  contactsMap: Record<string, Contact>
   formatDate: (d: string) => string
   onEdit: () => void
   onDelete: () => void
@@ -236,6 +284,10 @@ function ActionCard({ action, formatDate, onEdit, onDelete, onQuickStatus }: {
 
   const borderLeft = isLate ? `4px solid #E8151B` : `4px solid ${color}`
   const opacity = isDone ? 0.65 : isCancelled ? 0.55 : 1
+
+  const linkedContacts = (action.contact_ids || [])
+    .map((id) => contactsMap[id])
+    .filter((c): c is Contact => Boolean(c))
 
   return (
     <div style={{
@@ -297,6 +349,50 @@ function ActionCard({ action, formatDate, onEdit, onDelete, onQuickStatus }: {
             📅 {formatDate(action.date_debut)}{action.date_fin && ` → ${formatDate(action.date_fin)}`}
           </span>
         </div>
+
+        {linkedContacts.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
+            <span style={{ fontSize: 11, color: '#888', marginRight: 2, fontFamily: 'Montserrat, sans-serif' }}>👥</span>
+            {linkedContacts.map((c) => {
+              const info = getContactDisplay(c)
+              if (!info) return null
+              return (
+                <span
+                  key={c.id}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: '#fff',
+                    border: '1.5px solid #111',
+                    padding: '2px 8px 2px 2px',
+                    borderRadius: 20,
+                  }}
+                >
+                  <span style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    background: '#F5C400',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 9,
+                    fontWeight: 900,
+                    color: '#111',
+                    fontFamily: 'Montserrat, sans-serif',
+                  }}>
+                    {info.initials}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#111', fontFamily: 'Montserrat, sans-serif' }}>
+                    {info.fullName}
+                  </span>
+                </span>
+              )
+            })}
+          </div>
+        )}
+
         {action.note && (
           <p style={{ fontSize: 11, color: '#777', marginTop: 4, fontFamily: 'Montserrat, sans-serif' }}>{action.note}</p>
         )}
