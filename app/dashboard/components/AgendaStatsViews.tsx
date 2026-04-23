@@ -46,8 +46,8 @@ const BASE_LABELS_TO_ID: Record<string, string> = {
 function isInterviewByLabel(stageId: string, label: string | null | undefined): boolean {
   if (NON_INTERVIEW_DEFAULT_IDS.has(stageId)) return false;
   if (INTERVIEW_DEFAULT_IDS.has(stageId)) return true;
-  if (label) return label.toLowerCase().includes('entretien');
-  return false;
+  if (!label) return false; // stage inconnu = exclu par prudence
+  return label.toLowerCase().includes('entretien');
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -158,17 +158,29 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
     loadExchanges();
   }, [jobs.map(j => j.id).join(',')]);
 
-  function getStageDisplay(stageId: string): { label: string; color: string } {
+  // Retourne le VRAI label d'un stage, ou null si introuvable.
+  // Utilisé pour filtrer (on ne doit pas confondre "label inconnu" et "label réel").
+  function getRealLabel(stageId: string): string | null {
     const fromProps = stages.find(s => s.id === stageId);
-    if (fromProps) return { label: fromProps.label, color: fromProps.color };
+    if (fromProps) return fromProps.label;
     const fromMap = stagesLabelMap[stageId];
-    if (fromMap) return { label: fromMap.label, color: fromMap.color || '#888' };
+    if (fromMap) return fromMap.label;
     const DEFAULT_LABELS: Record<string, string> = {
       phone_interview: 'Entretien téléphonique',
       hr_interview: 'Entretien RH',
       manager_interview: 'Entretien manager',
     };
-    return { label: DEFAULT_LABELS[stageId] || 'Entretien', color: '#888' };
+    return DEFAULT_LABELS[stageId] || null;
+  }
+
+  // Retourne label + couleur pour l'affichage uniquement (peut avoir un fallback)
+  function getStageDisplay(stageId: string): { label: string; color: string } {
+    const fromProps = stages.find(s => s.id === stageId);
+    if (fromProps) return { label: fromProps.label, color: fromProps.color };
+    const fromMap = stagesLabelMap[stageId];
+    if (fromMap) return { label: fromMap.label, color: fromMap.color || '#888' };
+    const realLabel = getRealLabel(stageId);
+    return { label: realLabel || 'Étape', color: '#888' };
   }
 
   // Pour un job donné, retourne toutes les étapes d'entretien avec date,
@@ -203,8 +215,8 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
     Object.entries(merged).forEach(([stageId, dateStr]) => {
       if (!dateStr) return;
       if (hiddenSteps.includes(stageId)) return; // étape masquée dans la fiche
-      const { label } = getStageDisplay(stageId);
-      if (!isInterviewByLabel(stageId, label)) return;
+      const realLabel = getRealLabel(stageId);
+      if (!isInterviewByLabel(stageId, realLabel)) return;
       try {
         const date = parseLocalDate(dateStr);
         entries.push({
@@ -217,8 +229,8 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
     // Fallback : pas de step_dates mais interview_at présent
     if (entries.length === 0 && interviewAt) {
       const stageId = subStatus || (job.status as string);
-      const { label } = getStageDisplay(stageId);
-      if (!hiddenSteps.includes(stageId) && isInterviewByLabel(stageId, label)) {
+      const realLabel = getRealLabel(stageId);
+      if (!hiddenSteps.includes(stageId) && isInterviewByLabel(stageId, realLabel)) {
         entries.push({
           job, stageId,
           date: new Date(interviewAt),
