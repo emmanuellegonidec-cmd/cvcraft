@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase'
 import ActionModal from './ActionModal'
 
 interface Action {
@@ -17,12 +18,9 @@ interface Action {
 
 interface Contact {
   id: string
-  prenom?: string
-  nom?: string
-  first_name?: string
-  last_name?: string
-  name?: string
-  email?: string
+  name: string
+  role?: string | null
+  company?: string | null
 }
 
 const CATEGORIE_COLORS: Record<string, string> = {
@@ -35,15 +33,10 @@ const CATEGORIE_COLORS: Record<string, string> = {
   'Autre': '#888',
 }
 
-function getContactDisplay(c: Contact | undefined) {
-  if (!c) return null
-  const first = c.prenom ?? c.first_name ?? ''
-  const last = c.nom ?? c.last_name ?? c.name ?? ''
-  const fullName = `${first} ${last}`.trim() || c.email || 'Contact'
-  const initials = (
-    (first.charAt(0) || '') + (last.charAt(0) || '')
-  ).toUpperCase() || fullName.charAt(0).toUpperCase() || '?'
-  return { fullName, initials }
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return (parts[0]?.slice(0, 2) || '??').toUpperCase()
 }
 
 function getEffectiveStatus(a: Action): 'fait' | 'annule' | 'a_faire' | 'en_retard' {
@@ -97,14 +90,11 @@ export default function ActionsSection({
 
   const fetchContacts = async () => {
     try {
-      const token = getToken()
-      const res = await fetch('/api/contacts', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      if (res.ok) {
-        const data: Contact[] = await res.json()
+      const supabase = createClient()
+      const { data } = await supabase.from('contacts').select('id, name, role, company')
+      if (data) {
         const map: Record<string, Contact> = {}
-        data.forEach((c) => { map[c.id] = c })
+        ;(data as Contact[]).forEach((c) => { map[c.id] = c })
         setContactsMap(map)
       }
     } catch (err) {
@@ -353,43 +343,39 @@ function ActionCard({ action, contactsMap, formatDate, onEdit, onDelete, onQuick
         {linkedContacts.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
             <span style={{ fontSize: 11, color: '#888', marginRight: 2, fontFamily: 'Montserrat, sans-serif' }}>👥</span>
-            {linkedContacts.map((c) => {
-              const info = getContactDisplay(c)
-              if (!info) return null
-              return (
-                <span
-                  key={c.id}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    background: '#fff',
-                    border: '1.5px solid #111',
-                    padding: '2px 8px 2px 2px',
-                    borderRadius: 20,
-                  }}
-                >
-                  <span style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: '50%',
-                    background: '#F5C400',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 9,
-                    fontWeight: 900,
-                    color: '#111',
-                    fontFamily: 'Montserrat, sans-serif',
-                  }}>
-                    {info.initials}
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#111', fontFamily: 'Montserrat, sans-serif' }}>
-                    {info.fullName}
-                  </span>
+            {linkedContacts.map((c) => (
+              <span
+                key={c.id}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: '#fff',
+                  border: '1.5px solid #111',
+                  padding: '2px 8px 2px 2px',
+                  borderRadius: 20,
+                }}
+              >
+                <span style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: '#F5C400',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 9,
+                  fontWeight: 900,
+                  color: '#111',
+                  fontFamily: 'Montserrat, sans-serif',
+                }}>
+                  {getInitials(c.name)}
                 </span>
-              )
-            })}
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#111', fontFamily: 'Montserrat, sans-serif' }}>
+                  {c.name}
+                </span>
+              </span>
+            ))}
           </div>
         )}
 
