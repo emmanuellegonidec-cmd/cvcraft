@@ -183,7 +183,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
             <label style={labelStyle}>Organisateur</label>
             <input
               style={inputStyle}
-              placeholder="Ex: APEC, Hello Simone, Pôle Emploi..."
+              placeholder="Ex: APEC, Hello Simone, France Travail..."
               value={organisateur}
               onChange={e => setOrganisateur(e.target.value)}
             />

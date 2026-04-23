@@ -5,7 +5,7 @@ import { HeartRating } from './HeartComponents';
 import { ContactOption, ContactPicker } from './JobModal';
 
 const FIXED_SOURCES = [
-  'LinkedIn', 'Indeed', 'Welcome to the Jungle', 'Apec', 'Pôle Emploi',
+  'LinkedIn', 'Indeed', 'Welcome to the Jungle', 'Apec', 'France Travail',
   'Site entreprise', 'Réseau', 'Chasseur de tête', 'Cabinet recrutement',
   'Cooptation', 'HelloWork', 'Autre',
 ];
