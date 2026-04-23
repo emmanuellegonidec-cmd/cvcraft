@@ -146,6 +146,81 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// POST — création ou mise à jour d'un CV Creator
+// Body attendu : { id?, title, template, content, form_data }
+// - Si id fourni → UPDATE de la ligne existante (vérif user_id = user.id)
+// - Si id absent → INSERT d'une nouvelle ligne
+// Renvoie { cv: { id, title, template, created_at, updated_at } }
+export async function POST(req: NextRequest) {
+  const { supabase, user } = await getAuth(req);
+  if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+  try {
+    const body = await req.json();
+    const { id, title, template, content, form_data } = body || {};
+
+    if (!title || typeof title !== 'string') {
+      return NextResponse.json({ error: 'title requis' }, { status: 400 });
+    }
+
+    const now = new Date().toISOString();
+
+    // UPDATE d'un CV existant
+    if (id) {
+      const { data, error } = await supabase
+        .from('cvs')
+        .update({
+          title: title.trim(),
+          template: template || null,
+          content: content || '',
+          form_data: form_data || {},
+          updated_at: now,
+        })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select('id, title, template, created_at, updated_at')
+        .maybeSingle();
+
+      if (error) {
+        console.error('POST /api/cvs update error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      if (!data) {
+        // Soit l'id n'existe pas, soit il n'appartient pas à l'utilisateur
+        return NextResponse.json({ error: 'CV introuvable' }, { status: 404 });
+      }
+
+      return NextResponse.json({ cv: data });
+    }
+
+    // INSERT d'un nouveau CV
+    const { data, error } = await supabase
+      .from('cvs')
+      .insert({
+        user_id: user.id,
+        title: title.trim(),
+        template: template || null,
+        content: content || '',
+        form_data: form_data || {},
+        created_at: now,
+        updated_at: now,
+      })
+      .select('id, title, template, created_at, updated_at')
+      .single();
+
+    if (error) {
+      console.error('POST /api/cvs insert error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ cv: data });
+  } catch (err: any) {
+    console.error('POST /api/cvs error:', err);
+    return NextResponse.json({ error: err.message || 'Erreur serveur' }, { status: 500 });
+  }
+}
+
 export async function PATCH(req: NextRequest) {
   const { supabase, user } = await getAuth(req);
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
