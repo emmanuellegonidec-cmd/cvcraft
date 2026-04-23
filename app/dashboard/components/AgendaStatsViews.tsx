@@ -18,7 +18,7 @@ type InterviewEntry = {
   job: Job;
   stageId: string;
   date: Date;
-  isMainInterview: boolean; // vrai si c'est l'entretien en cours (sub_status actuel)
+  isMainInterview: boolean;
 };
 
 const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
@@ -29,9 +29,20 @@ const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> 
 
 const FONT = "'Montserrat', sans-serif";
 
-// IDs de stages qui ne sont PAS des entretiens : tout le reste compte comme entretien
-// (y compris les étapes custom type "Entretien Directrice de la croissance")
-const NON_INTERVIEW_STAGES = new Set(['to_apply', 'applied', 'offer', 'archived']);
+// IDs par défaut connus
+const INTERVIEW_DEFAULT_IDS = new Set(['phone_interview', 'hr_interview', 'manager_interview']);
+const NON_INTERVIEW_DEFAULT_IDS = new Set(['to_apply', 'applied', 'offer', 'archived']);
+
+// Un stage est un entretien si :
+// - C'est un ID par défaut d'entretien (phone_interview, hr_interview, manager_interview), OU
+// - Son label contient "entretien" (pour les étapes custom type "Entretien DRH")
+// Les étapes custom sans "entretien" dans le label (Refus, Offre reçue, Abandon...) sont exclues.
+function isInterviewByLabel(stageId: string, label: string | null | undefined): boolean {
+  if (NON_INTERVIEW_DEFAULT_IDS.has(stageId)) return false;
+  if (INTERVIEW_DEFAULT_IDS.has(stageId)) return true;
+  if (label) return label.toLowerCase().includes('entretien');
+  return false; // Stage custom sans label connu : on n'affiche pas par prudence
+}
 
 function getAuthHeaders(): Record<string, string> {
   const token = (typeof window !== 'undefined') ? (window as any).__jfmj_token : null;
@@ -60,42 +71,6 @@ function parseLocalDate(dateStr: string): Date {
   return new Date(dateStr);
 }
 
-// Pour un job donné, retourne toutes les entrées d'entretien depuis step_dates.
-// Fallback sur interview_at si step_dates est vide.
-function getAllInterviews(job: Job): InterviewEntry[] {
-  const entries: InterviewEntry[] = [];
-  const stepDates = (job as any).step_dates as Record<string, string> | null;
-  const interviewAt = (job as any).interview_at as string | null;
-  const subStatus = (job as any).sub_status as string | null;
-
-  if (stepDates) {
-    Object.entries(stepDates).forEach(([stageId, dateStr]) => {
-      if (!dateStr) return;
-      if (NON_INTERVIEW_STAGES.has(stageId)) return;
-      try {
-        const date = parseLocalDate(dateStr);
-        entries.push({
-          job, stageId, date,
-          isMainInterview: stageId === subStatus,
-        });
-      } catch {}
-    });
-  }
-
-  if (entries.length === 0 && interviewAt) {
-    const stageId = subStatus || (job.status as string);
-    if (!NON_INTERVIEW_STAGES.has(stageId)) {
-      entries.push({
-        job, stageId,
-        date: new Date(interviewAt),
-        isMainInterview: true,
-      });
-    }
-  }
-
-  return entries;
-}
-
 function SectionLabel({ label, past }: { label: string; past: boolean }) {
   return (
     <p style={{
@@ -113,6 +88,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
   const router = useRouter();
   const [contactsMap, setContactsMap] = useState<Record<string, ContactMin>>({});
   const [stagesLabelMap, setStagesLabelMap] = useState<Record<string, { label: string; color?: string }>>({});
+  const [stagesReady, setStagesReady] = useState(false);
 
   useEffect(() => {
     fetch('/api/contacts', { headers: getAuthHeaders() })
@@ -126,37 +102,98 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
       .catch(() => {});
   }, []);
 
-  // Charge le label de TOUS les stages (user-level + job-level) pour retrouver les étapes custom
+  // Charge tous les pipeline_stages de l'utilisateur (user-level + job-level)
   useEffect(() => {
     async function loadAllStages() {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const { data } = await supabase
-        .from('pipeline_stages')
-        .select('id, label, color')
-        .eq('user_id', session.user.id);
-      if (data) {
-        const map: Record<string, { label: string; color?: string }> = {};
-        data.forEach((s: any) => { map[s.id] = { label: s.label, color: s.color }; });
-        setStagesLabelMap(map);
-      }
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { setStagesReady(true); return; }
+        const { data } = await supabase
+          .from('pipeline_stages')
+          .select('id, label, color')
+          .eq('user_id', session.user.id);
+        if (data) {
+          const map: Record<string, { label: string; color?: string }> = {};
+          data.forEach((s: any) => { map[s.id] = { label: s.label, color: s.color }; });
+          setStagesLabelMap(map);
+        }
+      } catch {}
+      setStagesReady(true);
     }
     loadAllStages();
   }, []);
 
-  // Une entry par étape d'entretien de chaque job (tous jobs, y compris archivés)
-  const allEntries: InterviewEntry[] = [];
-  jobs.forEach(j => {
-    allEntries.push(...getAllInterviews(j));
-  });
+  // Récupère label + couleur d'un stage en cherchant dans les sources disponibles
+  function getStageDisplay(stageId: string): { label: string; color: string } {
+    const fromProps = stages.find(s => s.id === stageId);
+    if (fromProps) return { label: fromProps.label, color: fromProps.color };
+    const fromMap = stagesLabelMap[stageId];
+    if (fromMap) return { label: fromMap.label, color: fromMap.color || '#888' };
+    const DEFAULT_LABELS: Record<string, string> = {
+      phone_interview: 'Entretien téléphonique',
+      hr_interview: 'Entretien RH',
+      manager_interview: 'Entretien manager',
+    };
+    return { label: DEFAULT_LABELS[stageId] || 'Entretien', color: '#888' };
+  }
 
-  // Tri chronologique par date
+  // Pour un job, retourne toutes les entries correspondant à des entretiens
+  function getAllInterviews(job: Job): InterviewEntry[] {
+    const entries: InterviewEntry[] = [];
+    const stepDates = (job as any).step_dates as Record<string, string> | null;
+    const interviewAt = (job as any).interview_at as string | null;
+    const subStatus = (job as any).sub_status as string | null;
+
+    if (stepDates) {
+      Object.entries(stepDates).forEach(([stageId, dateStr]) => {
+        if (!dateStr) return;
+        const { label } = getStageDisplay(stageId);
+        if (!isInterviewByLabel(stageId, label)) return;
+        try {
+          const date = parseLocalDate(dateStr);
+          entries.push({
+            job, stageId, date,
+            isMainInterview: stageId === subStatus,
+          });
+        } catch {}
+      });
+    }
+
+    if (entries.length === 0 && interviewAt) {
+      const stageId = subStatus || (job.status as string);
+      const { label } = getStageDisplay(stageId);
+      if (isInterviewByLabel(stageId, label)) {
+        entries.push({
+          job, stageId,
+          date: new Date(interviewAt),
+          isMainInterview: true,
+        });
+      }
+    }
+
+    return entries;
+  }
+
+  // On attend que les labels soient chargés avant de filtrer
+  // (sinon on risque d'exclure des entretiens custom non-résolus)
+  const allEntries: InterviewEntry[] = stagesReady
+    ? jobs.flatMap(getAllInterviews)
+    : [];
+
   const sorted = [...allEntries].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
   const upcoming = sorted.filter(e => e.date >= todayMidnight);
   const past     = sorted.filter(e => e.date <  todayMidnight);
+
+  if (!stagesReady) {
+    return (
+      <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 12, padding: '2rem', textAlign: 'center', color: '#888', boxShadow: '3px 3px 0 #111' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: FONT }}>Chargement des entretiens…</div>
+      </div>
+    );
+  }
 
   if (sorted.length === 0) {
     return (
@@ -168,32 +205,14 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
     );
   }
 
-  // Cherche le label et la couleur d'un stage, en essayant d'abord `stages` props puis la map custom
-  function getStageDisplay(stageId: string): { label: string; color: string } {
-    const fromProps = stages.find(s => s.id === stageId);
-    if (fromProps) return { label: fromProps.label, color: fromProps.color };
-    const fromMap = stagesLabelMap[stageId];
-    if (fromMap) return { label: fromMap.label, color: fromMap.color || '#888' };
-    // Fallback pour les stages de base connus
-    const DEFAULT_LABELS: Record<string, string> = {
-      phone_interview: 'Entretien téléphonique',
-      hr_interview: 'Entretien RH',
-      manager_interview: 'Entretien manager',
-    };
-    return { label: DEFAULT_LABELS[stageId] || 'Entretien', color: '#888' };
-  }
-
   function renderCard(entry: InterviewEntry, muted: boolean) {
     const { job, stageId, date, isMainInterview } = entry;
     const stageDisplay = getStageDisplay(stageId);
 
-    // Heure, type : uniquement pour l'entretien en cours (sub_status)
     const timeStart   = isMainInterview ? ((job as any).interview_time as string | null) : null;
     const timeEnd     = isMainInterview ? ((job as any).interview_time_end as string | null) : null;
     const iType       = isMainInterview ? ((job as any).interview_type as string | null) : null;
 
-    // Contact : on regarde d'abord interview_contacts[stageId] (par étape),
-    // sinon interview_contact_id (global) si c'est l'entretien en cours
     const contactsByStep = (job as any).interview_contacts as Record<string, string> | null;
     const contactId = (contactsByStep && contactsByStep[stageId])
       || (isMainInterview ? ((job as any).interview_contact_id as string | null) : null);
@@ -239,7 +258,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
           </div>
         </div>
 
-        {/* HORAIRE (uniquement pour l'entretien en cours) */}
+        {/* HORAIRE */}
         {timeLabel && (
           <div style={{
             background: muted ? '#F5F5F0' : '#FFF8EC',
