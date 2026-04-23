@@ -42,6 +42,7 @@ export function Step6Save({
     setRgpdModalOpen(false);
     setIsSaving(true);
     setSaveMsg('');
+
     try {
       const token = (window as any).__jfmj_token || '';
       const res = await fetch('/api/cvs', {
@@ -65,16 +66,40 @@ export function Step6Save({
           },
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
+
+      // Lecture défensive du body : on récupère le texte brut,
+      // puis on tente de le parser en JSON. Ça évite le crash
+      // "Unexpected end of JSON input" si la réponse est vide ou malformée.
+      const rawText = await res.text();
+      let json: any = null;
+      if (rawText) {
+        try {
+          json = JSON.parse(rawText);
+        } catch {
+          // Réponse non-JSON (probablement une page d'erreur HTML serveur)
+          json = null;
+        }
+      }
+
+      if (!res.ok) {
+        // On affiche le message d'erreur du serveur s'il existe,
+        // sinon un message générique basé sur le code HTTP.
+        const serverMsg = json?.error || json?.message;
+        throw new Error(
+          serverMsg || `Erreur serveur (${res.status}${res.statusText ? ' ' + res.statusText : ''})`
+        );
+      }
+
+      // Succès — on essaie de récupérer l'ID du CV créé
       setSaveMsg('✅ Sauvegardé !');
-      if (!savedId && json.cv?.id) {
+      if (!savedId && json?.cv?.id) {
         setSavedId(json.cv.id);
         router.replace(`/dashboard/editor?id=${json.cv.id}`);
       }
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (e: any) {
-      setSaveMsg('❌ Erreur : ' + e.message);
+      const msg = e?.message || 'Erreur inconnue';
+      setSaveMsg('❌ Erreur : ' + msg);
     } finally {
       setIsSaving(false);
     }
