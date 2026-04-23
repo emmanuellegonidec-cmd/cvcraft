@@ -102,7 +102,10 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
       .catch(() => {});
   }, []);
 
-  const interviewJobs = jobs.filter(j => isInterviewStage(j.status, stages));
+  // Inclut tous les jobs ayant eu un entretien, y compris archivés / refusés
+  const interviewJobs = jobs.filter(j =>
+    isInterviewStage(j.status, stages) || !!(j as any).interview_at
+  );
 
   // Tri par date effective croissante
   const sorted = [...interviewJobs].sort((a, b) => {
@@ -201,7 +204,7 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
 
         {/* TITRE · Entreprise · Contact */}
         <div style={{ flex: '1 1 140px', minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap', fontFamily: FONT, textDecoration: muted ? 'line-through' : 'none' }}>{job.title}</span>
+          <span style={{ fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap', fontFamily: FONT }}>{job.title}</span>
           {job.company && (
             <span style={{ fontSize: 12, fontWeight: 600, color: '#888', whiteSpace: 'nowrap', fontFamily: FONT }}>· {job.company}</span>
           )}
