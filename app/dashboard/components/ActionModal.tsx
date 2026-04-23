@@ -173,7 +173,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
             <label style={labelStyle}>Nom de l'événement *</label>
             <input
               style={inputStyle}
-              placeholder="Ex: Atelier CV Hello Simone"
+              placeholder="Ex: Atelier CV"
               value={nom}
               onChange={e => setNom(e.target.value)}
             />
@@ -183,7 +183,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
             <label style={labelStyle}>Organisateur</label>
             <input
               style={inputStyle}
-              placeholder="Ex: APEC, Hello Simone, France Travail..."
+              placeholder="Ex: APEC, France Travail..."
               value={organisateur}
               onChange={e => setOrganisateur(e.target.value)}
             />
