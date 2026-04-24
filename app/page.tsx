@@ -48,7 +48,7 @@ async function getPublishedArticles(): Promise<Article[]> {
 export default async function LandingPage() {
   const articles = await getPublishedArticles()
    
-  const schema = {"@context":"https://schema.org","@graph":[{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Jean find my Job est-il vraiment gratuit ?","acceptedAnswer":{"@type":"Answer","text":"Oui, totalement gratuit, Jean find my Job est en phase bêta. Candidatures illimitées, toutes les fonctionnalités incluses — sans carte bancaire. Profitez-en !"}},{"@type":"Question","name":"Comment fonctionne l'import d'offre d'emploi ?","acceptedAnswer":{"@type":"Answer","text":"Il vous suffit de coller l'URL d'une offre et Jean extrait automatiquement toutes les informations : poste, entreprise, description, compétences requises. En cas de non possibilité, un formulaire à compléter s'ouvre et vous pouvez compléter l'offre manuellement."}},{"@type":"Question","name":"Mes données sont-elles sécurisées ?","acceptedAnswer":{"@type":"Answer","text":"Absolument. Vos données sont hébergées sur un serveur sécurisé (RGPD) et ne sont jamais partagées avec des tiers. Chaque utilisateur n'a accès qu'à ses propres candidatures."}},{"@type":"Question","name":"Comment fonctionne le CV Creator IA ?","acceptedAnswer":{"@type":"Answer","text":"En version bêta, importez votre profil LinkedIn en PDF, choisissez un template, et Claude AI rédige automatiquement des formulations percutantes pour chaque section de votre CV. Vous pouvez ensuite ajuster et exporter en PDF en un clic."}},{"@type":"Question","name":"Puis-je suivre plusieurs candidatures en même temps ?","acceptedAnswer":{"@type":"Answer","text":"Oui, sans limite. Chaque candidature dispose de son propre parcours personnalisable avec des étapes, des contacts associés, des documents et des notes. Vous visualisez tout depuis le tableau de bord global."}},{"@type":"Question","name":"Jean find my Job fonctionne-t-il sur mobile ?","acceptedAnswer":{"@type":"Answer","text":"L'interface est responsive et fonctionne sur mobile. La visualisation est néanmoins plus pertinente sur votre ordinateur."}}]},{"@type":"SoftwareApplication","name":"Jean Find My Job","url":"https://jeanfindmyjob.fr","applicationCategory":"BusinessApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"description":"Jean Find My Job centralise votre recherche d'emploi : tableau de bord Kanban, pipeline de candidature, relances, entretiens et score ATS pour optimiser vos candidatures.","inLanguage":"fr","author":{"@type":"Organization","name":"Jean Find My Job","url":"https://jeanfindmyjob.fr"}}]}
+  const schema = {"@context":"https://schema.org","@graph":[{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Jean find my Job est-il vraiment gratuit ?","acceptedAnswer":{"@type":"Answer","text":"Oui, totalement gratuit, Jean find my Job est en phase bêta. Candidatures illimitées, toutes les fonctionnalités incluses — sans carte bancaire. Profitez-en !"}},{"@type":"Question","name":"Mes données sont-elles sécurisées ?","acceptedAnswer":{"@type":"Answer","text":"Absolument. Vos données sont hébergées sur un serveur sécurisé (RGPD) et ne sont jamais partagées avec des tiers. Chaque utilisateur n'a accès qu'à ses propres candidatures."}},{"@type":"Question","name":"Comment importer une offre d'emploi dans Jean find my Job ?","acceptedAnswer":{"@type":"Answer","text":"Vous importez le PDF de l'offre que vous avez téléchargé, et Jean extrait automatiquement les informations clés : poste, entreprise, description, compétences requises. Vous pouvez aussi saisir l'offre manuellement en quelques champs."}},{"@type":"Question","name":"Puis-je lier des contacts à mes candidatures ?","acceptedAnswer":{"@type":"Answer","text":"Oui. Chaque candidature peut être reliée à un ou plusieurs contacts (recruteur, RH, manager, référent interne). Vous gardez ainsi l'historique de vos échanges par offre, et vous savez exactement qui relancer et quand."}},{"@type":"Question","name":"Comment fonctionne le Score ATS ?","acceptedAnswer":{"@type":"Answer","text":"Vous collez votre CV et la description du poste visé. En moins de 30 secondes, Jean analyse la correspondance et vous donne un score global sur 100, les mots-clés présents et manquants, vos points forts et points faibles, ainsi que des recommandations concrètes pour améliorer vos chances de passer les filtres automatiques des recruteurs."}},{"@type":"Question","name":"Puis-je suivre plusieurs candidatures en même temps ?","acceptedAnswer":{"@type":"Answer","text":"Oui, sans limite. Chaque candidature dispose de son propre parcours personnalisable avec des étapes, des contacts associés, des documents et des notes. Vous visualisez tout depuis le tableau de bord global."}},{"@type":"Question","name":"Jean find my Job fonctionne-t-il sur mobile ?","acceptedAnswer":{"@type":"Answer","text":"L'interface est responsive et fonctionne sur mobile. La visualisation est néanmoins plus pertinente sur votre ordinateur."}}]},{"@type":"SoftwareApplication","name":"Jean Find My Job","url":"https://jeanfindmyjob.fr","applicationCategory":"BusinessApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"description":"Jean Find My Job centralise votre recherche d'emploi : tableau de bord Kanban, pipeline de candidature, relances, entretiens et score ATS pour optimiser vos candidatures.","inLanguage":"fr","author":{"@type":"Organization","name":"Jean Find My Job","url":"https://jeanfindmyjob.fr"}}]}
 
   return (
     <>
@@ -173,7 +173,7 @@ export default async function LandingPage() {
               <span style={{ display:'block',whiteSpace:'nowrap' }}>dans le chaos</span>
             </h1>
             <p className="fade3" style={{ fontFamily:"'Montserrat', sans-serif",fontSize:'1.05rem',color:'#555',marginBottom:'2rem',lineHeight:1.75,maxWidth:460,fontWeight:500 }}>
-              Jean find my Job centralise votre recherche d&apos;emploi — tableau de bord, suivi de candidatures, CV personnalisé par IA. Tout au même endroit, enfin.
+              Jean find my Job centralise votre recherche d&apos;emploi — tableau de bord, suivi de candidatures, contacts, score ATS. Tout au même endroit, enfin.
             </p>
             <div className="fade4" style={{ display:'flex',gap:12,flexWrap:'wrap',alignItems:'center' }}>
               <CTAButton href="/auth/signup" label="Commencer gratuitement →" eventName="cta_hero" className="btn-black" style={{ fontSize:15,padding:'14px 32px' }} />
@@ -283,8 +283,8 @@ export default async function LandingPage() {
             {[
               'Étapes standards incluses : entretien tél, RH, manager, offre',
               'Ajoutez vos propres étapes : Entretien DRH, cas pratique, etc.',
-              'CV, comptes-rendus, notes et contacts : tout est stocké par candidature',
-              'Conseils et actions suggérés à chaque étape pour ne rien rater',
+              'Contacts liés à chaque offre (recruteur, RH, manager) et historique de vos échanges',
+              'Actions à faire, documents, comptes-rendus et notes : tout est centralisé par candidature',
             ].map(item => (
               <li key={item} style={{ display:'flex',gap:10,fontSize:14,fontWeight:600,fontFamily:"'Montserrat', sans-serif" }}>
                 <span style={{ color:'#E8151B',fontWeight:900,flexShrink:0,fontSize:16 }}>✓</span>{item}
@@ -349,9 +349,9 @@ export default async function LandingPage() {
           <div className="steps-grid">
             {[
               { num:'1', title:'Vous créez votre profil', desc:"Un compte sécurisé et c'est parti. Jean prépare la base. Prêt à postuler sans repartir de zéro à chaque fois.", ia:false },
-              { num:'2', title:'Vous ajoutez vos candidatures', desc:"Importez une offre ou ajoutez-la manuellement. Chaque candidature a son propre parcours de suivi entièrement personnalisable.", ia:false },
+              { num:'2', title:'Vous ajoutez vos candidatures', desc:"Importez le PDF de l'offre ou saisissez-la manuellement. Chaque candidature a son propre parcours de suivi entièrement personnalisable, avec ses contacts et ses étapes.", ia:false },
               { num:'3', title:'Vous suivez sans vous perdre', desc:"Toutes vos candidatures au même endroit. Vous savez où vous en êtes, à chaque instant, sans réfléchir.", ia:false },
-              { num:'4', title:"L'IA vous aide à mieux candidater", desc:"Jean vous donne un coup de main quand vous en avez besoin — améliorer votre CV, comprendre une offre, préparer vos entretiens.", ia:true },
+              { num:'4', title:"L'IA vous aide à mieux candidater", desc:"Jean vous donne un coup de main quand vous en avez besoin — analyser votre CV face à une offre, comprendre les attentes d'un poste, préparer vos entretiens.", ia:true },
             ].map(s => (
               <div key={s.num} className={s.ia ? 'step-card-ia' : 'step-card-normal'}>
                 <div className={`step-num-badge ${s.ia ? 'step-num-ia' : 'step-num-normal'}`}>
@@ -379,9 +379,9 @@ export default async function LandingPage() {
               { icon:'📊',title:'Tableau de bord kanban',desc:'5 colonnes pour visualiser toutes vos candidatures d\'un coup d\'œil — de l\'envie de postuler à l\'offre reçue.' },
               { icon:'🗂️',title:'Parcours par candidature',desc:'Étapes, dates, notes, contacts et documents : tout est centralisé par offre en un seul endroit.' },
               { icon:'🎯',title:'Score ATS',desc:'Analysez votre CV face à la description du poste et maximisez vos chances de passer les filtres automatiques.' },
-              { icon:'📥',title:'Import d\'offres',desc:'Collez une URL, importez un PDF/Word/image ou saisissez manuellement — Jean analyse et remplit tout automatiquement.' },
+              { icon:'👥',title:'Contacts',desc:'Liez recruteurs, RH, managers et référents à chaque candidature. Historique de vos échanges et relances, rangés par offre.' },
               { icon:'📋',title:'Synthèse & export PDF',desc:'Générez un bilan complet de votre recherche d\'emploi, exportable en PDF — idéal pour votre conseiller emploi.' },
-              { icon:'📨',title:'Candidature spontanée',desc:'Contactez une entreprise sans offre publiée et suivez votre démarche comme n\'importe quelle candidature.' },
+              { icon:'📥',title:'Import PDF d\'offre',desc:'Importez le PDF d\'une offre téléchargée et Jean extrait automatiquement le poste, l\'entreprise, la description et les compétences requises.' },
               { icon:'📅',title:'Calendrier intégré',desc:'Visualisez vos entretiens et relances à venir en vue semaine ou mois.' },
               { icon:'⚡',title:'Événements',desc:'Ateliers, formations, coaching, RDV conseil — suivez tout ce qui gravite autour de votre recherche.' },
               { icon:'📈',title:'Statistiques',desc:'Taux de réponse, entretiens, propositions : pilotez votre recherche avec les données.' },
@@ -504,7 +504,7 @@ export default async function LandingPage() {
               </span>
             </div>
             <p style={{ fontFamily:"'Montserrat', sans-serif",fontSize:13,color:'#555',lineHeight:1.7,fontWeight:500,marginBottom:'1.25rem',maxWidth:260 }}>
-              La plateforme de recherche d&apos;emploi propulsée par Claude AI. Tableau de bord, parcours de candidature, CV Creator.
+              La plateforme de recherche d&apos;emploi propulsée par Claude AI. Tableau de bord, parcours de candidature, contacts et score ATS.
             </p>
             <div style={{ display:'flex',gap:8,marginBottom:'1rem' }}>
               <a href="https://www.linkedin.com/company/jean-find-my-job/" target="_blank" rel="noopener noreferrer" className="social-link" title="LinkedIn" style={{ background:'#0077B5',borderColor:'#0077B5',color:'#fff' }}>
@@ -530,13 +530,13 @@ export default async function LandingPage() {
           </div>
           <div>
             <h5 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Ressources</h5>
-            {[['Guide de démarrage','#'],['Blog','/blog'],['FAQ','#faq'],['Conseils entretien','#'],['Chaîne YouTube','https://www.youtube.com/channel/UCDgezWysIr83yW5dUlkKbSg']].map(([label,href]) => (
+            {[['Blog','/blog'],['FAQ','#faq'],['Chaîne YouTube','https://www.youtube.com/channel/UCDgezWysIr83yW5dUlkKbSg']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link" target={href.startsWith('http')?'_blank':undefined} rel={href.startsWith('http')?'noopener noreferrer':undefined}>{label}</a>
             ))}
           </div>
           <div>
             <h5 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Entreprise</h5>
-            {[['À propos','#'],['Tarifs','#'],['Contact','mailto:hello@jeanfindmyjob.fr'],['Confidentialité','/confidentialite'],['CGU','/cgu']].map(([label,href]) => (
+            {[['Contact','mailto:hello@jeanfindmyjob.fr'],['Confidentialité','/confidentialite'],['CGU','/cgu']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
           </div>
