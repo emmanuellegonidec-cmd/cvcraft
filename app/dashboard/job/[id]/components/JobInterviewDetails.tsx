@@ -19,6 +19,7 @@ interface Job {
   interview_syntheses: Record<string, string> | null
   follow_up_dates: Record<string, string> | null
   follow_up_enabled: Record<string, boolean> | null
+  follow_up_sent_dates?: Record<string, string> | null
 }
 
 interface ContactMin { id: string; name: string; role?: string | null; company?: string | null }
@@ -35,7 +36,7 @@ interface Props {
 }
 
 function formatDateFR(iso: string): string {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Paris' })
 }
 function typeLabel(t: string | null): string {
   if (t === 'phone') return 'Téléphone'
@@ -54,19 +55,29 @@ function buildLogisticsSummary(job: Job): string {
   return parts.join(' · ')
 }
 
+// Date du jour au format YYYY-MM-DD (timezone Europe/Paris)
+function todayISO(): string {
+  const fmt = new Intl.DateTimeFormat('fr-CA', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  })
+  return fmt.format(new Date())
+}
+
 function Collapsible({
-  title, summary, open, onToggle, children,
+  title, summary, open, onToggle, children, accentColor,
 }: {
   title: string
   summary?: string
   open: boolean
   onToggle: () => void
   children: React.ReactNode
+  accentColor?: string
 }) {
   return (
     <div style={{
       background: '#fff', borderRadius: 12, marginBottom: 10,
-      border: '1.5px solid #EBEBEB', overflow: 'hidden',
+      border: `1.5px solid ${accentColor ?? '#EBEBEB'}`, overflow: 'hidden',
     }}>
       <div
         onClick={onToggle}
@@ -78,7 +89,7 @@ function Collapsible({
         }}
       >
         <span style={{
-          fontSize: 11, fontWeight: 800, color: '#555',
+          fontSize: 11, fontWeight: 800, color: accentColor ?? '#555',
           letterSpacing: '1.3px', textTransform: 'uppercase',
           fontFamily: FONT, flexShrink: 0,
         }}>
@@ -87,7 +98,7 @@ function Collapsible({
         <div style={{ flex: 1 }} />
         {summary && (
           <span style={{
-            fontSize: 11, color: '#666', fontWeight: 600,
+            fontSize: 11, color: accentColor ?? '#666', fontWeight: 600,
             fontFamily: FONT, marginRight: 10,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
@@ -120,12 +131,15 @@ export default function JobInterviewDetails({
   const syntheses = job.interview_syntheses ?? {}
   const followUpDates = job.follow_up_dates ?? {}
   const followUpEnabled = job.follow_up_enabled ?? {}
+  const followUpSentDates = job.follow_up_sent_dates ?? {}
 
   const contactIdForStep = interviewContacts[currentStepId] ?? ''
   const preparationValue = preparations[currentStepId] ?? ''
   const synthesisValue = syntheses[currentStepId] ?? ''
   const followUpDate = followUpDates[currentStepId] ?? ''
   const followUpIsEnabled = followUpEnabled[currentStepId] !== false
+  const sentDate = followUpSentDates[currentStepId] ?? ''
+  const isSent = !!sentDate
 
   const inp: React.CSSProperties = {
     width: '100%', border: '1.5px solid #eee', borderRadius: 8,
@@ -306,10 +320,25 @@ export default function JobInterviewDetails({
       onJobChange('follow_up_enabled', next)
       onPatch('follow_up_enabled', next)
     }
+    const updateSentDate = (val: string) => {
+      const next = { ...followUpSentDates }
+      if (val) next[currentStepId] = val
+      else delete next[currentStepId]
+      onJobChange('follow_up_sent_dates', next)
+      onPatch('follow_up_sent_dates', next)
+    }
+    const toggleSent = (checked: boolean) => {
+      if (checked) updateSentDate(todayISO())
+      else updateSentDate('')
+    }
 
-    const relanceSummary = followUpIsEnabled
-      ? (followUpDate ? formatDateFR(followUpDate) : 'À planifier')
-      : 'Désactivée'
+    const relanceSummary = isSent
+      ? `Envoyée le ${formatDateFR(sentDate)}`
+      : (followUpIsEnabled
+        ? (followUpDate ? formatDateFR(followUpDate) : 'À planifier')
+        : 'Désactivée')
+
+    const relanceTitle = isSent ? 'Relance envoyée ✓' : 'Relance à programmer'
 
     return (
       <>
@@ -332,29 +361,72 @@ export default function JobInterviewDetails({
         </Collapsible>
 
         <Collapsible
-          title="Relance à programmer"
+          title={relanceTitle}
           summary={relanceSummary}
           open={relanceOpen}
           onToggle={() => setRelanceOpen(v => !v)}
+          accentColor={isSent ? '#1A7A4A' : undefined}
         >
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 10 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: isSent ? 'not-allowed' : 'pointer', marginBottom: 10 }}>
             <input type="checkbox" checked={followUpIsEnabled}
               onChange={e => updateFollowUpEnabled(e.target.checked)}
-              style={{ width: 16, height: 16, cursor: 'pointer' }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#111', fontFamily: FONT }}>
+              disabled={isSent}
+              style={{ width: 16, height: 16, cursor: isSent ? 'not-allowed' : 'pointer' }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: isSent ? '#888' : '#111', fontFamily: FONT }}>
               Activer la relance
             </span>
           </label>
+
           {followUpIsEnabled && (
-            <div>
-              <label style={fieldLabel}>Date de relance</label>
-              <input type="date" defaultValue={followUpDate}
+            <div style={{ marginBottom: 14 }}>
+              <label style={fieldLabel}>Date de relance prévue</label>
+              <input type="date"
+                key={`fu-date-${currentStepId}-${isSent}`}
+                defaultValue={followUpDate}
                 onBlur={e => updateFollowUpDate(e.target.value)}
-                style={{ ...inp, maxWidth: 220 }}
-                onFocus={e => { e.target.style.borderColor = '#F5C400' }} />
+                disabled={isSent}
+                style={{
+                  ...inp, maxWidth: 220,
+                  background: isSent ? '#F7F6F3' : '#fff',
+                  color: isSent ? '#666' : '#111',
+                  cursor: isSent ? 'not-allowed' : 'text',
+                }}
+                onFocus={e => { if (!isSent) e.target.style.borderColor = '#F5C400' }} />
               <p style={{ fontSize: 11, color: '#666', marginTop: 7, fontFamily: FONT, fontWeight: 500, lineHeight: 1.5 }}>
                 Par défaut 4 semaines après le RDV. Tu peux ajuster cette date à tout moment.
               </p>
+            </div>
+          )}
+
+          {followUpIsEnabled && (
+            <div style={{ borderTop: '1px solid #EBEBEB', paddingTop: 14, marginTop: 14 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 10 }}>
+                <input type="checkbox" checked={isSent}
+                  onChange={e => toggleSent(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#1A7A4A' }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#111', fontFamily: FONT }}>
+                  Relance envoyée
+                </span>
+              </label>
+
+              {isSent ? (
+                <div>
+                  <label style={{ ...fieldLabel, color: '#1A7A4A' }}>Date d&apos;envoi</label>
+                  <input type="date"
+                    key={`sent-${currentStepId}-${isSent}`}
+                    defaultValue={sentDate}
+                    onBlur={e => updateSentDate(e.target.value || todayISO())}
+                    style={{ ...inp, maxWidth: 220, borderColor: '#1A7A4A' }}
+                    onFocus={e => { e.target.style.borderColor = '#1A7A4A' }} />
+                  <p style={{ fontSize: 11, color: '#666', marginTop: 7, fontFamily: FONT, fontWeight: 500, lineHeight: 1.5 }}>
+                    Par défaut la date du jour. Tu peux la modifier si tu as envoyé ta relance un autre jour.
+                  </p>
+                </div>
+              ) : (
+                <p style={{ fontSize: 11, color: '#666', fontFamily: FONT, fontWeight: 500, lineHeight: 1.5 }}>
+                  Coche cette case quand tu as envoyé ta relance.
+                </p>
+              )}
             </div>
           )}
         </Collapsible>
