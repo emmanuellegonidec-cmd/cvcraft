@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Job, JobStatus } from '@/lib/jobs';
+import { createClient } from '@/lib/supabase';
 import { Stage, NewJobState, EMPTY_JOB } from './types';
 import SpontaneousMode from './SpontaneousMode';
 import FileImportMode from './FileImportMode';
@@ -74,6 +75,17 @@ export default function JobModal({
   const [companyExtras, setCompanyExtras]         = useState<{
     company_description?: string; company_website?: string; company_size?: string;
   }>({});
+
+  // ─── Admin check (même pattern que Sidebar pour CV Creator) ───
+  // UI-only: masque l'option "Importer depuis une URL" tant que la feature
+  // est en maintenance. Non destiné à la sécurité.
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setIsAdmin(data.user?.email === 'emmanuelle.gonidec@gmail.com');
+    });
+  }, []);
 
   useEffect(() => {
     const token = (window as unknown as { __jfmj_token?: string }).__jfmj_token;
@@ -173,6 +185,15 @@ export default function JobModal({
     : addJobMode === 'file' ? '📄 Importer un fichier'
     : 'Ajouter une offre';
 
+  // ─── Options d'ajout (URL cachée aux non-admin tant que la feature est en maintenance) ───
+  const addJobOptions: { mode: 'url' | 'manual' | 'file' | 'spontaneous'; icon: string; title: string; sub: string; adminOnly?: boolean }[] = [
+    { mode: 'url',         icon: '🔗', title: 'Importer depuis une URL',   sub: 'Importer automatiquement depuis un jobboard', adminOnly: true },
+    { mode: 'manual',      icon: '✏️', title: 'Remplir manuellement',      sub: 'Créer une offre à partir de zéro' },
+    { mode: 'file',        icon: '📄', title: 'Importer un fichier',       sub: 'PDF, Word, image — analysé automatiquement par IA' },
+    { mode: 'spontaneous', icon: '📨', title: 'Candidature spontanée',     sub: 'Contacter une entreprise sans offre publiée' },
+  ];
+  const visibleOptions = addJobOptions.filter(opt => !opt.adminOnly || isAdmin);
+
   return (
     <div className="modal-bg" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
@@ -189,20 +210,20 @@ export default function JobModal({
         {/* ── Écran de choix ── */}
         {!addJobMode && !editingJobId && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              { mode: 'url',         icon: '🔗', title: 'Importer depuis une URL',   sub: 'Importer automatiquement depuis un jobboard' },
-              { mode: 'manual',      icon: '✏️', title: 'Remplir manuellement',      sub: 'Créer une offre à partir de zéro' },
-              { mode: 'file',        icon: '📄', title: 'Importer un fichier',       sub: 'PDF, Word, image — analysé automatiquement par IA' },
-              { mode: 'spontaneous', icon: '📨', title: 'Candidature spontanée',     sub: 'Contacter une entreprise sans offre publiée' },
-            ].map(opt => (
+            {visibleOptions.map(opt => (
               <button key={opt.mode}
-                onClick={() => setAddJobMode(opt.mode as 'url' | 'manual' | 'file' | 'spontaneous')}
+                onClick={() => setAddJobMode(opt.mode)}
                 style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', textAlign: 'left', boxShadow: '2px 2px 0 #111', width: '100%' }}
                 onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'translate(-1px,-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '3px 3px 0 #E8151B'; }}
                 onMouseOut={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '2px 2px 0 #111'; }}>
                 <span style={{ fontSize: 24 }}>{opt.icon}</span>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 2 }}>{opt.title}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 2 }}>
+                    {opt.title}
+                    {opt.adminOnly && (
+                      <span style={{ marginLeft: 8, background: '#E8151B', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>admin</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: 12, color: '#888', fontWeight: 500 }}>{opt.sub}</div>
                 </div>
               </button>
@@ -210,8 +231,8 @@ export default function JobModal({
           </div>
         )}
 
-        {/* ── Mode URL ── */}
-        {addJobMode === 'url' && !editingJobId && (
+        {/* ── Mode URL (admin uniquement) ── */}
+        {addJobMode === 'url' && !editingJobId && isAdmin && (
           <div>
             <button onClick={() => { setAddJobMode(null); setImportError(false); setImportUrl(''); }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 12, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>

@@ -30,7 +30,6 @@ const SCREENS = [
           en haut du tableau de bord.
         </p>
         {[
-          { icon: '🔗', label: 'Coller une URL', sub: "Ajoute une url d'un jobboard… Jean analyse automatiquement et complète manuellement avec ce qui manque" },
           { icon: '📄', label: 'Importer un fichier', sub: "PDF, Word, image — l'IA extrait les infos" },
           { icon: '✏️', label: 'Saisir à la main', sub: "Si tu as déjà toutes les infos" },
           { icon: '⭐', label: 'Candidature spontanée', sub: "Tu cibles une entreprise sans offre publiée", yellow: true },

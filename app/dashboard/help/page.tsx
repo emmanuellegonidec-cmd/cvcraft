@@ -12,10 +12,9 @@ const TOPICS = [
     content: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <p style={{ margin: '0 0 12px', fontSize: 13, color: '#555', fontFamily: FONT, lineHeight: 1.6 }}>
-          Clique sur <strong style={{ background: '#F5C400', padding: '1px 6px', border: '1.5px solid #111' }}>+ Ajouter une offre</strong> en haut du tableau de bord. 4 façons d'ajouter :
+          Clique sur <strong style={{ background: '#F5C400', padding: '1px 6px', border: '1.5px solid #111' }}>+ Ajouter une offre</strong> en haut du tableau de bord. 3 façons d&apos;ajouter :
         </p>
         {[
-          { icon: '🔗', label: 'Coller une URL', sub: 'Ajoute une url… Jean analyse automatiquement et complète par ce qui manque' },
           { icon: '📄', label: 'Importer un fichier', sub: "PDF, Word, image — l'IA extrait les infos" },
           { icon: '✏️', label: 'Saisir à la main', sub: 'Si tu as déjà toutes les infos' },
           { icon: '⭐', label: 'Candidature spontanée', sub: 'Tu cibles une entreprise sans offre publiée', yellow: true },
@@ -259,13 +258,13 @@ export default function HelpPage() {
 
             <div style={{ marginBottom: '2.5rem' }}>
               <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', padding: '4px 14px', borderRadius: 6, fontSize: 11, fontWeight: 800, fontFamily: FONT, letterSpacing: 1, marginBottom: 14, boxShadow: '2px 2px 0 #111' }}>
-                CENTRE D'AIDE
+                CENTRE D&apos;AIDE
               </div>
               <div style={{ fontSize: 32, fontWeight: 900, color: '#111', fontFamily: FONT, lineHeight: 1.15, marginBottom: 10 }}>
-                Won't you please,<br />please, help me?
+                Won&apos;t you please,<br />please, help me?
               </div>
               <div style={{ fontSize: 13, color: '#aaa', fontFamily: FONT }}>
-                Tout ce qu'il faut savoir pour bien utiliser Jean find my Job.
+                Tout ce qu&apos;il faut savoir pour bien utiliser Jean find my Job.
               </div>
             </div>
 
