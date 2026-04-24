@@ -54,15 +54,19 @@ function getSourceBadge(source?: string) {
 
 // ─── Détecte si une offre a au moins une relance dépassée ─────────────────────
 // On regarde toutes les étapes où une relance a été configurée et activée.
-// Si au moins une date est <= aujourd'hui, on affiche le badge "À relancer".
+// Si au moins une date est <= aujourd'hui ET que la relance n'a pas été envoyée,
+// on affiche le badge "À relancer".
 function hasOverdueFollowUp(job: Job): boolean {
   const dates = (job as any).follow_up_dates as Record<string, string> | null
   const enabled = (job as any).follow_up_enabled as Record<string, boolean> | null
+  const sentDates = (job as any).follow_up_sent_dates as Record<string, string> | null
   if (!dates || Object.keys(dates).length === 0) return false
   const today = new Date(); today.setHours(0, 0, 0, 0)
   for (const stepId of Object.keys(dates)) {
     const date = dates[stepId]
     if (!date) continue
+    // Si la relance a déjà été envoyée pour cette étape, on n'affiche plus le badge
+    if (sentDates && sentDates[stepId]) continue
     // par défaut activée si pas explicitement désactivée
     const isEnabled = !enabled || enabled[stepId] !== false
     if (!isEnabled) continue
