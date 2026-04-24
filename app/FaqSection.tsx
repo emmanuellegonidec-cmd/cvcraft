@@ -8,16 +8,20 @@ const FAQ_ITEMS = [
     a: "Oui, totalement gratuit, Jean find my Job est en phase bêta. Candidatures illimitées, toutes les fonctionnalités incluses — sans carte bancaire. Profitez-en !"
   },
   {
-    q: "Comment fonctionne l'import d'offre d'emploi ?",
-    a: "Il vous suffit de coller l'URL d'une offre et Jean extrait automatiquement toutes les informations : poste, entreprise, description, compétences requises. En cas de non possibilité, un formulaire à compléter s'ouvre et vous pouvez compléter l'offre manuellement."
-  },
-  {
     q: "Mes données sont-elles sécurisées ?",
-    a: "Absolument. Vos données sont hébergées sur un serveur (infrastructure sécurisée, RGPD) et ne sont jamais partagées avec des tiers. Chaque utilisateur n'a accès qu'à ses propres candidatures."
+    a: "Absolument. Vos données sont hébergées sur un serveur sécurisé (RGPD) et ne sont jamais partagées avec des tiers. Chaque utilisateur n'a accès qu'à ses propres candidatures."
   },
   {
-    q: "Comment fonctionne le CV Creator IA ?",
-    a: "En version bêta, importez votre profil LinkedIn en PDF, choisissez un template, et Claude AI rédige automatiquement des formulations percutantes pour chaque section de votre CV. Vous pouvez ensuite ajuster et exporter en PDF en un clic."
+    q: "Comment importer une offre d'emploi dans Jean find my Job ?",
+    a: "Vous importez le PDF de l'offre que vous avez téléchargé, et Jean extrait automatiquement les informations clés : poste, entreprise, description, compétences requises. Vous pouvez aussi saisir l'offre manuellement en quelques champs."
+  },
+  {
+    q: "Puis-je lier des contacts à mes candidatures ?",
+    a: "Oui. Chaque candidature peut être reliée à un ou plusieurs contacts (recruteur, RH, manager, référent interne). Vous gardez ainsi l'historique de vos échanges par offre, et vous savez exactement qui relancer et quand."
+  },
+  {
+    q: "Comment fonctionne le Score ATS ?",
+    a: "Vous collez votre CV et la description du poste visé. En moins de 30 secondes, Jean analyse la correspondance et vous donne un score global sur 100, les mots-clés présents et manquants, vos points forts et points faibles, ainsi que des recommandations concrètes pour améliorer vos chances de passer les filtres automatiques des recruteurs."
   },
   {
     q: "Puis-je suivre plusieurs candidatures en même temps ?",
@@ -83,7 +87,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
         </span>
       </button>
       <div style={{
-        maxHeight: open ? 300 : 0,
+        maxHeight: open ? 400 : 0,
         overflow: 'hidden',
         transition: 'max-height 0.3s ease',
       }}>
