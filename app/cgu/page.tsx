@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: "Conditions Générales d'Utilisation — Jean find my Job",
-  description: "Conditions Générales d'Utilisation de la plateforme Jean find my Job.",
+  description: "Conditions d'utilisation de Jean find my Job : règles d'usage, propriété intellectuelle, responsabilités et résiliation du compte.",
   alternates: {
     canonical: 'https://jeanfindmyjob.fr/cgu',
   },

@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité — Jean find my Job',
-  description: 'Politique de confidentialité et de protection des données personnelles de Jean find my Job.',
+  description: 'Comment Jean find my Job protège vos données personnelles : conservation 2 ans, chiffrement, droits RGPD, suppression de compte.',
   alternates: {
     canonical: 'https://jeanfindmyjob.fr/confidentialite',
   },

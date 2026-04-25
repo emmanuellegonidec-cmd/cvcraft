@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://jeanfindmyjob.fr'),
   title: "Jean find my Job — Suivez et optimisez vos candidatures",
   description:
-    "Jean find my Job centralise votre recherche d'emploi : tableau de bord Kanban, pipeline de candidature, relances, entretiens et score ATS pour optimiser vos candidatures face aux recruteurs.",
+    "Suivez vos candidatures, organisez vos relances et optimisez votre CV avec le score ATS. Outil gratuit pour réussir votre recherche d'emploi.",
   keywords: [
     "suivi candidatures",
     "recherche emploi",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Jean find my Job — Suivez et optimisez vos candidatures",
     description:
-      "Organisez votre recherche d'emploi avec un tableau de bord Kanban, un suivi étape par étape, des rappels automatiques et un score ATS pour maximiser vos candidatures.",
+      "Suivez vos candidatures, organisez vos relances et optimisez votre CV avec le score ATS. Outil gratuit pour réussir votre recherche d'emploi.",
     url: "https://jeanfindmyjob.fr",
     siteName: "Jean Find My Job",
     locale: "fr_FR",
