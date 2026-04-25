@@ -37,7 +37,7 @@ export default function MentionsLegalesPage() {
             </p>
             <div className="border-2 border-black p-5 bg-gray-50">
               <p className="mb-1">
-                <strong>GONIDEC EMMANUELLE</strong>
+                <strong>GONIDEC E</strong>
               </p>
               <p className="mb-1">Entrepreneur individuel</p>
               <p className="mb-1">87 rue Didot, 75014 Paris, France</p>
@@ -59,7 +59,7 @@ export default function MentionsLegalesPage() {
           <div>
             <h2 className="text-xl font-bold mb-3">2. Directrice de la publication</h2>
             <p>
-              La directrice de la publication est la dirigeante de l&apos;entreprise individuelle GONIDEC EMMANUELLE.
+              La directrice de la publication est la dirigeante de l&apos;entreprise individuelle GONIDEC E.
             </p>
           </div>
 
@@ -98,7 +98,7 @@ export default function MentionsLegalesPage() {
           <div>
             <h2 className="text-xl font-bold mb-3">4. Propriété intellectuelle</h2>
             <p className="mb-3">
-              L&apos;ensemble des éléments composant le site jeanfindmyjob.fr (textes, images, vidéos, logos, marques, code source, design, charte graphique, base de données) sont la propriété exclusive de GONIDEC EMMANUELLE ou de ses partenaires, et sont protégés par les lois françaises et internationales relatives à la propriété intellectuelle.
+              L&apos;ensemble des éléments composant le site jeanfindmyjob.fr (textes, images, vidéos, logos, marques, code source, design, charte graphique, base de données) sont la propriété exclusive de GONIDEC E ou de ses partenaires, et sont protégés par les lois françaises et internationales relatives à la propriété intellectuelle.
             </p>
             <p>
               Toute reproduction, représentation, modification, publication, adaptation, totale ou partielle, des éléments du site, quel que soit le moyen ou le procédé utilisé, est interdite sans autorisation écrite préalable de l&apos;éditeur. Toute exploitation non autorisée constitue une contrefaçon sanctionnée par les articles L.335-2 et suivants du Code de la propriété intellectuelle.
