@@ -26,7 +26,7 @@ export async function generateMetadata(
   }
 
   return {
-    title: `${article.title} — Jean Find My Job`,
+    title: article.title,
     description: article.excerpt || 'Conseils et ressources pour votre recherche d\'emploi.',
     alternates: {
       canonical: `https://jeanfindmyjob.fr/blog/${params.slug}`,
