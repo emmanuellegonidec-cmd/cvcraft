@@ -42,29 +42,18 @@ export default function CookiesPage() {
             content: `Jean find my Job utilise deux catégories de cookies :
 
 🔒 Cookies strictement nécessaires (toujours actifs)
-Indispensables au fonctionnement du site, ces cookies ne nécessitent pas votre consentement (article 82 de la loi Informatique et Libertés). Sans eux, le site ne peut pas fonctionner correctement.
-
-- sb-access-token (Supabase) — Session d'authentification — Durée : 1 heure
-- sb-refresh-token (Supabase) — Renouvellement de session — Durée : 7 jours
-- jfmj_cookie_consent (Jean find my Job) — Mémorisation de vos choix de cookies — Durée : 12 mois
+Indispensables au fonctionnement du site : authentification de votre compte, mémorisation de vos préférences de cookies. Ces cookies ne nécessitent pas votre consentement (article 82 de la loi Informatique et Libertés). Sans eux, le site ne peut pas fonctionner correctement. Durée : de 1 heure à 12 mois selon leur finalité.
 
 📊 Cookies analytiques (soumis à votre consentement)
-Ces cookies nous aident à comprendre comment notre site est utilisé (pages visitées, durée, parcours) afin de l'améliorer. Ils ne sont déposés qu'après votre consentement explicite. Les données collectées sont anonymisées.
+Ces cookies, déposés via Google Analytics, nous aident à comprendre comment notre site est utilisé (pages visitées, durée, parcours) afin de l'améliorer. Ils ne sont déposés qu'après votre consentement explicite. Les données collectées sont anonymisées (adresse IP masquée). Durée : 13 mois maximum.
 
-- _ga (Google Analytics) — Distinction des visiteurs (anonyme) — Durée : 13 mois
-- _ga_LKZHGMP0WG (Google Analytics) — Persistance de session GA4 — Durée : 13 mois
-
-Adresse IP anonymisée. Aucune donnée personnelle identifiable n'est collectée. Aucun cookie publicitaire n'est utilisé sur ce site.`
+Aucune donnée personnelle identifiable n'est collectée. Aucun cookie publicitaire n'est utilisé sur ce site.`
           },
           {
             title: '3. Comment gérer vos préférences ?',
             content: `Vous pouvez à tout moment modifier vos choix concernant les cookies analytiques. Le retrait de votre consentement est aussi simple que son recueil — utilisez le bouton ci-dessous.
 
-Vous pouvez également bloquer ou supprimer les cookies directement depuis les paramètres de votre navigateur :
-- Google Chrome : support.google.com/chrome/answer/95647
-- Mozilla Firefox : support.mozilla.org
-- Safari : support.apple.com
-- Microsoft Edge : support.microsoft.com
+Vous pouvez également bloquer ou supprimer les cookies directement depuis les paramètres de votre navigateur (Google Chrome, Mozilla Firefox, Safari, Microsoft Edge).
 
 Note : refuser les cookies strictement nécessaires (notamment l'authentification) empêchera le fonctionnement du service.`
           },
