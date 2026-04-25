@@ -1,180 +1,100 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import CookiePreferencesButton from './CookiePreferencesButton';
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import CookiePreferencesButton from './CookiePreferencesButton'
 
 export const metadata: Metadata = {
-  title: 'Politique des cookies | Jean find my Job',
-  description:
-    'Politique des cookies de Jean find my Job : quels cookies nous utilisons, pourquoi, et comment gérer vos préférences.',
-};
+  title: 'Politique des cookies — Jean find my Job',
+  description: 'Politique des cookies de Jean find my Job : quels cookies nous utilisons, pourquoi, et comment gérer vos préférences.',
+  alternates: {
+    canonical: 'https://jeanfindmyjob.fr/cookies',
+  },
+}
 
 export default function CookiesPage() {
   return (
-    <main
-      className="min-h-screen bg-white"
-      style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}
-    >
-      <div className="max-w-3xl mx-auto px-6 py-12 md:py-16">
-        <Link
-          href="/"
-          className="inline-block mb-8 text-sm font-bold underline hover:opacity-70"
-        >
-          ← Retour à l&apos;accueil
+    <div style={{ fontFamily: "'Montserrat', sans-serif", background: '#fff', color: '#111', minHeight: '100vh' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');`}</style>
+
+      {/* NAV */}
+      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: '#fff', borderBottom: '2.5px solid #111', position: 'sticky', top: 0, zIndex: 100 }}>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '0.95rem', fontWeight: 900, color: '#111' }}>
+            Jean <span style={{ color: '#E8151B' }}>find my Job</span>
+          </span>
         </Link>
+        <Link href="/" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: '#111', textDecoration: 'none', fontWeight: 700 }}>← Retour à l&apos;accueil</Link>
+      </nav>
 
-        <p className="text-xs font-bold uppercase tracking-wider mb-2 text-gray-600">Légal</p>
-        <h1 className="text-4xl md:text-5xl font-black mb-3">Politique des cookies</h1>
-        <p className="text-sm text-gray-600 mb-10">Dernière mise à jour : 25 avril 2026</p>
+      <main style={{ maxWidth: 800, margin: '0 auto', padding: '4rem 2rem' }}>
+        <div style={{ marginBottom: '2.5rem' }}>
+          <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 800, color: '#111', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Légal</div>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Politique des cookies</h1>
+          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 25 avril 2026</p>
+        </div>
 
-        <section className="space-y-8 leading-relaxed">
-          <div>
-            <h2 className="text-xl font-bold mb-3">1. Qu&apos;est-ce qu&apos;un cookie ?</h2>
-            <p>
-              Un cookie est un petit fichier texte déposé sur votre appareil (ordinateur, tablette, smartphone) lors de votre visite sur un site web. Il permet au site de mémoriser des informations sur votre visite, comme votre langue préférée ou votre statut de connexion, pour faciliter votre navigation et améliorer votre expérience.
-            </p>
+        {[
+          {
+            title: '1. Qu\'est-ce qu\'un cookie ?',
+            content: `Un cookie est un petit fichier texte déposé sur votre appareil (ordinateur, tablette, smartphone) lors de votre visite sur un site web. Il permet au site de mémoriser des informations sur votre visite, comme votre langue préférée ou votre statut de connexion, pour faciliter votre navigation et améliorer votre expérience.`
+          },
+          {
+            title: '2. Quels cookies utilisons-nous ?',
+            content: `Jean find my Job utilise deux catégories de cookies :
+
+🔒 Cookies strictement nécessaires (toujours actifs)
+Indispensables au fonctionnement du site, ces cookies ne nécessitent pas votre consentement (article 82 de la loi Informatique et Libertés). Sans eux, le site ne peut pas fonctionner correctement.
+
+- sb-access-token (Supabase) — Session d'authentification — Durée : 1 heure
+- sb-refresh-token (Supabase) — Renouvellement de session — Durée : 7 jours
+- jfmj_cookie_consent (Jean find my Job) — Mémorisation de vos choix de cookies — Durée : 12 mois
+
+📊 Cookies analytiques (soumis à votre consentement)
+Ces cookies nous aident à comprendre comment notre site est utilisé (pages visitées, durée, parcours) afin de l'améliorer. Ils ne sont déposés qu'après votre consentement explicite. Les données collectées sont anonymisées.
+
+- _ga (Google Analytics) — Distinction des visiteurs (anonyme) — Durée : 13 mois
+- _ga_LKZHGMP0WG (Google Analytics) — Persistance de session GA4 — Durée : 13 mois
+
+Adresse IP anonymisée. Aucune donnée personnelle identifiable n'est collectée. Aucun cookie publicitaire n'est utilisé sur ce site.`
+          },
+          {
+            title: '3. Comment gérer vos préférences ?',
+            content: `Vous pouvez à tout moment modifier vos choix concernant les cookies analytiques. Le retrait de votre consentement est aussi simple que son recueil — utilisez le bouton ci-dessous.
+
+Vous pouvez également bloquer ou supprimer les cookies directement depuis les paramètres de votre navigateur :
+- Google Chrome : support.google.com/chrome/answer/95647
+- Mozilla Firefox : support.mozilla.org
+- Safari : support.apple.com
+- Microsoft Edge : support.microsoft.com
+
+Note : refuser les cookies strictement nécessaires (notamment l'authentification) empêchera le fonctionnement du service.`
+          },
+          {
+            title: '4. Cadre légal',
+            content: `Cette politique est conforme aux exigences de la CNIL (Commission Nationale de l'Informatique et des Libertés), du RGPD (Règlement UE 2016/679) et de l'article 82 de la loi Informatique et Libertés du 6 janvier 1978 modifiée.
+
+Conformément aux recommandations CNIL 2021, le bouton "Tout refuser" est aussi visible que le bouton "Tout accepter", aucune case n'est pré-cochée par défaut, et votre choix est mémorisé pour une durée maximale de 12 mois.`
+          },
+          {
+            title: '5. Contact',
+            content: `Pour toute question relative aux cookies ou à la protection de vos données : hello@jeanfindmyjob.fr`
+          },
+        ].map((section) => (
+          <div key={section.title} style={{ marginBottom: '2rem', padding: '1.5rem', border: '2px solid #111', borderRadius: 12, boxShadow: '3px 3px 0 #111' }}>
+            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, marginBottom: '0.75rem', color: '#111' }}>{section.title}</h2>
+            <p style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontWeight: 500, whiteSpace: 'pre-line' }}>{section.content}</p>
           </div>
+        ))}
 
-          <div>
-            <h2 className="text-xl font-bold mb-3">2. Quels cookies utilisons-nous ?</h2>
-            <p className="mb-4">
-              Jean find my Job utilise deux catégories de cookies :
-            </p>
+        <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+          <CookiePreferencesButton />
+        </div>
 
-            <div className="border-2 border-black p-5 mb-4 bg-gray-50">
-              <h3 className="font-bold text-base mb-2">Cookies strictement nécessaires (toujours actifs)</h3>
-              <p className="text-sm mb-3">
-                Indispensables au fonctionnement du site, ces cookies ne nécessitent pas votre consentement (article 82 de la loi Informatique et Libertés). Sans eux, le site ne peut pas fonctionner correctement.
-              </p>
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr style={{ backgroundColor: '#111', color: 'white' }}>
-                    <th className="text-left p-2 border border-black">Cookie</th>
-                    <th className="text-left p-2 border border-black">Finalité</th>
-                    <th className="text-left p-2 border border-black">Durée</th>
-                    <th className="text-left p-2 border border-black">Émetteur</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="p-2 border border-black font-mono">sb-access-token</td>
-                    <td className="p-2 border border-black">Session d&apos;authentification</td>
-                    <td className="p-2 border border-black">1 heure</td>
-                    <td className="p-2 border border-black">Supabase</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2 border border-black font-mono">sb-refresh-token</td>
-                    <td className="p-2 border border-black">Renouvellement de session</td>
-                    <td className="p-2 border border-black">7 jours</td>
-                    <td className="p-2 border border-black">Supabase</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2 border border-black font-mono">jfmj_cookie_consent</td>
-                    <td className="p-2 border border-black">Mémorisation de vos choix de cookies</td>
-                    <td className="p-2 border border-black">12 mois</td>
-                    <td className="p-2 border border-black">Jean find my Job</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div className="border-2 border-black p-5 bg-gray-50">
-              <h3 className="font-bold text-base mb-2">Cookies analytiques (soumis à votre consentement)</h3>
-              <p className="text-sm mb-3">
-                Ces cookies nous aident à comprendre comment notre site est utilisé (pages visitées, durée, parcours) afin de l&apos;améliorer. Ils ne sont déposés <strong>qu&apos;après votre consentement explicite</strong>. Les données collectées sont anonymisées.
-              </p>
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr style={{ backgroundColor: '#111', color: 'white' }}>
-                    <th className="text-left p-2 border border-black">Cookie</th>
-                    <th className="text-left p-2 border border-black">Finalité</th>
-                    <th className="text-left p-2 border border-black">Durée</th>
-                    <th className="text-left p-2 border border-black">Émetteur</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="p-2 border border-black font-mono">_ga</td>
-                    <td className="p-2 border border-black">Distinction des visiteurs (anonyme)</td>
-                    <td className="p-2 border border-black">13 mois</td>
-                    <td className="p-2 border border-black">Google Analytics</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2 border border-black font-mono">_ga_LKZHGMP0WG</td>
-                    <td className="p-2 border border-black">Persistance de session GA4</td>
-                    <td className="p-2 border border-black">13 mois</td>
-                    <td className="p-2 border border-black">Google Analytics</td>
-                  </tr>
-                </tbody>
-              </table>
-              <p className="text-xs mt-3 italic">
-                Adresse IP anonymisée. Aucune donnée personnelle identifiable n&apos;est collectée. Aucun cookie publicitaire n&apos;est utilisé sur ce site.
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-xl font-bold mb-3">3. Comment gérer vos préférences ?</h2>
-            <p className="mb-4">
-              Vous pouvez à tout moment modifier vos choix concernant les cookies analytiques. Le retrait de votre consentement est aussi simple que son recueil.
-            </p>
-            <CookiePreferencesButton />
-            <p className="text-sm mt-4">
-              Vous pouvez également bloquer ou supprimer les cookies directement depuis les paramètres de votre navigateur :
-            </p>
-            <ul className="text-sm mt-2 ml-5 list-disc space-y-1">
-              <li>
-                <a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70">
-                  Google Chrome
-                </a>
-              </li>
-              <li>
-                <a href="https://support.mozilla.org/fr/kb/protection-renforcee-contre-pistage-firefox-ordinateur" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70">
-                  Mozilla Firefox
-                </a>
-              </li>
-              <li>
-                <a href="https://support.apple.com/fr-fr/guide/safari/sfri11471/mac" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70">
-                  Safari
-                </a>
-              </li>
-              <li>
-                <a href="https://support.microsoft.com/fr-fr/microsoft-edge" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70">
-                  Microsoft Edge
-                </a>
-              </li>
-            </ul>
-            <p className="text-sm mt-3 italic">
-              Note : refuser les cookies strictement nécessaires (notamment l&apos;authentification) empêchera le fonctionnement du service.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-xl font-bold mb-3">4. Cadre légal</h2>
-            <p>
-              Cette politique est conforme aux exigences de la CNIL (Commission Nationale de l&apos;Informatique et des Libertés), du RGPD (Règlement UE 2016/679) et de l&apos;article 82 de la loi Informatique et Libertés du 6 janvier 1978 modifiée.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-xl font-bold mb-3">5. Contact</h2>
-            <p>
-              Pour toute question relative aux cookies ou à la protection de vos données :{' '}
-              <a href="mailto:hello@jeanfindmyjob.fr" className="underline font-bold">
-                hello@jeanfindmyjob.fr
-              </a>
-            </p>
-          </div>
-
-          <div className="pt-6 border-t-2 border-black flex flex-wrap gap-4 text-sm">
-            <Link href="/confidentialite" className="underline font-bold hover:opacity-70">
-              Politique de confidentialité →
-            </Link>
-            <Link href="/cgu" className="underline font-bold hover:opacity-70">
-              CGU →
-            </Link>
-          </div>
-        </section>
-      </div>
-    </main>
-  );
+        <div style={{ marginTop: '2rem', textAlign: 'center', display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link href="/confidentialite" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: '#E8151B', fontWeight: 700, textDecoration: 'underline' }}>Politique de confidentialité →</Link>
+          <Link href="/cgu" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: '#E8151B', fontWeight: 700, textDecoration: 'underline' }}>Consulter les CGU →</Link>
+          <Link href="/mentions-legales" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: '#E8151B', fontWeight: 700, textDecoration: 'underline' }}>Mentions légales →</Link>
+        </div>
+      </main>
+    </div>
+  )
 }
