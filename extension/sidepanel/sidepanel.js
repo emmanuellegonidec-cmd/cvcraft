@@ -4,7 +4,7 @@
 // ===============================================
 
 const API_URL = "https://jeanfindmyjob.fr/api/jobs/from-extension";
-const DASHBOARD_BASE = "https://jeanfindmyjob.fr/dashboard/jobs/";
+const DASHBOARD_URL = "https://jeanfindmyjob.fr/dashboard";
 
 // État local du panel
 let currentCapture = null; // données scrapées (modifiables)
@@ -298,16 +298,15 @@ document.addEventListener("DOMContentLoaded", () => {
     window.close();
   });
 
+  // Le bouton "Voir dans Jean" et "Voir la carte existante" ouvrent
+  // le kanban global plutôt que la page detail (qui n'existe pas comme route).
+  // L'utilisateur trouve sa carte dans la colonne "Envie de postuler".
   $("btn-view-in-jean").addEventListener("click", () => {
-    if (createdJobId) {
-      chrome.tabs.create({ url: DASHBOARD_BASE + createdJobId });
-    }
+    chrome.tabs.create({ url: DASHBOARD_URL });
   });
 
   $("btn-view-existing").addEventListener("click", () => {
-    if (createdJobId) {
-      chrome.tabs.create({ url: DASHBOARD_BASE + createdJobId });
-    }
+    chrome.tabs.create({ url: DASHBOARD_URL });
   });
 
   // Lancement

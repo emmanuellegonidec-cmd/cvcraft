@@ -1,6 +1,6 @@
 // extension/content/content.js
-// Jean find my Job — Content script France Travail (v2.1 — split contractType / workSchedule)
-// Session 3 — 26 avril 2026
+// Jean find my Job — Content script France Travail (v3.0 — message au service worker)
+// Session 4 — 26 avril 2026
 
 (function () {
   'use strict';
@@ -288,6 +288,9 @@
     document.body.appendChild(btn);
   }
 
+  // ============================================================
+  // 4. CLIC SUR "CAPTURER" → ENVOI AU SERVICE WORKER (session 4)
+  // ============================================================
   function handleCaptureClick(offerId, btn, label) {
     btn.classList.add('jfmj-loading');
     btn.disabled = true;
@@ -296,6 +299,7 @@
     try {
       const data = extractJobData(offerId);
 
+      // ---- Logs console (utiles pour le debug, conserves de la session 3) ----
       console.group('%c[Jean find my Job] 📋 Offre capturée', 'background:#F5C400;color:#111;font-weight:bold;padding:2px 6px;');
       console.log('🆔 ID externe :', data.externalId);
       console.log('📌 Titre :', data.title);
@@ -316,29 +320,51 @@
       console.log('📦 Objet complet :', data);
       console.groupEnd();
 
-      btn.classList.remove('jfmj-loading');
-      btn.classList.add('jfmj-success');
-      label.textContent = '✓ Capturée !';
-      setTimeout(function () {
-        btn.classList.remove('jfmj-success');
-        label.textContent = 'Capturer cette offre';
-        btn.disabled = false;
-      }, 2200);
+      // ---- Envoi au service worker pour ouverture du side panel ----
+      chrome.runtime.sendMessage(
+        { type: 'JFMJ_CAPTURE_OFFER', data: data },
+        function (response) {
+          if (chrome.runtime.lastError) {
+            console.error('[Jean] Erreur sendMessage :', chrome.runtime.lastError);
+            showButtonError(btn, label, '✗ Erreur');
+            return;
+          }
+
+          if (response && response.ok) {
+            // Le side panel est ouvert : feedback succès sur le bouton
+            btn.classList.remove('jfmj-loading');
+            btn.classList.add('jfmj-success');
+            label.textContent = '✓ Panel ouvert';
+            setTimeout(function () {
+              btn.classList.remove('jfmj-success');
+              label.textContent = 'Capturer cette offre';
+              btn.disabled = false;
+            }, 2200);
+          } else {
+            console.error('[Jean] Service worker n\'a pas pu ouvrir le panel :', response);
+            showButtonError(btn, label, '✗ Panel KO');
+          }
+        }
+      );
     } catch (e) {
       console.error('[Jean] Erreur capture :', e);
-      btn.classList.remove('jfmj-loading');
-      btn.classList.add('jfmj-error');
-      label.textContent = '✗ Erreur';
-      setTimeout(function () {
-        btn.classList.remove('jfmj-error');
-        label.textContent = 'Capturer cette offre';
-        btn.disabled = false;
-      }, 2200);
+      showButtonError(btn, label, '✗ Erreur');
     }
   }
 
+  function showButtonError(btn, label, txt) {
+    btn.classList.remove('jfmj-loading');
+    btn.classList.add('jfmj-error');
+    label.textContent = txt;
+    setTimeout(function () {
+      btn.classList.remove('jfmj-error');
+      label.textContent = 'Capturer cette offre';
+      btn.disabled = false;
+    }, 2200);
+  }
+
   // ============================================================
-  // 4. INIT
+  // 5. INIT
   // ============================================================
   function init() {
     const offerId = detectOfferPage();
