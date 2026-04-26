@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jean find my Job</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <!-- En-tête sticky avec logo Jean -->
+    <header class="jfmj-header">
+      <div class="jfmj-logo">
+        <span class="jfmj-logo-jean">Jean</span>
+        <span class="jfmj-logo-rest">find my Job</span>
+      </div>
+    </header>
+
+    <main class="jfmj-main">
+      <!-- =========================================== -->
+      <!-- VUE 1 : Chargement initial                   -->
+      <!-- =========================================== -->
+      <section id="view-loading" class="jfmj-view">
+        <div class="jfmj-spinner"></div>
+        <p class="jfmj-loading-text">Chargement de l'offre…</p>
+      </section>
+
+      <!-- =========================================== -->
+      <!-- VUE 2 : Pas connecté                         -->
+      <!-- =========================================== -->
+      <section id="view-not-logged-in" class="jfmj-view jfmj-hidden">
+        <div class="jfmj-banner jfmj-banner-warn">
+          <strong>Tu n'es pas connecté à Jean.</strong>
+          <p>
+            Connecte-toi via la popup de l'extension (clique sur l'icône Jean
+            dans la barre d'outils Chrome), puis recapture cette offre.
+          </p>
+        </div>
+        <button id="btn-close-not-logged" class="jfmj-btn jfmj-btn-secondary">
+          Fermer
+        </button>
+      </section>
+
+      <!-- =========================================== -->
+      <!-- VUE 3 : Pas de données à afficher            -->
+      <!-- =========================================== -->
+      <section id="view-empty" class="jfmj-view jfmj-hidden">
+        <div class="jfmj-banner jfmj-banner-info">
+          <strong>Aucune offre capturée pour le moment.</strong>
+          <p>
+            Va sur une page d'offre France Travail et clique sur le bouton
+            "📋 Capturer cette offre" en bas à droite.
+          </p>
+        </div>
+      </section>
+
+      <!-- =========================================== -->
+      <!-- VUE 4 : Récap éditable de l'offre capturée   -->
+      <!-- =========================================== -->
+      <section id="view-recap" class="jfmj-view jfmj-hidden">
+        <div class="jfmj-status-pill">📋 Offre capturée</div>
+
+        <!-- Bloc principal : titre + entreprise éditables -->
+        <div class="jfmj-card jfmj-card-main">
+          <label class="jfmj-label" for="input-title">Intitulé du poste</label>
+          <input id="input-title" class="jfmj-input" type="text" />
+
+          <label class="jfmj-label" for="input-company">Entreprise</label>
+          <input id="input-company" class="jfmj-input" type="text" />
+        </div>
+
+        <!-- Bloc : champs détectés (non éditables ici, modifiables dans Jean) -->
+        <div class="jfmj-card">
+          <h3 class="jfmj-card-title">Champs détectés</h3>
+          <dl class="jfmj-fields" id="fields-detected"></dl>
+        </div>
+
+        <!-- Bloc : compétences (chips supprimables) -->
+        <div class="jfmj-card jfmj-hidden" id="card-skills">
+          <h3 class="jfmj-card-title">Compétences</h3>
+          <div class="jfmj-chips" id="skills-chips"></div>
+          <p class="jfmj-hint">Clique sur × pour retirer une compétence</p>
+        </div>
+
+        <!-- Bloc : description (collapsable) -->
+        <details class="jfmj-card jfmj-details" id="card-description">
+          <summary class="jfmj-card-title">Description de l'offre</summary>
+          <textarea id="input-description" class="jfmj-textarea"></textarea>
+        </details>
+
+        <!-- Zone d'erreur (cachée par défaut) -->
+        <div id="error-box" class="jfmj-error jfmj-hidden"></div>
+      </section>
+
+      <!-- =========================================== -->
+      <!-- VUE 5 : Confirmation succès (carte créée)    -->
+      <!-- =========================================== -->
+      <section id="view-success" class="jfmj-view jfmj-hidden">
+        <div class="jfmj-success-icon">✓</div>
+        <h2 class="jfmj-success-title">Carte créée dans Jean</h2>
+        <p class="jfmj-success-subtitle" id="success-job-title"></p>
+        <button id="btn-view-in-jean" class="jfmj-btn jfmj-btn-primary">
+          Voir dans Jean
+        </button>
+        <button id="btn-close-success" class="jfmj-btn jfmj-btn-secondary">
+          Fermer le panneau
+        </button>
+      </section>
+
+      <!-- =========================================== -->
+      <!-- VUE 6 : Offre déjà capturée                  -->
+      <!-- =========================================== -->
+      <section id="view-already-exists" class="jfmj-view jfmj-hidden">
+        <div class="jfmj-info-icon">ℹ️</div>
+        <h2 class="jfmj-already-title">Cette offre est déjà dans ton kanban</h2>
+        <p class="jfmj-success-subtitle" id="already-job-title"></p>
+        <button id="btn-view-existing" class="jfmj-btn jfmj-btn-primary">
+          Voir la carte existante
+        </button>
+        <button id="btn-close-existing" class="jfmj-btn jfmj-btn-secondary">
+          Fermer le panneau
+        </button>
+      </section>
+    </main>
+
+    <!-- Footer sticky : actions sur la vue récap uniquement -->
+    <footer id="footer-recap" class="jfmj-footer jfmj-hidden">
+      <button id="btn-cancel" class="jfmj-btn jfmj-btn-secondary">
+        Annuler
+      </button>
+      <button id="btn-save" class="jfmj-btn jfmj-btn-primary">
+        ✓ Enregistrer dans Jean
+      </button>
+    </footer>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
