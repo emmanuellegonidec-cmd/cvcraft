@@ -1,0 +1,77 @@
+/* extension/content/content.css */
+/* Jean find my Job — Style du bouton flottant France Travail */
+/* Tous les styles préfixés jfmj- pour éviter les conflits */
+/* !important utilisé pour résister aux CSS de France Travail */
+
+#jfmj-capture-btn {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 999999 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 14px 22px !important;
+  margin: 0 !important;
+
+  background: #F5C400 !important;
+  color: #111 !important;
+  border: 3px solid #111 !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0 0 #111 !important;
+
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+
+  cursor: pointer !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease !important;
+}
+
+#jfmj-capture-btn:hover {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 2px 2px 0 0 #111 !important;
+}
+
+#jfmj-capture-btn:active {
+  transform: translate(4px, 4px) !important;
+  box-shadow: 0 0 0 0 #111 !important;
+}
+
+#jfmj-capture-btn:disabled {
+  cursor: wait !important;
+  opacity: 0.75 !important;
+}
+
+#jfmj-capture-btn .jfmj-btn-icon {
+  font-size: 18px !important;
+  line-height: 1 !important;
+  display: inline-block !important;
+}
+
+#jfmj-capture-btn .jfmj-btn-label {
+  line-height: 1 !important;
+  display: inline-block !important;
+}
+
+/* Etats */
+#jfmj-capture-btn.jfmj-loading {
+  background: #ddd !important;
+  color: #555 !important;
+}
+
+#jfmj-capture-btn.jfmj-success {
+  background: #4ade80 !important;
+  color: #111 !important;
+}
+
+#jfmj-capture-btn.jfmj-error {
+  background: #E8151B !important;
+  color: #fff !important;
+}
