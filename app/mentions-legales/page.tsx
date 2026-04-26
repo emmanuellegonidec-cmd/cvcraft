@@ -28,7 +28,7 @@ export default function MentionsLegalesPage() {
         <div style={{ marginBottom: '2.5rem' }}>
           <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 800, color: '#111', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Légal</div>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Mentions légales</h1>
-          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 25 avril 2026</p>
+          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 26 avril 2026</p>
         </div>
 
         {[
@@ -36,8 +36,8 @@ export default function MentionsLegalesPage() {
             title: '1. Éditeur du site',
             content: `Le site jeanfindmyjob.fr est édité par :
 
-GONIDEC E
-Entrepreneur individuel
+Emmanuelle Gonidec
+Entrepreneur individuel exerçant sous le nom commercial « Jean find my Job »
 87 rue Didot, 75014 Paris, France
 SIREN : 844 130 245
 SIRET : 844 130 245 00013
@@ -48,7 +48,7 @@ Contact : hello@jeanfindmyjob.fr`
           },
           {
             title: '2. Directrice de la publication',
-            content: `La directrice de la publication est la dirigeante de l'entreprise individuelle GONIDEC E.`
+            content: `La directrice de la publication est Emmanuelle Gonidec, dirigeante de l'entreprise individuelle.`
           },
           {
             title: '3. Hébergement du site',
@@ -69,7 +69,7 @@ Site web : supabase.com`
           },
           {
             title: '4. Propriété intellectuelle',
-            content: `L'ensemble des éléments composant le site jeanfindmyjob.fr (textes, images, vidéos, logos, marques, code source, design, charte graphique, base de données) sont la propriété exclusive de GONIDEC E ou de ses partenaires, et sont protégés par les lois françaises et internationales relatives à la propriété intellectuelle.
+            content: `L'ensemble des éléments composant le site jeanfindmyjob.fr (textes, images, vidéos, logos, marques, code source, design, charte graphique, base de données) sont la propriété exclusive d'Emmanuelle Gonidec ou de ses partenaires, et sont protégés par les lois françaises et internationales relatives à la propriété intellectuelle.
 
 Toute reproduction, représentation, modification, publication, adaptation, totale ou partielle, des éléments du site, quel que soit le moyen ou le procédé utilisé, est interdite sans autorisation écrite préalable de l'éditeur. Toute exploitation non autorisée constitue une contrefaçon sanctionnée par les articles L.335-2 et suivants du Code de la propriété intellectuelle.`
           },
