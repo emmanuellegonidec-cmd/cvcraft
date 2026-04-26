@@ -9,44 +9,66 @@
 <body>
   <div class="container">
     <header class="header">
-      <div class="logo-block">
-        <span class="logo-emoji">🎯</span>
-        <h1 class="logo-title">Jean find my Job</h1>
-      </div>
-      <p class="version">v0.1.0</p>
+      <h1 class="logo">
+        Jean
+        <span class="logo-accent">find my Job</span>
+      </h1>
     </header>
 
-    <main class="main">
-      <div class="status-card">
-        <div class="status-indicator">
-          <span class="status-dot"></span>
-          <span class="status-label">Extension installée</span>
-        </div>
-        <p class="status-message">
-          Bienvenue ! L'extension est en cours de développement.
-          Bientôt, tu pourras capturer tes offres d'emploi en 1 clic.
-        </p>
-      </div>
+    <!-- Zone affichee quand l'utilisateur n'est pas connecte -->
+    <section id="zone-login" class="zone">
+      <h2 class="zone-title">Connecte-toi</h2>
+      <p class="zone-subtitle">Avec ton compte Jean find my Job</p>
 
-      <div class="info-card">
-        <p class="info-title">📋 Prochaines étapes</p>
-        <ul class="info-list">
-          <li>Authentification avec ton compte Jean</li>
-          <li>Capture automatique des offres</li>
-          <li>Analyse CV vs offre intégrée</li>
-        </ul>
-      </div>
+      <form id="login-form" class="form" novalidate>
+        <label class="field">
+          <span class="field-label">Email</span>
+          <input
+            type="email"
+            id="email"
+            class="field-input"
+            autocomplete="email"
+            required
+          >
+        </label>
 
-      <button id="open-jean" class="btn-primary">
+        <label class="field">
+          <span class="field-label">Mot de passe</span>
+          <input
+            type="password"
+            id="password"
+            class="field-input"
+            autocomplete="current-password"
+            required
+          >
+        </label>
+
+        <p id="error-msg" class="error hidden"></p>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary">
+          Se connecter
+        </button>
+      </form>
+
+      <p class="signup-link">
+        Pas encore de compte ?
+        <a href="#" id="signup-link" class="link">Cree-le sur jeanfindmyjob.fr</a>
+      </p>
+    </section>
+
+    <!-- Zone affichee quand l'utilisateur est connecte -->
+    <section id="zone-account" class="zone hidden">
+      <p class="hello">Bonjour</p>
+      <p id="user-email" class="user-email"></p>
+
+      <button type="button" id="open-jean-btn" class="btn btn-primary">
         Ouvrir Jean find my Job
       </button>
-    </main>
 
-    <footer class="footer">
-      <p class="footer-text">
-        Made with 🧡 in France
-      </p>
-    </footer>
+      <button type="button" id="logout-btn" class="btn btn-secondary">
+        Se deconnecter
+      </button>
+    </section>
   </div>
 
   <script src="popup.js"></script>

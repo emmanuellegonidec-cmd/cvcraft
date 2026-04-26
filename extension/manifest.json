@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Jean find my Job",
   "short_name": "Jean",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Capture les offres d'emploi sur LinkedIn, France Travail et Welcome to the Jungle, analyse leur compatibilité avec ton CV et suis tes candidatures sans quitter la page.",
   
   "icons": {
@@ -23,5 +23,7 @@
     "storage",
     "activeTab"
   ],
-  "host_permissions": []
+  "host_permissions": [
+    "https://kjsqfgpewjzierlxzdyj.supabase.co/*"
+  ]
 }
