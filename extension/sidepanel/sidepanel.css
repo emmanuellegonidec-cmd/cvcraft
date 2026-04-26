@@ -160,6 +160,22 @@ details[open].jfmj-card summary.jfmj-card-title::after {
   line-height: 1.6;
 }
 
+/* Select stylé comme un input */
+.jfmj-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23111' d='M0 0l6 8 6-8z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+.jfmj-select option:disabled {
+  color: #aaa;
+  font-style: italic;
+}
+
 /* ---------- Liste de champs détectés ---------- */
 .jfmj-fields {
   display: flex;
@@ -194,7 +210,7 @@ details[open].jfmj-card summary.jfmj-card-title::after {
   word-break: break-word;
 }
 
-/* ---------- Chips (compétences) ---------- */
+/* ---------- Chips (compétences + manquants) ---------- */
 .jfmj-chips {
   display: flex;
   flex-wrap: wrap;
@@ -232,6 +248,14 @@ details[open].jfmj-card summary.jfmj-card-title::after {
 
 .jfmj-chip-remove:hover {
   background: #e8151b;
+}
+
+/* Variante chip pour mots-clés manquants (rouge) */
+.jfmj-chip-missing {
+  background: #ffe5e5;
+  color: #b02020;
+  border-color: #e8151b;
+  padding: 4px 10px;
 }
 
 .jfmj-hint {
@@ -365,6 +389,13 @@ details[open].jfmj-card summary.jfmj-card-title::after {
   background: #f0f0f0;
 }
 
+.jfmj-btn-secondary:disabled {
+  background: #f0f0f0;
+  color: #999;
+  cursor: not-allowed;
+  border-color: #999;
+}
+
 /* ---------- Footer sticky (vue récap) ---------- */
 .jfmj-footer {
   position: fixed;
@@ -383,7 +414,7 @@ details[open].jfmj-card summary.jfmj-card-title::after {
   flex: 1;
 }
 
-/* ---------- Spinner (vue chargement) ---------- */
+/* ---------- Spinner (vue chargement / analyse) ---------- */
 .jfmj-spinner {
   width: 40px;
   height: 40px;
@@ -403,6 +434,314 @@ details[open].jfmj-card summary.jfmj-card-title::after {
 .jfmj-loading-text {
   text-align: center;
   color: #555;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   font-style: italic;
+}
+
+.jfmj-analyzing-hint {
+  text-align: center;
+  color: #888;
+  font-size: 12px;
+  margin-top: 8px;
+  padding: 0 24px;
+}
+
+/* =========================================
+   SESSION 5 — Résultat ATS
+   ========================================= */
+
+/* ---------- Carte du score global avec cercle ---------- */
+.jfmj-score-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  background: #fffbe6;
+}
+
+.jfmj-score-circle-wrap {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin-bottom: 12px;
+}
+
+.jfmj-score-circle {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* commence en haut */
+}
+
+.jfmj-score-bg {
+  fill: none;
+  stroke: #f5c400;
+  stroke-width: 12;
+}
+
+.jfmj-score-progress {
+  fill: none;
+  stroke: #111;
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.2s ease-out, stroke 0.4s;
+}
+
+/* Variantes couleur du cercle selon le score */
+.jfmj-score-progress.jfmj-score-good {
+  stroke: #2c8a3e;
+}
+.jfmj-score-progress.jfmj-score-medium {
+  stroke: #d97706;
+}
+.jfmj-score-progress.jfmj-score-low {
+  stroke: #e8151b;
+}
+
+.jfmj-score-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.jfmj-score-text > div:first-child {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  color: #111;
+}
+
+.jfmj-score-max {
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  margin-top: 4px;
+}
+
+.jfmj-score-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ---------- Sous-scores (jauges horizontales) ---------- */
+.jfmj-subscores {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jfmj-subscore-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jfmj-subscore-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+}
+
+.jfmj-subscore-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.jfmj-subscore-value {
+  font-weight: 700;
+  color: #111;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+.jfmj-subscore-bar {
+  width: 100%;
+  height: 8px;
+  background: #ebebeb;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}
+
+.jfmj-subscore-fill {
+  height: 100%;
+  background: #111;
+  border-radius: 999px;
+  transition: width 0.8s ease-out;
+}
+
+.jfmj-subscore-fill.jfmj-fill-good {
+  background: #2c8a3e;
+}
+.jfmj-subscore-fill.jfmj-fill-medium {
+  background: #d97706;
+}
+.jfmj-subscore-fill.jfmj-fill-low {
+  background: #e8151b;
+}
+
+/* ---------- Couverture mots-clés ---------- */
+.jfmj-kw-coverage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.jfmj-kw-coverage-bar {
+  width: 100%;
+  height: 14px;
+  background: #ebebeb;
+  border: 2px solid #111;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.jfmj-kw-coverage-fill {
+  height: 100%;
+  width: 0%;
+  background: #f5c400;
+  transition: width 0.8s ease-out, background 0.4s;
+}
+
+.jfmj-kw-coverage-fill.jfmj-fill-good {
+  background: #2c8a3e;
+}
+.jfmj-kw-coverage-fill.jfmj-fill-low {
+  background: #e8151b;
+}
+
+.jfmj-kw-coverage-text {
+  font-size: 13px;
+  color: #333;
+}
+
+.jfmj-kw-coverage-text strong {
+  font-size: 16px;
+  color: #111;
+}
+
+.jfmj-kw-missing-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1.5px solid #ebebeb;
+}
+
+.jfmj-kw-missing-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #b02020;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* ---------- Bullets points forts / faibles ---------- */
+.jfmj-bullets {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jfmj-bullets li {
+  position: relative;
+  padding-left: 24px;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.5;
+}
+
+.jfmj-bullets li::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 700;
+}
+
+.jfmj-bullets-positive li::before {
+  content: "✓";
+  color: #2c8a3e;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.jfmj-bullets-negative li::before {
+  content: "•";
+  color: #d97706;
+  font-size: 22px;
+  line-height: 0.7;
+  top: 4px;
+}
+
+/* ---------- Recommandations avec pills ---------- */
+.jfmj-recos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jfmj-reco {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: #fafafa;
+  border: 1.5px solid #ebebeb;
+  border-radius: 8px;
+}
+
+.jfmj-reco-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jfmj-reco-priority {
+  font-size: 11px;
+  font-weight: 800;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.jfmj-reco-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1.5px solid;
+}
+
+.jfmj-reco-pill-critique {
+  background: #ffe5e5;
+  color: #b02020;
+  border-color: #e8151b;
+}
+
+.jfmj-reco-pill-majeur {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #d97706;
+}
+
+.jfmj-reco-pill-mineur {
+  background: #fffbe6;
+  color: #555;
+  border-color: #f5c400;
+}
+
+.jfmj-reco-action {
+  font-size: 13px;
+  color: #111;
+  line-height: 1.5;
 }

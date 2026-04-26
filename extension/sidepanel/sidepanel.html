@@ -104,7 +104,10 @@
         <div class="jfmj-success-icon">✓</div>
         <h2 class="jfmj-success-title">Carte créée dans Jean</h2>
         <p class="jfmj-success-subtitle" id="success-job-title"></p>
-        <button id="btn-view-in-jean" class="jfmj-btn jfmj-btn-primary">
+        <button id="btn-analyze-from-success" class="jfmj-btn jfmj-btn-primary">
+          🎯 Analyser cette offre avec mon CV
+        </button>
+        <button id="btn-view-in-jean" class="jfmj-btn jfmj-btn-secondary">
           Voir dans Jean
         </button>
         <button id="btn-close-success" class="jfmj-btn jfmj-btn-secondary">
@@ -119,10 +122,176 @@
         <div class="jfmj-info-icon">ℹ️</div>
         <h2 class="jfmj-already-title">Cette offre est déjà dans ton kanban</h2>
         <p class="jfmj-success-subtitle" id="already-job-title"></p>
-        <button id="btn-view-existing" class="jfmj-btn jfmj-btn-primary">
+        <button id="btn-analyze-from-existing" class="jfmj-btn jfmj-btn-primary">
+          🎯 Analyser cette offre avec mon CV
+        </button>
+        <button id="btn-view-existing" class="jfmj-btn jfmj-btn-secondary">
           Voir la carte existante
         </button>
         <button id="btn-close-existing" class="jfmj-btn jfmj-btn-secondary">
+          Fermer le panneau
+        </button>
+      </section>
+
+      <!-- =========================================== -->
+      <!-- VUE 7 : Choisir un CV pour l'analyse         -->
+      <!-- =========================================== -->
+      <section id="view-choose-cv" class="jfmj-view jfmj-hidden">
+        <div class="jfmj-status-pill">🎯 Analyse CV vs Offre</div>
+
+        <div class="jfmj-card">
+          <h3 class="jfmj-card-title">Quel CV veux-tu analyser ?</h3>
+          <p class="jfmj-hint" style="margin-top: 0; margin-bottom: 12px">
+            Sélectionne le CV à comparer avec cette offre.
+          </p>
+          <select id="select-cv" class="jfmj-input jfmj-select"></select>
+          <p class="jfmj-hint" style="margin-top: 12px">
+            ⚠️ Limite : 3 analyses maximum par offre.
+          </p>
+        </div>
+
+        <button id="btn-launch-analysis" class="jfmj-btn jfmj-btn-primary">
+          Lancer l'analyse
+        </button>
+        <button id="btn-cancel-analysis" class="jfmj-btn jfmj-btn-secondary">
+          Annuler
+        </button>
+      </section>
+
+      <!-- =========================================== -->
+      <!-- VUE 8 : Pas de CV PDF dans la bibliothèque   -->
+      <!-- =========================================== -->
+      <section id="view-no-cv" class="jfmj-view jfmj-hidden">
+        <div class="jfmj-banner jfmj-banner-warn">
+          <strong>Aucun CV analysable trouvé</strong>
+          <p>
+            Tu n'as pas encore de CV PDF dans ta bibliothèque Jean. Pour
+            analyser cette offre, upload un CV PDF depuis ton profil ou depuis
+            la section Documents d'une candidature existante.
+          </p>
+        </div>
+        <button id="btn-go-to-profile" class="jfmj-btn jfmj-btn-primary">
+          Aller dans Mon profil
+        </button>
+        <button id="btn-close-no-cv" class="jfmj-btn jfmj-btn-secondary">
+          Fermer
+        </button>
+      </section>
+
+      <!-- =========================================== -->
+      <!-- VUE 9 : Analyse en cours                     -->
+      <!-- =========================================== -->
+      <section id="view-analyzing" class="jfmj-view jfmj-hidden">
+        <div class="jfmj-spinner"></div>
+        <p id="analyzing-text" class="jfmj-loading-text">
+          Préparation de l'analyse…
+        </p>
+        <p class="jfmj-analyzing-hint">
+          Claude analyse ton CV face à l'offre. Cela prend généralement 15 à
+          30 secondes.
+        </p>
+      </section>
+
+      <!-- =========================================== -->
+      <!-- VUE 10 : Résultat de l'analyse ATS           -->
+      <!-- =========================================== -->
+      <section id="view-ats-result" class="jfmj-view jfmj-hidden">
+        <div class="jfmj-status-pill">🎯 Résultat de l'analyse</div>
+
+        <!-- Cercle de score global -->
+        <div class="jfmj-card jfmj-score-card">
+          <div class="jfmj-score-circle-wrap">
+            <svg
+              class="jfmj-score-circle"
+              viewBox="0 0 120 120"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                class="jfmj-score-bg"
+                cx="60"
+                cy="60"
+                r="52"
+              />
+              <circle
+                id="score-progress"
+                class="jfmj-score-progress"
+                cx="60"
+                cy="60"
+                r="52"
+                stroke-dasharray="326.7"
+                stroke-dashoffset="326.7"
+              />
+            </svg>
+            <div class="jfmj-score-text">
+              <div id="score-number">0</div>
+              <div class="jfmj-score-max">/100</div>
+            </div>
+          </div>
+          <p id="score-label" class="jfmj-score-label">—</p>
+          <p id="analyses-restantes" class="jfmj-hint"></p>
+        </div>
+
+        <!-- Sous-scores -->
+        <div class="jfmj-card">
+          <h3 class="jfmj-card-title">Détail des sous-scores</h3>
+          <div id="subscores-list" class="jfmj-subscores"></div>
+        </div>
+
+        <!-- Keywords -->
+        <div class="jfmj-card">
+          <h3 class="jfmj-card-title">Mots-clés du poste</h3>
+          <div class="jfmj-kw-coverage">
+            <div class="jfmj-kw-coverage-bar">
+              <div id="kw-bar-fill" class="jfmj-kw-coverage-fill"></div>
+            </div>
+            <p class="jfmj-kw-coverage-text">
+              <strong id="kw-coverage-pct">0%</strong> des mots-clés du poste
+              sont présents dans ton CV
+            </p>
+          </div>
+          <div
+            id="kw-missing-section"
+            class="jfmj-kw-missing-section jfmj-hidden"
+          >
+            <p class="jfmj-kw-missing-title">Manquants critiques :</p>
+            <div id="kw-missing-chips" class="jfmj-chips"></div>
+          </div>
+        </div>
+
+        <!-- Points forts -->
+        <div class="jfmj-card">
+          <h3 class="jfmj-card-title">✅ Points forts</h3>
+          <ul id="points-forts" class="jfmj-bullets jfmj-bullets-positive"></ul>
+        </div>
+
+        <!-- Points faibles -->
+        <div class="jfmj-card">
+          <h3 class="jfmj-card-title">⚠️ Points à améliorer</h3>
+          <ul
+            id="points-faibles"
+            class="jfmj-bullets jfmj-bullets-negative"
+          ></ul>
+        </div>
+
+        <!-- Recommandations -->
+        <div class="jfmj-card">
+          <h3 class="jfmj-card-title">🎯 Recommandations prioritaires</h3>
+          <div id="recommandations" class="jfmj-recos"></div>
+        </div>
+
+        <!-- Boutons -->
+        <button id="btn-view-in-jean-result" class="jfmj-btn jfmj-btn-primary">
+          Voir dans Jean
+        </button>
+        <button
+          id="btn-adapt-cv"
+          class="jfmj-btn jfmj-btn-secondary"
+          disabled
+          title="Disponible en session 6"
+        >
+          Adapter mon CV (bientôt)
+        </button>
+        <button id="btn-close-result" class="jfmj-btn jfmj-btn-secondary">
           Fermer le panneau
         </button>
       </section>
