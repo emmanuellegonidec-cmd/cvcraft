@@ -1,5 +1,5 @@
 // extension/content/content.js
-// Jean find my Job — Content script France Travail (v2 — microdata schema.org)
+// Jean find my Job — Content script France Travail (v2.1 — split contractType / workSchedule)
 // Session 3 — 26 avril 2026
 
 (function () {
@@ -10,6 +10,18 @@
   // ============================================================
   const FT_OFFER_REGEX = /^https:\/\/candidat\.francetravail\.fr\/offres\/recherche\/detail\/([A-Z0-9]+)/i;
   const BUTTON_ID = 'jfmj-capture-btn';
+
+  // Mapping schema.org employmentType -> francais (rythme de travail)
+  const WORK_SCHEDULE_MAP = {
+    FULL_TIME: 'Temps plein',
+    PART_TIME: 'Temps partiel',
+    CONTRACTOR: 'Independant',
+    TEMPORARY: 'Temporaire',
+    INTERN: 'Stage',
+    VOLUNTEER: 'Benevole',
+    PER_DIEM: 'Vacation',
+    OTHER: 'Autre'
+  };
 
   // ============================================================
   // 1. DETECTION : sommes-nous sur une page d'offre ?
@@ -33,7 +45,8 @@
       title: null,
       company: null,
       location: null,
-      contractType: null,
+      contractType: null,    // CDI / CDD - 12 Mois / Interim / etc. (depuis le texte FT)
+      workSchedule: null,    // Temps plein / Temps partiel / Stage / etc. (depuis microdata)
       workingHours: null,
       salaryMin: null,
       salaryMax: null,
@@ -115,11 +128,15 @@
     const hoursEl = root.querySelector('[itemprop="workHours"]');
     if (hoursEl) r.workingHours = cleanText(hoursEl.textContent.replace(/\s*\n\s*/g, ' • '));
 
-    // Type de contrat (souvent vide en microdata sur France Travail)
+    // Rythme de travail (FULL_TIME / PART_TIME / etc.) -> workSchedule en francais
     const empTypeEl = root.querySelector('[itemprop="employmentType"]');
     if (empTypeEl) {
-      const txt = cleanText(empTypeEl.textContent) || cleanText(empTypeEl.getAttribute('content') || '');
-      if (txt) r.contractType = txt;
+      const raw = (cleanText(empTypeEl.textContent) || cleanText(empTypeEl.getAttribute('content') || '')).toUpperCase();
+      if (raw && WORK_SCHEDULE_MAP[raw]) {
+        r.workSchedule = WORK_SCHEDULE_MAP[raw];
+      } else if (raw) {
+        r.workSchedule = raw; // valeur brute si pas mappee
+      }
     }
 
     // Salaire
@@ -153,7 +170,7 @@
     const qualEl = root.querySelector('[itemprop="qualifications"]');
     if (qualEl) r.qualification = cleanText(qualEl.textContent);
 
-    // Secteur d'activite
+    // Secteur
     const indEl = root.querySelector('[itemprop="industry"]');
     if (indEl) r.industry = cleanText(indEl.textContent);
 
@@ -217,7 +234,7 @@
 
     const bodyText = (document.body && document.body.innerText) || '';
 
-    // Type de contrat
+    // Type de contrat (CDI / CDD - 12 Mois / Interim / etc.)
     const contractMatch = bodyText.match(/Type de contrat\s*[:\n]+\s*([^\n]+(?:\n[^\n:]+)?)/i);
     if (contractMatch) {
       const parts = contractMatch[1].split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
@@ -284,8 +301,9 @@
       console.log('📌 Titre :', data.title);
       console.log('🏢 Entreprise :', data.company);
       console.log('📍 Lieu :', data.location);
-      console.log('📝 Contrat :', data.contractType);
-      console.log('⏱️ Durée / horaires :', data.workingHours);
+      console.log('📝 Type de contrat :', data.contractType);
+      console.log('🕐 Rythme de travail :', data.workSchedule);
+      console.log('⏱️  Durée / horaires :', data.workingHours);
       console.log('💰 Salaire :', data.salaryMin, '-', data.salaryMax, data.salaryCurrency, '/', data.salaryPeriod);
       console.log('📅 Publié/actualisé le :', data.postedAt);
       console.log('🎓 Formation :', data.educationLevel);
