@@ -1,6 +1,10 @@
 // ============================================================
 // Jean find my Job — Side panel logic
-// Session 6 : ajout zone documents (CV/LM download + LM generation)
+// Session 6 v0.6.1 (final2) :
+//   - Zone documents simplifiée : télécharger CV + bouton "Optimiser mon CV"
+//   - LM retirée (sera côté Jean web uniquement)
+//   - Fix : expiresIn passé dans le BODY JSON (et non en query param)
+//     Format Supabase Storage attendu : POST /sign/{bucket}/{path} body={expiresIn: number}
 // ============================================================
 
 const SUPABASE_URL = 'https://kjsqfgpewjzierlxzdyj.supabase.co';
@@ -9,12 +13,11 @@ const JEAN_API_BASE = 'https://jeanfindmyjob.fr';
 // ============================================================
 // État global
 // ============================================================
-let currentJobId = null;          // jobId Supabase après save
-let currentSessionToken = null;   // access_token Supabase
-let currentCapturedData = null;   // données scrapées
-let selectedCvRef = null;         // ref du CV sélectionné pour l'analyse
-let selectedCvDisplayName = null; // nom du CV sélectionné (pour bouton télécharger)
-let availableLms = [];            // liste des LM chargées (cache local)
+let currentJobId = null;
+let currentSessionToken = null;
+let currentCapturedData = null;
+let selectedCvRef = null;
+let selectedCvDisplayName = null;
 
 // ============================================================
 // Helpers DOM
@@ -30,7 +33,7 @@ function setText(id, text) {
 }
 
 // ============================================================
-// Auth — récupérer le token depuis chrome.storage
+// Auth
 // ============================================================
 async function getSessionToken() {
   return new Promise((resolve) => {
@@ -40,7 +43,6 @@ async function getSessionToken() {
         resolve(null);
         return;
       }
-      // Vérifier expiration (en secondes)
       const nowSec = Math.floor(Date.now() / 1000);
       if (session.expires_at && session.expires_at <= nowSec + 30) {
         resolve(null);
@@ -52,7 +54,7 @@ async function getSessionToken() {
 }
 
 // ============================================================
-// Init — flow d'ouverture du side panel
+// Init
 // ============================================================
 async function init() {
   show('view-loading');
@@ -64,36 +66,26 @@ async function init() {
   }
   currentSessionToken = token;
 
-  // Demander au service worker les dernières données capturées
-  chrome.runtime.sendMessage({ type: 'JFMJ_REQUEST_DATA' }, (response) => {
+  chrome.runtime.sendMessage({ type: 'JFMJ_GET_PENDING_CAPTURE' }, (response) => {
     if (chrome.runtime.lastError) {
+      console.warn('[sidepanel] erreur sendMessage:', chrome.runtime.lastError);
       show('view-empty');
       return;
     }
-    if (!response || !response.data) {
+    if (!response || !response.ok || !response.payload || !response.payload.data) {
       show('view-empty');
       return;
     }
-    currentCapturedData = response.data;
-    populateRecap(response.data);
+    currentCapturedData = response.payload.data;
+    populateRecap(currentCapturedData);
     show('view-recap');
   });
 }
 
-// Re-init quand l'utilisateur clique "J'ai connecté, recharger"
 $('btn-refresh-auth')?.addEventListener('click', init);
 
-// Écoute les nouvelles captures pendant que le panel est ouvert
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === 'JFMJ_NEW_DATA' && msg.data) {
-    currentCapturedData = msg.data;
-    populateRecap(msg.data);
-    show('view-recap');
-  }
-});
-
 // ============================================================
-// Populate recap (vue 1 — édition de l'offre capturée)
+// Populate recap
 // ============================================================
 function populateRecap(d) {
   $('field-title').value = d.title || '';
@@ -123,7 +115,6 @@ function populateRecap(d) {
 
   $('field-description').value = d.description || '';
 
-  // Compétences en chips
   const chipsContainer = $('field-skills-chips');
   chipsContainer.innerHTML = '';
   const skills = Array.isArray(d.skills) ? d.skills : [];
@@ -145,18 +136,15 @@ function populateRecap(d) {
 }
 
 // ============================================================
-// Bouton Annuler / Fermer
+// Boutons fermeture
 // ============================================================
-$('btn-cancel')?.addEventListener('click', () => {
-  show('view-empty');
-});
-
+$('btn-cancel')?.addEventListener('click', () => show('view-empty'));
 $('btn-close-success')?.addEventListener('click', () => window.close());
 $('btn-close-exists')?.addEventListener('click', () => window.close());
 $('btn-close-ats')?.addEventListener('click', () => window.close());
 
 // ============================================================
-// Save → POST /api/jobs/from-extension
+// Save
 // ============================================================
 $('btn-save')?.addEventListener('click', async () => {
   if (!currentSessionToken) {
@@ -164,7 +152,6 @@ $('btn-save')?.addEventListener('click', async () => {
     return;
   }
 
-  // Récupérer les valeurs éditées
   const payload = {
     ...currentCapturedData,
     title: $('field-title').value,
@@ -210,7 +197,7 @@ $('btn-save')?.addEventListener('click', async () => {
 });
 
 // ============================================================
-// Analyse CV vs offre — déclenchement
+// Analyse CV vs offre
 // ============================================================
 $('btn-analyze-from-success')?.addEventListener('click', () => startAnalysisFlow());
 $('btn-analyze-from-exists')?.addEventListener('click', () => startAnalysisFlow());
@@ -236,14 +223,12 @@ async function startAnalysisFlow() {
     }
 
     if (analyzableCvs.length === 1) {
-      // 1 seul CV analysable → analyse directe
       selectedCvRef = analyzableCvs[0].ref;
       selectedCvDisplayName = analyzableCvs[0].display_name;
       launchAnalysis();
       return;
     }
 
-    // Plusieurs CV → afficher dropdown
     populateCvChooser(cvs, data.default_cv_ref);
     show('view-choose-cv');
   } catch (e) {
@@ -259,7 +244,6 @@ function populateCvChooser(cvs, defaultRef) {
   const analyzable = cvs.filter(c => c.is_analyzable);
   const nonAnalyzable = cvs.filter(c => !c.is_analyzable);
 
-  // Pré-sélectionner le default analysable, sinon le premier analysable
   let preSelectedRef = null;
   if (defaultRef && analyzable.find(c => c.ref === defaultRef)) {
     preSelectedRef = defaultRef;
@@ -267,7 +251,6 @@ function populateCvChooser(cvs, defaultRef) {
     preSelectedRef = analyzable[0].ref;
   }
 
-  // Group analysables
   if (analyzable.length > 0) {
     const grp = document.createElement('optgroup');
     grp.label = '📄 CV analysables (PDF)';
@@ -281,7 +264,6 @@ function populateCvChooser(cvs, defaultRef) {
     select.appendChild(grp);
   }
 
-  // Group non-analysables
   if (nonAnalyzable.length > 0) {
     const grp = document.createElement('optgroup');
     grp.label = '🚫 CV Creator (non analysables ici)';
@@ -327,10 +309,10 @@ async function launchAnalysis() {
       throw new Error(err.error || `HTTP ${res.status}`);
     }
 
-    const result = await res.json();
-    renderAtsResult(result);
-    // Charger les LM disponibles en arrière-plan (silencieux si erreur)
-    loadAvailableLms();
+    const data = await res.json();
+    const atsPayload = data.result || data;
+    renderAtsResult(atsPayload);
+
     show('view-ats-result');
   } catch (e) {
     console.error('[analyse - launch] erreur:', e);
@@ -338,7 +320,6 @@ async function launchAnalysis() {
   }
 }
 
-// Messages qui défilent pendant l'analyse
 const ANALYZING_MESSAGES = [
   'Lecture de ton CV…',
   "Extraction des mots-clés de l'offre…",
@@ -369,15 +350,13 @@ function renderAtsResult(r) {
   }
 
   const score = r.score_global || 0;
-  const circumference = 2 * Math.PI * 52; // 326.7
+  const circumference = 2 * Math.PI * 52;
 
-  // Cercle de score
   const fill = $('score-circle-fill');
   fill.classList.remove('score-orange', 'score-red');
   if (score < 50) fill.classList.add('score-red');
   else if (score < 75) fill.classList.add('score-orange');
 
-  // Reset puis animation
   fill.style.strokeDashoffset = circumference;
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -386,10 +365,8 @@ function renderAtsResult(r) {
     });
   });
 
-  // Score animé (count up)
   animateNumber('score-value', 0, score, 1200);
 
-  // Label
   let label;
   if (score >= 85) label = 'Excellent match';
   else if (score >= 75) label = 'Bon match';
@@ -398,24 +375,13 @@ function renderAtsResult(r) {
   else label = 'Match très faible';
   setText('score-label', label);
 
-  // Sous-scores
   renderSubscores(r.scores || {});
-
-  // Mots-clés
   renderKeywords(r.keywords || {});
-
-  // Points forts/faibles
   renderBullets('strengths-list', r.analyse_contenu?.points_forts || []);
   renderBullets('weaknesses-list', r.analyse_contenu?.points_faibles || []);
-
-  // Recommandations
   renderRecommendations(r.recommandations || []);
 
-  // Documents zone — afficher le nom du CV utilisé
   setText('doc-cv-name', selectedCvDisplayName);
-
-  // Lien Voir dans Jean
-  $('link-view-after-ats').href = `${JEAN_API_BASE}/dashboard`;
 }
 
 function animateNumber(id, from, to, duration) {
@@ -517,7 +483,6 @@ function renderRecommendations(recs) {
     container.innerHTML = '<p class="jfmj-help-text" style="color:#2E7D32;font-weight:700;">✓ Aucune recommandation prioritaire</p>';
     return;
   }
-  // Tri par priorité
   const sorted = [...recs].sort((a, b) => (a.priorite || 99) - (b.priorite || 99));
   sorted.forEach(rec => {
     const card = document.createElement('div');
@@ -532,10 +497,11 @@ function renderRecommendations(recs) {
 }
 
 // ============================================================
-// ✨ SESSION 6 — Zone documents
+// ✨ SESSION 6 v0.6.1 — Téléchargement CV via Supabase Storage signed URL
+// Format Supabase :
+//   POST /storage/v1/object/sign/{bucket}/{path}
+//   body: { "expiresIn": 300 }   ← OBLIGATOIRE, en secondes
 // ============================================================
-
-// --- Téléchargement CV (depuis bucket Storage via signed URL) ---
 $('btn-download-cv')?.addEventListener('click', async () => {
   if (!selectedCvRef) {
     alert("Aucun CV sélectionné");
@@ -553,275 +519,65 @@ $('btn-download-cv')?.addEventListener('click', async () => {
 
   try {
     const filePath = selectedCvRef.slice('upload:'.length);
-    // Encoder le filePath en base64url pour le passer dans l'URL
-    const encoded = btoa(filePath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
-    // On passe par notre route extension (qui gère l'auth + sécurité user_id)
-    const res = await fetch(`${JEAN_API_BASE}/api/extension/lm-pdf/upload__${encoded}`, {
-      headers: { 'Authorization': `Bearer ${currentSessionToken}` },
-    });
+    const signedRes = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/sign/job-documents/${filePath}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${currentSessionToken}`,
+          'apikey': currentSessionToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ expiresIn: 300 }),
+      }
+    );
 
-    if (!res.ok) {
-      // Fallback : on essaye via Supabase directement
-      throw new Error(`HTTP ${res.status}`);
+    if (!signedRes.ok) {
+      const errTxt = await signedRes.text().catch(() => '');
+      throw new Error(`Signed URL refusée (${signedRes.status}): ${errTxt}`);
     }
 
-    const blob = await res.blob();
+    const { signedURL } = await signedRes.json();
+    if (!signedURL) {
+      throw new Error('Pas de signedURL retournée par Supabase');
+    }
+
+    const fullUrl = `${SUPABASE_URL}/storage/v1${signedURL}`;
+    const fileRes = await fetch(fullUrl);
+    if (!fileRes.ok) {
+      throw new Error(`Téléchargement échoué (${fileRes.status})`);
+    }
+
+    const blob = await fileRes.blob();
     const fileName = filePath.split('/').pop() || 'cv.pdf';
     triggerDownload(blob, fileName);
   } catch (e) {
-    // Plan B : passer par signed URL Supabase directement
-    try {
-      const filePath = selectedCvRef.slice('upload:'.length);
-      const signedRes = await fetch(
-        `${SUPABASE_URL}/storage/v1/object/sign/job-documents/${filePath}?expiresIn=300`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${currentSessionToken}`,
-            'apikey': await getSupabaseAnonKey(),
-          },
-        }
-      );
-      if (!signedRes.ok) throw new Error('signed URL failed');
-      const { signedURL } = await signedRes.json();
-      const fullUrl = `${SUPABASE_URL}/storage/v1${signedURL}`;
-      const fileBlob = await (await fetch(fullUrl)).blob();
-      const fileName = filePath.split('/').pop() || 'cv.pdf';
-      triggerDownload(fileBlob, fileName);
-    } catch (e2) {
-      console.error('[download CV] erreur:', e, e2);
-      alert("Erreur lors du téléchargement du CV. Réessaye.");
-    }
+    console.error('[download CV] erreur:', e);
+    alert("Erreur lors du téléchargement du CV : " + (e.message || 'inconnue'));
   } finally {
     btn.disabled = false;
     btn.textContent = originalText;
   }
 });
 
-// La clé anon Supabase est publique, on la lit depuis le manifest stocké
-// (alternative : la mettre en dur ici, mais on évite la duplication)
-async function getSupabaseAnonKey() {
-  // On la lit depuis chrome.storage si jamais elle a été stockée par popup.js
-  // sinon fallback en dur (clé publique anon, sans risque)
-  return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtqc3FmZ3Bld2p6aWVybHh6ZHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTgyNDUsImV4cCI6MjA4OTA3NDI0NX0.UlR7xF9grcPIPQ30WjLYojD76bPvnwFGBQgIizf1wu4.placeholder';
-  // ⚠️ Cette clé sera lue depuis popup.js via chrome.storage en pratique
-}
-
-// --- Chargement liste LM disponibles ---
-async function loadAvailableLms() {
-  try {
-    const res = await fetch(`${JEAN_API_BASE}/api/extension/user-documents?type=lm`, {
-      headers: { 'Authorization': `Bearer ${currentSessionToken}` },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    availableLms = data.lms || [];
-    populateLmSelect(availableLms, data.default_lm_ref);
-  } catch (e) {
-    console.error('[load LMs] erreur:', e);
-    // Silencieux : on laisse la dropdown vide, l'utilisateur peut quand même générer
-  }
-}
-
-function populateLmSelect(lms, defaultRef) {
-  const select = $('select-lm');
-  select.innerHTML = '<option value="">— Choisis une LM existante…</option>';
-
-  const generated = lms.filter(l => l.source === 'generated');
-  const uploaded = lms.filter(l => l.source === 'upload');
-
-  if (generated.length > 0) {
-    const grp = document.createElement('optgroup');
-    grp.label = `✨ LM générées (${generated.length})`;
-    generated.forEach(lm => {
-      const opt = document.createElement('option');
-      opt.value = lm.ref;
-      opt.textContent = lm.display_name + (lm.is_default ? ' ⭐' : '');
-      if (defaultRef && lm.ref === defaultRef) opt.selected = true;
-      grp.appendChild(opt);
-    });
-    select.appendChild(grp);
-  }
-
-  if (uploaded.length > 0) {
-    const grp = document.createElement('optgroup');
-    grp.label = `📎 LM uploadées (${uploaded.length})`;
-    uploaded.forEach(lm => {
-      const opt = document.createElement('option');
-      opt.value = lm.ref;
-      opt.textContent = lm.display_name + (lm.is_default ? ' ⭐' : '');
-      if (defaultRef && lm.ref === defaultRef) opt.selected = true;
-      grp.appendChild(opt);
-    });
-    select.appendChild(grp);
-  }
-
-  // Si une LM est pré-sélectionnée, afficher le bouton télécharger
-  if (select.value) {
-    $('btn-download-lm').classList.remove('jfmj-hidden');
-  }
-}
-
-// Toggle bouton télécharger LM selon sélection
-$('select-lm')?.addEventListener('change', (e) => {
-  const ref = e.target.value;
-  if (ref) {
-    $('btn-download-lm').classList.remove('jfmj-hidden');
-  } else {
-    $('btn-download-lm').classList.add('jfmj-hidden');
-  }
-});
-
-// --- Téléchargement LM ---
-$('btn-download-lm')?.addEventListener('click', async () => {
-  const ref = $('select-lm').value;
-  if (!ref) return;
-
-  const btn = $('btn-download-lm');
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = '⏳ Téléchargement…';
-
-  try {
-    let urlPath;
-    if (ref.startsWith('generated:')) {
-      const lmId = ref.slice('generated:'.length);
-      urlPath = `/api/extension/lm-pdf/${lmId}`;
-    } else if (ref.startsWith('upload:')) {
-      const filePath = ref.slice('upload:'.length);
-      const encoded = btoa(filePath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-      urlPath = `/api/extension/lm-pdf/upload__${encoded}`;
-    } else {
-      throw new Error('Référence LM invalide');
-    }
-
-    const res = await fetch(`${JEAN_API_BASE}${urlPath}`, {
-      headers: { 'Authorization': `Bearer ${currentSessionToken}` },
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP ${res.status}`);
-    }
-
-    const blob = await res.blob();
-    // Récupérer le nom de fichier depuis Content-Disposition
-    let fileName = 'lettre-de-motivation.pdf';
-    const cd = res.headers.get('content-disposition');
-    if (cd) {
-      const match = cd.match(/filename="([^"]+)"/);
-      if (match) fileName = match[1];
-    }
-    triggerDownload(blob, fileName);
-  } catch (e) {
-    console.error('[download LM] erreur:', e);
-    alert("Erreur lors du téléchargement de la LM. Réessaye.");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
-  }
-});
-
-// --- Toggle options génération LM ---
-$('btn-generate-lm-toggle')?.addEventListener('click', () => {
-  $('lm-generate-options').classList.remove('jfmj-hidden');
-  $('btn-generate-lm-toggle').classList.add('jfmj-hidden');
-});
-
-$('btn-cancel-generate-lm')?.addEventListener('click', () => {
-  $('lm-generate-options').classList.add('jfmj-hidden');
-  $('btn-generate-lm-toggle').classList.remove('jfmj-hidden');
-});
-
-// --- Lancer génération LM ---
-$('btn-launch-generate-lm')?.addEventListener('click', async () => {
+// ============================================================
+// ✨ SESSION 6 v0.6.1 — Bouton "Optimiser mon CV"
+// → Ouvre /dashboard avec params spéciaux pour ouvrir directement le panneau ATS
+// → Le dashboard Jean web devra supporter ces params (TODO prochaine session)
+// ============================================================
+$('btn-optimize-cv')?.addEventListener('click', () => {
   if (!currentJobId) {
-    alert("Pas de jobId courant — réenregistre l'offre d'abord");
+    alert("Pas de jobId courant");
     return;
   }
-
-  const tone = $('select-lm-tone').value;
-  const length = parseInt($('select-lm-length').value);
-  const lang = $('select-lm-lang').value;
-
-  show('view-generating-lm');
-  cycleGeneratingLmMessages();
-
-  try {
-    const body = {
-      jobId: currentJobId,
-      tone,
-      length,
-      lang,
-    };
-    // Inclure le CV sélectionné pour l'analyse, si dispo
-    if (selectedCvRef) {
-      body.cvRef = selectedCvRef;
-    }
-
-    const res = await fetch(`${JEAN_API_BASE}/api/extension/generate-lm`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${currentSessionToken}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP ${res.status}`);
-    }
-
-    const result = await res.json();
-
-    // Recharger la liste des LM pour inclure la nouvelle
-    await loadAvailableLms();
-
-    // Pré-sélectionner la nouvelle LM
-    const newRef = `generated:${result.lm_id}`;
-    $('select-lm').value = newRef;
-    $('btn-download-lm').classList.remove('jfmj-hidden');
-
-    // Reset toggle
-    $('lm-generate-options').classList.add('jfmj-hidden');
-    $('btn-generate-lm-toggle').classList.remove('jfmj-hidden');
-
-    show('view-ats-result');
-
-    // Petit feedback visuel : faire scroll vers la zone LM + flash
-    setTimeout(() => {
-      $('select-lm').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 200);
-  } catch (e) {
-    console.error('[generate LM] erreur:', e);
-    showError(e.message || "Erreur pendant la génération", 'view-ats-result');
-  }
+  const url = `${JEAN_API_BASE}/dashboard?ats=open&jobId=${encodeURIComponent(currentJobId)}`;
+  window.open(url, '_blank');
 });
 
-const GENERATING_LM_MESSAGES = [
-  "Lecture de l'offre…",
-  'Analyse de ton profil…',
-  'Sélection des arguments les plus pertinents…',
-  'Rédaction du paragraphe d\'accroche…',
-  'Rédaction des arguments métier…',
-  'Rédaction de la conclusion…',
-  'Mise en forme finale…',
-];
-
-let generatingLmInterval = null;
-function cycleGeneratingLmMessages() {
-  if (generatingLmInterval) clearInterval(generatingLmInterval);
-  let idx = 0;
-  setText('generating-lm-message', GENERATING_LM_MESSAGES[idx]);
-  generatingLmInterval = setInterval(() => {
-    idx = (idx + 1) % GENERATING_LM_MESSAGES.length;
-    setText('generating-lm-message', GENERATING_LM_MESSAGES[idx]);
-  }, 4000);
-}
-
-// --- Helper download ---
+// ============================================================
+// Helper download
+// ============================================================
 function triggerDownload(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -833,7 +589,9 @@ function triggerDownload(blob, fileName) {
   setTimeout(() => URL.revokeObjectURL(url), 200);
 }
 
-// --- Vue erreur générique ---
+// ============================================================
+// Vue erreur générique
+// ============================================================
 function showError(message, returnView) {
   setText('error-message', message || 'Erreur inconnue');
   $('btn-error-retry').onclick = () => show(returnView);

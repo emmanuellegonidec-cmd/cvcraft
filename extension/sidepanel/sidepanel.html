@@ -208,93 +208,28 @@
         <div id="recommendations-list" class="jfmj-recommendations"></div>
       </details>
 
-      <!-- ✨ NOUVEAU SESSION 6 : zone Mes documents pour postuler -->
+      <!-- ✨ SESSION 6 v0.6.1 — Zone simplifiée : 2 boutons + astuce drag & drop -->
       <div id="documents-zone" class="jfmj-documents-zone">
-        <h2 class="jfmj-section-title">📎 Mes documents pour postuler</h2>
-
-        <!-- Bloc CV -->
         <div class="jfmj-doc-block">
           <label class="jfmj-field-label">CV utilisé pour l'analyse</label>
           <p id="doc-cv-name" class="jfmj-field-readonly">—</p>
           <button id="btn-download-cv" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full">📥 Télécharger ce CV</button>
         </div>
 
-        <!-- Séparateur -->
-        <div class="jfmj-doc-separator"></div>
+        <button id="btn-optimize-cv" class="jfmj-btn jfmj-btn-primary jfmj-btn-full" style="margin-top: 6px;">🎯 Optimiser mon CV pour cette offre</button>
 
-        <!-- Bloc LM -->
-        <div class="jfmj-doc-block">
-          <label class="jfmj-field-label">Lettre de motivation</label>
-
-          <!-- Sélecteur LM existantes -->
-          <select id="select-lm" class="jfmj-field-input">
-            <option value="">— Choisis une LM existante…</option>
-          </select>
-
-          <!-- Bouton télécharger LM (visible si LM sélectionnée) -->
-          <button id="btn-download-lm" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full jfmj-hidden">📥 Télécharger cette LM</button>
-
-          <!-- OU séparateur -->
-          <div class="jfmj-or-separator">
-            <span>OU</span>
-          </div>
-
-          <!-- Génération LM -->
-          <button id="btn-generate-lm-toggle" class="jfmj-btn jfmj-btn-primary jfmj-btn-full">✨ Générer une LM avec Claude</button>
-
-          <!-- Options de génération LM (cachées par défaut) -->
-          <div id="lm-generate-options" class="jfmj-lm-options jfmj-hidden">
-            <label class="jfmj-field-label">Ton</label>
-            <select id="select-lm-tone" class="jfmj-field-input">
-              <option value="sobre">Sobre et professionnel</option>
-              <option value="chaleureux">Chaleureux et engagé</option>
-              <option value="percutant">Percutant et direct</option>
-            </select>
-
-            <label class="jfmj-field-label">Longueur</label>
-            <select id="select-lm-length" class="jfmj-field-input">
-              <option value="250">Courte (~250 mots)</option>
-              <option value="300" selected>Moyenne (~300 mots)</option>
-              <option value="400">Longue (~400 mots)</option>
-            </select>
-
-            <label class="jfmj-field-label">Langue</label>
-            <select id="select-lm-lang" class="jfmj-field-input">
-              <option value="FR" selected>Français</option>
-              <option value="EN">English</option>
-            </select>
-
-            <div class="jfmj-actions" style="margin-top: 16px;">
-              <button id="btn-cancel-generate-lm" class="jfmj-btn jfmj-btn-secondary">Annuler</button>
-              <button id="btn-launch-generate-lm" class="jfmj-btn jfmj-btn-primary">✨ Générer</button>
-            </div>
-
-            <p class="jfmj-help-text" style="margin-top: 12px;">⏱️ La génération prend 15 à 30 secondes.</p>
-          </div>
-        </div>
-
-        <!-- Astuce drag & drop -->
         <p class="jfmj-tip-box">
-          💡 <strong>Astuce :</strong> drag & drop tes fichiers téléchargés sur le formulaire de candidature à gauche.
+          💡 <strong>Astuce :</strong> drag & drop ton CV téléchargé sur le formulaire de candidature à gauche, ou clique sur "Optimiser mon CV" pour passer côté Jean et améliorer ton match avant de postuler.
         </p>
       </div>
 
       <!-- Actions footer -->
       <div class="jfmj-actions" style="margin-top: 24px;">
-        <a id="link-view-after-ats" class="jfmj-btn jfmj-btn-secondary" target="_blank">Voir dans Jean</a>
         <button id="btn-close-ats" class="jfmj-btn jfmj-btn-link">Fermer</button>
       </div>
     </section>
 
-    <!-- Vue : génération LM en cours -->
-    <section id="view-generating-lm" class="jfmj-view jfmj-hidden">
-      <div class="jfmj-loading-state">
-        <div class="jfmj-spinner jfmj-spinner-yellow"></div>
-        <p id="generating-lm-message" class="jfmj-loading-text">Lecture de l'offre…</p>
-      </div>
-    </section>
-
-    <!-- Vue : erreur générique (PDF, génération, etc.) -->
+    <!-- Vue : erreur générique -->
     <section id="view-error" class="jfmj-view jfmj-hidden">
       <div class="jfmj-empty-state">
         <span class="jfmj-emoji-big">⚠️</span>
