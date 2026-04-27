@@ -8,6 +8,7 @@ import {
 } from '@dnd-kit/core'
 import { createClient } from '@/lib/supabase'
 import ATSScoreModal from './ATSScoreModal'
+import GenerateLMModal from './GenerateLMModal'
 
 const FONT = "'Montserrat', sans-serif"
 
@@ -82,6 +83,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
 
 const DATE_ACTION_TITLES = ['Fixer une deadline', 'Ajouter un rappel', 'Programmer une relance', 'Date de prise de poste']
 const ATS_CARD_TITLE = 'Vérifier le score ATS'
+const LM_CARD_TITLE = 'Rédiger ma LM'
 
 interface StepActionRow {
   id: string; title: string; icon: string; sub: string; position: number
@@ -89,7 +91,7 @@ interface StepActionRow {
   deadline_date?: string | null
 }
 
-function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlineSave, onATSClick, atsScore }: {
+function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlineSave, onATSClick, atsScore, onLMClick, lmGenerated }: {
   action: StepActionRow
   dragId: string
   onDelete: (id: string, title: string) => void
@@ -97,11 +99,14 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
   onDeadlineSave: (id: string, date: string) => void
   onATSClick?: () => void
   atsScore?: number | null
+  onLMClick?: () => void
+  lmGenerated?: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: dragId })
   const [localDate, setLocalDate] = useState(action.deadline_date || '')
   const isDateCard = DATE_ACTION_TITLES.includes(action.title)
   const isATSCard = action.title === ATS_CARD_TITLE
+  const isLMCard = action.title === LM_CARD_TITLE
 
   const borderColor = action.is_done ? '#A5D6A7' : action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#BBBBBB'
   const bgColor = action.is_done ? '#F1F8E9' : action.type === 'included' ? '#F1F8E9' : '#fff'
@@ -130,24 +135,25 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
   }
 
   const deadlineStatus = isDateCard ? getDeadlineStatus(localDate) : null
+  const isInteractiveCard = isATSCard || isLMCard
 
   return (
     <div ref={setNodeRef} style={{
       background: bgColor, border: `2px solid ${isDragging ? '#F5C400' : borderColor}`,
       borderRadius: 10, padding: '10px 12px 12px',
-      cursor: isATSCard ? 'default' : (isDragging ? 'grabbing' : 'grab'),
+      cursor: isInteractiveCard ? 'default' : (isDragging ? 'grabbing' : 'grab'),
       opacity: isDragging ? 0.5 : 1,
       transform: transform ? `translate(${transform.x}px,${transform.y}px)` : undefined,
       zIndex: isDragging ? 50 : 1, position: 'relative',
       touchAction: 'none', userSelect: 'none',
       width: '100%', boxSizing: 'border-box',
       display: 'flex', flexDirection: 'column', height: '100%',
-    }} {...(isATSCard ? {} : { ...listeners, ...attributes })}>
+    }} {...(isInteractiveCard ? {} : { ...listeners, ...attributes })}>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4, marginBottom: 6 }}>
         <span style={{ fontSize: 18 }}>{action.icon}</span>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {!isATSCard && <span style={{ fontSize: 11, color: '#bbb', cursor: 'grab', lineHeight: 1 }}>⠿</span>}
+          {!isInteractiveCard && <span style={{ fontSize: 11, color: '#bbb', cursor: 'grab', lineHeight: 1 }}>⠿</span>}
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
@@ -197,7 +203,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
 )}
 
 
-      {/* Bouton Analyser si pas encore de score */}
+      {/* Bouton Analyser ATS si pas encore de score */}
       {isATSCard && atsScore == null && (
         <div
           onPointerDown={e => e.stopPropagation()}
@@ -208,6 +214,35 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
             cursor: 'pointer', marginBottom: 8, textAlign: 'center',
           }}>
           <span style={{ fontSize: 10, fontWeight: 800, color: '#111', fontFamily: FONT }}>Analyser →</span>
+        </div>
+      )}
+
+      {/* Carte LM — badge "✓ LM générée" si déjà fait, sinon bouton "Rédiger →" */}
+      {isLMCard && lmGenerated && (
+        <div
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onLMClick?.() }}
+          style={{
+            background: '#F1F8E9', border: '1.5px solid #2E7D32',
+            borderRadius: 6, padding: '5px 8px',
+            cursor: 'pointer', marginBottom: 8, textAlign: 'center',
+            display: 'flex', flexDirection: 'column', gap: 2,
+          }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: '#2E7D32', fontFamily: FONT }}>✓ LM générée</span>
+          <span style={{ fontSize: 9, color: '#2E7D32', fontFamily: FONT, opacity: 0.8 }}>Voir / régénérer →</span>
+        </div>
+      )}
+
+      {isLMCard && !lmGenerated && (
+        <div
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onLMClick?.() }}
+          style={{
+            background: '#F5C400', border: '1.5px solid #111',
+            borderRadius: 6, padding: '5px 8px',
+            cursor: 'pointer', marginBottom: 8, textAlign: 'center',
+          }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: '#111', fontFamily: FONT }}>Rédiger →</span>
         </div>
       )}
 
@@ -258,9 +293,10 @@ interface Props {
   currentStepLabel: string
   currentStepIndex: number
   jobTitle?: string
+  jobCompany?: string
 }
 
-export default function JobStepActions({ jobId, userId, currentStepId, currentStepLabel, currentStepIndex, jobTitle = '' }: Props) {
+export default function JobStepActions({ jobId, userId, currentStepId, currentStepLabel, currentStepIndex, jobTitle = '', jobCompany = '' }: Props) {
   const [stepActions, setStepActions] = useState<StepActionRow[]>([])
   const [loading, setLoading] = useState(false)
   const [cvSent, setCvSent] = useState<boolean>(false)
@@ -272,6 +308,10 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
   const [atsModalOpen, setAtsModalOpen] = useState(false)
   const [atsResult, setAtsResult] = useState<any | null>(null)
   const [atsCount, setAtsCount] = useState(0)
+
+  // LM
+  const [lmModalOpen, setLmModalOpen] = useState(false)
+  const [lmGenerated, setLmGenerated] = useState(false)
 
   // Panneau unifié
   const [showPanel, setShowPanel] = useState(false)
@@ -300,8 +340,9 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
     if (!currentStepId || !userId) return
     loadJobDocStatus()
     loadStepActions()
+    loadLmStatus()
     setShowPanel(false)
-  }, [currentStepId, userId])
+  }, [currentStepId, userId, jobId])
 
   async function loadJobDocStatus() {
     const supabase = createClient()
@@ -315,6 +356,25 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
       setLmSent(!!(data.cover_letter_sent || data.cover_letter_url))
       if (data.ats_result) setAtsResult(data.ats_result)
       if (data.ats_analysis_count) setAtsCount(data.ats_analysis_count)
+    }
+  }
+
+  // Vérifie s'il existe au moins une LM générée pour cette offre dans la table `lms`
+  async function loadLmStatus() {
+    if (!userId) return
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('lms')
+      .select('id, form_data')
+      .eq('user_id', userId)
+      .eq('template', 'generated')
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (data && data.length > 0) {
+      const found = data.some((row: any) => row?.form_data?.jobId === jobId)
+      setLmGenerated(found)
+    } else {
+      setLmGenerated(false)
     }
   }
 
@@ -477,6 +537,8 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
                       onDeadlineSave={handleDeadlineSave}
                       onATSClick={action.title === ATS_CARD_TITLE ? () => setAtsModalOpen(true) : undefined}
                       atsScore={action.title === ATS_CARD_TITLE && atsResult ? atsResult.score_global : null}
+                      onLMClick={action.title === LM_CARD_TITLE ? () => setLmModalOpen(true) : undefined}
+                      lmGenerated={action.title === LM_CARD_TITLE ? lmGenerated : undefined}
                     />
                   </div>
                 </div>
@@ -613,6 +675,18 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
         onResultSaved={(result, newCount) => {
           setAtsResult(result)
           setAtsCount(newCount)
+        }}
+      />
+
+      {/* Modale LM */}
+      <GenerateLMModal
+        isOpen={lmModalOpen}
+        onClose={() => setLmModalOpen(false)}
+        jobId={jobId}
+        jobTitle={jobTitle}
+        jobCompany={jobCompany}
+        onGenerated={() => {
+          setLmGenerated(true)
         }}
       />
     </>

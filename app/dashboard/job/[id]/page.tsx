@@ -786,6 +786,7 @@ export default function JobDetailPage() {
                 currentStepLabel={currentStepLabel}
                 currentStepIndex={currentStepIndex}
                 jobTitle={job.title}
+                jobCompany={job.company}
               />
 
               <JobInterviewDetails section="preparation" {...interviewSectionProps} />
