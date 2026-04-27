@@ -182,6 +182,9 @@ export default function GenerateLMModal({
       setGeneratedContent(data.content)
       setGeneratedLmId(data.lm_id)
       setView('result')
+      if (typeof window !== 'undefined') {
+         window.dispatchEvent(new CustomEvent('jfmj-lm-generated', { detail: { jobId } }))
+       }
       onGenerated?.({
         lm_id: data.lm_id,
         title: data.title,

@@ -16,6 +16,7 @@ import EditJobModal from './components/EditJobModal'
 import ParcoursBannerModal from './components/ParcoursBannerModal'
 import JobArchivedDetails from './components/JobArchivedDetails'
 import JobContacts, { JobContactEnriched } from './components/JobContacts'
+import LinkedLMsSection from './components/LinkedLMsSection'
 import RgpdConsentModal from '@/components/RgpdConsentModal'
 import SecureStorageNotice from '@/components/SecureStorageNotice'
 
@@ -819,6 +820,7 @@ export default function JobDetailPage() {
             currentStepLabel={currentStepLabel}
             currentStepIndex={currentStepIndex}
             jobTitle={job.title}
+            jobCompany={job.company}
           />
         )}
 
@@ -866,6 +868,15 @@ export default function JobDetailPage() {
                 </div>
               </div>
             ))}
+
+            {/* ═══ NOUVELLE SOUS-SECTION : LM générées rattachées à cette candidature ═══ */}
+            <LinkedLMsSection
+              jobId={jobId}
+              userId={userId}
+              jobTitle={job.title}
+              jobCompany={job.company}
+            />
+
             <SecureStorageNotice compact />
           </div>
           <div style={{ ...card, marginBottom: 0 }}>
