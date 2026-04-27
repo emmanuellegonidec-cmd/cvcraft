@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { pdf, Document, Page, Text, StyleSheet } from '@react-pdf/renderer'
 
 const FONT = "'Montserrat', sans-serif"
@@ -95,12 +95,16 @@ export default function ViewLMModal({
   const [copied, setCopied] = useState(false)
   const [pdfLoading, setPdfLoading] = useState(false)
 
-  // À l'ouverture, reset du contenu à celui passé en props
-  // (au cas où on rouvre avec une LM différente)
-  if (isOpen && editableContent !== lmContent && !copied) {
-    // synchronise sans effet d'effet infini
-    setEditableContent(lmContent)
-  }
+  // Synchronise editableContent avec lmContent UNIQUEMENT quand :
+  //  - la modale s'ouvre (isOpen passe de false à true)
+  //  - OU le contenu source change (LM différente affichée)
+  // Important : pas de sync à chaque render, sinon ça écrase la saisie
+  // de l'utilisateur en temps réel (bug corrigé en session 6b.1bis-fix).
+  useEffect(() => {
+    if (isOpen) {
+      setEditableContent(lmContent)
+    }
+  }, [isOpen, lmContent])
 
   if (!isOpen) return null
 
