@@ -1,10 +1,12 @@
 // ============================================================
 // Jean find my Job — Side panel logic
+// Session 7 v0.7.0 :
+//   - 🆕 Bouton "✓ J'ai postulé" → marque la candidature comme postulée
+//   - 🆕 Création automatique d'une relance à J+7
+//   - 🆕 Vue de succès dédiée après mark-applied
 // Session 6 v0.6.1 (final2) :
 //   - Zone documents simplifiée : télécharger CV + bouton "Optimiser mon CV"
 //   - LM retirée (sera côté Jean web uniquement)
-//   - Fix : expiresIn passé dans le BODY JSON (et non en query param)
-//     Format Supabase Storage attendu : POST /sign/{bucket}/{path} body={expiresIn: number}
 // ============================================================
 
 const SUPABASE_URL = 'https://kjsqfgpewjzierlxzdyj.supabase.co';
@@ -142,6 +144,7 @@ $('btn-cancel')?.addEventListener('click', () => show('view-empty'));
 $('btn-close-success')?.addEventListener('click', () => window.close());
 $('btn-close-exists')?.addEventListener('click', () => window.close());
 $('btn-close-ats')?.addEventListener('click', () => window.close());
+$('btn-close-applied')?.addEventListener('click', () => window.close());
 
 // ============================================================
 // Save
@@ -497,10 +500,7 @@ function renderRecommendations(recs) {
 }
 
 // ============================================================
-// ✨ SESSION 6 v0.6.1 — Téléchargement CV via Supabase Storage signed URL
-// Format Supabase :
-//   POST /storage/v1/object/sign/{bucket}/{path}
-//   body: { "expiresIn": 300 }   ← OBLIGATOIRE, en secondes
+// SESSION 6 v0.6.1 — Téléchargement CV via Supabase Storage signed URL
 // ============================================================
 $('btn-download-cv')?.addEventListener('click', async () => {
   if (!selectedCvRef) {
@@ -562,9 +562,7 @@ $('btn-download-cv')?.addEventListener('click', async () => {
 });
 
 // ============================================================
-// ✨ SESSION 6 v0.6.1 — Bouton "Optimiser mon CV"
-// → Ouvre /dashboard avec params spéciaux pour ouvrir directement le panneau ATS
-// → Le dashboard Jean web devra supporter ces params (TODO prochaine session)
+// SESSION 6 v0.6.1 — Bouton "Optimiser mon CV"
 // ============================================================
 $('btn-optimize-cv')?.addEventListener('click', () => {
   if (!currentJobId) {
@@ -573,6 +571,71 @@ $('btn-optimize-cv')?.addEventListener('click', () => {
   }
   const url = `${JEAN_API_BASE}/dashboard?ats=open&jobId=${encodeURIComponent(currentJobId)}`;
   window.open(url, '_blank');
+});
+
+// ============================================================
+// 🆕 SESSION 7 v0.7.0 — Bouton "✓ J'ai postulé"
+// → Marque la candidature comme postulée dans Jean
+// → Crée automatiquement une action de relance à J+7
+// ============================================================
+$('btn-mark-applied')?.addEventListener('click', async () => {
+  if (!currentJobId) {
+    alert("Pas de candidature courante");
+    return;
+  }
+  if (!currentSessionToken) {
+    show('view-not-logged-in');
+    return;
+  }
+
+  const btn = $('btn-mark-applied');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Enregistrement…';
+
+  try {
+    const res = await fetch(`${JEAN_API_BASE}/api/jobs/${currentJobId}/mark-applied`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentSessionToken}`,
+      },
+      body: JSON.stringify({
+        cvRef: selectedCvRef || null,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    // Format date FR (ex: "4 mai 2026")
+    let relanceDateLabel = 'J+7';
+    if (data.relance_date) {
+      try {
+        const d = new Date(data.relance_date + 'T00:00:00');
+        relanceDateLabel = d.toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        });
+      } catch (_) {
+        relanceDateLabel = data.relance_date;
+      }
+    }
+    setText('applied-relance-date', relanceDateLabel);
+    $('link-view-applied').href = `${JEAN_API_BASE}/dashboard`;
+    show('view-applied-success');
+  } catch (e) {
+    console.error('[mark-applied] erreur:', e);
+    alert("Erreur lors de l'enregistrement : " + (e.message || 'inconnue'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
 });
 
 // ============================================================
