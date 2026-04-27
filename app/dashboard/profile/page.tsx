@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { Montserrat } from 'next/font/google';
 import CVsSection from './components/CVsSection';
+import LMsSection from './components/LMsSection';
 const montserrat = Montserrat({ subsets: ['latin'], weight: ['500', '600', '700', '800', '900'] });
 
 interface UserProfile {
@@ -315,6 +316,9 @@ export default function ProfilePage() {
 
         {/* 5 — Mes CV (fichiers) */}
         {token && <CVsSection token={token} />}
+
+        {/* 5bis — Mes lettres de motivation (fichiers) */}
+        {token && <LMsSection token={token} />}
 
         {/* 6 — Disponibilité */}
         <Section title="🗓️ Disponibilité & contrat">
