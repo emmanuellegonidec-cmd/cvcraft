@@ -2,22 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 
-// ============================================================================
-// CORS — autorise les appels depuis l'extension Chrome (chrome-extension://*)
-// ============================================================================
-const corsHeaders = {
+// ──────────────────────────────────────────────────────────────────
+// CORS — autoriser les appels depuis l'extension Chrome
+// ──────────────────────────────────────────────────────────────────
+const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
 export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders });
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
-// ============================================================================
-// AUTH HELPER — pattern Bearer + cookies fallback (identique au reste de Jean)
-// ============================================================================
+// ──────────────────────────────────────────────────────────────────
+// Auth : Bearer token (pattern projet, identique aux autres routes extension)
+// ──────────────────────────────────────────────────────────────────
 function createAuthedClient(token: string) {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,169 +29,214 @@ function createAuthedClient(token: string) {
 async function getAuth(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice('Bearer '.length);
+    const token = authHeader.replace('Bearer ', '').trim();
     const supabase = createAuthedClient(token);
-    const { data: { user } } = await supabase.auth.getUser();
-    return { supabase, user };
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (!error && user) return { userId: user.id, supabase };
   }
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  return { supabase, user };
+  return { userId: user?.id ?? null, supabase };
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-function buildUploadDisplayName(fileName: string, jobTitle?: string, jobCompany?: string): string {
-  const prefix = fileName.toLowerCase().startsWith('cv') ? 'CV' : fileName;
-  if (!jobTitle) return `${prefix} - Offre supprimee`;
-  const parts = [prefix, '-', jobTitle];
-  if (jobCompany) parts.push('-', jobCompany);
-  return parts.join(' ');
+// ──────────────────────────────────────────────────────────────────
+// Helpers display name
+// ──────────────────────────────────────────────────────────────────
+function getJobLabel(job: any): string {
+  if (!job) return 'Offre supprimée';
+  const title = job.title || 'Sans titre';
+  const company = job.company ? ` — ${job.company}` : '';
+  return `${title}${company}`;
 }
 
-const CREATOR_NOT_ANALYZABLE_REASON =
-  "Pour analyser un CV Creator, telecharge-le d'abord depuis Mes CV puis upload-le sur cette offre dans la section Documents.";
+// ──────────────────────────────────────────────────────────────────
+// Récupération des CV (Creator + uploads)
+// ──────────────────────────────────────────────────────────────────
+async function getCvs(userId: string, supabase: any, profile: any) {
+  const cvs: any[] = [];
 
-// ============================================================================
-// LOGIQUE CV — recopiee/simplifiee depuis /api/cvs/route.ts
-// On ne renvoie que ce dont l'extension a besoin pour la dropdown + l'analyse.
-// ============================================================================
-async function getCvs(supabase: any, userId: string) {
-  // Profil pour recuperer default_cv_ref + display_names custom
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('default_cv_ref, cv_display_names')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  const defaultRef: string | null = profile?.default_cv_ref || null;
-  const displayNames: Record<string, string> = profile?.cv_display_names || {};
-
-  // CV Creator (non analysables cote extension session 5)
+  // Creator CVs
   const { data: creatorCvs } = await supabase
     .from('cvs')
-    .select('id, title, updated_at')
+    .select('id, title, created_at')
     .eq('user_id', userId)
-    .order('updated_at', { ascending: false });
+    .order('created_at', { ascending: false });
 
-  const creatorList = (creatorCvs || []).map((cv: any) => {
-    const ref = `creator:${cv.id}`;
-    return {
-      ref,
-      source: 'creator',
-      display_name: displayNames[ref] || cv.title || 'Sans titre',
-      is_default: defaultRef === ref,
-      is_analyzable: false,
-      reason: CREATOR_NOT_ANALYZABLE_REASON,
-      updated_at: cv.updated_at,
-    };
-  });
-
-  // CV uploades (PDF dans le bucket — analysables)
-  const { data: folders } = await supabase.storage
-    .from('job-documents')
-    .list(userId, { limit: 1000, sortBy: { column: 'name', order: 'asc' } });
-
-  const uploadList: any[] = [];
-
-  if (folders && folders.length > 0) {
-    const jobIds = folders
-      .filter((f: any) => !f.name.includes('.'))
-      .map((f: any) => f.name);
-    let jobsMap: Record<string, any> = {};
-
-    if (jobIds.length > 0) {
-      const { data: jobs } = await supabase
-        .from('jobs')
-        .select('id, title, company')
-        .in('id', jobIds);
-      jobsMap = Object.fromEntries((jobs || []).map((j: any) => [j.id, j]));
+  if (creatorCvs && creatorCvs.length) {
+    for (const cv of creatorCvs) {
+      cvs.push({
+        ref: `creator:${cv.id}`,
+        source: 'creator',
+        display_name: cv.title || 'CV sans titre',
+        is_analyzable: false,
+        is_default: profile?.default_cv_ref === `creator:${cv.id}`,
+      });
     }
+  }
 
-    for (const folder of folders) {
-      if ((folder as any).name.includes('.')) continue;
-      const jobId = (folder as any).name;
+  // Uploaded CVs (bucket job-documents → user_id/job_id/cv*.pdf)
+  const { data: storageList } = await supabase.storage
+    .from('job-documents')
+    .list(userId, { limit: 100, sortBy: { column: 'name', order: 'asc' } });
 
-      const { data: files } = await supabase.storage
+  if (storageList && storageList.length) {
+    for (const folder of storageList) {
+      // Chaque entrée du niveau 1 est un job_id (dossier)
+      if (!folder.name) continue;
+      const { data: jobFiles } = await supabase.storage
         .from('job-documents')
-        .list(`${userId}/${jobId}`, { limit: 100 });
+        .list(`${userId}/${folder.name}`, { limit: 50 });
 
-      if (!files) continue;
+      if (!jobFiles) continue;
 
-      for (const file of files) {
-        const fname = (file as any).name.toLowerCase();
-        // Filtre : fichiers CV uniquement, et seuls les PDF sont analysables par Claude
-        if (!fname.startsWith('cv')) continue;
-        if (!fname.endsWith('.pdf')) continue;
+      for (const f of jobFiles) {
+        // On ne garde que les fichiers cv*.pdf
+        if (!f.name.toLowerCase().startsWith('cv') || !f.name.toLowerCase().endsWith('.pdf')) continue;
 
-        const filePath = `${userId}/${jobId}/${(file as any).name}`;
-        const ref = `upload:${filePath}`;
-        const job = jobsMap[jobId];
+        const filePath = `${userId}/${folder.name}/${f.name}`;
+        // Trouver le job lié pour le display name
+        const { data: linkedJob } = await supabase
+          .from('jobs')
+          .select('title, company')
+          .eq('id', folder.name)
+          .eq('user_id', userId)
+          .maybeSingle();
 
-        const autoName = buildUploadDisplayName((file as any).name, job?.title, job?.company);
-
-        uploadList.push({
-          ref,
+        cvs.push({
+          ref: `upload:${filePath}`,
           source: 'upload',
-          display_name: displayNames[ref] || autoName,
-          is_default: defaultRef === ref,
+          display_name: `CV - ${getJobLabel(linkedJob)}`,
           is_analyzable: true,
-          updated_at: (file as any).updated_at || (file as any).created_at,
+          is_default: profile?.default_cv_ref === `upload:${filePath}`,
         });
       }
     }
   }
 
-  // Tri : analysables d'abord, puis par date desc
-  const allCvs = [...creatorList, ...uploadList].sort((a, b) => {
-    if (a.is_analyzable !== b.is_analyzable) {
-      return a.is_analyzable ? -1 : 1;
-    }
-    const ad = new Date(a.updated_at || 0).getTime();
-    const bd = new Date(b.updated_at || 0).getTime();
-    return bd - ad;
-  });
-
-  return { cvs: allCvs, default_cv_ref: defaultRef };
+  return cvs;
 }
 
-// ============================================================================
-// GET /api/extension/user-documents?type=cv|lm|all
-// ============================================================================
-export async function GET(req: NextRequest) {
-  const { supabase, user } = await getAuth(req);
-  if (!user) {
-    return NextResponse.json(
-      { error: 'Non authentifie' },
-      { status: 401, headers: corsHeaders }
-    );
+// ──────────────────────────────────────────────────────────────────
+// Récupération des LM (table lms generated + uploads bucket)
+// ──────────────────────────────────────────────────────────────────
+async function getLms(userId: string, supabase: any, profile: any) {
+  const lms: any[] = [];
+
+  // 1. LM générées (table lms, template = 'generated')
+  const { data: generatedLms } = await supabase
+    .from('lms')
+    .select('id, title, content, form_data, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (generatedLms && generatedLms.length) {
+    for (const lm of generatedLms) {
+      lms.push({
+        ref: `generated:${lm.id}`,
+        source: 'generated',
+        display_name: lm.title || 'LM sans titre',
+        // Une LM generated a son content texte, on peut générer le PDF côté serveur
+        is_downloadable: !!lm.content,
+        is_default: profile?.default_lm_ref === `generated:${lm.id}`,
+        // Métadonnées utiles pour l'extension
+        metadata: {
+          tone: lm.form_data?.tone || null,
+          length: lm.form_data?.length || null,
+          lang: lm.form_data?.lang || null,
+          generatedAt: lm.created_at,
+        },
+      });
+    }
   }
 
-  const { searchParams } = new URL(req.url);
-  const type = (searchParams.get('type') || 'cv').toLowerCase();
+  // 2. LM uploadées (bucket job-documents → user_id/job_id/lm*.pdf)
+  const { data: storageList } = await supabase.storage
+    .from('job-documents')
+    .list(userId, { limit: 100 });
 
+  if (storageList && storageList.length) {
+    for (const folder of storageList) {
+      if (!folder.name) continue;
+      const { data: jobFiles } = await supabase.storage
+        .from('job-documents')
+        .list(`${userId}/${folder.name}`, { limit: 50 });
+
+      if (!jobFiles) continue;
+
+      for (const f of jobFiles) {
+        if (!f.name.toLowerCase().startsWith('lm') || !f.name.toLowerCase().endsWith('.pdf')) continue;
+
+        const filePath = `${userId}/${folder.name}/${f.name}`;
+        const { data: linkedJob } = await supabase
+          .from('jobs')
+          .select('title, company')
+          .eq('id', folder.name)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        lms.push({
+          ref: `upload:${filePath}`,
+          source: 'upload',
+          display_name: `LM - ${getJobLabel(linkedJob)}`,
+          is_downloadable: true,
+          is_default: profile?.default_lm_ref === `upload:${filePath}`,
+          metadata: null,
+        });
+      }
+    }
+  }
+
+  return lms;
+}
+
+// ──────────────────────────────────────────────────────────────────
+// GET /api/extension/user-documents?type=cv|lm|all
+// ──────────────────────────────────────────────────────────────────
+export async function GET(req: NextRequest) {
   try {
+    const { userId, supabase } = await getAuth(req);
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401, headers: CORS_HEADERS }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const type = (searchParams.get('type') || 'all').toLowerCase();
+
+    if (type !== 'cv' && type !== 'lm' && type !== 'all') {
+      return NextResponse.json(
+        { error: "Paramètre 'type' invalide. Attendu : cv | lm | all" },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    // Récupérer le profil pour les refs par défaut
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('default_cv_ref, default_lm_ref')
+      .eq('user_id', userId)
+      .single();
+
     const result: any = {};
 
     if (type === 'cv' || type === 'all') {
-      const cvData = await getCvs(supabase, user.id);
-      result.cvs = cvData.cvs;
-      result.default_cv_ref = cvData.default_cv_ref;
+      result.cvs = await getCvs(userId, supabase, profile);
+      result.default_cv_ref = profile?.default_cv_ref || null;
     }
 
     if (type === 'lm' || type === 'all') {
-      // TODO session 6 : lister les LM (lettres de motivation)
-      result.lms = [];
-      result.default_lm_ref = null;
+      result.lms = await getLms(userId, supabase, profile);
+      result.default_lm_ref = profile?.default_lm_ref || null;
     }
 
-    return NextResponse.json(result, { headers: corsHeaders });
-  } catch (err: any) {
-    console.error('GET /api/extension/user-documents error:', err);
+    return NextResponse.json(result, { headers: CORS_HEADERS });
+  } catch (e: any) {
+    console.error('[user-documents] erreur:', e);
     return NextResponse.json(
-      { error: err.message || 'Erreur serveur' },
-      { status: 500, headers: corsHeaders }
+      { error: e?.message || 'Erreur inattendue' },
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }
