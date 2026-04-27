@@ -1,312 +1,311 @@
 <!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Jean find my Job</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="sidepanel.css" />
-  </head>
-  <body>
-    <!-- En-tête sticky avec logo Jean -->
+<head>
+  <meta charset="UTF-8" />
+  <title>Jean find my Job</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Header avec logo -->
     <header class="jfmj-header">
       <div class="jfmj-logo">
-        <span class="jfmj-logo-jean">Jean</span>
-        <span class="jfmj-logo-rest">find my Job</span>
+        <span class="jfmj-logo-jean">Jean</span><span class="jfmj-logo-rest"> find my Job</span>
       </div>
     </header>
 
-    <main class="jfmj-main">
-      <!-- =========================================== -->
-      <!-- VUE 1 : Chargement initial                   -->
-      <!-- =========================================== -->
-      <section id="view-loading" class="jfmj-view">
-        <div class="jfmj-spinner"></div>
-        <p class="jfmj-loading-text">Chargement de l'offre…</p>
-      </section>
+    <!-- Vue : chargement initial -->
+    <section id="view-loading" class="jfmj-view">
+      <div class="jfmj-spinner"></div>
+      <p class="jfmj-loading-text">Chargement…</p>
+    </section>
 
-      <!-- =========================================== -->
-      <!-- VUE 2 : Pas connecté                         -->
-      <!-- =========================================== -->
-      <section id="view-not-logged-in" class="jfmj-view jfmj-hidden">
-        <div class="jfmj-banner jfmj-banner-warn">
-          <strong>Tu n'es pas connecté à Jean.</strong>
-          <p>
-            Connecte-toi via la popup de l'extension (clique sur l'icône Jean
-            dans la barre d'outils Chrome), puis recapture cette offre.
-          </p>
+    <!-- Vue : non connecté -->
+    <section id="view-not-logged-in" class="jfmj-view jfmj-hidden">
+      <div class="jfmj-empty-state">
+        <span class="jfmj-emoji-big">🔒</span>
+        <h2>Tu n'es pas connecté</h2>
+        <p>Ouvre la popup de l'extension (clic sur l'icône Jean en haut à droite de Chrome) pour te connecter à ton compte.</p>
+        <button id="btn-refresh-auth" class="jfmj-btn jfmj-btn-primary">🔄 J'ai connecté, recharger</button>
+      </div>
+    </section>
+
+    <!-- Vue : aucune donnée capturée -->
+    <section id="view-empty" class="jfmj-view jfmj-hidden">
+      <div class="jfmj-empty-state">
+        <span class="jfmj-emoji-big">📋</span>
+        <h2>Aucune offre capturée</h2>
+        <p>Va sur une page d'offre <strong>France Travail</strong> et clique sur le bouton flottant <em>"📋 Capturer cette offre"</em> en bas à droite.</p>
+      </div>
+    </section>
+
+    <!-- Vue : récap éditable -->
+    <section id="view-recap" class="jfmj-view jfmj-hidden">
+      <h1 class="jfmj-section-title">Offre capturée</h1>
+
+      <div class="jfmj-card">
+        <label class="jfmj-field-label">Titre du poste</label>
+        <input id="field-title" class="jfmj-field-input" type="text" />
+
+        <label class="jfmj-field-label">Entreprise</label>
+        <input id="field-company" class="jfmj-field-input" type="text" />
+
+        <label class="jfmj-field-label">Lieu</label>
+        <p id="field-location" class="jfmj-field-readonly"></p>
+
+        <label class="jfmj-field-label">Contrat</label>
+        <p id="field-contract" class="jfmj-field-readonly"></p>
+
+        <label class="jfmj-field-label">Salaire</label>
+        <p id="field-salary" class="jfmj-field-readonly"></p>
+      </div>
+
+      <details class="jfmj-details">
+        <summary class="jfmj-details-summary">📊 Champs détectés (autres infos)</summary>
+        <div class="jfmj-details-content">
+          <p><strong>Durée :</strong> <span id="field-working-hours">—</span></p>
+          <p><strong>Posté le :</strong> <span id="field-posted-at">—</span></p>
+          <p><strong>Expérience :</strong> <span id="field-experience">—</span></p>
+          <p><strong>Qualification :</strong> <span id="field-qualification">—</span></p>
+          <p><strong>Formation :</strong> <span id="field-education">—</span></p>
+          <p><strong>Secteur :</strong> <span id="field-industry">—</span></p>
         </div>
-        <button id="btn-close-not-logged" class="jfmj-btn jfmj-btn-secondary">
-          Fermer
-        </button>
-      </section>
+      </details>
 
-      <!-- =========================================== -->
-      <!-- VUE 3 : Pas de données à afficher            -->
-      <!-- =========================================== -->
-      <section id="view-empty" class="jfmj-view jfmj-hidden">
-        <div class="jfmj-banner jfmj-banner-info">
-          <strong>Aucune offre capturée pour le moment.</strong>
-          <p>
-            Va sur une page d'offre France Travail et clique sur le bouton
-            "📋 Capturer cette offre" en bas à droite.
-          </p>
+      <div class="jfmj-card">
+        <label class="jfmj-field-label">Description</label>
+        <textarea id="field-description" class="jfmj-field-textarea" rows="6"></textarea>
+      </div>
+
+      <div class="jfmj-card">
+        <label class="jfmj-field-label">Compétences détectées</label>
+        <div id="field-skills-chips" class="jfmj-chips-container"></div>
+      </div>
+
+      <div class="jfmj-actions">
+        <button id="btn-cancel" class="jfmj-btn jfmj-btn-secondary">Annuler</button>
+        <button id="btn-save" class="jfmj-btn jfmj-btn-primary">✓ Enregistrer dans Jean</button>
+      </div>
+    </section>
+
+    <!-- Vue : succès création -->
+    <section id="view-success" class="jfmj-view jfmj-hidden">
+      <div class="jfmj-success-state">
+        <span class="jfmj-emoji-big">✅</span>
+        <h2>Carte créée dans Jean</h2>
+        <p>L'offre est dans la colonne <strong>"Envie de postuler"</strong> de ton kanban.</p>
+
+        <button id="btn-analyze-from-success" class="jfmj-btn jfmj-btn-primary jfmj-btn-full">🎯 Analyser cette offre avec mon CV</button>
+        <a id="link-view-success" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full" target="_blank">Voir dans Jean</a>
+        <button id="btn-close-success" class="jfmj-btn jfmj-btn-link">Fermer</button>
+      </div>
+    </section>
+
+    <!-- Vue : déjà existant -->
+    <section id="view-already-exists" class="jfmj-view jfmj-hidden">
+      <div class="jfmj-success-state">
+        <span class="jfmj-emoji-big">ℹ️</span>
+        <h2>Cette offre est déjà dans ton kanban</h2>
+        <p>Tu l'as déjà capturée auparavant.</p>
+
+        <button id="btn-analyze-from-exists" class="jfmj-btn jfmj-btn-primary jfmj-btn-full">🎯 Analyser cette offre avec mon CV</button>
+        <a id="link-view-exists" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full" target="_blank">Voir dans Jean</a>
+        <button id="btn-close-exists" class="jfmj-btn jfmj-btn-link">Fermer</button>
+      </div>
+    </section>
+
+    <!-- Vue : choix CV pour analyse -->
+    <section id="view-choose-cv" class="jfmj-view jfmj-hidden">
+      <h1 class="jfmj-section-title">🎯 Analyser avec mon CV</h1>
+
+      <div class="jfmj-card">
+        <label class="jfmj-field-label">Quel CV utiliser ?</label>
+        <select id="select-cv" class="jfmj-field-input"></select>
+        <p class="jfmj-help-text">Seuls les CV au format PDF peuvent être analysés. Les CV créés via le Creator de Jean ne sont pas encore supportés.</p>
+      </div>
+
+      <div class="jfmj-actions">
+        <button id="btn-cancel-analysis" class="jfmj-btn jfmj-btn-secondary">Annuler</button>
+        <button id="btn-launch-analysis" class="jfmj-btn jfmj-btn-primary">🎯 Lancer l'analyse</button>
+      </div>
+    </section>
+
+    <!-- Vue : aucun CV PDF disponible -->
+    <section id="view-no-cv" class="jfmj-view jfmj-hidden">
+      <div class="jfmj-empty-state">
+        <span class="jfmj-emoji-big">📄</span>
+        <h2>Aucun CV au format PDF</h2>
+        <p>Pour analyser une offre depuis l'extension, tu as besoin d'un CV au format PDF dans ta bibliothèque.</p>
+        <a href="https://jeanfindmyjob.fr/dashboard/profile" target="_blank" class="jfmj-btn jfmj-btn-primary">Aller à mon profil pour ajouter un CV</a>
+        <button id="btn-back-to-success" class="jfmj-btn jfmj-btn-link">Retour</button>
+      </div>
+    </section>
+
+    <!-- Vue : analyse en cours -->
+    <section id="view-analyzing" class="jfmj-view jfmj-hidden">
+      <div class="jfmj-loading-state">
+        <div class="jfmj-spinner jfmj-spinner-yellow"></div>
+        <p id="analyzing-message" class="jfmj-loading-text">Lecture de ton CV…</p>
+      </div>
+    </section>
+
+    <!-- Vue : résultat ATS -->
+    <section id="view-ats-result" class="jfmj-view jfmj-hidden">
+      <h1 class="jfmj-section-title">🎯 Score de compatibilité</h1>
+
+      <!-- Cercle de score -->
+      <div class="jfmj-score-circle-container">
+        <svg class="jfmj-score-circle" viewBox="0 0 120 120">
+          <circle class="jfmj-score-circle-bg" cx="60" cy="60" r="52" />
+          <circle id="score-circle-fill" class="jfmj-score-circle-fill" cx="60" cy="60" r="52" />
+        </svg>
+        <div class="jfmj-score-circle-center">
+          <div id="score-value" class="jfmj-score-value">0</div>
+          <div class="jfmj-score-max">/100</div>
         </div>
-      </section>
+      </div>
+      <p id="score-label" class="jfmj-score-label">—</p>
 
-      <!-- =========================================== -->
-      <!-- VUE 4 : Récap éditable de l'offre capturée   -->
-      <!-- =========================================== -->
-      <section id="view-recap" class="jfmj-view jfmj-hidden">
-        <div class="jfmj-status-pill">📋 Offre capturée</div>
+      <!-- Sous-scores -->
+      <details class="jfmj-details" open>
+        <summary class="jfmj-details-summary">📊 Détail des sous-scores</summary>
+        <div id="subscores-list" class="jfmj-subscores"></div>
+      </details>
 
-        <!-- Bloc principal : titre + entreprise éditables -->
-        <div class="jfmj-card jfmj-card-main">
-          <label class="jfmj-label" for="input-title">Intitulé du poste</label>
-          <input id="input-title" class="jfmj-input" type="text" />
-
-          <label class="jfmj-label" for="input-company">Entreprise</label>
-          <input id="input-company" class="jfmj-input" type="text" />
-        </div>
-
-        <!-- Bloc : champs détectés (non éditables ici, modifiables dans Jean) -->
-        <div class="jfmj-card">
-          <h3 class="jfmj-card-title">Champs détectés</h3>
-          <dl class="jfmj-fields" id="fields-detected"></dl>
-        </div>
-
-        <!-- Bloc : compétences (chips supprimables) -->
-        <div class="jfmj-card jfmj-hidden" id="card-skills">
-          <h3 class="jfmj-card-title">Compétences</h3>
-          <div class="jfmj-chips" id="skills-chips"></div>
-          <p class="jfmj-hint">Clique sur × pour retirer une compétence</p>
-        </div>
-
-        <!-- Bloc : description (collapsable) -->
-        <details class="jfmj-card jfmj-details" id="card-description">
-          <summary class="jfmj-card-title">Description de l'offre</summary>
-          <textarea id="input-description" class="jfmj-textarea"></textarea>
-        </details>
-
-        <!-- Zone d'erreur (cachée par défaut) -->
-        <div id="error-box" class="jfmj-error jfmj-hidden"></div>
-      </section>
-
-      <!-- =========================================== -->
-      <!-- VUE 5 : Confirmation succès (carte créée)    -->
-      <!-- =========================================== -->
-      <section id="view-success" class="jfmj-view jfmj-hidden">
-        <div class="jfmj-success-icon">✓</div>
-        <h2 class="jfmj-success-title">Carte créée dans Jean</h2>
-        <p class="jfmj-success-subtitle" id="success-job-title"></p>
-        <button id="btn-analyze-from-success" class="jfmj-btn jfmj-btn-primary">
-          🎯 Analyser cette offre avec mon CV
-        </button>
-        <button id="btn-view-in-jean" class="jfmj-btn jfmj-btn-secondary">
-          Voir dans Jean
-        </button>
-        <button id="btn-close-success" class="jfmj-btn jfmj-btn-secondary">
-          Fermer le panneau
-        </button>
-      </section>
-
-      <!-- =========================================== -->
-      <!-- VUE 6 : Offre déjà capturée                  -->
-      <!-- =========================================== -->
-      <section id="view-already-exists" class="jfmj-view jfmj-hidden">
-        <div class="jfmj-info-icon">ℹ️</div>
-        <h2 class="jfmj-already-title">Cette offre est déjà dans ton kanban</h2>
-        <p class="jfmj-success-subtitle" id="already-job-title"></p>
-        <button id="btn-analyze-from-existing" class="jfmj-btn jfmj-btn-primary">
-          🎯 Analyser cette offre avec mon CV
-        </button>
-        <button id="btn-view-existing" class="jfmj-btn jfmj-btn-secondary">
-          Voir la carte existante
-        </button>
-        <button id="btn-close-existing" class="jfmj-btn jfmj-btn-secondary">
-          Fermer le panneau
-        </button>
-      </section>
-
-      <!-- =========================================== -->
-      <!-- VUE 7 : Choisir un CV pour l'analyse         -->
-      <!-- =========================================== -->
-      <section id="view-choose-cv" class="jfmj-view jfmj-hidden">
-        <div class="jfmj-status-pill">🎯 Analyse CV vs Offre</div>
-
-        <div class="jfmj-card">
-          <h3 class="jfmj-card-title">Quel CV veux-tu analyser ?</h3>
-          <p class="jfmj-hint" style="margin-top: 0; margin-bottom: 12px">
-            Sélectionne le CV à comparer avec cette offre.
-          </p>
-          <select id="select-cv" class="jfmj-input jfmj-select"></select>
-          <p class="jfmj-hint" style="margin-top: 12px">
-            ⚠️ Limite : 3 analyses maximum par offre.
-          </p>
-        </div>
-
-        <button id="btn-launch-analysis" class="jfmj-btn jfmj-btn-primary">
-          Lancer l'analyse
-        </button>
-        <button id="btn-cancel-analysis" class="jfmj-btn jfmj-btn-secondary">
-          Annuler
-        </button>
-      </section>
-
-      <!-- =========================================== -->
-      <!-- VUE 8 : Pas de CV PDF dans la bibliothèque   -->
-      <!-- =========================================== -->
-      <section id="view-no-cv" class="jfmj-view jfmj-hidden">
-        <div class="jfmj-banner jfmj-banner-warn">
-          <strong>Aucun CV analysable trouvé</strong>
-          <p>
-            Tu n'as pas encore de CV PDF dans ta bibliothèque Jean. Pour
-            analyser cette offre, upload un CV PDF depuis ton profil ou depuis
-            la section Documents d'une candidature existante.
-          </p>
-        </div>
-        <button id="btn-go-to-profile" class="jfmj-btn jfmj-btn-primary">
-          Aller dans Mon profil
-        </button>
-        <button id="btn-close-no-cv" class="jfmj-btn jfmj-btn-secondary">
-          Fermer
-        </button>
-      </section>
-
-      <!-- =========================================== -->
-      <!-- VUE 9 : Analyse en cours                     -->
-      <!-- =========================================== -->
-      <section id="view-analyzing" class="jfmj-view jfmj-hidden">
-        <div class="jfmj-spinner"></div>
-        <p id="analyzing-text" class="jfmj-loading-text">
-          Préparation de l'analyse…
-        </p>
-        <p class="jfmj-analyzing-hint">
-          Claude analyse ton CV face à l'offre. Cela prend généralement 15 à
-          30 secondes.
-        </p>
-      </section>
-
-      <!-- =========================================== -->
-      <!-- VUE 10 : Résultat de l'analyse ATS           -->
-      <!-- =========================================== -->
-      <section id="view-ats-result" class="jfmj-view jfmj-hidden">
-        <div class="jfmj-status-pill">🎯 Résultat de l'analyse</div>
-
-        <!-- Cercle de score global -->
-        <div class="jfmj-card jfmj-score-card">
-          <div class="jfmj-score-circle-wrap">
-            <svg
-              class="jfmj-score-circle"
-              viewBox="0 0 120 120"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle
-                class="jfmj-score-bg"
-                cx="60"
-                cy="60"
-                r="52"
-              />
-              <circle
-                id="score-progress"
-                class="jfmj-score-progress"
-                cx="60"
-                cy="60"
-                r="52"
-                stroke-dasharray="326.7"
-                stroke-dashoffset="326.7"
-              />
-            </svg>
-            <div class="jfmj-score-text">
-              <div id="score-number">0</div>
-              <div class="jfmj-score-max">/100</div>
+      <!-- Mots-clés -->
+      <details class="jfmj-details">
+        <summary class="jfmj-details-summary">🔑 Couverture des mots-clés</summary>
+        <div class="jfmj-details-content">
+          <div class="jfmj-keyword-bar-container">
+            <div class="jfmj-keyword-bar-bg">
+              <div id="keyword-coverage-fill" class="jfmj-keyword-bar-fill"></div>
             </div>
+            <span id="keyword-coverage-pct" class="jfmj-keyword-pct">0%</span>
           </div>
-          <p id="score-label" class="jfmj-score-label">—</p>
-          <p id="analyses-restantes" class="jfmj-hint"></p>
+          <p class="jfmj-help-text" style="margin-top: 12px;">Mots-clés manquants critiques :</p>
+          <div id="keywords-missing-chips" class="jfmj-chips-container"></div>
+        </div>
+      </details>
+
+      <!-- Points forts / faibles -->
+      <details class="jfmj-details">
+        <summary class="jfmj-details-summary">💪 Points forts</summary>
+        <ul id="strengths-list" class="jfmj-bullets jfmj-bullets-strong"></ul>
+      </details>
+
+      <details class="jfmj-details">
+        <summary class="jfmj-details-summary">⚠️ Points faibles</summary>
+        <ul id="weaknesses-list" class="jfmj-bullets jfmj-bullets-weak"></ul>
+      </details>
+
+      <!-- Recommandations -->
+      <details class="jfmj-details" open>
+        <summary class="jfmj-details-summary">💡 Recommandations</summary>
+        <div id="recommendations-list" class="jfmj-recommendations"></div>
+      </details>
+
+      <!-- ✨ NOUVEAU SESSION 6 : zone Mes documents pour postuler -->
+      <div id="documents-zone" class="jfmj-documents-zone">
+        <h2 class="jfmj-section-title">📎 Mes documents pour postuler</h2>
+
+        <!-- Bloc CV -->
+        <div class="jfmj-doc-block">
+          <label class="jfmj-field-label">CV utilisé pour l'analyse</label>
+          <p id="doc-cv-name" class="jfmj-field-readonly">—</p>
+          <button id="btn-download-cv" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full">📥 Télécharger ce CV</button>
         </div>
 
-        <!-- Sous-scores -->
-        <div class="jfmj-card">
-          <h3 class="jfmj-card-title">Détail des sous-scores</h3>
-          <div id="subscores-list" class="jfmj-subscores"></div>
-        </div>
+        <!-- Séparateur -->
+        <div class="jfmj-doc-separator"></div>
 
-        <!-- Keywords -->
-        <div class="jfmj-card">
-          <h3 class="jfmj-card-title">Mots-clés du poste</h3>
-          <div class="jfmj-kw-coverage">
-            <div class="jfmj-kw-coverage-bar">
-              <div id="kw-bar-fill" class="jfmj-kw-coverage-fill"></div>
+        <!-- Bloc LM -->
+        <div class="jfmj-doc-block">
+          <label class="jfmj-field-label">Lettre de motivation</label>
+
+          <!-- Sélecteur LM existantes -->
+          <select id="select-lm" class="jfmj-field-input">
+            <option value="">— Choisis une LM existante…</option>
+          </select>
+
+          <!-- Bouton télécharger LM (visible si LM sélectionnée) -->
+          <button id="btn-download-lm" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full jfmj-hidden">📥 Télécharger cette LM</button>
+
+          <!-- OU séparateur -->
+          <div class="jfmj-or-separator">
+            <span>OU</span>
+          </div>
+
+          <!-- Génération LM -->
+          <button id="btn-generate-lm-toggle" class="jfmj-btn jfmj-btn-primary jfmj-btn-full">✨ Générer une LM avec Claude</button>
+
+          <!-- Options de génération LM (cachées par défaut) -->
+          <div id="lm-generate-options" class="jfmj-lm-options jfmj-hidden">
+            <label class="jfmj-field-label">Ton</label>
+            <select id="select-lm-tone" class="jfmj-field-input">
+              <option value="sobre">Sobre et professionnel</option>
+              <option value="chaleureux">Chaleureux et engagé</option>
+              <option value="percutant">Percutant et direct</option>
+            </select>
+
+            <label class="jfmj-field-label">Longueur</label>
+            <select id="select-lm-length" class="jfmj-field-input">
+              <option value="250">Courte (~250 mots)</option>
+              <option value="300" selected>Moyenne (~300 mots)</option>
+              <option value="400">Longue (~400 mots)</option>
+            </select>
+
+            <label class="jfmj-field-label">Langue</label>
+            <select id="select-lm-lang" class="jfmj-field-input">
+              <option value="FR" selected>Français</option>
+              <option value="EN">English</option>
+            </select>
+
+            <div class="jfmj-actions" style="margin-top: 16px;">
+              <button id="btn-cancel-generate-lm" class="jfmj-btn jfmj-btn-secondary">Annuler</button>
+              <button id="btn-launch-generate-lm" class="jfmj-btn jfmj-btn-primary">✨ Générer</button>
             </div>
-            <p class="jfmj-kw-coverage-text">
-              <strong id="kw-coverage-pct">0%</strong> des mots-clés du poste
-              sont présents dans ton CV
-            </p>
-          </div>
-          <div
-            id="kw-missing-section"
-            class="jfmj-kw-missing-section jfmj-hidden"
-          >
-            <p class="jfmj-kw-missing-title">Manquants critiques :</p>
-            <div id="kw-missing-chips" class="jfmj-chips"></div>
+
+            <p class="jfmj-help-text" style="margin-top: 12px;">⏱️ La génération prend 15 à 30 secondes.</p>
           </div>
         </div>
 
-        <!-- Points forts -->
-        <div class="jfmj-card">
-          <h3 class="jfmj-card-title">✅ Points forts</h3>
-          <ul id="points-forts" class="jfmj-bullets jfmj-bullets-positive"></ul>
-        </div>
+        <!-- Astuce drag & drop -->
+        <p class="jfmj-tip-box">
+          💡 <strong>Astuce :</strong> drag & drop tes fichiers téléchargés sur le formulaire de candidature à gauche.
+        </p>
+      </div>
 
-        <!-- Points faibles -->
-        <div class="jfmj-card">
-          <h3 class="jfmj-card-title">⚠️ Points à améliorer</h3>
-          <ul
-            id="points-faibles"
-            class="jfmj-bullets jfmj-bullets-negative"
-          ></ul>
-        </div>
+      <!-- Actions footer -->
+      <div class="jfmj-actions" style="margin-top: 24px;">
+        <a id="link-view-after-ats" class="jfmj-btn jfmj-btn-secondary" target="_blank">Voir dans Jean</a>
+        <button id="btn-close-ats" class="jfmj-btn jfmj-btn-link">Fermer</button>
+      </div>
+    </section>
 
-        <!-- Recommandations -->
-        <div class="jfmj-card">
-          <h3 class="jfmj-card-title">🎯 Recommandations prioritaires</h3>
-          <div id="recommandations" class="jfmj-recos"></div>
-        </div>
+    <!-- Vue : génération LM en cours -->
+    <section id="view-generating-lm" class="jfmj-view jfmj-hidden">
+      <div class="jfmj-loading-state">
+        <div class="jfmj-spinner jfmj-spinner-yellow"></div>
+        <p id="generating-lm-message" class="jfmj-loading-text">Lecture de l'offre…</p>
+      </div>
+    </section>
 
-        <!-- Boutons -->
-        <button id="btn-view-in-jean-result" class="jfmj-btn jfmj-btn-primary">
-          Voir dans Jean
-        </button>
-        <button
-          id="btn-adapt-cv"
-          class="jfmj-btn jfmj-btn-secondary"
-          disabled
-          title="Disponible en session 6"
-        >
-          Adapter mon CV (bientôt)
-        </button>
-        <button id="btn-close-result" class="jfmj-btn jfmj-btn-secondary">
-          Fermer le panneau
-        </button>
-      </section>
-    </main>
+    <!-- Vue : erreur générique (PDF, génération, etc.) -->
+    <section id="view-error" class="jfmj-view jfmj-hidden">
+      <div class="jfmj-empty-state">
+        <span class="jfmj-emoji-big">⚠️</span>
+        <h2>Une erreur est survenue</h2>
+        <p id="error-message">—</p>
+        <button id="btn-error-retry" class="jfmj-btn jfmj-btn-primary">Retour</button>
+      </div>
+    </section>
 
-    <!-- Footer sticky : actions sur la vue récap uniquement -->
-    <footer id="footer-recap" class="jfmj-footer jfmj-hidden">
-      <button id="btn-cancel" class="jfmj-btn jfmj-btn-secondary">
-        Annuler
-      </button>
-      <button id="btn-save" class="jfmj-btn jfmj-btn-primary">
-        ✓ Enregistrer dans Jean
-      </button>
-    </footer>
+  </div>
 
-    <script src="sidepanel.js"></script>
-  </body>
+  <script src="sidepanel.js"></script>
+</body>
 </html>

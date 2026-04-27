@@ -1,7 +1,8 @@
-/* =========================================
-   Side Panel — Jean find my Job
-   Charte : neo-brutalist, Montserrat
-   ========================================= */
+/* ============================================================
+   Jean find my Job — Side panel
+   Charte : Montserrat, noir #111, jaune #F5C400, rouge #E8151B
+   Style : neo-brutalist (bordures épaisses + ombres décalées)
+   ============================================================ */
 
 * {
   box-sizing: border-box;
@@ -9,30 +10,37 @@
   padding: 0;
 }
 
-body {
-  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #fafafa;
-  color: #111;
+html, body {
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
-  line-height: 1.5;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  color: #111;
+  background: #FAFAF7;
+  height: 100%;
+  overflow-x: hidden;
 }
 
-/* ---------- Header sticky ---------- */
+#app {
+  padding: 16px;
+  padding-bottom: 32px;
+}
+
+.jfmj-hidden {
+  display: none !important;
+}
+
+/* ============================================================
+   Header / logo
+   ============================================================ */
+
 .jfmj-header {
-  position: sticky;
-  top: 0;
-  background: #fff;
-  border-bottom: 3px solid #111;
-  padding: 16px 20px;
-  z-index: 10;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #111;
 }
 
 .jfmj-logo {
-  font-weight: 800;
-  font-size: 20px;
+  font-weight: 900;
+  font-size: 18px;
   letter-spacing: -0.5px;
 }
 
@@ -41,707 +49,710 @@ body {
 }
 
 .jfmj-logo-rest {
-  color: #e8151b;
-  margin-left: 4px;
+  color: #E8151B;
 }
 
-/* ---------- Main / vues ---------- */
-.jfmj-main {
-  flex: 1;
-  padding: 20px;
-  padding-bottom: 100px; /* place pour le footer sticky */
-}
+/* ============================================================
+   Vues
+   ============================================================ */
 
 .jfmj-view {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.jfmj-section-title {
+  font-weight: 900;
+  font-size: 16px;
+  margin-bottom: 16px;
+  color: #111;
+}
+
+/* ============================================================
+   États empty / success / loading
+   ============================================================ */
+
+.jfmj-empty-state,
+.jfmj-success-state,
+.jfmj-loading-state {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  text-align: center;
+  padding: 32px 16px;
+  gap: 14px;
 }
 
-.jfmj-hidden {
-  display: none !important;
+.jfmj-emoji-big {
+  font-size: 48px;
+  margin-bottom: 4px;
 }
 
-/* ---------- Status pill ---------- */
-.jfmj-status-pill {
-  display: inline-block;
-  align-self: flex-start;
-  background: #f5c400;
+.jfmj-empty-state h2,
+.jfmj-success-state h2 {
+  font-weight: 900;
+  font-size: 18px;
   color: #111;
-  font-weight: 700;
-  font-size: 12px;
-  padding: 6px 12px;
-  border: 2px solid #111;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-/* ---------- Cards ---------- */
+.jfmj-empty-state p,
+.jfmj-success-state p {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.jfmj-loading-text {
+  font-size: 13px;
+  color: #555;
+  font-weight: 600;
+}
+
+/* ============================================================
+   Spinner
+   ============================================================ */
+
+.jfmj-spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid #E5E5E5;
+  border-top-color: #111;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.jfmj-spinner-yellow {
+  border-top-color: #F5C400;
+  width: 48px;
+  height: 48px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   Cards
+   ============================================================ */
+
 .jfmj-card {
   background: #fff;
-  border: 3px solid #111;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 4px 4px 0 #111;
+  border: 2px solid #111;
+  border-radius: 10px;
+  box-shadow: 3px 3px 0 #111;
+  padding: 14px;
+  margin-bottom: 14px;
 }
 
-.jfmj-card-main {
-  background: #fffbe6;
-}
+/* ============================================================
+   Champs de formulaire
+   ============================================================ */
 
-.jfmj-card-title {
-  font-size: 13px;
-  font-weight: 700;
+.jfmj-field-label {
+  display: block;
+  font-weight: 800;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #111;
-  margin-bottom: 12px;
-  cursor: default;
-}
-
-/* Pour <details> */
-details.jfmj-card summary.jfmj-card-title {
-  cursor: pointer;
-  list-style: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-details.jfmj-card summary.jfmj-card-title::after {
-  content: "▼";
-  font-size: 10px;
-  transition: transform 0.2s;
-}
-
-details[open].jfmj-card summary.jfmj-card-title::after {
-  transform: rotate(180deg);
-}
-
-/* ---------- Inputs ---------- */
-.jfmj-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  margin-top: 12px;
   color: #555;
+  margin-top: 10px;
+  margin-bottom: 6px;
 }
 
-.jfmj-label:first-of-type {
+.jfmj-field-label:first-child {
   margin-top: 0;
 }
 
-.jfmj-input,
-.jfmj-textarea {
+.jfmj-field-input {
   width: 100%;
-  font-family: inherit;
-  font-size: 14px;
-  padding: 10px 12px;
-  border: 2px solid #111;
-  border-radius: 8px;
-  background: #fff;
-  color: #111;
-  outline: none;
-}
-
-.jfmj-input:focus,
-.jfmj-textarea:focus {
-  background: #fffbe6;
-  box-shadow: 2px 2px 0 #111;
-}
-
-.jfmj-textarea {
-  margin-top: 12px;
-  min-height: 120px;
-  resize: vertical;
-  font-family: inherit;
-  line-height: 1.6;
-}
-
-/* Select stylé comme un input */
-.jfmj-select {
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23111' d='M0 0l6 8 6-8z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 36px;
-  cursor: pointer;
-}
-
-.jfmj-select option:disabled {
-  color: #aaa;
-  font-style: italic;
-}
-
-/* ---------- Liste de champs détectés ---------- */
-.jfmj-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.jfmj-field-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 6px 0;
-  border-bottom: 1px solid #ebebeb;
-}
-
-.jfmj-field-row:last-child {
-  border-bottom: none;
-}
-
-.jfmj-field-key {
-  font-size: 12px;
-  font-weight: 600;
-  color: #555;
-  flex-shrink: 0;
-}
-
-.jfmj-field-value {
+  padding: 9px 12px;
+  font-family: 'Montserrat', sans-serif;
   font-size: 13px;
+  font-weight: 600;
   color: #111;
-  text-align: right;
-  word-break: break-word;
+  background: #FAFAFA;
+  border: 1.5px solid #E5E5E5;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s;
 }
 
-/* ---------- Chips (compétences + manquants) ---------- */
-.jfmj-chips {
+.jfmj-field-input:focus {
+  border-color: #F5C400;
+}
+
+.jfmj-field-readonly {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  padding: 6px 0;
+}
+
+.jfmj-field-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #222;
+  background: #FAFAFA;
+  border: 1.5px solid #E5E5E5;
+  border-radius: 6px;
+  outline: none;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.jfmj-field-textarea:focus {
+  border-color: #F5C400;
+}
+
+.jfmj-help-text {
+  font-size: 11px;
+  color: #888;
+  font-weight: 500;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   Chips (compétences)
+   ============================================================ */
+
+.jfmj-chips-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .jfmj-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #f5c400;
+  padding: 4px 10px;
+  background: #FFF8DD;
+  border: 1.5px solid #F5C400;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 700;
   color: #111;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 8px 4px 10px;
-  border: 2px solid #111;
-  border-radius: 999px;
 }
 
 .jfmj-chip-remove {
-  background: #111;
-  color: #f5c400;
+  background: none;
   border: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: #888;
+  padding: 0;
+  line-height: 1;
 }
 
 .jfmj-chip-remove:hover {
-  background: #e8151b;
+  color: #E8151B;
 }
 
-/* Variante chip pour mots-clés manquants (rouge) */
-.jfmj-chip-missing {
-  background: #ffe5e5;
-  color: #b02020;
-  border-color: #e8151b;
-  padding: 4px 10px;
+.jfmj-chip-keyword-missing {
+  background: #FFEBEB;
+  border-color: #E8151B;
 }
 
-.jfmj-hint {
-  font-size: 11px;
-  color: #888;
-  margin-top: 8px;
-  font-style: italic;
-}
+/* ============================================================
+   Details (accordéons)
+   ============================================================ */
 
-/* ---------- Banners ---------- */
-.jfmj-banner {
-  border: 3px solid #111;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 4px 4px 0 #111;
-}
-
-.jfmj-banner strong {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 15px;
-}
-
-.jfmj-banner p {
-  font-size: 13px;
-  color: #333;
-}
-
-.jfmj-banner-warn {
-  background: #fff3cd;
-}
-
-.jfmj-banner-info {
-  background: #e7f3ff;
-}
-
-/* ---------- Erreur ---------- */
-.jfmj-error {
-  background: #ffe5e5;
-  border: 2px solid #e8151b;
+.jfmj-details {
+  background: #fff;
+  border: 1.5px solid #E5E5E5;
   border-radius: 8px;
-  padding: 10px 12px;
-  color: #b02020;
-  font-size: 13px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.jfmj-details[open] {
+  border-color: #111;
+  box-shadow: 2px 2px 0 #111;
+}
+
+.jfmj-details-summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  font-weight: 800;
+  font-size: 12px;
+  color: #111;
+  background: #FAFAFA;
+  list-style: none;
+  position: relative;
+}
+
+.jfmj-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.jfmj-details-summary::after {
+  content: '▾';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  transition: transform 0.15s;
+}
+
+.jfmj-details[open] .jfmj-details-summary::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.jfmj-details-content {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: #333;
+  line-height: 1.6;
+}
+
+.jfmj-details-content p {
+  margin-bottom: 4px;
   font-weight: 500;
 }
 
-/* ---------- Vue succès / déjà existante ---------- */
-.jfmj-success-icon,
-.jfmj-info-icon {
-  font-size: 56px;
-  text-align: center;
-  margin: 16px 0 8px;
-}
+/* ============================================================
+   Buttons
+   ============================================================ */
 
-.jfmj-success-icon {
-  color: #2c8a3e;
-  font-weight: 900;
-  background: #d4edda;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  border: 3px solid #111;
-  box-shadow: 4px 4px 0 #111;
-  display: flex;
+.jfmj-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin: 24px auto 16px;
-  line-height: 1;
-}
-
-.jfmj-success-title,
-.jfmj-already-title {
-  text-align: center;
-  font-size: 18px;
+  gap: 6px;
+  padding: 10px 16px;
+  font-family: 'Montserrat', sans-serif;
   font-weight: 800;
-  color: #111;
-}
-
-.jfmj-success-subtitle {
-  text-align: center;
-  font-size: 14px;
-  color: #555;
-  font-style: italic;
-  padding: 0 12px;
-}
-
-/* ---------- Buttons ---------- */
-.jfmj-btn {
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  padding: 12px 16px;
-  border: 3px solid #111;
+  font-size: 13px;
   border-radius: 8px;
+  border: 2px solid #111;
   cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
+  text-decoration: none;
   text-align: center;
+  transition: all 0.12s;
+  min-height: 38px;
+}
+
+.jfmj-btn:active {
+  transform: translate(1px, 1px);
 }
 
 .jfmj-btn-primary {
-  background: #f5c400;
+  background: #F5C400;
   color: #111;
-  box-shadow: 4px 4px 0 #111;
+  box-shadow: 3px 3px 0 #111;
 }
 
 .jfmj-btn-primary:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 #111;
-}
-
-.jfmj-btn-primary:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 #111;
-}
-
-.jfmj-btn-primary:disabled {
-  background: #ddd;
-  color: #888;
-  cursor: not-allowed;
-  box-shadow: 4px 4px 0 #888;
-  transform: none;
+  box-shadow: 4px 4px 0 #111;
+  transform: translate(-1px, -1px);
 }
 
 .jfmj-btn-secondary {
   background: #fff;
   color: #111;
+  box-shadow: 2px 2px 0 #111;
 }
 
 .jfmj-btn-secondary:hover {
-  background: #f0f0f0;
+  background: #FAFAFA;
 }
 
-.jfmj-btn-secondary:disabled {
-  background: #f0f0f0;
-  color: #999;
+.jfmj-btn-link {
+  background: transparent;
+  color: #555;
+  border: none;
+  box-shadow: none;
+  font-weight: 600;
+  text-decoration: underline;
+  padding: 8px 16px;
+}
+
+.jfmj-btn-link:hover {
+  color: #111;
+}
+
+.jfmj-btn-full {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.jfmj-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-  border-color: #999;
+  transform: none !important;
+  box-shadow: 1px 1px 0 #888 !important;
 }
 
-/* ---------- Footer sticky (vue récap) ---------- */
-.jfmj-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #fff;
-  border-top: 3px solid #111;
-  padding: 12px 20px;
+.jfmj-actions {
   display: flex;
   gap: 8px;
-  z-index: 10;
+  justify-content: flex-end;
+  margin-top: 16px;
+  flex-wrap: wrap;
 }
 
-.jfmj-footer .jfmj-btn {
+.jfmj-actions .jfmj-btn {
   flex: 1;
+  min-width: 110px;
 }
 
-/* ---------- Spinner (vue chargement / analyse) ---------- */
-.jfmj-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f5c400;
-  border-top-color: #111;
-  border-radius: 50%;
-  animation: jfmj-spin 0.8s linear infinite;
-  margin: 60px auto 16px;
-}
+/* ============================================================
+   Score circle (résultat ATS)
+   ============================================================ */
 
-@keyframes jfmj-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.jfmj-loading-text {
-  text-align: center;
-  color: #555;
-  font-size: 14px;
-  font-weight: 600;
-  font-style: italic;
-}
-
-.jfmj-analyzing-hint {
-  text-align: center;
-  color: #888;
-  font-size: 12px;
-  margin-top: 8px;
-  padding: 0 24px;
-}
-
-/* =========================================
-   SESSION 5 — Résultat ATS
-   ========================================= */
-
-/* ---------- Carte du score global avec cercle ---------- */
-.jfmj-score-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 16px;
-  background: #fffbe6;
-}
-
-.jfmj-score-circle-wrap {
+.jfmj-score-circle-container {
   position: relative;
   width: 160px;
   height: 160px;
-  margin-bottom: 12px;
+  margin: 16px auto 8px;
 }
 
 .jfmj-score-circle {
   width: 100%;
   height: 100%;
-  transform: rotate(-90deg); /* commence en haut */
+  transform: rotate(-90deg);
 }
 
-.jfmj-score-bg {
+.jfmj-score-circle-bg {
   fill: none;
-  stroke: #f5c400;
-  stroke-width: 12;
+  stroke: #F0F0F0;
+  stroke-width: 10;
 }
 
-.jfmj-score-progress {
+.jfmj-score-circle-fill {
   fill: none;
-  stroke: #111;
-  stroke-width: 12;
+  stroke: #2E7D32;
+  stroke-width: 10;
   stroke-linecap: round;
-  transition: stroke-dashoffset 1.2s ease-out, stroke 0.4s;
+  stroke-dasharray: 326.7; /* 2 * π * 52 */
+  stroke-dashoffset: 326.7;
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Variantes couleur du cercle selon le score */
-.jfmj-score-progress.jfmj-score-good {
-  stroke: #2c8a3e;
-}
-.jfmj-score-progress.jfmj-score-medium {
-  stroke: #d97706;
-}
-.jfmj-score-progress.jfmj-score-low {
-  stroke: #e8151b;
-}
+.jfmj-score-circle-fill.score-orange { stroke: #F57C00; }
+.jfmj-score-circle-fill.score-red { stroke: #E8151B; }
 
-.jfmj-score-text {
+.jfmj-score-circle-center {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.jfmj-score-text > div:first-child {
-  font-size: 44px;
-  font-weight: 800;
-  line-height: 1;
+.jfmj-score-value {
+  font-size: 38px;
+  font-weight: 900;
   color: #111;
+  line-height: 1;
 }
 
 .jfmj-score-max {
-  font-size: 14px;
-  font-weight: 600;
-  color: #555;
-  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #888;
+  margin-top: 2px;
 }
 
 .jfmj-score-label {
-  font-size: 16px;
-  font-weight: 700;
-  color: #111;
   text-align: center;
-  margin-top: 4px;
+  font-weight: 800;
+  font-size: 14px;
+  margin-bottom: 20px;
+  color: #111;
 }
 
-/* ---------- Sous-scores (jauges horizontales) ---------- */
+/* ============================================================
+   Sous-scores (jauges)
+   ============================================================ */
+
 .jfmj-subscores {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.jfmj-subscore-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.jfmj-subscore-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-size: 13px;
-}
-
-.jfmj-subscore-name {
-  font-weight: 600;
-  color: #333;
-}
-
-.jfmj-subscore-value {
-  font-weight: 700;
-  color: #111;
-  font-variant-numeric: tabular-nums;
-  font-size: 12px;
-}
-
-.jfmj-subscore-bar {
-  width: 100%;
-  height: 8px;
-  background: #ebebeb;
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid #ddd;
-}
-
-.jfmj-subscore-fill {
-  height: 100%;
-  background: #111;
-  border-radius: 999px;
-  transition: width 0.8s ease-out;
-}
-
-.jfmj-subscore-fill.jfmj-fill-good {
-  background: #2c8a3e;
-}
-.jfmj-subscore-fill.jfmj-fill-medium {
-  background: #d97706;
-}
-.jfmj-subscore-fill.jfmj-fill-low {
-  background: #e8151b;
-}
-
-/* ---------- Couverture mots-clés ---------- */
-.jfmj-kw-coverage {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.jfmj-kw-coverage-bar {
-  width: 100%;
-  height: 14px;
-  background: #ebebeb;
-  border: 2px solid #111;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.jfmj-kw-coverage-fill {
-  height: 100%;
-  width: 0%;
-  background: #f5c400;
-  transition: width 0.8s ease-out, background 0.4s;
-}
-
-.jfmj-kw-coverage-fill.jfmj-fill-good {
-  background: #2c8a3e;
-}
-.jfmj-kw-coverage-fill.jfmj-fill-low {
-  background: #e8151b;
-}
-
-.jfmj-kw-coverage-text {
-  font-size: 13px;
-  color: #333;
-}
-
-.jfmj-kw-coverage-text strong {
-  font-size: 16px;
-  color: #111;
-}
-
-.jfmj-kw-missing-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1.5px solid #ebebeb;
-}
-
-.jfmj-kw-missing-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #b02020;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-
-/* ---------- Bullets points forts / faibles ---------- */
-.jfmj-bullets {
-  list-style: none;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.jfmj-bullets li {
-  position: relative;
-  padding-left: 24px;
-  font-size: 13px;
-  color: #333;
-  line-height: 1.5;
+.jfmj-subscore-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 50px;
+  align-items: center;
+  gap: 10px;
 }
 
-.jfmj-bullets li::before {
-  position: absolute;
-  left: 0;
-  top: 0;
+.jfmj-subscore-label {
+  font-size: 11px;
   font-weight: 700;
+  color: #444;
 }
 
-.jfmj-bullets-positive li::before {
-  content: "✓";
-  color: #2c8a3e;
-  font-size: 16px;
-  line-height: 1.2;
+.jfmj-subscore-bar-bg {
+  height: 8px;
+  background: #F0F0F0;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-.jfmj-bullets-negative li::before {
-  content: "•";
-  color: #d97706;
-  font-size: 22px;
-  line-height: 0.7;
-  top: 4px;
+.jfmj-subscore-bar-fill {
+  height: 100%;
+  background: #2E7D32;
+  border-radius: 4px;
+  width: 0%;
+  transition: width 1s ease-out;
 }
 
-/* ---------- Recommandations avec pills ---------- */
-.jfmj-recos {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.jfmj-subscore-bar-fill.bar-orange { background: #F57C00; }
+.jfmj-subscore-bar-fill.bar-red { background: #E8151B; }
+
+.jfmj-subscore-value {
+  font-size: 11px;
+  font-weight: 800;
+  color: #111;
+  text-align: right;
 }
 
-.jfmj-reco {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px;
-  background: #fafafa;
-  border: 1.5px solid #ebebeb;
-  border-radius: 8px;
-}
+/* ============================================================
+   Mots-clés couverture
+   ============================================================ */
 
-.jfmj-reco-header {
+.jfmj-keyword-bar-container {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.jfmj-keyword-bar-bg {
+  flex: 1;
+  height: 10px;
+  background: #F0F0F0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.jfmj-keyword-bar-fill {
+  height: 100%;
+  background: #F5C400;
+  border-radius: 5px;
+  width: 0%;
+  transition: width 1s ease-out;
+}
+
+.jfmj-keyword-pct {
+  font-size: 12px;
+  font-weight: 800;
+  color: #111;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* ============================================================
+   Bullets points forts/faibles
+   ============================================================ */
+
+.jfmj-bullets {
+  list-style: none;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.jfmj-reco-priority {
-  font-size: 11px;
-  font-weight: 800;
-  color: #555;
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-
-.jfmj-reco-pill {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: 1.5px solid;
-}
-
-.jfmj-reco-pill-critique {
-  background: #ffe5e5;
-  color: #b02020;
-  border-color: #e8151b;
-}
-
-.jfmj-reco-pill-majeur {
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #d97706;
-}
-
-.jfmj-reco-pill-mineur {
-  background: #fffbe6;
-  color: #555;
-  border-color: #f5c400;
-}
-
-.jfmj-reco-action {
-  font-size: 13px;
-  color: #111;
+.jfmj-bullets li {
+  font-size: 12px;
   line-height: 1.5;
+  font-weight: 500;
+  padding-left: 22px;
+  position: relative;
+  color: #333;
+}
+
+.jfmj-bullets-strong li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #2E7D32;
+  font-weight: 900;
+}
+
+.jfmj-bullets-weak li::before {
+  content: '•';
+  position: absolute;
+  left: 4px;
+  color: #F57C00;
+  font-weight: 900;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ============================================================
+   Recommandations
+   ============================================================ */
+
+.jfmj-recommendations {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jfmj-recommendation-card {
+  background: #FAFAFA;
+  border: 1.5px solid #E5E5E5;
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jfmj-recommendation-priority {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  align-self: flex-start;
+}
+
+.jfmj-priority-critique {
+  background: #FFEBEB;
+  color: #C62828;
+  border: 1px solid #E8151B;
+}
+
+.jfmj-priority-majeur {
+  background: #FFF4E5;
+  color: #E65100;
+  border: 1px solid #F57C00;
+}
+
+.jfmj-priority-mineur {
+  background: #FFF8DD;
+  color: #8B6F00;
+  border: 1px solid #F5C400;
+}
+
+.jfmj-recommendation-action {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #333;
+  font-weight: 500;
+}
+
+/* ============================================================
+   ✨ NOUVEAU SESSION 6 — Zone "Mes documents pour postuler"
+   ============================================================ */
+
+.jfmj-documents-zone {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 2px solid #111;
+}
+
+.jfmj-doc-block {
+  background: #fff;
+  border: 2px solid #111;
+  border-radius: 10px;
+  box-shadow: 3px 3px 0 #111;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.jfmj-doc-separator {
+  height: 1px;
+  background: #E5E5E5;
+  margin: 6px 0 14px;
+}
+
+/* Séparateur "OU" entre choix LM existante et génération */
+.jfmj-or-separator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  text-align: center;
+}
+
+.jfmj-or-separator::before,
+.jfmj-or-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #DDD;
+}
+
+.jfmj-or-separator span {
+  font-size: 10px;
+  font-weight: 800;
+  color: #888;
+  letter-spacing: 1px;
+}
+
+/* Options de génération LM (ton, longueur, langue) */
+.jfmj-lm-options {
+  margin-top: 12px;
+  padding: 12px;
+  background: #FAFAF7;
+  border: 1.5px solid #E5E5E5;
+  border-radius: 8px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Encadré astuce drag & drop */
+.jfmj-tip-box {
+  margin-top: 6px;
+  padding: 12px 14px;
+  background: #FFF8DD;
+  border: 1.5px solid #F5C400;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6B5500;
+  font-weight: 500;
+}
+
+.jfmj-tip-box strong {
+  font-weight: 800;
+  color: #6B5500;
+}
+
+/* ============================================================
+   Responsive : le side panel peut faire ~380px de large
+   ============================================================ */
+
+@media (max-width: 380px) {
+  #app {
+    padding: 12px;
+  }
+  .jfmj-section-title {
+    font-size: 15px;
+  }
+  .jfmj-score-circle-container {
+    width: 140px;
+    height: 140px;
+  }
+  .jfmj-score-value {
+    font-size: 32px;
+  }
+  .jfmj-subscore-row {
+    grid-template-columns: 95px 1fr 40px;
+  }
 }

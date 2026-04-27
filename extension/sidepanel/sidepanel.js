@@ -1,771 +1,846 @@
-// ===============================================
-// Side Panel — Jean find my Job (v0.5.0)
-// Logique : capture + création carte + analyse ATS
-// ===============================================
+// ============================================================
+// Jean find my Job — Side panel logic
+// Session 6 : ajout zone documents (CV/LM download + LM generation)
+// ============================================================
 
-const API_URL_FROM_EXTENSION = "https://jeanfindmyjob.fr/api/jobs/from-extension";
-const API_URL_USER_DOCUMENTS = "https://jeanfindmyjob.fr/api/extension/user-documents";
-const API_URL_ATS_FROM_EXTENSION = (jobId) =>
-  `https://jeanfindmyjob.fr/api/jobs/${jobId}/ats-from-extension`;
-const DASHBOARD_URL = "https://jeanfindmyjob.fr/dashboard";
-const PROFILE_URL = "https://jeanfindmyjob.fr/dashboard/profile";
+const SUPABASE_URL = 'https://kjsqfgpewjzierlxzdyj.supabase.co';
+const JEAN_API_BASE = 'https://jeanfindmyjob.fr';
 
-// État local du panel
-let currentCapture = null; // données scrapées (modifiables)
-let currentSkills = []; // tableau de skills (modifiables)
-let createdJobId = null; // id de la carte créée/existante
-let availableCvs = []; // CVs chargés depuis /api/extension/user-documents
-let defaultCvRef = null; // ref du CV par défaut profil (peut être null)
-let selectedCvRef = null; // CV choisi pour l'analyse
-let analyzingInterval = null; // timer messages "analyse en cours"
+// ============================================================
+// État global
+// ============================================================
+let currentJobId = null;          // jobId Supabase après save
+let currentSessionToken = null;   // access_token Supabase
+let currentCapturedData = null;   // données scrapées
+let selectedCvRef = null;         // ref du CV sélectionné pour l'analyse
+let selectedCvDisplayName = null; // nom du CV sélectionné (pour bouton télécharger)
+let availableLms = [];            // liste des LM chargées (cache local)
 
-// ---------- Helpers DOM ----------
-const $ = (id) => document.getElementById(id);
-
-function showView(viewId) {
-  document
-    .querySelectorAll(".jfmj-view")
-    .forEach((v) => v.classList.add("jfmj-hidden"));
-  $(viewId).classList.remove("jfmj-hidden");
-
-  // Footer visible uniquement sur la vue récap
-  if (viewId === "view-recap") {
-    $("footer-recap").classList.remove("jfmj-hidden");
-  } else {
-    $("footer-recap").classList.add("jfmj-hidden");
-  }
-
-  // Si on quitte la vue analyzing, on stoppe le timer
-  if (viewId !== "view-analyzing") {
-    stopAnalyzingMessages();
-  }
-
-  // Scroll vers le haut sur changement de vue (utile pour la longue vue résultat)
-  window.scrollTo({ top: 0, behavior: "smooth" });
+// ============================================================
+// Helpers DOM
+// ============================================================
+function $(id) { return document.getElementById(id); }
+function show(viewId) {
+  document.querySelectorAll('.jfmj-view').forEach(v => v.classList.add('jfmj-hidden'));
+  $(viewId)?.classList.remove('jfmj-hidden');
+}
+function setText(id, text) {
+  const el = $(id);
+  if (el) el.textContent = text || '—';
 }
 
-function showError(message) {
-  const errBox = $("error-box");
-  if (errBox) {
-    errBox.textContent = message;
-    errBox.classList.remove("jfmj-hidden");
-  } else {
-    alert(message);
-  }
-}
-
-function clearError() {
-  const errBox = $("error-box");
-  if (errBox) errBox.classList.add("jfmj-hidden");
-}
-
-// ---------- Auth (lecture du token Supabase) ----------
-async function getAuthSession() {
+// ============================================================
+// Auth — récupérer le token depuis chrome.storage
+// ============================================================
+async function getSessionToken() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(["jfmj_session"], (result) => {
-      resolve(result.jfmj_session || null);
-    });
-  });
-}
-
-function isSessionValid(session) {
-  if (!session || !session.access_token || !session.expires_at) return false;
-  // expires_at est en secondes, on compare en secondes
-  const nowSec = Math.floor(Date.now() / 1000);
-  return session.expires_at > nowSec + 30; // marge de 30s
-}
-
-// ---------- Récup des données capturées ----------
-async function getPendingCapture() {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(
-      { type: "JFMJ_GET_PENDING_CAPTURE" },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          console.error(
-            "[JFMJ Panel] Erreur sendMessage :",
-            chrome.runtime.lastError
-          );
-          resolve(null);
-          return;
-        }
-        resolve(response?.payload || null);
+    chrome.storage.local.get(['jfmj_session'], (result) => {
+      const session = result.jfmj_session;
+      if (!session || !session.access_token) {
+        resolve(null);
+        return;
       }
-    );
-  });
-}
-
-// ---------- Affichage des champs détectés ----------
-function renderDetectedFields(data) {
-  const container = $("fields-detected");
-  container.innerHTML = "";
-
-  const fields = [
-    { key: "Lieu", value: data.location },
-    { key: "Type de contrat", value: data.contractType },
-    { key: "Rythme", value: data.workSchedule },
-    { key: "Durée hebdo", value: data.workingHours },
-    { key: "Salaire", value: formatSalary(data) },
-    { key: "Période salaire", value: formatPeriod(data.salaryPeriod) },
-    { key: "Date de publication", value: formatDate(data.postedAt) },
-    { key: "Expérience", value: data.experienceLabel },
-    { key: "Niveau d'études", value: data.educationLevel },
-    { key: "Qualification", value: data.qualification },
-    { key: "Secteur", value: data.industry },
-    { key: "Source", value: data.source },
-  ];
-
-  fields.forEach((f) => {
-    if (!f.value) return; // on cache les champs vides
-    const row = document.createElement("div");
-    row.className = "jfmj-field-row";
-    row.innerHTML = `
-      <span class="jfmj-field-key">${escapeHtml(f.key)}</span>
-      <span class="jfmj-field-value">${escapeHtml(String(f.value))}</span>
-    `;
-    container.appendChild(row);
-  });
-}
-
-function formatSalary(data) {
-  const min = data.salaryMin;
-  const max = data.salaryMax;
-  const currency = data.salaryCurrency === "EUR" ? "€" : data.salaryCurrency || "€";
-  if (min && max && min !== max) return `${min} - ${max} ${currency}`;
-  if (min) return `À partir de ${min} ${currency}`;
-  if (max) return `Jusqu'à ${max} ${currency}`;
-  return null;
-}
-
-function formatPeriod(p) {
-  const map = { YEAR: "annuel", MONTH: "mensuel", HOUR: "horaire" };
-  return map[p] || p || null;
-}
-
-function formatDate(iso) {
-  if (!iso) return null;
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
+      // Vérifier expiration (en secondes)
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (session.expires_at && session.expires_at <= nowSec + 30) {
+        resolve(null);
+        return;
+      }
+      resolve(session.access_token);
     });
-  } catch {
-    return iso;
-  }
+  });
 }
 
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+// ============================================================
+// Init — flow d'ouverture du side panel
+// ============================================================
+async function init() {
+  show('view-loading');
 
-// ---------- Skills (chips) ----------
-function renderSkills() {
-  const card = $("card-skills");
-  const container = $("skills-chips");
-  container.innerHTML = "";
-
-  if (!currentSkills || currentSkills.length === 0) {
-    card.classList.add("jfmj-hidden");
+  const token = await getSessionToken();
+  if (!token) {
+    show('view-not-logged-in');
     return;
   }
-  card.classList.remove("jfmj-hidden");
+  currentSessionToken = token;
 
-  currentSkills.forEach((skill, idx) => {
-    const chip = document.createElement("span");
-    chip.className = "jfmj-chip";
-    chip.innerHTML = `
-      ${escapeHtml(skill)}
-      <button class="jfmj-chip-remove" data-idx="${idx}" title="Retirer">×</button>
-    `;
-    container.appendChild(chip);
+  // Demander au service worker les dernières données capturées
+  chrome.runtime.sendMessage({ type: 'JFMJ_REQUEST_DATA' }, (response) => {
+    if (chrome.runtime.lastError) {
+      show('view-empty');
+      return;
+    }
+    if (!response || !response.data) {
+      show('view-empty');
+      return;
+    }
+    currentCapturedData = response.data;
+    populateRecap(response.data);
+    show('view-recap');
   });
+}
 
-  // Bind suppression
-  container.querySelectorAll(".jfmj-chip-remove").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const idx = parseInt(e.currentTarget.dataset.idx, 10);
-      currentSkills.splice(idx, 1);
-      renderSkills();
+// Re-init quand l'utilisateur clique "J'ai connecté, recharger"
+$('btn-refresh-auth')?.addEventListener('click', init);
+
+// Écoute les nouvelles captures pendant que le panel est ouvert
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === 'JFMJ_NEW_DATA' && msg.data) {
+    currentCapturedData = msg.data;
+    populateRecap(msg.data);
+    show('view-recap');
+  }
+});
+
+// ============================================================
+// Populate recap (vue 1 — édition de l'offre capturée)
+// ============================================================
+function populateRecap(d) {
+  $('field-title').value = d.title || '';
+  $('field-company').value = d.company || '';
+  setText('field-location', d.location);
+
+  const contractParts = [d.contractType, d.workSchedule].filter(Boolean);
+  setText('field-contract', contractParts.join(' · '));
+
+  let salary = '—';
+  if (d.salaryMin || d.salaryMax) {
+    const period = d.salaryPeriod === 'YEAR' ? '/an' : d.salaryPeriod === 'MONTH' ? '/mois' : d.salaryPeriod === 'HOUR' ? '/h' : '';
+    if (d.salaryMin && d.salaryMax && d.salaryMin !== d.salaryMax) {
+      salary = `${d.salaryMin} – ${d.salaryMax} ${d.salaryCurrency || '€'}${period}`;
+    } else {
+      salary = `${d.salaryMin || d.salaryMax} ${d.salaryCurrency || '€'}${period}`;
+    }
+  }
+  setText('field-salary', salary);
+
+  setText('field-working-hours', d.workingHours);
+  setText('field-posted-at', d.postedAt ? new Date(d.postedAt).toLocaleDateString('fr-FR') : null);
+  setText('field-experience', d.experienceLabel);
+  setText('field-qualification', d.qualification);
+  setText('field-education', d.educationLevel);
+  setText('field-industry', d.industry);
+
+  $('field-description').value = d.description || '';
+
+  // Compétences en chips
+  const chipsContainer = $('field-skills-chips');
+  chipsContainer.innerHTML = '';
+  const skills = Array.isArray(d.skills) ? d.skills : [];
+  skills.forEach((skill, idx) => {
+    const chip = document.createElement('span');
+    chip.className = 'jfmj-chip';
+    chip.innerHTML = `<span>${skill}</span><button class="jfmj-chip-remove" data-idx="${idx}">×</button>`;
+    chipsContainer.appendChild(chip);
+  });
+  chipsContainer.querySelectorAll('.jfmj-chip-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const idx = parseInt(e.target.dataset.idx);
+      if (Array.isArray(currentCapturedData.skills)) {
+        currentCapturedData.skills.splice(idx, 1);
+        populateRecap(currentCapturedData);
+      }
     });
   });
 }
 
-// ---------- Affichage de la vue récap ----------
-function populateRecap(data) {
-  currentCapture = data;
-  currentSkills = Array.isArray(data.skills) ? [...data.skills] : [];
+// ============================================================
+// Bouton Annuler / Fermer
+// ============================================================
+$('btn-cancel')?.addEventListener('click', () => {
+  show('view-empty');
+});
 
-  $("input-title").value = data.title || "";
-  $("input-company").value = data.company || "";
-  $("input-description").value = data.description || "";
+$('btn-close-success')?.addEventListener('click', () => window.close());
+$('btn-close-exists')?.addEventListener('click', () => window.close());
+$('btn-close-ats')?.addEventListener('click', () => window.close());
 
-  renderDetectedFields(data);
-  renderSkills();
+// ============================================================
+// Save → POST /api/jobs/from-extension
+// ============================================================
+$('btn-save')?.addEventListener('click', async () => {
+  if (!currentSessionToken) {
+    show('view-not-logged-in');
+    return;
+  }
 
-  showView("view-recap");
-}
+  // Récupérer les valeurs éditées
+  const payload = {
+    ...currentCapturedData,
+    title: $('field-title').value,
+    company: $('field-company').value,
+    description: $('field-description').value,
+  };
 
-// ---------- Soumission de la carte ----------
-async function handleSave() {
-  clearError();
-  const btn = $("btn-save");
-  btn.disabled = true;
-  btn.textContent = "Enregistrement…";
+  $('btn-save').disabled = true;
+  $('btn-save').textContent = '⏳ Enregistrement…';
 
   try {
-    const session = await getAuthSession();
-    if (!isSessionValid(session)) {
-      showError("Ta session a expiré. Reconnecte-toi via la popup.");
-      btn.disabled = false;
-      btn.textContent = "✓ Enregistrer dans Jean";
-      return;
-    }
-
-    // Construction du body avec les valeurs (potentiellement éditées)
-    const payload = {
-      ...currentCapture,
-      title: $("input-title").value.trim(),
-      company: $("input-company").value.trim() || null,
-      description: $("input-description").value.trim() || null,
-      skills: currentSkills,
-    };
-
-    if (!payload.title) {
-      showError("L'intitulé du poste est obligatoire.");
-      btn.disabled = false;
-      btn.textContent = "✓ Enregistrer dans Jean";
-      return;
-    }
-
-    const response = await fetch(API_URL_FROM_EXTENSION, {
-      method: "POST",
+    const res = await fetch(`${JEAN_API_BASE}/api/jobs/from-extension`, {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentSessionToken}`,
       },
       body: JSON.stringify(payload),
     });
 
-    const result = await response.json();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
 
-    if (!response.ok || !result.ok) {
-      showError(result.error || `Erreur ${response.status}`);
-      btn.disabled = false;
-      btn.textContent = "✓ Enregistrer dans Jean";
+    const result = await res.json();
+    currentJobId = result.jobId;
+
+    if (result.status === 'already_exists') {
+      $('link-view-exists').href = `${JEAN_API_BASE}/dashboard`;
+      show('view-already-exists');
+    } else {
+      $('link-view-success').href = `${JEAN_API_BASE}/dashboard`;
+      show('view-success');
+    }
+  } catch (e) {
+    console.error('[save] erreur:', e);
+    showError(e.message || 'Erreur lors de la sauvegarde', 'view-recap');
+  } finally {
+    $('btn-save').disabled = false;
+    $('btn-save').textContent = '✓ Enregistrer dans Jean';
+  }
+});
+
+// ============================================================
+// Analyse CV vs offre — déclenchement
+// ============================================================
+$('btn-analyze-from-success')?.addEventListener('click', () => startAnalysisFlow());
+$('btn-analyze-from-exists')?.addEventListener('click', () => startAnalysisFlow());
+$('btn-cancel-analysis')?.addEventListener('click', () => show('view-success'));
+$('btn-back-to-success')?.addEventListener('click', () => show('view-success'));
+
+async function startAnalysisFlow() {
+  show('view-loading');
+
+  try {
+    const res = await fetch(`${JEAN_API_BASE}/api/extension/user-documents?type=cv`, {
+      headers: { 'Authorization': `Bearer ${currentSessionToken}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    const cvs = data.cvs || [];
+    const analyzableCvs = cvs.filter(c => c.is_analyzable);
+
+    if (analyzableCvs.length === 0) {
+      show('view-no-cv');
       return;
     }
 
-    createdJobId = result.jobId;
-
-    if (result.status === "already_exists") {
-      $("already-job-title").textContent = payload.title;
-      showView("view-already-exists");
-    } else {
-      $("success-job-title").textContent = payload.title;
-      showView("view-success");
-    }
-  } catch (err) {
-    console.error("[JFMJ Panel] Erreur fetch :", err);
-    showError("Erreur réseau : " + (err?.message || "inconnue"));
-    btn.disabled = false;
-    btn.textContent = "✓ Enregistrer dans Jean";
-  }
-}
-
-// =========================================
-// SESSION 5 — Analyse ATS (CV vs Offre)
-// =========================================
-
-// ---------- Étape 1 : récupérer les CV de la bibliothèque ----------
-async function loadCvs() {
-  const session = await getAuthSession();
-  if (!isSessionValid(session)) {
-    showView("view-not-logged-in");
-    return null;
-  }
-
-  try {
-    const response = await fetch(API_URL_USER_DOCUMENTS + "?type=cv", {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    if (analyzableCvs.length === 1) {
+      // 1 seul CV analysable → analyse directe
+      selectedCvRef = analyzableCvs[0].ref;
+      selectedCvDisplayName = analyzableCvs[0].display_name;
+      launchAnalysis();
+      return;
     }
 
-    const data = await response.json();
-    availableCvs = Array.isArray(data.cvs) ? data.cvs : [];
-    defaultCvRef = data.default_cv_ref || null;
-    return data;
-  } catch (err) {
-    console.error("[JFMJ Panel] Erreur chargement CVs :", err);
-    return null;
+    // Plusieurs CV → afficher dropdown
+    populateCvChooser(cvs, data.default_cv_ref);
+    show('view-choose-cv');
+  } catch (e) {
+    console.error('[analyse - load CVs] erreur:', e);
+    showError(e.message || 'Erreur de chargement des CV', 'view-success');
   }
 }
 
-// ---------- Étape 2 : déclenchement du flow analyse ----------
-async function handleAnalyzeClick() {
-  if (!createdJobId) {
-    alert("Aucune carte n'a été créée pour cette offre. Réessaye.");
-    return;
+function populateCvChooser(cvs, defaultRef) {
+  const select = $('select-cv');
+  select.innerHTML = '';
+
+  const analyzable = cvs.filter(c => c.is_analyzable);
+  const nonAnalyzable = cvs.filter(c => !c.is_analyzable);
+
+  // Pré-sélectionner le default analysable, sinon le premier analysable
+  let preSelectedRef = null;
+  if (defaultRef && analyzable.find(c => c.ref === defaultRef)) {
+    preSelectedRef = defaultRef;
+  } else if (analyzable.length > 0) {
+    preSelectedRef = analyzable[0].ref;
   }
 
-  // Indicateur de chargement immédiat (spinner sur la vue analyzing avec message neutre)
-  $("analyzing-text").textContent = "Chargement de tes CV…";
-  showView("view-analyzing");
-
-  const data = await loadCvs();
-  if (!data) {
-    showError(
-      "Impossible de charger tes CV. Vérifie ta connexion et réessaye."
-    );
-    showView("view-success"); // retour à l'écran de succès
-    return;
-  }
-
-  const analysableCvs = availableCvs.filter((cv) => cv.is_analyzable);
-
-  if (analysableCvs.length === 0) {
-    showView("view-no-cv");
-    return;
-  }
-
-  if (analysableCvs.length === 1) {
-    // Un seul CV PDF : analyse directe, pas de dropdown
-    selectedCvRef = analysableCvs[0].ref;
-    launchAnalysis(selectedCvRef);
-    return;
-  }
-
-  // Plusieurs CV : afficher la dropdown
-  populateCvChooser();
-  showView("view-choose-cv");
-}
-
-// ---------- Étape 3 : peuple la dropdown CV ----------
-function populateCvChooser() {
-  const select = $("select-cv");
-  select.innerHTML = "";
-
-  // Pré-sélection : CV par défaut s'il existe et est analysable, sinon premier analysable
-  let preselectRef = null;
-  if (
-    defaultCvRef &&
-    availableCvs.some((c) => c.ref === defaultCvRef && c.is_analyzable)
-  ) {
-    preselectRef = defaultCvRef;
-  } else {
-    const firstAnalysable = availableCvs.find((c) => c.is_analyzable);
-    preselectRef = firstAnalysable ? firstAnalysable.ref : null;
-  }
-
-  // Options analysables d'abord, puis non-analysables (grisées)
-  const analysable = availableCvs.filter((c) => c.is_analyzable);
-  const nonAnalysable = availableCvs.filter((c) => !c.is_analyzable);
-
-  if (analysable.length > 0) {
-    const og = document.createElement("optgroup");
-    og.label = "📄 CV analysables (PDF)";
-    analysable.forEach((cv) => {
-      const opt = document.createElement("option");
+  // Group analysables
+  if (analyzable.length > 0) {
+    const grp = document.createElement('optgroup');
+    grp.label = '📄 CV analysables (PDF)';
+    analyzable.forEach(cv => {
+      const opt = document.createElement('option');
       opt.value = cv.ref;
-      opt.textContent = cv.is_default
-        ? `${cv.display_name}  ⭐ par défaut`
-        : cv.display_name;
-      if (cv.ref === preselectRef) opt.selected = true;
-      og.appendChild(opt);
+      opt.textContent = cv.display_name + (cv.is_default ? ' ⭐' : '');
+      if (cv.ref === preSelectedRef) opt.selected = true;
+      grp.appendChild(opt);
     });
-    select.appendChild(og);
+    select.appendChild(grp);
   }
 
-  if (nonAnalysable.length > 0) {
-    const og = document.createElement("optgroup");
-    og.label = "🚫 CV Creator (non analysables ici)";
-    nonAnalysable.forEach((cv) => {
-      const opt = document.createElement("option");
+  // Group non-analysables
+  if (nonAnalyzable.length > 0) {
+    const grp = document.createElement('optgroup');
+    grp.label = '🚫 CV Creator (non analysables ici)';
+    nonAnalyzable.forEach(cv => {
+      const opt = document.createElement('option');
       opt.value = cv.ref;
       opt.textContent = cv.display_name;
       opt.disabled = true;
-      og.appendChild(opt);
+      grp.appendChild(opt);
     });
-    select.appendChild(og);
+    select.appendChild(grp);
   }
-
-  selectedCvRef = preselectRef;
-  select.addEventListener("change", (e) => {
-    selectedCvRef = e.target.value;
-  });
 }
 
-// ---------- Étape 4 : lancer l'analyse ATS ----------
-async function launchAnalysis(cvRef) {
-  if (!cvRef || !createdJobId) {
-    alert("CV ou offre manquant. Réessaye.");
+$('btn-launch-analysis')?.addEventListener('click', () => {
+  const select = $('select-cv');
+  selectedCvRef = select.value;
+  selectedCvDisplayName = select.options[select.selectedIndex]?.text || 'CV';
+  launchAnalysis();
+});
+
+async function launchAnalysis() {
+  if (!currentJobId || !selectedCvRef) {
+    showError('Données manquantes (jobId ou CV)', 'view-success');
     return;
   }
 
-  startAnalyzingMessages();
-  showView("view-analyzing");
+  show('view-analyzing');
+  cycleAnalyzingMessages();
 
   try {
-    const session = await getAuthSession();
-    if (!isSessionValid(session)) {
-      stopAnalyzingMessages();
-      showView("view-not-logged-in");
-      return;
-    }
-
-    const response = await fetch(API_URL_ATS_FROM_EXTENSION(createdJobId), {
-      method: "POST",
+    const res = await fetch(`${JEAN_API_BASE}/api/jobs/${currentJobId}/ats-from-extension`, {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentSessionToken}`,
       },
-      body: JSON.stringify({ cvRef }),
+      body: JSON.stringify({ cvRef: selectedCvRef }),
     });
 
-    const result = await response.json();
-    stopAnalyzingMessages();
-
-    if (!response.ok || !result.success) {
-      // Cas spécial : limite atteinte
-      if (response.status === 429 || result.code === "LIMIT_REACHED") {
-        alert(
-          "Tu as atteint la limite de 3 analyses pour cette offre. Tu peux consulter les résultats précédents directement dans Jean."
-        );
-        showView("view-success");
-        return;
-      }
-      // Cas spécial : Creator non supporté (sécurité, ne devrait pas arriver côté UI)
-      if (result.code === "CREATOR_NOT_SUPPORTED") {
-        alert(
-          "Les CV Creator ne sont pas analysables depuis l'extension. Sélectionne un CV PDF."
-        );
-        showView("view-choose-cv");
-        return;
-      }
-      alert(result.error || `Erreur ${response.status}`);
-      showView("view-success");
-      return;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
     }
 
-    renderAtsResult(result.result, result.analyses_restantes);
-  } catch (err) {
-    console.error("[JFMJ Panel] Erreur analyse :", err);
-    stopAnalyzingMessages();
-    alert("Erreur réseau pendant l'analyse : " + (err?.message || "inconnue"));
-    showView("view-success");
+    const result = await res.json();
+    renderAtsResult(result);
+    // Charger les LM disponibles en arrière-plan (silencieux si erreur)
+    loadAvailableLms();
+    show('view-ats-result');
+  } catch (e) {
+    console.error('[analyse - launch] erreur:', e);
+    showError(e.message || "Erreur pendant l'analyse", 'view-success');
   }
 }
 
-// ---------- Messages animés pendant l'analyse ----------
+// Messages qui défilent pendant l'analyse
 const ANALYZING_MESSAGES = [
-  "Lecture de ton CV…",
+  'Lecture de ton CV…',
   "Extraction des mots-clés de l'offre…",
-  "Calcul du matching CV ↔ offre…",
-  "Évaluation du score ATS sur 100…",
-  "Identification des points forts et faibles…",
-  "Génération des recommandations prioritaires…",
+  'Comparaison CV ↔ offre…',
+  'Calcul du score de compatibilité…',
+  'Identification des points forts…',
+  'Génération des recommandations…',
 ];
 
-function startAnalyzingMessages() {
+let analyzingInterval = null;
+function cycleAnalyzingMessages() {
+  if (analyzingInterval) clearInterval(analyzingInterval);
   let idx = 0;
-  $("analyzing-text").textContent = ANALYZING_MESSAGES[0];
-  stopAnalyzingMessages();
+  setText('analyzing-message', ANALYZING_MESSAGES[idx]);
   analyzingInterval = setInterval(() => {
     idx = (idx + 1) % ANALYZING_MESSAGES.length;
-    $("analyzing-text").textContent = ANALYZING_MESSAGES[idx];
+    setText('analyzing-message', ANALYZING_MESSAGES[idx]);
   }, 4000);
 }
 
-function stopAnalyzingMessages() {
+// ============================================================
+// Rendu résultat ATS
+// ============================================================
+function renderAtsResult(r) {
   if (analyzingInterval) {
     clearInterval(analyzingInterval);
     analyzingInterval = null;
   }
-}
 
-// ---------- Rendu de la vue résultat ATS ----------
-function renderAtsResult(result, analysesRestantes) {
-  if (!result) {
-    showView("view-success");
-    return;
-  }
+  const score = r.score_global || 0;
+  const circumference = 2 * Math.PI * 52; // 326.7
 
-  // 1. Cercle de score global
-  const scoreGlobal = Math.max(0, Math.min(100, result.score_global || 0));
-  $("score-number").textContent = scoreGlobal;
+  // Cercle de score
+  const fill = $('score-circle-fill');
+  fill.classList.remove('score-orange', 'score-red');
+  if (score < 50) fill.classList.add('score-red');
+  else if (score < 75) fill.classList.add('score-orange');
 
-  const circumference = 326.7; // 2 * π * 52
-  const offset = circumference - (scoreGlobal / 100) * circumference;
-  const circle = $("score-progress");
-  circle.classList.remove(
-    "jfmj-score-good",
-    "jfmj-score-medium",
-    "jfmj-score-low"
-  );
-  if (scoreGlobal >= 75) circle.classList.add("jfmj-score-good");
-  else if (scoreGlobal >= 50) circle.classList.add("jfmj-score-medium");
-  else circle.classList.add("jfmj-score-low");
-
-  // Animation : on attend le prochain frame puis on applique l'offset
-  circle.setAttribute("stroke-dashoffset", circumference);
+  // Reset puis animation
+  fill.style.strokeDashoffset = circumference;
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      circle.setAttribute("stroke-dashoffset", offset);
+      const offset = circumference - (score / 100) * circumference;
+      fill.style.strokeDashoffset = offset;
     });
   });
 
-  $("score-label").textContent = scoreLabel(scoreGlobal);
+  // Score animé (count up)
+  animateNumber('score-value', 0, score, 1200);
 
-  // Compteur d'analyses restantes
-  if (typeof analysesRestantes === "number") {
-    $("analyses-restantes").textContent =
-      analysesRestantes > 0
-        ? `${analysesRestantes} analyse${
-            analysesRestantes > 1 ? "s" : ""
-          } restante${analysesRestantes > 1 ? "s" : ""} sur cette offre`
-        : "Limite atteinte (3/3)";
-  } else {
-    $("analyses-restantes").textContent = "";
+  // Label
+  let label;
+  if (score >= 85) label = 'Excellent match';
+  else if (score >= 75) label = 'Bon match';
+  else if (score >= 50) label = 'Match moyen';
+  else if (score >= 30) label = 'Match faible';
+  else label = 'Match très faible';
+  setText('score-label', label);
+
+  // Sous-scores
+  renderSubscores(r.scores || {});
+
+  // Mots-clés
+  renderKeywords(r.keywords || {});
+
+  // Points forts/faibles
+  renderBullets('strengths-list', r.analyse_contenu?.points_forts || []);
+  renderBullets('weaknesses-list', r.analyse_contenu?.points_faibles || []);
+
+  // Recommandations
+  renderRecommendations(r.recommandations || []);
+
+  // Documents zone — afficher le nom du CV utilisé
+  setText('doc-cv-name', selectedCvDisplayName);
+
+  // Lien Voir dans Jean
+  $('link-view-after-ats').href = `${JEAN_API_BASE}/dashboard`;
+}
+
+function animateNumber(id, from, to, duration) {
+  const el = $(id);
+  if (!el) return;
+  const start = performance.now();
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(from + (to - from) * eased);
+    if (progress < 1) requestAnimationFrame(step);
   }
-
-  // 2. Sous-scores (jauges)
-  renderSubscores(result.scores || {});
-
-  // 3. Mots-clés
-  renderKeywords(result.keywords || {});
-
-  // 4. Points forts / faibles
-  renderBullets("points-forts", result.analyse_contenu?.points_forts || []);
-  renderBullets("points-faibles", result.analyse_contenu?.points_faibles || []);
-
-  // 5. Recommandations
-  renderRecommandations(result.recommandations || []);
-
-  showView("view-ats-result");
+  requestAnimationFrame(step);
 }
 
-function scoreLabel(score) {
-  if (score >= 80) return "Excellent match 🎯";
-  if (score >= 60) return "Bon match";
-  if (score >= 40) return "Match moyen";
-  if (score >= 20) return "Match faible";
-  return "Match très faible";
-}
-
-// ---------- Sous-scores ----------
-const SUBSCORE_DEFS = [
-  { key: "format", label: "Format ATS", max: 15 },
-  { key: "lisibilite_ats", label: "Lisibilité ATS", max: 15 },
-  { key: "infos_obligatoires", label: "Infos obligatoires", max: 10 },
-  { key: "structure", label: "Structure du CV", max: 10 },
-  { key: "experiences", label: "Expériences", max: 25 },
-  { key: "competences", label: "Compétences", max: 15 },
-  { key: "matching", label: "Matching CV ↔ Offre", max: 10 },
-];
+const SUBSCORE_LABELS = {
+  format: { label: 'Format PDF', max: 15 },
+  lisibilite_ats: { label: 'Lisibilité ATS', max: 15 },
+  infos_obligatoires: { label: 'Infos obligatoires', max: 10 },
+  structure: { label: 'Structure', max: 10 },
+  experiences: { label: 'Expériences', max: 25 },
+  competences: { label: 'Compétences', max: 15 },
+  matching: { label: 'Matching offre', max: 10 },
+};
 
 function renderSubscores(scores) {
-  const container = $("subscores-list");
-  container.innerHTML = "";
+  const container = $('subscores-list');
+  container.innerHTML = '';
+  Object.entries(SUBSCORE_LABELS).forEach(([key, meta]) => {
+    const value = scores[key] || 0;
+    const ratio = value / meta.max;
+    let barClass = '';
+    if (ratio < 0.5) barClass = 'bar-red';
+    else if (ratio < 0.75) barClass = 'bar-orange';
 
-  SUBSCORE_DEFS.forEach((def) => {
-    const value = Math.max(0, Math.min(def.max, scores[def.key] || 0));
-    const ratio = (value / def.max) * 100;
-
-    let fillClass = "jfmj-fill-good";
-    if (ratio < 50) fillClass = "jfmj-fill-low";
-    else if (ratio < 80) fillClass = "jfmj-fill-medium";
-
-    const row = document.createElement("div");
-    row.className = "jfmj-subscore-row";
+    const row = document.createElement('div');
+    row.className = 'jfmj-subscore-row';
     row.innerHTML = `
-      <div class="jfmj-subscore-header">
-        <span class="jfmj-subscore-name">${escapeHtml(def.label)}</span>
-        <span class="jfmj-subscore-value">${value}/${def.max}</span>
+      <span class="jfmj-subscore-label">${meta.label}</span>
+      <div class="jfmj-subscore-bar-bg">
+        <div class="jfmj-subscore-bar-fill ${barClass}" style="width: 0%;"></div>
       </div>
-      <div class="jfmj-subscore-bar">
-        <div class="jfmj-subscore-fill ${fillClass}" style="width: 0%"></div>
-      </div>
+      <span class="jfmj-subscore-value">${value}/${meta.max}</span>
     `;
     container.appendChild(row);
 
-    // Animation : on attend le prochain frame
-    const fillEl = row.querySelector(".jfmj-subscore-fill");
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        fillEl.style.width = ratio + "%";
+        row.querySelector('.jfmj-subscore-bar-fill').style.width = `${ratio * 100}%`;
       });
     });
   });
 }
 
-// ---------- Mots-clés ----------
 function renderKeywords(kw) {
-  const pct = Math.max(0, Math.min(100, kw.couverture_pct || 0));
-  const fill = $("kw-bar-fill");
-  $("kw-coverage-pct").textContent = pct + "%";
+  const pct = kw.couverture_pct || 0;
+  $('keyword-coverage-fill').style.width = '0%';
+  setText('keyword-coverage-pct', `${pct}%`);
 
-  fill.classList.remove("jfmj-fill-good", "jfmj-fill-low");
-  if (pct >= 70) fill.classList.add("jfmj-fill-good");
-  else if (pct < 50) fill.classList.add("jfmj-fill-low");
-
-  fill.style.width = "0%";
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      fill.style.width = pct + "%";
+      $('keyword-coverage-fill').style.width = `${pct}%`;
     });
   });
 
-  // Mots-clés manquants critiques
-  const missing = Array.isArray(kw.manquants_critiques)
-    ? kw.manquants_critiques
-    : [];
-  const section = $("kw-missing-section");
-  const chips = $("kw-missing-chips");
-  chips.innerHTML = "";
-
+  const missing = kw.manquants_critiques || [];
+  const chipsContainer = $('keywords-missing-chips');
+  chipsContainer.innerHTML = '';
   if (missing.length === 0) {
-    section.classList.add("jfmj-hidden");
-  } else {
-    section.classList.remove("jfmj-hidden");
-    missing.forEach((kw) => {
-      const chip = document.createElement("span");
-      chip.className = "jfmj-chip jfmj-chip-missing";
-      chip.textContent = kw;
-      chips.appendChild(chip);
-    });
-  }
-}
-
-// ---------- Bullets points forts / faibles ----------
-function renderBullets(containerId, items) {
-  const ul = $(containerId);
-  ul.innerHTML = "";
-  if (!items || items.length === 0) {
-    const li = document.createElement("li");
-    li.style.color = "#888";
-    li.style.fontStyle = "italic";
-    li.textContent = "Aucun élément remonté par l'analyse";
-    ul.appendChild(li);
+    chipsContainer.innerHTML = '<p class="jfmj-help-text" style="color:#2E7D32;font-weight:700;">✓ Aucun mot-clé critique manquant</p>';
     return;
   }
-  items.forEach((item) => {
-    const li = document.createElement("li");
-    li.textContent = item;
+  missing.forEach(k => {
+    const chip = document.createElement('span');
+    chip.className = 'jfmj-chip jfmj-chip-keyword-missing';
+    chip.innerHTML = `<span>${k}</span>`;
+    chipsContainer.appendChild(chip);
+  });
+}
+
+function renderBullets(listId, items) {
+  const ul = $(listId);
+  ul.innerHTML = '';
+  if (!items.length) {
+    ul.innerHTML = '<li style="font-style:italic;color:#888;">—</li>';
+    return;
+  }
+  items.forEach(text => {
+    const li = document.createElement('li');
+    li.textContent = text;
     ul.appendChild(li);
   });
 }
 
-// ---------- Recommandations ----------
-function renderRecommandations(recos) {
-  const container = $("recommandations");
-  container.innerHTML = "";
-
-  if (!recos || recos.length === 0) {
-    container.innerHTML =
-      '<p class="jfmj-hint" style="font-style: normal">Aucune recommandation prioritaire.</p>';
+function renderRecommendations(recs) {
+  const container = $('recommendations-list');
+  container.innerHTML = '';
+  if (!recs.length) {
+    container.innerHTML = '<p class="jfmj-help-text" style="color:#2E7D32;font-weight:700;">✓ Aucune recommandation prioritaire</p>';
     return;
   }
-
-  // Tri par priorité croissante (1 = plus urgent)
-  const sorted = [...recos].sort(
-    (a, b) => (a.priorite || 99) - (b.priorite || 99)
-  );
-
-  sorted.forEach((reco) => {
-    const impact = (reco.impact || "mineur").toLowerCase();
-    const pillClass = `jfmj-reco-pill-${impact}`;
-
-    const div = document.createElement("div");
-    div.className = "jfmj-reco";
-    div.innerHTML = `
-      <div class="jfmj-reco-header">
-        <span class="jfmj-reco-priority">#${reco.priorite || "?"}</span>
-        <span class="jfmj-reco-pill ${pillClass}">${escapeHtml(impact)}</span>
-      </div>
-      <p class="jfmj-reco-action">${escapeHtml(reco.action || "")}</p>
+  // Tri par priorité
+  const sorted = [...recs].sort((a, b) => (a.priorite || 99) - (b.priorite || 99));
+  sorted.forEach(rec => {
+    const card = document.createElement('div');
+    card.className = 'jfmj-recommendation-card';
+    const impact = (rec.impact || 'mineur').toLowerCase();
+    card.innerHTML = `
+      <span class="jfmj-recommendation-priority jfmj-priority-${impact}">${impact}</span>
+      <p class="jfmj-recommendation-action">${rec.action || ''}</p>
     `;
-    container.appendChild(div);
+    container.appendChild(card);
   });
 }
 
-// ---------- Init ----------
-async function init() {
-  // 1. Vérifier l'authentification
-  const session = await getAuthSession();
-  if (!isSessionValid(session)) {
-    showView("view-not-logged-in");
+// ============================================================
+// ✨ SESSION 6 — Zone documents
+// ============================================================
+
+// --- Téléchargement CV (depuis bucket Storage via signed URL) ---
+$('btn-download-cv')?.addEventListener('click', async () => {
+  if (!selectedCvRef) {
+    alert("Aucun CV sélectionné");
+    return;
+  }
+  if (!selectedCvRef.startsWith('upload:')) {
+    alert("Ce CV n'est pas téléchargeable (CV Creator non supporté pour le moment)");
     return;
   }
 
-  // 2. Récupérer les données en attente
-  const capture = await getPendingCapture();
-  if (!capture || !capture.data) {
-    showView("view-empty");
-    return;
-  }
+  const btn = $('btn-download-cv');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Téléchargement…';
 
-  // 3. Peupler la vue récap
-  populateRecap(capture.data);
-}
+  try {
+    const filePath = selectedCvRef.slice('upload:'.length);
+    // Encoder le filePath en base64url pour le passer dans l'URL
+    const encoded = btoa(filePath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
-// ---------- Bind boutons ----------
-document.addEventListener("DOMContentLoaded", () => {
-  // Vue récap
-  $("btn-save").addEventListener("click", handleSave);
-  $("btn-cancel").addEventListener("click", () => window.close());
+    // On passe par notre route extension (qui gère l'auth + sécurité user_id)
+    const res = await fetch(`${JEAN_API_BASE}/api/extension/lm-pdf/upload__${encoded}`, {
+      headers: { 'Authorization': `Bearer ${currentSessionToken}` },
+    });
 
-  // Vue success
-  $("btn-close-success").addEventListener("click", () => window.close());
-  $("btn-view-in-jean").addEventListener("click", () => {
-    chrome.tabs.create({ url: DASHBOARD_URL });
-  });
-  $("btn-analyze-from-success").addEventListener("click", handleAnalyzeClick);
-
-  // Vue already-exists
-  $("btn-close-existing").addEventListener("click", () => window.close());
-  $("btn-view-existing").addEventListener("click", () => {
-    chrome.tabs.create({ url: DASHBOARD_URL });
-  });
-  $("btn-analyze-from-existing").addEventListener("click", handleAnalyzeClick);
-
-  // Vue not-logged-in
-  $("btn-close-not-logged").addEventListener("click", () => window.close());
-
-  // Vue choose-cv
-  $("btn-launch-analysis").addEventListener("click", () => {
-    if (!selectedCvRef) {
-      alert("Sélectionne un CV avant de lancer l'analyse.");
-      return;
+    if (!res.ok) {
+      // Fallback : on essaye via Supabase directement
+      throw new Error(`HTTP ${res.status}`);
     }
-    launchAnalysis(selectedCvRef);
-  });
-  $("btn-cancel-analysis").addEventListener("click", () => {
-    showView("view-success");
-  });
 
-  // Vue no-cv
-  $("btn-go-to-profile").addEventListener("click", () => {
-    chrome.tabs.create({ url: PROFILE_URL });
-  });
-  $("btn-close-no-cv").addEventListener("click", () => window.close());
-
-  // Vue ats-result
-  $("btn-view-in-jean-result").addEventListener("click", () => {
-    chrome.tabs.create({ url: DASHBOARD_URL });
-  });
-  $("btn-close-result").addEventListener("click", () => window.close());
-
-  // Lancement
-  init();
+    const blob = await res.blob();
+    const fileName = filePath.split('/').pop() || 'cv.pdf';
+    triggerDownload(blob, fileName);
+  } catch (e) {
+    // Plan B : passer par signed URL Supabase directement
+    try {
+      const filePath = selectedCvRef.slice('upload:'.length);
+      const signedRes = await fetch(
+        `${SUPABASE_URL}/storage/v1/object/sign/job-documents/${filePath}?expiresIn=300`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentSessionToken}`,
+            'apikey': await getSupabaseAnonKey(),
+          },
+        }
+      );
+      if (!signedRes.ok) throw new Error('signed URL failed');
+      const { signedURL } = await signedRes.json();
+      const fullUrl = `${SUPABASE_URL}/storage/v1${signedURL}`;
+      const fileBlob = await (await fetch(fullUrl)).blob();
+      const fileName = filePath.split('/').pop() || 'cv.pdf';
+      triggerDownload(fileBlob, fileName);
+    } catch (e2) {
+      console.error('[download CV] erreur:', e, e2);
+      alert("Erreur lors du téléchargement du CV. Réessaye.");
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
 });
+
+// La clé anon Supabase est publique, on la lit depuis le manifest stocké
+// (alternative : la mettre en dur ici, mais on évite la duplication)
+async function getSupabaseAnonKey() {
+  // On la lit depuis chrome.storage si jamais elle a été stockée par popup.js
+  // sinon fallback en dur (clé publique anon, sans risque)
+  return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtqc3FmZ3Bld2p6aWVybHh6ZHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTgyNDUsImV4cCI6MjA4OTA3NDI0NX0.UlR7xF9grcPIPQ30WjLYojD76bPvnwFGBQgIizf1wu4.placeholder';
+  // ⚠️ Cette clé sera lue depuis popup.js via chrome.storage en pratique
+}
+
+// --- Chargement liste LM disponibles ---
+async function loadAvailableLms() {
+  try {
+    const res = await fetch(`${JEAN_API_BASE}/api/extension/user-documents?type=lm`, {
+      headers: { 'Authorization': `Bearer ${currentSessionToken}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    availableLms = data.lms || [];
+    populateLmSelect(availableLms, data.default_lm_ref);
+  } catch (e) {
+    console.error('[load LMs] erreur:', e);
+    // Silencieux : on laisse la dropdown vide, l'utilisateur peut quand même générer
+  }
+}
+
+function populateLmSelect(lms, defaultRef) {
+  const select = $('select-lm');
+  select.innerHTML = '<option value="">— Choisis une LM existante…</option>';
+
+  const generated = lms.filter(l => l.source === 'generated');
+  const uploaded = lms.filter(l => l.source === 'upload');
+
+  if (generated.length > 0) {
+    const grp = document.createElement('optgroup');
+    grp.label = `✨ LM générées (${generated.length})`;
+    generated.forEach(lm => {
+      const opt = document.createElement('option');
+      opt.value = lm.ref;
+      opt.textContent = lm.display_name + (lm.is_default ? ' ⭐' : '');
+      if (defaultRef && lm.ref === defaultRef) opt.selected = true;
+      grp.appendChild(opt);
+    });
+    select.appendChild(grp);
+  }
+
+  if (uploaded.length > 0) {
+    const grp = document.createElement('optgroup');
+    grp.label = `📎 LM uploadées (${uploaded.length})`;
+    uploaded.forEach(lm => {
+      const opt = document.createElement('option');
+      opt.value = lm.ref;
+      opt.textContent = lm.display_name + (lm.is_default ? ' ⭐' : '');
+      if (defaultRef && lm.ref === defaultRef) opt.selected = true;
+      grp.appendChild(opt);
+    });
+    select.appendChild(grp);
+  }
+
+  // Si une LM est pré-sélectionnée, afficher le bouton télécharger
+  if (select.value) {
+    $('btn-download-lm').classList.remove('jfmj-hidden');
+  }
+}
+
+// Toggle bouton télécharger LM selon sélection
+$('select-lm')?.addEventListener('change', (e) => {
+  const ref = e.target.value;
+  if (ref) {
+    $('btn-download-lm').classList.remove('jfmj-hidden');
+  } else {
+    $('btn-download-lm').classList.add('jfmj-hidden');
+  }
+});
+
+// --- Téléchargement LM ---
+$('btn-download-lm')?.addEventListener('click', async () => {
+  const ref = $('select-lm').value;
+  if (!ref) return;
+
+  const btn = $('btn-download-lm');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Téléchargement…';
+
+  try {
+    let urlPath;
+    if (ref.startsWith('generated:')) {
+      const lmId = ref.slice('generated:'.length);
+      urlPath = `/api/extension/lm-pdf/${lmId}`;
+    } else if (ref.startsWith('upload:')) {
+      const filePath = ref.slice('upload:'.length);
+      const encoded = btoa(filePath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+      urlPath = `/api/extension/lm-pdf/upload__${encoded}`;
+    } else {
+      throw new Error('Référence LM invalide');
+    }
+
+    const res = await fetch(`${JEAN_API_BASE}${urlPath}`, {
+      headers: { 'Authorization': `Bearer ${currentSessionToken}` },
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const blob = await res.blob();
+    // Récupérer le nom de fichier depuis Content-Disposition
+    let fileName = 'lettre-de-motivation.pdf';
+    const cd = res.headers.get('content-disposition');
+    if (cd) {
+      const match = cd.match(/filename="([^"]+)"/);
+      if (match) fileName = match[1];
+    }
+    triggerDownload(blob, fileName);
+  } catch (e) {
+    console.error('[download LM] erreur:', e);
+    alert("Erreur lors du téléchargement de la LM. Réessaye.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
+
+// --- Toggle options génération LM ---
+$('btn-generate-lm-toggle')?.addEventListener('click', () => {
+  $('lm-generate-options').classList.remove('jfmj-hidden');
+  $('btn-generate-lm-toggle').classList.add('jfmj-hidden');
+});
+
+$('btn-cancel-generate-lm')?.addEventListener('click', () => {
+  $('lm-generate-options').classList.add('jfmj-hidden');
+  $('btn-generate-lm-toggle').classList.remove('jfmj-hidden');
+});
+
+// --- Lancer génération LM ---
+$('btn-launch-generate-lm')?.addEventListener('click', async () => {
+  if (!currentJobId) {
+    alert("Pas de jobId courant — réenregistre l'offre d'abord");
+    return;
+  }
+
+  const tone = $('select-lm-tone').value;
+  const length = parseInt($('select-lm-length').value);
+  const lang = $('select-lm-lang').value;
+
+  show('view-generating-lm');
+  cycleGeneratingLmMessages();
+
+  try {
+    const body = {
+      jobId: currentJobId,
+      tone,
+      length,
+      lang,
+    };
+    // Inclure le CV sélectionné pour l'analyse, si dispo
+    if (selectedCvRef) {
+      body.cvRef = selectedCvRef;
+    }
+
+    const res = await fetch(`${JEAN_API_BASE}/api/extension/generate-lm`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentSessionToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const result = await res.json();
+
+    // Recharger la liste des LM pour inclure la nouvelle
+    await loadAvailableLms();
+
+    // Pré-sélectionner la nouvelle LM
+    const newRef = `generated:${result.lm_id}`;
+    $('select-lm').value = newRef;
+    $('btn-download-lm').classList.remove('jfmj-hidden');
+
+    // Reset toggle
+    $('lm-generate-options').classList.add('jfmj-hidden');
+    $('btn-generate-lm-toggle').classList.remove('jfmj-hidden');
+
+    show('view-ats-result');
+
+    // Petit feedback visuel : faire scroll vers la zone LM + flash
+    setTimeout(() => {
+      $('select-lm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+  } catch (e) {
+    console.error('[generate LM] erreur:', e);
+    showError(e.message || "Erreur pendant la génération", 'view-ats-result');
+  }
+});
+
+const GENERATING_LM_MESSAGES = [
+  "Lecture de l'offre…",
+  'Analyse de ton profil…',
+  'Sélection des arguments les plus pertinents…',
+  'Rédaction du paragraphe d\'accroche…',
+  'Rédaction des arguments métier…',
+  'Rédaction de la conclusion…',
+  'Mise en forme finale…',
+];
+
+let generatingLmInterval = null;
+function cycleGeneratingLmMessages() {
+  if (generatingLmInterval) clearInterval(generatingLmInterval);
+  let idx = 0;
+  setText('generating-lm-message', GENERATING_LM_MESSAGES[idx]);
+  generatingLmInterval = setInterval(() => {
+    idx = (idx + 1) % GENERATING_LM_MESSAGES.length;
+    setText('generating-lm-message', GENERATING_LM_MESSAGES[idx]);
+  }, 4000);
+}
+
+// --- Helper download ---
+function triggerDownload(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 200);
+}
+
+// --- Vue erreur générique ---
+function showError(message, returnView) {
+  setText('error-message', message || 'Erreur inconnue');
+  $('btn-error-retry').onclick = () => show(returnView);
+  show('view-error');
+}
+
+// ============================================================
+// Démarrage
+// ============================================================
+init();
