@@ -1,7 +1,12 @@
 // extension/content/scrapers/linkedin.js
-// Jean find my Job — Scraper LinkedIn (session 8 — v0.8.2)
+// Jean find my Job — Scraper LinkedIn (session 8 + fix post-session 9 — v0.9.1)
 // LinkedIn 2026 : DOM 100% en classes CSS obfusquees (hashees) + systeme SDUI
 // Strategie : exploiter les attributs semantiques componentkey (stables) + heuristiques sur textes
+//
+// v0.9.1 (fix post-session 9) : split explicite contractType / workSchedule sur le separateur "·"
+// pour eviter "CDD · Temps plein" colle dans un seul champ. Ajout d'une normalisation
+// (CDI, CDD, Stage, Alternance, etc.) pour avoir une casse coherente quelle que soit
+// la langue du compte LinkedIn.
 
 (function () {
   'use strict';
@@ -314,6 +319,10 @@
   // ============================================================
   // Insights : contractType, workSchedule, experienceLabel, salary
   // Scan tous les textes courts du body, applique les regex keywords
+  //
+  // v0.9.1 : split explicite sur "·" (point median LinkedIn) avant regex pour
+  // garantir que "CDD · Temps plein" se traduit en contractType="CDD" +
+  // workSchedule="Temps plein" sans collision possible.
   // ============================================================
   function extractInsights() {
     const result = {
@@ -335,33 +344,61 @@
       const txt = cleanInline(el.textContent);
       if (!txt || txt.length < 2 || txt.length > 200) continue;
 
-      if (!result.contractType) {
-        const m = txt.match(/\b(CDI|CDD|Stage|Alternance|Freelance|Permanent|Contract|Internship|Apprenticeship|Temporaire|Independant|Interim|Intérim)\b/i);
-        if (m) result.contractType = m[0];
-      }
+      // NOUVEAU v0.9.1 : split sur le separateur LinkedIn "·" (point median U+00B7)
+      // ou "•" (bullet U+2022) si present. Sinon on traite le texte entier comme une
+      // seule partie. Cela evite que "CDD · Temps plein" tombe dans un seul champ.
+      const parts = txt.split(/\s*[·•]\s*/).map(function (p) { return cleanInline(p); }).filter(Boolean);
+      const segments = parts.length > 1 ? parts : [txt];
 
-      if (!result.workSchedule) {
-        if (/temps partiel|part[- ]?time/i.test(txt)) result.workSchedule = 'Temps partiel';
-        else if (/temps plein|full[- ]?time/i.test(txt)) result.workSchedule = 'Temps plein';
-      }
+      for (let s = 0; s < segments.length; s++) {
+        const seg = segments[s];
 
-      if (!result.experienceLabel) {
-        const m = txt.match(/\b(Premier emploi|Stagiaire|Junior|Confirmé|Sénior|Senior|Cadre dirigeant|Entry level|Associate|Mid[- ]Senior level|Director|Executive|Internship|Expérimenté)\b/i);
-        if (m) result.experienceLabel = m[0];
-      }
+        if (!result.contractType) {
+          const m = seg.match(/\b(CDI|CDD|Stage|Alternance|Freelance|Permanent|Contract|Internship|Apprenticeship|Temporaire|Independant|Interim|Intérim)\b/i);
+          if (m) result.contractType = normalizeContractType(m[0]);
+        }
 
-      if (result.salaryMin === null) {
-        const sal = parseSalaryFromText(txt);
-        if (sal) {
-          result.salaryMin = sal.min;
-          result.salaryMax = sal.max;
-          result.salaryCurrency = sal.currency;
-          result.salaryPeriod = sal.period;
+        if (!result.workSchedule) {
+          if (/temps partiel|part[- ]?time/i.test(seg)) result.workSchedule = 'Temps partiel';
+          else if (/temps plein|full[- ]?time/i.test(seg)) result.workSchedule = 'Temps plein';
+        }
+
+        if (!result.experienceLabel) {
+          const m = seg.match(/\b(Premier emploi|Stagiaire|Junior|Confirmé|Sénior|Senior|Cadre dirigeant|Entry level|Associate|Mid[- ]Senior level|Director|Executive|Internship|Expérimenté)\b/i);
+          if (m) result.experienceLabel = m[0];
+        }
+
+        if (result.salaryMin === null) {
+          const sal = parseSalaryFromText(seg);
+          if (sal) {
+            result.salaryMin = sal.min;
+            result.salaryMax = sal.max;
+            result.salaryCurrency = sal.currency;
+            result.salaryPeriod = sal.period;
+          }
         }
       }
     }
 
     return result;
+  }
+
+  // ============================================================
+  // Normalisation du contractType : casse coherente quelle que soit
+  // la langue du compte LinkedIn (FR/EN). On retombe toujours sur
+  // les memes valeurs canoniques cote Jean.
+  // ============================================================
+  function normalizeContractType(raw) {
+    const v = (raw || '').trim();
+    if (/^cdi$/i.test(v) || /^permanent$/i.test(v)) return 'CDI';
+    if (/^cdd$/i.test(v)) return 'CDD';
+    if (/^stage$/i.test(v) || /^internship$/i.test(v)) return 'Stage';
+    if (/^alternance$/i.test(v) || /^apprenticeship$/i.test(v)) return 'Alternance';
+    if (/^freelance$/i.test(v) || /^independant$/i.test(v)) return 'Freelance';
+    if (/^contract$/i.test(v) || /^temporaire$/i.test(v)) return 'Temporaire';
+    if (/^interim$/i.test(v) || /^intérim$/i.test(v)) return 'Intérim';
+    // Fallback : capitalisation simple
+    return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
   }
 
   function parseSalaryFromText(text) {
@@ -460,5 +497,5 @@
     extract: extract
   };
 
-  console.log(LOG_PREFIX + ' Scraper LinkedIn v0.8.2 charge');
+  console.log(LOG_PREFIX + ' Scraper LinkedIn v0.9.1 charge');
 })();
