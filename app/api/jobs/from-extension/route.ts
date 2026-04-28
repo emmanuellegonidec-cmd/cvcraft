@@ -73,6 +73,8 @@ export async function POST(request: NextRequest) {
       salaryCurrency,
       salaryPeriod,
       description,
+      requirements,
+      companyDescription,
       postedAt,
       educationLevel,
       qualification,
@@ -144,6 +146,8 @@ export async function POST(request: NextRequest) {
         currency: salaryCurrency || 'EUR',
         salary_period: salaryPeriod || null,
         description: description || null,
+        requirements: requirements || null,
+        company_description: companyDescription || null,
         posted_at: postedAt || null,
         education_level: educationLevel || null,
         qualification: qualification || null,
@@ -152,7 +156,7 @@ export async function POST(request: NextRequest) {
         status: 'to_apply',
         import_status: 'imported_extension',
         parser_name: 'jfmj-extension',
-        parser_version: '0.4.0',
+        parser_version: '0.8.1',
         extraction_confidence: confidence,
       })
       .select('id')

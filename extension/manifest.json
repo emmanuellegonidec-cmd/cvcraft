@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Jean find my Job",
   "short_name": "Jean",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Ton coach de candidature directement sur LinkedIn, France Travail et Welcome to the Jungle.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -31,12 +31,25 @@
   "host_permissions": [
     "https://kjsqfgpewjzierlxzdyj.supabase.co/*",
     "https://jeanfindmyjob.fr/*",
-    "https://candidat.francetravail.fr/*"
+    "https://candidat.francetravail.fr/*",
+    "https://www.welcometothejungle.com/*"
   ],
   "content_scripts": [
     {
       "matches": ["https://candidat.francetravail.fr/*"],
-      "js": ["content/content.js"],
+      "js": [
+        "content/scrapers/francetravail.js",
+        "content/content.js"
+      ],
+      "css": ["content/content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.welcometothejungle.com/*"],
+      "js": [
+        "content/scrapers/welcometothejungle.js",
+        "content/content.js"
+      ],
       "css": ["content/content.css"],
       "run_at": "document_idle"
     }
