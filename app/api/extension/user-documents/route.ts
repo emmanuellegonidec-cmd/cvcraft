@@ -117,80 +117,10 @@ async function getCvs(userId: string, supabase: any, profile: any) {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Récupération des LM (table lms generated + uploads bucket)
-// ──────────────────────────────────────────────────────────────────
-async function getLms(userId: string, supabase: any, profile: any) {
-  const lms: any[] = [];
-
-  // 1. LM générées (table lms, template = 'generated')
-  const { data: generatedLms } = await supabase
-    .from('lms')
-    .select('id, title, content, form_data, created_at')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (generatedLms && generatedLms.length) {
-    for (const lm of generatedLms) {
-      lms.push({
-        ref: `generated:${lm.id}`,
-        source: 'generated',
-        display_name: lm.title || 'LM sans titre',
-        // Une LM generated a son content texte, on peut générer le PDF côté serveur
-        is_downloadable: !!lm.content,
-        is_default: profile?.default_lm_ref === `generated:${lm.id}`,
-        // Métadonnées utiles pour l'extension
-        metadata: {
-          tone: lm.form_data?.tone || null,
-          length: lm.form_data?.length || null,
-          lang: lm.form_data?.lang || null,
-          generatedAt: lm.created_at,
-        },
-      });
-    }
-  }
-
-  // 2. LM uploadées (bucket job-documents → user_id/job_id/lm*.pdf)
-  const { data: storageList } = await supabase.storage
-    .from('job-documents')
-    .list(userId, { limit: 100 });
-
-  if (storageList && storageList.length) {
-    for (const folder of storageList) {
-      if (!folder.name) continue;
-      const { data: jobFiles } = await supabase.storage
-        .from('job-documents')
-        .list(`${userId}/${folder.name}`, { limit: 50 });
-
-      if (!jobFiles) continue;
-
-      for (const f of jobFiles) {
-        if (!f.name.toLowerCase().startsWith('lm') || !f.name.toLowerCase().endsWith('.pdf')) continue;
-
-        const filePath = `${userId}/${folder.name}/${f.name}`;
-        const { data: linkedJob } = await supabase
-          .from('jobs')
-          .select('title, company')
-          .eq('id', folder.name)
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        lms.push({
-          ref: `upload:${filePath}`,
-          source: 'upload',
-          display_name: `LM - ${getJobLabel(linkedJob)}`,
-          is_downloadable: true,
-          is_default: profile?.default_lm_ref === `upload:${filePath}`,
-          metadata: null,
-        });
-      }
-    }
-  }
-
-  return lms;
-}
-
-// ──────────────────────────────────────────────────────────────────
-// GET /api/extension/user-documents?type=cv|lm|all
+// GET /api/extension/user-documents
+// Retourne la liste des CV de l'utilisateur (Creator + uploads).
+// Note : la fonctionnalite LM a ete retiree du scope de l'extension
+// en session 6 (pivot UX). La LM reste cote Jean web uniquement.
 // ──────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
@@ -202,36 +132,22 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const { searchParams } = new URL(req.url);
-    const type = (searchParams.get('type') || 'all').toLowerCase();
-
-    if (type !== 'cv' && type !== 'lm' && type !== 'all') {
-      return NextResponse.json(
-        { error: "Paramètre 'type' invalide. Attendu : cv | lm | all" },
-        { status: 400, headers: CORS_HEADERS }
-      );
-    }
-
-    // Récupérer le profil pour les refs par défaut
+    // Récupérer le profil pour la ref CV par défaut
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('default_cv_ref, default_lm_ref')
+      .select('default_cv_ref')
       .eq('user_id', userId)
       .single();
 
-    const result: any = {};
+    const cvs = await getCvs(userId, supabase, profile);
 
-    if (type === 'cv' || type === 'all') {
-      result.cvs = await getCvs(userId, supabase, profile);
-      result.default_cv_ref = profile?.default_cv_ref || null;
-    }
-
-    if (type === 'lm' || type === 'all') {
-      result.lms = await getLms(userId, supabase, profile);
-      result.default_lm_ref = profile?.default_lm_ref || null;
-    }
-
-    return NextResponse.json(result, { headers: CORS_HEADERS });
+    return NextResponse.json(
+      {
+        cvs,
+        default_cv_ref: profile?.default_cv_ref || null,
+      },
+      { headers: CORS_HEADERS }
+    );
   } catch (e: any) {
     console.error('[user-documents] erreur:', e);
     return NextResponse.json(
