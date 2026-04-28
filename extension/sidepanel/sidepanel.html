@@ -30,7 +30,7 @@
         <span class="jfmj-emoji-big">🔒</span>
         <h2>Tu n'es pas connecté</h2>
         <p>Ouvre la popup de l'extension (clic sur l'icône Jean en haut à droite de Chrome) pour te connecter à ton compte.</p>
-        <button id="btn-refresh-auth" class="jfmj-btn jfmj-btn-primary">🔄 J'ai connecté, recharger</button>
+        <button id="btn-refresh-auth" class="jfmj-btn jfmj-btn-primary">🔄 Recharger</button>
       </div>
     </section>
 
@@ -88,7 +88,7 @@
 
       <div class="jfmj-actions">
         <button id="btn-cancel" class="jfmj-btn jfmj-btn-secondary">Annuler</button>
-        <button id="btn-save" class="jfmj-btn jfmj-btn-primary">Enregistrer pour analyse de ma candidature</button>
+        <button id="btn-save" class="jfmj-btn jfmj-btn-primary">Enregistrer pour analyse de ta candidature</button>
       </div>
     </section>
 
@@ -96,11 +96,11 @@
     <section id="view-success" class="jfmj-view jfmj-hidden">
       <div class="jfmj-success-state">
         <span class="jfmj-emoji-big">✅</span>
-        <h2>Carte créée dans Jean</h2>
+        <h2>Offre d'emploi créée dans tes candidatures</h2>
         <p>L'offre est dans la colonne <strong>"Envie de postuler"</strong> de ton kanban.</p>
 
-        <button id="btn-analyze-from-success" class="jfmj-btn jfmj-btn-primary jfmj-btn-full">🎯 Analyser cette offre avec mon CV</button>
-        <a id="link-view-success" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full" target="_blank">Voir dans Jean</a>
+        <button id="btn-analyze-from-success" class="jfmj-btn jfmj-btn-primary jfmj-btn-full">Analyser cette offre avec ton CV</button>
+        <a id="link-view-success" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full" target="_blank">Ouvrir ton tableau de bord</a>
         <button id="btn-close-success" class="jfmj-btn jfmj-btn-link">Fermer</button>
       </div>
     </section>
@@ -109,18 +109,18 @@
     <section id="view-already-exists" class="jfmj-view jfmj-hidden">
       <div class="jfmj-success-state">
         <span class="jfmj-emoji-big">ℹ️</span>
-        <h2>Cette offre est déjà dans ton kanban</h2>
+        <h2>Cette offre est déjà dans tes candidatures</h2>
         <p>Tu l'as déjà capturée auparavant.</p>
 
-        <button id="btn-analyze-from-exists" class="jfmj-btn jfmj-btn-primary jfmj-btn-full">🎯 Analyser cette offre avec mon CV</button>
-        <a id="link-view-exists" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full" target="_blank">Voir dans Jean</a>
+        <button id="btn-analyze-from-exists" class="jfmj-btn jfmj-btn-primary jfmj-btn-full">Analyser cette offre avec ton CV</button>
+        <a id="link-view-exists" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full" target="_blank">Ouvrir ton tableau de bord</a>
         <button id="btn-close-exists" class="jfmj-btn jfmj-btn-link">Fermer</button>
       </div>
     </section>
 
     <!-- Vue : choix CV pour analyse -->
     <section id="view-choose-cv" class="jfmj-view jfmj-hidden">
-      <h1 class="jfmj-section-title">🎯 Analyser avec mon CV</h1>
+      <h1 class="jfmj-section-title">🎯 Analyser avec ton CV</h1>
 
       <div class="jfmj-card">
         <label class="jfmj-field-label">Quel CV utiliser ?</label>
@@ -140,7 +140,7 @@
         <span class="jfmj-emoji-big">📄</span>
         <h2>Aucun CV au format PDF</h2>
         <p>Pour analyser une offre depuis l'extension, tu as besoin d'un CV au format PDF dans ta bibliothèque.</p>
-        <a href="https://jeanfindmyjob.fr/dashboard/profile" target="_blank" class="jfmj-btn jfmj-btn-primary">Aller à mon profil pour ajouter un CV</a>
+        <a href="https://jeanfindmyjob.fr/dashboard/profile" target="_blank" class="jfmj-btn jfmj-btn-primary">Aller à ton profil pour ajouter un CV</a>
         <button id="btn-back-to-success" class="jfmj-btn jfmj-btn-link">Retour</button>
       </div>
     </section>
@@ -216,7 +216,7 @@
           <button id="btn-download-cv" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full">📥 Télécharger ce CV</button>
         </div>
 
-        <button id="btn-optimize-cv" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full" style="margin-top: 6px;">🎯 Optimiser mon CV pour cette offre</button>
+        <button id="btn-optimize-cv" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full" style="margin-top: 6px;">🎯 Optimiser ton CV pour cette offre</button>
 
         <!-- 🆕 SESSION 7 — Bouton "J'ai postulé" -->
         <button id="btn-mark-applied" class="jfmj-btn jfmj-btn-primary jfmj-btn-full" style="margin-top: 12px;">✓ J'ai postulé</button>
@@ -241,7 +241,7 @@
         <p style="margin-top:12px;">📨 <strong>Relance prévue le <span id="applied-relance-date">—</span></strong></p>
         <p class="jfmj-help-text" style="margin-top:8px;">Si tu n'as pas de réponse d'ici là, on te rappellera de relancer le recruteur.</p>
 
-        <a id="link-view-applied" class="jfmj-btn jfmj-btn-primary jfmj-btn-full" target="_blank" style="margin-top:16px;">Voir dans Jean</a>
+        <a id="link-view-applied" class="jfmj-btn jfmj-btn-primary jfmj-btn-full" target="_blank" style="margin-top:16px;">Ouvrir ton tableau de bord</a>
         <button id="btn-close-applied" class="jfmj-btn jfmj-btn-link">Fermer</button>
       </div>
     </section>
