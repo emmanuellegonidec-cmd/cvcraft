@@ -1,12 +1,11 @@
 // extension/content/scrapers/welcometothejungle.js
-// Jean find my Job — Scraper Welcome to the Jungle (session 8 — v0.8.1)
-// Strategie : JSON-LD JobPosting prioritaire + split en 3 sections (description / requirements / company_description)
-// + fallback DOM pour contrat et salaire
+// Jean find my Job — Scraper Welcome to the Jungle (session 8 — v0.8.2)
+// Hybride : JSON-LD (metadata + description) + DOM (sections Profil recherché / Qui sont-ils ?)
+// Robuste aux 2 formats observes : Sia (description avec titres en gras) et Bartle (description sans titres + champs separes)
 
 (function () {
   'use strict';
 
-  // Pattern URL : https://www.welcometothejungle.com/fr/companies/{company}/jobs/{slug}_{loc}_{ID}
   const WTJ_OFFER_REGEX = /^https:\/\/www\.welcometothejungle\.com\/(fr|en)\/companies\/[^/]+\/jobs\/[^/?#]+/i;
 
   const WORK_SCHEDULE_MAP = {
@@ -20,9 +19,8 @@
     OTHER: 'Autre'
   };
 
-  // Titres JSON-LD WTJ (en gras dans la description HTML) -> champ Supabase cible
-  // L'ordre est important : on parcourt la description en cherchant ces titres dans cet ordre.
-  const WTJ_SECTION_TITLES = [
+  // Titres connus dans le JSON-LD WTJ (en gras dans la description HTML, format Sia)
+  const WTJ_LD_SECTION_TITLES = [
     "Description de l'entreprise",
     'Description du poste',
     'Qualifications',
@@ -31,15 +29,11 @@
 
   function match(url) {
     if (!WTJ_OFFER_REGEX.test(url)) return null;
-
-    // L'ID externe est compose des 2 derniers segments du slug (ex: SIA_awO6eAP, IKXO_a21bW58)
     const pathMatch = url.match(/\/jobs\/([^/?#]+)/);
     if (!pathMatch) return null;
-
     const slug = pathMatch[1];
     const parts = slug.split('_');
     if (parts.length < 2) return null;
-
     return parts.slice(-2).join('_');
   }
 
@@ -71,30 +65,46 @@
       _extractionMethod: null
     };
 
-    // 1. JSON-LD JobPosting (prioritaire)
+    // 1. JSON-LD : metadata + description (avec splitter si format Sia, sinon description complete)
     const ldData = extractFromJsonLd();
     if (ldData) {
       Object.assign(data, ldData);
       data._extractionMethod = 'json-ld';
     }
 
-    // 2. Fallback DOM pour les champs absents du JSON-LD (contrat juridique, salaire DOM)
-    const domData = extractFromDom();
-    let usedDom = false;
-    for (const key in domData) {
-      const isEmpty = (data[key] === null || data[key] === '' || (Array.isArray(data[key]) && data[key].length === 0));
-      if (isEmpty && domData[key] !== null && domData[key] !== undefined) {
-        data[key] = domData[key];
-        usedDom = true;
+    // 2. DOM : prefere sur JSON-LD pour les sections (toujours mieux formate)
+    const domReq = extractSectionByH4('Profil recherché');
+    if (domReq) {
+      data.requirements = domReq;
+      data._extractionMethod = data._extractionMethod === 'json-ld' ? 'json-ld+dom' : 'dom';
+    }
+
+    const domComp = extractSectionByH4('Qui sont-ils ?');
+    if (domComp) {
+      data.companyDescription = domComp;
+      data._extractionMethod = data._extractionMethod === 'json-ld' ? 'json-ld+dom' : 'dom';
+    }
+
+    // 3. DOM fallback pour contrat & salaire (jamais dans le JSON-LD WTJ)
+    const domMeta = extractMetaFromDom();
+    let usedDomMeta = false;
+    for (const key in domMeta) {
+      const isEmpty = (data[key] === null || data[key] === '');
+      if (isEmpty && domMeta[key] !== null && domMeta[key] !== undefined) {
+        data[key] = domMeta[key];
+        usedDomMeta = true;
       }
     }
-    if (usedDom) {
-      data._extractionMethod = data._extractionMethod === 'json-ld' ? 'json-ld+dom' : 'dom';
+    if (usedDomMeta && data._extractionMethod === 'json-ld') {
+      data._extractionMethod = 'json-ld+dom';
     }
 
     return data;
   }
 
+  // ============================================================
+  // JSON-LD : metadata + description avec splitter ou fallback complet
+  // ============================================================
   function extractFromJsonLd() {
     const scripts = document.querySelectorAll('script[type="application/ld+json"]');
     for (let i = 0; i < scripts.length; i++) {
@@ -104,7 +114,7 @@
           return parseJobPostingLd(parsed);
         }
       } catch (e) {
-        // Ignore les blocs non-JSON ou non-JobPosting (FAQPage, BreadcrumbList, etc.)
+        // Ignore les blocs non-JSON ou non-JobPosting
       }
     }
     return null;
@@ -116,19 +126,35 @@
     if (j.title) r.title = cleanInline(j.title);
     if (j.datePosted) r.postedAt = j.datePosted;
 
-    // Split de la description HTML en 4 sections via leurs titres en gras
+    // Description : essai du splitter, fallback sur description complete
     if (j.description) {
       const sections = splitWtjDescription(j.description);
-      // sections est un objet { "Description de l'entreprise": "...", "Description du poste": "...", ... }
+      const knownSections = Object.keys(sections).filter(function (k) {
+        return WTJ_LD_SECTION_TITLES.indexOf(k) !== -1;
+      });
 
-      const poste = sections['Description du poste'] || '';
-      const profil = sections['Qualifications'] || '';
-      const entreprise = sections["Description de l'entreprise"] || '';
-      // 'Informations supplémentaires' volontairement ignoré (marketing, pas utile pour ATS/LM)
+      if (knownSections.length > 0) {
+        // Format Sia : on utilise les sections detectees
+        // 'Informations supplémentaires' est volontairement ignore
+        if (sections['Description du poste']) {
+          r.description = sections['Description du poste'];
+        }
+        if (sections['Qualifications']) {
+          r.requirements = sections['Qualifications'];
+        }
+        if (sections["Description de l'entreprise"]) {
+          r.companyDescription = sections["Description de l'entreprise"];
+        }
 
-      r.description = poste || null;
-      r.requirements = profil || null;
-      r.companyDescription = entreprise || null;
+        // Si le splitter n'a pas trouve "Description du poste" mais d'autres sections,
+        // fallback sur la description complete pour ne pas perdre l'info
+        if (!r.description) {
+          r.description = htmlToReadableText(j.description);
+        }
+      } else {
+        // Format Bartle (ou autre) : aucun titre connu detecte, on prend la description complete
+        r.description = htmlToReadableText(j.description);
+      }
     }
 
     if (j.employmentType) {
@@ -152,7 +178,6 @@
       r.company = cleanInline(j.hiringOrganization.name);
     }
 
-    // jobLocation peut etre un objet ou un tableau
     let loc = j.jobLocation;
     if (Array.isArray(loc)) loc = loc[0];
     if (loc && loc.address) {
@@ -168,12 +193,19 @@
 
     if (j.industry) r.industry = cleanInline(j.industry);
 
+    // qualifications (champ JSON-LD distinct, present chez Bartle)
+    // - On l'utilise comme fallback pour requirements si splitter n'a rien trouve
+    // - On stocke aussi un extrait court dans qualification (champ Supabase distinct)
     if (j.qualifications) {
       const q = cleanInline(j.qualifications);
-      if (q) r.qualification = q;
+      if (q) {
+        r.qualification = q.substring(0, 200);
+        if (r.requirements === undefined || r.requirements === null) {
+          r.requirements = q;
+        }
+      }
     }
 
-    // baseSalary (optionnel sur WTJ)
     if (j.baseSalary) {
       const bs = j.baseSalary;
       if (bs.currency) r.salaryCurrency = bs.currency;
@@ -193,15 +225,10 @@
   }
 
   // ============================================================
-  // Split de la description HTML en sections
-  //
-  // WTJ structure son champ description en blocs <p><strong>Titre</strong></p>
-  // suivis du contenu. On parcourt les noeuds enfants du body parsé
-  // et on accumule le texte sous le titre courant.
+  // Splitter : pour le format Sia (titres en gras dans description HTML)
   // ============================================================
   function splitWtjDescription(html) {
     const result = {};
-
     let doc;
     try {
       doc = new DOMParser().parseFromString(html, 'text/html');
@@ -214,10 +241,7 @@
 
     function flush() {
       if (currentTitle && buffer.length > 0) {
-        const text = buffer.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-        if (text) {
-          result[currentTitle] = text;
-        }
+        result[currentTitle] = buffer.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
       }
       buffer = [];
     }
@@ -225,9 +249,8 @@
     const children = doc.body.childNodes;
     for (let i = 0; i < children.length; i++) {
       const node = children[i];
-      if (node.nodeType !== 1) continue; // skip text nodes au top level
+      if (node.nodeType !== 1) continue;
 
-      // Detecte un titre de section : <p> contenant uniquement un <strong>
       const titleText = detectSectionTitle(node);
       if (titleText) {
         flush();
@@ -235,82 +258,66 @@
         continue;
       }
 
-      // Sinon, on convertit le noeud en texte structure (paragraphes + listes)
-      const blockText = nodeToReadableText(node);
-      if (blockText) {
-        buffer.push(blockText);
-      }
+      walk(node, buffer);
     }
     flush();
 
     return result;
   }
 
-  // Verifie si un noeud est un titre de section WTJ (<p><strong>Titre connu</strong></p>)
-  // Retourne le titre normalise s'il en est un, sinon null.
   function detectSectionTitle(node) {
     if (node.tagName !== 'P') return null;
-
     const strongs = node.querySelectorAll('strong');
     if (strongs.length === 0) return null;
 
-    // On compare le texte total du <p> au texte du <strong> :
-    // si c'est essentiellement la meme chose, c'est un titre.
     const pText = cleanInline(node.textContent);
     const strongText = cleanInline(strongs[0].textContent);
 
     if (!strongText) return null;
-    if (pText.length > strongText.length + 3) return null; // titre + autre contenu = pas un titre
+    if (pText.length > strongText.length + 3) return null;
 
-    // Match exact ou approchant avec un des titres connus
-    for (let i = 0; i < WTJ_SECTION_TITLES.length; i++) {
-      const known = WTJ_SECTION_TITLES[i];
+    for (let i = 0; i < WTJ_LD_SECTION_TITLES.length; i++) {
+      const known = WTJ_LD_SECTION_TITLES[i];
       if (normalizeForCompare(strongText) === normalizeForCompare(known)) {
         return known;
       }
     }
-
     return null;
   }
 
-  // Convertit un noeud DOM en texte lisible :
-  // - <p>     -> texte + saut de ligne
-  // - <ul>    -> chaque <li> sur sa propre ligne, prefixee par "• "
-  // - <br>    -> saut de ligne
-  // - sinon   -> texte simple
-  function nodeToReadableText(node) {
-    if (!node) return '';
+  // ============================================================
+  // DOM : recherche d'un <h4> par titre, retourne le contenu lisible
+  // ============================================================
+  function extractSectionByH4(titleText) {
+    const h4s = document.querySelectorAll('h4');
+    for (let i = 0; i < h4s.length; i++) {
+      const h4 = h4s[i];
+      const txt = cleanInline(h4.textContent);
+      if (normalizeForCompare(txt) === normalizeForCompare(titleText)) {
+        const parent = h4.parentElement;
+        if (!parent) continue;
 
-    const tag = node.tagName;
+        const blocks = [];
+        const kids = parent.childNodes;
+        for (let j = 0; j < kids.length; j++) {
+          const kid = kids[j];
+          if (kid === h4) continue;
+          if (kid.nodeType !== 1) continue;
+          walk(kid, blocks);
+        }
 
-    if (tag === 'UL' || tag === 'OL') {
-      const items = node.querySelectorAll('li');
-      const lines = [];
-      for (let i = 0; i < items.length; i++) {
-        const t = cleanInline(items[i].textContent);
-        if (t) lines.push('• ' + t);
+        if (blocks.length > 0) {
+          return blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+        }
       }
-      return lines.join('\n');
     }
-
-    if (tag === 'P') {
-      // On preserve les <br> intra-paragraphe en les transformant en \n
-      const clone = node.cloneNode(true);
-      const brs = clone.querySelectorAll('br');
-      for (let i = 0; i < brs.length; i++) {
-        brs[i].replaceWith('\n');
-      }
-      return cleanInline(clone.textContent);
-    }
-
-    // Fallback : texte brut
-    return cleanInline(node.textContent);
+    return null;
   }
 
   // ============================================================
-  // Fallback DOM (pour les champs absents du JSON-LD)
+  // DOM : contrat & salaire (jamais dans le JSON-LD WTJ)
   // ============================================================
-  function extractFromDom() {
+  function extractMetaFromDom() {
     const r = {
       contractType: null,
       salaryMin: null,
@@ -318,7 +325,6 @@
       salaryCurrency: null
     };
 
-    // Type de contrat : badge avec svg alt="Contract"
     const contractIcons = document.querySelectorAll('svg[alt="Contract"]');
     for (let i = 0; i < contractIcons.length; i++) {
       const parent = contractIcons[i].parentElement;
@@ -331,14 +337,12 @@
       }
     }
 
-    // Salaire : badge avec svg alt="Salary" (formats : "40K à 60K €", "Non spécifié")
     const salaryIcons = document.querySelectorAll('svg[alt="Salary"]');
     for (let i = 0; i < salaryIcons.length; i++) {
       const parent = salaryIcons[i].parentElement;
       if (parent) {
         const txt = cleanInline(parent.textContent);
         if (txt && txt.length < 100) {
-          // On cherche un range numerique
           const m = txt.match(/(\d+)\s*[Kk]?\s*(?:a|à|to|-)\s*(\d+)\s*[Kk]?\s*[€$£]?/);
           if (m) {
             const min = parseInt(m[1], 10);
@@ -354,6 +358,64 @@
     }
 
     return r;
+  }
+
+  // ============================================================
+  // Walker recursif : produit du texte lisible (paragraphes + puces)
+  // - <p>     -> 1 bloc texte (avec <br> convertis en \n)
+  // - <ul>    -> 1 bloc avec puces "• item" sur lignes successives
+  // - <br>    -> ignore au top level (gere a l'interieur des <p>)
+  // - sinon   -> descend recursivement dans les enfants
+  // ============================================================
+  function walk(n, out) {
+    if (!n) return;
+    if (n.nodeType === 3) return;
+
+    const tag = n.tagName;
+
+    if (tag === 'UL' || tag === 'OL') {
+      const items = n.querySelectorAll(':scope > li');
+      const itemLines = [];
+      for (let i = 0; i < items.length; i++) {
+        const t = cleanInline(items[i].textContent);
+        if (t) itemLines.push('• ' + t);
+      }
+      if (itemLines.length > 0) {
+        out.push(itemLines.join('\n'));
+      }
+      return;
+    }
+
+    if (tag === 'P') {
+      const clone = n.cloneNode(true);
+      const brs = clone.querySelectorAll('br');
+      for (let i = 0; i < brs.length; i++) {
+        brs[i].replaceWith('\n');
+      }
+      const t = cleanInline(clone.textContent);
+      if (t) out.push(t);
+      return;
+    }
+
+    if (tag === 'BR') return;
+
+    const kids = n.childNodes;
+    for (let i = 0; i < kids.length; i++) {
+      walk(kids[i], out);
+    }
+  }
+
+  function htmlToReadableText(html) {
+    if (!html) return '';
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(html, 'text/html');
+    } catch (e) {
+      return '';
+    }
+    const blocks = [];
+    walk(doc.body, blocks);
+    return blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
   }
 
   function mapEducationLevel(credentialCategory) {
@@ -375,13 +437,11 @@
     return isNaN(n) ? null : n;
   }
 
-  // Texte inline : ecrase les espaces multiples (idem pour les titres et noms courts)
   function cleanInline(s) {
     if (!s) return '';
     return String(s).replace(/\s+/g, ' ').trim();
   }
 
-  // Normalisation pour comparer 2 titres : minuscules + retire accents + espaces uniques
   function normalizeForCompare(s) {
     if (!s) return '';
     return cleanInline(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
