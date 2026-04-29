@@ -1,13 +1,25 @@
 // ============================================================
 // Jean find my Job — Side panel logic
+// Session 9bis v0.9.7 — Bloc 6b (complet) :
+//   - Skip ATS direct après capture
+//     → Au clic "Enregistrer pour analyse de ta candidature", on enchaîne
+//       directement sur startAnalysisFlow() (sélection de CV ou analyse
+//       direct si 1 seul CV). Plus d'étape intermédiaire view-success
+//       ou view-already-exists.
+//     → Ces vues restent comme filet de sécurité si l'utilisateur annule
+//       depuis view-choose-cv (la bonne est affichée selon wasAlreadyExisting).
+//   - Badge "Offre déjà capturée" sur view-choose-cv en cas de recapture
+//     → Restaure l'info qui était portée par view-already-exists, sans
+//       casser la fluidité du flow (zéro clic supplémentaire).
+//   - Variable globale wasAlreadyExisting + helpers getCaptureSuccessView()
+//     et updateAlreadyCapturedBadge().
+//   - Fix mineur : le finally de btn-save remet désormais le bon wording.
 // Session 9bis v0.9.5 — Bloc 2 (fix #4) :
 //   - 🔧 #4 : récupération du prénom/nom utilisateur revue
-//             → on décode le JWT directement (pas d'appel à /auth/v1/user
-//               qui exigeait la clé anon publique non disponible dans l'extension)
-//             → on lit la table 'user_profiles' (first_name + last_name)
-//               via l'API REST Supabase, avec double tentative user_id puis id
+//             → décodage du JWT directement (pas d'appel à /auth/v1/user)
+//             → lecture de user_profiles via API REST Supabase, double
+//               tentative user_id puis id
 //             → fallback en cascade : metadata JWT → parsing email
-//             → garantit au minimum "EGonidec" pour emmanuelle.gonidec@gmail.com
 // Session 9bis v0.9.4 — Bloc 2 :
 //   - #3 : auto-reload du panel quand la session apparaît
 //   - #4 : nom du CV téléchargé personnalisé
@@ -36,8 +48,11 @@ let currentSessionToken = null;
 let currentCapturedData = null;
 let selectedCvRef = null;
 let selectedCvDisplayName = null;
-// 🆕 #4 — partie "InitialeNom" déduite du profil utilisateur (ex: "EGonidec")
+// Partie "InitialeNom" déduite du profil utilisateur (ex: "EGonidec")
 let currentUserNamePart = '';
+// 🆕 Bloc 6b — mémorise si la dernière capture a renvoyé "already_exists"
+// pour router correctement en cas d'annulation depuis view-choose-cv.
+let wasAlreadyExisting = false;
 
 // ============================================================
 // Helpers DOM
@@ -50,6 +65,47 @@ function show(viewId) {
 function setText(id, text) {
   const el = $(id);
   if (el) el.textContent = text || '—';
+}
+
+// 🆕 Bloc 6b — vue de succès appropriée selon le statut de la dernière capture.
+// Utilisée si l'utilisateur annule l'analyse depuis view-choose-cv.
+function getCaptureSuccessView() {
+  return wasAlreadyExisting ? 'view-already-exists' : 'view-success';
+}
+
+// 🆕 Bloc 6b — Badge "Offre déjà capturée" sur view-choose-cv en cas de recapture.
+// Restaure l'information perdue avec le skip ATS direct, sans casser la
+// fluidité du flow (l'utilisateur n'a pas de clic supplémentaire à faire).
+// Le badge est créé une seule fois puis montré/caché selon wasAlreadyExisting.
+function updateAlreadyCapturedBadge() {
+  const chooseCvView = $('view-choose-cv');
+  if (!chooseCvView) return;
+
+  let badge = $('already-captured-badge');
+
+  if (wasAlreadyExisting) {
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'already-captured-badge';
+      badge.style.cssText =
+        'padding:10px 14px;background:#FFFBE6;border:1.5px solid #F5C400;' +
+        'border-radius:8px;color:#7A5A00;font-weight:600;text-align:center;' +
+        'font-size:13px;margin:0 0 14px 0;line-height:1.4;' +
+        "font-family:'Montserrat',sans-serif;";
+      badge.textContent = 'ℹ️ Offre déjà capturée dans tes candidatures';
+      // Insère après le titre (1er enfant) si présent, sinon en tête de vue
+      const firstEl = chooseCvView.firstElementChild;
+      if (firstEl) {
+        firstEl.after(badge);
+      } else {
+        chooseCvView.appendChild(badge);
+      }
+    } else {
+      badge.style.display = '';
+    }
+  } else if (badge) {
+    badge.style.display = 'none';
+  }
 }
 
 // ============================================================
@@ -74,18 +130,14 @@ async function getSessionToken() {
 }
 
 // ============================================================
-// 🆕 SESSION 9bis #4 (v0.9.5) — Décodage du JWT Supabase
-// Pas d'appel réseau, 100% fiable.
-// Récupère : email, sub (= user_id auth.users), user_metadata
+// SESSION 9bis #4 (v0.9.5) — Décodage du JWT Supabase
 // ============================================================
 function decodeJwtPayload(token) {
   if (!token) return null;
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    // base64url → base64
     const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    // padding
     const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
     const json = atob(padded);
     return JSON.parse(json);
@@ -96,10 +148,7 @@ function decodeJwtPayload(token) {
 }
 
 // ============================================================
-// 🆕 SESSION 9bis #4 (v0.9.5) — Lecture de la table user_profiles
-// Double tentative : ?user_id=eq.{sub} puis ?id=eq.{sub}
-// Best effort : si la table ou les RLS empêchent la lecture, on retourne null
-// et on basculera sur les fallbacks (metadata JWT puis parsing email).
+// SESSION 9bis #4 (v0.9.5) — Lecture de la table user_profiles
 // ============================================================
 async function tryFetchUserProfile(filter) {
   try {
@@ -123,23 +172,15 @@ async function tryFetchUserProfile(filter) {
 
 async function fetchUserProfileFromDb(userId) {
   if (!userId || !currentSessionToken) return null;
-
-  // Tentative 1 : ?user_id=eq.{sub} (convention la plus courante)
   let profile = await tryFetchUserProfile(`user_id=eq.${encodeURIComponent(userId)}`);
   if (profile) return profile;
-
-  // Tentative 2 : ?id=eq.{sub} (si la PK de la table = auth.users.id)
   profile = await tryFetchUserProfile(`id=eq.${encodeURIComponent(userId)}`);
   return profile;
 }
 
 // ============================================================
-// 🆕 SESSION 9bis #4 (v0.9.5) — Construction de la partie utilisateur
-// du nom de fichier (ex: "EGonidec").
-// Stratégie en cascade :
-//   1. Table user_profiles (first_name + last_name)
-//   2. user_metadata du JWT (first_name/last_name puis full_name)
-//   3. Parsing de l'email (prenom.nom@... → "EGonidec")
+// SESSION 9bis #4 (v0.9.5) — Construction "InitialeNom"
+// Stratégie en cascade : user_profiles → JWT user_metadata → email
 // ============================================================
 async function buildUserNamePart() {
   const tokenPayload = decodeJwtPayload(currentSessionToken);
@@ -148,7 +189,6 @@ async function buildUserNamePart() {
   let firstName = '';
   let lastName = '';
 
-  // Tentative 1 : table user_profiles
   if (tokenPayload.sub) {
     const profile = await fetchUserProfileFromDb(tokenPayload.sub);
     if (profile) {
@@ -157,7 +197,6 @@ async function buildUserNamePart() {
     }
   }
 
-  // Tentative 2 : user_metadata du JWT
   if (!firstName && !lastName) {
     const meta = tokenPayload.user_metadata || {};
     firstName = (meta.first_name || meta.firstName || '').trim();
@@ -173,7 +212,6 @@ async function buildUserNamePart() {
     }
   }
 
-  // Tentative 3 : parsing email (ex: emmanuelle.gonidec@... → Emmanuelle / Gonidec)
   if (!firstName && !lastName && tokenPayload.email) {
     const localPart = tokenPayload.email.split('@')[0];
     const parts = localPart.split(/[._-]/);
@@ -188,18 +226,12 @@ async function buildUserNamePart() {
   return formatNamePart(firstName, lastName);
 }
 
-/**
- * Construit "InitialeNom" à partir d'un prénom et d'un nom.
- * Ex: ("Emmanuelle", "GONIDEC") → "EGonidec"
- *     ("Marie-Claire", "Le Breton") → "MLeBreton"
- */
 function formatNamePart(firstName, lastName) {
   const cleanFirst = sanitizeFilenamePart(firstName);
   const cleanLast = sanitizeFilenamePart(lastName);
 
   const initial = cleanFirst ? cleanFirst.charAt(0).toUpperCase() : '';
 
-  // Capitalise chaque morceau du nom (séparés par _ après sanitize)
   const lastFormatted = cleanLast
     .split('_')
     .filter(Boolean)
@@ -209,30 +241,21 @@ function formatNamePart(firstName, lastName) {
   return initial + lastFormatted;
 }
 
-/**
- * 🆕 #4 — Sanitization d'une chaîne pour l'utiliser dans un nom de fichier.
- * Retire accents et caractères spéciaux, remplace espaces par _.
- */
 function sanitizeFilenamePart(s) {
   if (!s) return '';
   return s
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // retirer accents
-    .replace(/[^a-zA-Z0-9\s-]/g, '')                    // garder lettres ASCII, chiffres, espaces, tirets
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
     .trim()
-    .replace(/\s+/g, '_')                               // espaces → _
-    .replace(/_+/g, '_')                                // multiples _ → un seul
-    .replace(/^_+|_+$/g, '');                           // trim _
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
 }
 
-/**
- * 🆕 #4 — Construit le nom final du fichier CV téléchargé.
- * Format : [Poste]_[Entreprise]_CV_[Initiale][Nom].[ext]
- */
 function buildCvFilename(originalFileName) {
   const dotIdx = originalFileName.lastIndexOf('.');
   const ext = dotIdx > 0 ? originalFileName.slice(dotIdx) : '.pdf';
 
-  // Priorité aux champs du formulaire (valeur potentiellement éditée par l'utilisateur)
   const posteRaw = $('field-title')?.value || currentCapturedData?.title || 'Poste';
   const entrepriseRaw = $('field-company')?.value || currentCapturedData?.company || 'Entreprise';
 
@@ -259,9 +282,6 @@ async function init() {
   }
   currentSessionToken = token;
 
-  // 🆕 #4 — Récupère le prénom/nom utilisateur pour personnaliser les noms de fichiers.
-  // Non bloquant : si tout échoue, currentUserNamePart restera vide et le nom du
-  // fichier sera "Poste_Entreprise_CV.pdf" (sans suffixe utilisateur).
   try {
     currentUserNamePart = await buildUserNamePart();
     console.log('[init] currentUserNamePart =', currentUserNamePart || '(vide)');
@@ -289,9 +309,7 @@ async function init() {
 $('btn-refresh-auth')?.addEventListener('click', init);
 
 // ============================================================
-// 🆕 SESSION 9bis #3 — Auto-reload du panel quand la session change
-// (login détecté depuis la popup → bascule auto vers l'écran principal,
-//  logout détecté → retour à view-not-logged-in)
+// SESSION 9bis #3 — Auto-reload du panel quand la session change
 // ============================================================
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== 'local') return;
@@ -303,7 +321,6 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   const oldToken = oldSession?.access_token;
   const newToken = newSession?.access_token;
 
-  // Cas 1 — Login détecté : la session vient d'apparaître (ou de changer)
   if (newToken && (!oldToken || newToken !== oldToken)) {
     const notLoggedView = $('view-not-logged-in');
     const isShowingNotLoggedIn =
@@ -314,7 +331,6 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     }
   }
 
-  // Cas 2 — Logout détecté : la session vient de disparaître
   if (!newToken && oldToken) {
     console.log('[storage.onChanged] Logout détecté → retour à view-not-logged-in');
     currentSessionToken = null;
@@ -385,6 +401,11 @@ $('btn-close-applied')?.addEventListener('click', () => window.close());
 
 // ============================================================
 // Save
+// 🆕 Bloc 6b — Skip ATS direct après capture :
+//   après le POST réussi, on enchaîne directement sur startAnalysisFlow()
+//   au lieu d'afficher view-success / view-already-exists. Les vues fallback
+//   restent prêtes (liens "Voir dans Jean" pré-remplis) si l'utilisateur
+//   annule depuis view-choose-cv.
 // ============================================================
 $('btn-save')?.addEventListener('click', async () => {
   if (!currentSessionToken) {
@@ -419,30 +440,33 @@ $('btn-save')?.addEventListener('click', async () => {
 
     const result = await res.json();
     currentJobId = result.jobId;
+    wasAlreadyExisting = (result.status === 'already_exists');
 
-    if (result.status === 'already_exists') {
-      $('link-view-exists').href = `${JEAN_API_BASE}/dashboard`;
-      show('view-already-exists');
-    } else {
-      $('link-view-success').href = `${JEAN_API_BASE}/dashboard`;
-      show('view-success');
-    }
+    // Pré-remplit les liens "Voir dans Jean" des vues fallback
+    $('link-view-success').href = `${JEAN_API_BASE}/dashboard`;
+    $('link-view-exists').href = `${JEAN_API_BASE}/dashboard`;
+
+    // 🆕 Bloc 6b — Skip direct vers l'analyse ATS, plus d'étape intermédiaire.
+    startAnalysisFlow();
   } catch (e) {
     console.error('[save] erreur:', e);
     showError(e.message || 'Erreur lors de la sauvegarde', 'view-recap');
   } finally {
     $('btn-save').disabled = false;
-    $('btn-save').textContent = '✓ Enregistrer dans Jean';
+    // Wording aligné sur le HTML (s9 — tutoiement)
+    $('btn-save').textContent = 'Enregistrer pour analyse de ta candidature';
   }
 });
 
 // ============================================================
 // Analyse CV vs offre
+// 🆕 Bloc 6b — boutons "Annuler analyse" / "Retour" routent vers la bonne
+// vue de succès selon le statut de la capture (créée vs déjà existante).
 // ============================================================
 $('btn-analyze-from-success')?.addEventListener('click', () => startAnalysisFlow());
 $('btn-analyze-from-exists')?.addEventListener('click', () => startAnalysisFlow());
-$('btn-cancel-analysis')?.addEventListener('click', () => show('view-success'));
-$('btn-back-to-success')?.addEventListener('click', () => show('view-success'));
+$('btn-cancel-analysis')?.addEventListener('click', () => show(getCaptureSuccessView()));
+$('btn-back-to-success')?.addEventListener('click', () => show(getCaptureSuccessView()));
 
 async function startAnalysisFlow() {
   show('view-loading');
@@ -475,11 +499,14 @@ async function startAnalysisFlow() {
     show('view-choose-cv');
   } catch (e) {
     console.error('[analyse - load CVs] erreur:', e);
-    showError(e.message || 'Erreur de chargement des CV', 'view-success');
+    showError(e.message || 'Erreur de chargement des CV', getCaptureSuccessView());
   }
 }
 
 function populateCvChooser(allCvs, favoriteCvs) {
+  // 🆕 Bloc 6b — affiche/cache le badge "Offre déjà capturée" selon le statut
+  updateAlreadyCapturedBadge();
+
   const select = $('select-cv');
   select.innerHTML = '';
 
@@ -548,7 +575,7 @@ $('btn-launch-analysis')?.addEventListener('click', () => {
 
 async function launchAnalysis() {
   if (!currentJobId || !selectedCvRef) {
-    showError('Données manquantes (jobId ou CV)', 'view-success');
+    showError('Données manquantes (jobId ou CV)', getCaptureSuccessView());
     return;
   }
 
@@ -577,7 +604,7 @@ async function launchAnalysis() {
     show('view-ats-result');
   } catch (e) {
     console.error('[analyse - launch] erreur:', e);
-    showError(e.message || "Erreur pendant l'analyse", 'view-success');
+    showError(e.message || "Erreur pendant l'analyse", getCaptureSuccessView());
   }
 }
 
@@ -762,7 +789,7 @@ function renderRecommendations(recs) {
 
 // ============================================================
 // SESSION 6 v0.6.1 — Téléchargement CV via Supabase Storage signed URL
-// 🆕 SESSION 9bis #4 — Nom du fichier personnalisé (Poste_Entreprise_CV_InitialeNom.ext)
+// SESSION 9bis #4 — Nom du fichier personnalisé
 // ============================================================
 $('btn-download-cv')?.addEventListener('click', async () => {
   if (!selectedCvRef) {
@@ -813,8 +840,6 @@ $('btn-download-cv')?.addEventListener('click', async () => {
 
     const blob = await fileRes.blob();
 
-    // 🆕 #4 — Construit le nom personnalisé à partir du nom de fichier d'origine
-    // (uniquement pour récupérer l'extension, le reste est généré).
     const originalFileName = filePath.split('/').pop() || 'cv.pdf';
     const fileName = buildCvFilename(originalFileName);
 
