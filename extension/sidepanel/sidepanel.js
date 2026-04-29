@@ -1,10 +1,19 @@
 // ============================================================
 // Jean find my Job — Side panel logic
+// Session 9bis v0.9.4 — Bloc 2 :
+//   - 🆕 #3 : auto-reload du panel quand la session apparaît
+//             (chrome.storage.onChanged détecte le login depuis la popup
+//              et rebascule automatiquement vers l'écran principal)
+//             → gère aussi le logout (retour à view-not-logged-in)
+//   - 🆕 #4 : nom du CV téléchargé personnalisé
+//             → format : [Poste]_[Entreprise]_CV_[Initiale][Nom].pdf
+//             → infos utilisateur lues via /auth/v1/user (Supabase),
+//               fallback : user_metadata.full_name puis parsing de l'email
 // Session 9bis v0.9.3 :
-//   - 🆕 #1 : plus de création auto de relance J+7 au "J'ai postulé"
-//   - 🆕 #2 : bouton "✓ J'ai postulé" masqué si la candidature est déjà appliquée
+//   - #1 : plus de création auto de relance J+7 au "J'ai postulé"
+//   - #2 : bouton "✓ J'ai postulé" masqué si la candidature est déjà appliquée
 //             → indicateur "✓ Déjà postulé" affiché à la place
-//   - 🆕 #7 : "J'ai postulé" valide aussi l'étape du parcours côté API
+//   - #7 : "J'ai postulé" valide aussi l'étape du parcours côté API
 //             (step_dates.applied = today)
 // Session 9bis-bis v0.9.2 :
 //   - Dropdown CV en 2 groupes : ⭐ Mes favoris + 📋 Tous mes CV
@@ -30,6 +39,8 @@ let currentSessionToken = null;
 let currentCapturedData = null;
 let selectedCvRef = null;
 let selectedCvDisplayName = null;
+// 🆕 #4 — partie "InitialeNom" déduite du profil utilisateur (ex: "EGonidec")
+let currentUserNamePart = '';
 
 // ============================================================
 // Helpers DOM
@@ -66,6 +77,114 @@ async function getSessionToken() {
 }
 
 // ============================================================
+// 🆕 SESSION 9bis #4 — Récupération profil utilisateur (Supabase Auth)
+// ============================================================
+async function fetchUserInfo() {
+  if (!currentSessionToken) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        'Authorization': `Bearer ${currentSessionToken}`,
+        'apikey': currentSessionToken,
+      },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    console.warn('[fetchUserInfo] erreur:', e);
+    return null;
+  }
+}
+
+/**
+ * 🆕 #4 — Construit la partie "InitialeNom" pour le nom de fichier.
+ * Stratégie en cascade :
+ *   1. user_metadata.first_name + last_name
+ *   2. user_metadata.full_name (split sur 1er espace)
+ *   3. parsing de l'email (ex: prenom.nom@...)
+ */
+function getUserNameForFilename(user) {
+  if (!user) return '';
+
+  const meta = user.user_metadata || {};
+  let firstName = (meta.first_name || meta.firstName || '').trim();
+  let lastName = (meta.last_name || meta.lastName || '').trim();
+
+  // Fallback 1 : full_name
+  if (!firstName && !lastName) {
+    const fullName = (meta.full_name || meta.fullName || meta.name || '').trim();
+    if (fullName) {
+      const parts = fullName.split(/\s+/);
+      firstName = parts[0] || '';
+      lastName = parts.slice(1).join(' ') || '';
+    }
+  }
+
+  // Fallback 2 : parsing email (prenom.nom@... ou prenom_nom@... ou prenom-nom@...)
+  if (!firstName && !lastName && user.email) {
+    const localPart = user.email.split('@')[0];
+    const parts = localPart.split(/[._-]/);
+    if (parts.length >= 2) {
+      firstName = parts[0];
+      lastName = parts.slice(1).join(' ');
+    } else {
+      lastName = localPart;
+    }
+  }
+
+  const cleanFirst = sanitizeFilenamePart(firstName);
+  const cleanLast = sanitizeFilenamePart(lastName);
+
+  const initial = cleanFirst ? cleanFirst.charAt(0).toUpperCase() : '';
+
+  // Capitalise chaque morceau du nom (séparés par _ après sanitize)
+  const lastFormatted = cleanLast
+    .split('_')
+    .filter(Boolean)
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join('');
+
+  return initial + lastFormatted;
+}
+
+/**
+ * 🆕 #4 — Sanitization d'une chaîne pour l'utiliser dans un nom de fichier.
+ * Retire accents et caractères spéciaux, remplace espaces par _.
+ */
+function sanitizeFilenamePart(s) {
+  if (!s) return '';
+  return s
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // retirer accents
+    .replace(/[^a-zA-Z0-9\s-]/g, '')                    // garder lettres ASCII, chiffres, espaces, tirets
+    .trim()
+    .replace(/\s+/g, '_')                               // espaces → _
+    .replace(/_+/g, '_')                                // multiples _ → un seul
+    .replace(/^_+|_+$/g, '');                           // trim _
+}
+
+/**
+ * 🆕 #4 — Construit le nom final du fichier CV téléchargé.
+ * Format : [Poste]_[Entreprise]_CV_[Initiale][Nom].[ext]
+ */
+function buildCvFilename(originalFileName) {
+  const dotIdx = originalFileName.lastIndexOf('.');
+  const ext = dotIdx > 0 ? originalFileName.slice(dotIdx) : '.pdf';
+
+  // Priorité aux champs du formulaire (valeur potentiellement éditée par l'utilisateur)
+  const posteRaw = $('field-title')?.value || currentCapturedData?.title || 'Poste';
+  const entrepriseRaw = $('field-company')?.value || currentCapturedData?.company || 'Entreprise';
+
+  const poste = sanitizeFilenamePart(posteRaw) || 'Poste';
+  const entreprise = sanitizeFilenamePart(entrepriseRaw) || 'Entreprise';
+
+  let name = `${poste}_${entreprise}_CV`;
+  if (currentUserNamePart) {
+    name += `_${currentUserNamePart}`;
+  }
+  return name + ext;
+}
+
+// ============================================================
 // Init
 // ============================================================
 async function init() {
@@ -77,6 +196,17 @@ async function init() {
     return;
   }
   currentSessionToken = token;
+
+  // 🆕 #4 — Récupère les infos utilisateur pour personnaliser les noms de fichiers.
+  // Non bloquant : si ça échoue, currentUserNamePart restera vide et le nom du
+  // fichier sera "Poste_Entreprise_CV.pdf" (sans suffixe utilisateur).
+  try {
+    const userInfo = await fetchUserInfo();
+    currentUserNamePart = getUserNameForFilename(userInfo);
+  } catch (e) {
+    console.warn('[init - fetch user] erreur:', e);
+    currentUserNamePart = '';
+  }
 
   chrome.runtime.sendMessage({ type: 'JFMJ_GET_PENDING_CAPTURE' }, (response) => {
     if (chrome.runtime.lastError) {
@@ -95,6 +225,43 @@ async function init() {
 }
 
 $('btn-refresh-auth')?.addEventListener('click', init);
+
+// ============================================================
+// 🆕 SESSION 9bis #3 — Auto-reload du panel quand la session change
+// (login détecté depuis la popup → bascule auto vers l'écran principal,
+//  logout détecté → retour à view-not-logged-in)
+// ============================================================
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+  if (!changes.jfmj_session) return;
+
+  const newSession = changes.jfmj_session.newValue;
+  const oldSession = changes.jfmj_session.oldValue;
+
+  const oldToken = oldSession?.access_token;
+  const newToken = newSession?.access_token;
+
+  // Cas 1 — Login détecté : la session vient d'apparaître (ou de changer)
+  // On ne re-init que si on est actuellement bloqué sur "non connecté",
+  // sinon on risquerait d'écraser un état utilisateur en cours.
+  if (newToken && (!oldToken || newToken !== oldToken)) {
+    const notLoggedView = $('view-not-logged-in');
+    const isShowingNotLoggedIn =
+      notLoggedView && !notLoggedView.classList.contains('jfmj-hidden');
+    if (isShowingNotLoggedIn) {
+      console.log('[storage.onChanged] Login détecté → re-init du panel');
+      init();
+    }
+  }
+
+  // Cas 2 — Logout détecté : la session vient de disparaître
+  if (!newToken && oldToken) {
+    console.log('[storage.onChanged] Logout détecté → retour à view-not-logged-in');
+    currentSessionToken = null;
+    currentUserNamePart = '';
+    show('view-not-logged-in');
+  }
+});
 
 // ============================================================
 // Populate recap
@@ -545,6 +712,7 @@ function renderRecommendations(recs) {
 
 // ============================================================
 // SESSION 6 v0.6.1 — Téléchargement CV via Supabase Storage signed URL
+// 🆕 SESSION 9bis #4 — Nom du fichier personnalisé (Poste_Entreprise_CV_InitialeNom.ext)
 // ============================================================
 $('btn-download-cv')?.addEventListener('click', async () => {
   if (!selectedCvRef) {
@@ -594,7 +762,12 @@ $('btn-download-cv')?.addEventListener('click', async () => {
     }
 
     const blob = await fileRes.blob();
-    const fileName = filePath.split('/').pop() || 'cv.pdf';
+
+    // 🆕 #4 — Construit le nom personnalisé à partir du nom de fichier d'origine
+    // (uniquement pour récupérer l'extension, le reste est généré).
+    const originalFileName = filePath.split('/').pop() || 'cv.pdf';
+    const fileName = buildCvFilename(originalFileName);
+
     triggerDownload(blob, fileName);
   } catch (e) {
     console.error('[download CV] erreur:', e);
