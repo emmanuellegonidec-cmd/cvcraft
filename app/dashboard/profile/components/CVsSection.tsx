@@ -147,7 +147,7 @@ export default function CVsSection({ token }: { token: string }) {
     }
   }
 
-  // ─── Toggle is_reference (promouvoir un CV candidature en référent ou inverse) ───
+  // ─── Promouvoir un CV de candidature en CV référent ───
   async function toggleReference(cv: CV) {
     setError('');
     try {
@@ -158,6 +158,37 @@ export default function CVsSection({ token }: { token: string }) {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ ref: cv.ref, is_reference: !cv.is_reference }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Erreur');
+      }
+      await loadCvs();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }
+
+  // ─── Rétrograder un CV référent vers la section "CV des candidatures" ───
+  // Session 9bis Bloc 3 (29 avril 2026)
+  // Concerne uniquement les CV "promus" (issus d'une candidature). Les CV uploadés
+  // directement comme référents (dossier _reference/ du bucket) ne sont pas
+  // rétrogradables — leur gestion se fait via la suppression classique.
+  // On retire aussi le flag is_favorite pour ne pas laisser un favori fantôme.
+  async function demoteFromReference(cv: CV) {
+    setError('');
+    try {
+      const res = await fetch('/api/cvs', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ref: cv.ref,
+          is_reference: false,
+          is_favorite: false,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -326,8 +357,15 @@ export default function CVsSection({ token }: { token: string }) {
   const candidacyCvs = cvs.filter(cv => !cv.is_reference);
 
   // ─── Rendu d'une carte CV (réutilisable) ───
-  function renderCvCard(cv: CV, options: { showFavoriteStar?: boolean; showPromoteToReference?: boolean }) {
-    const { showFavoriteStar, showPromoteToReference } = options;
+  function renderCvCard(
+    cv: CV,
+    options: {
+      showFavoriteStar?: boolean;
+      showPromoteToReference?: boolean;
+      showDemoteFromReference?: boolean;
+    }
+  ) {
+    const { showFavoriteStar, showPromoteToReference, showDemoteFromReference } = options;
     return (
       <div
         key={cv.ref}
@@ -429,6 +467,15 @@ export default function CVsSection({ token }: { token: string }) {
               style={iconBtnStyle}
             >
               📌
+            </button>
+          )}
+          {showDemoteFromReference && (
+            <button
+              onClick={() => demoteFromReference(cv)}
+              title="Retirer de mes CV référents"
+              style={iconBtnStyle}
+            >
+              📤
             </button>
           )}
           <button
@@ -540,7 +587,10 @@ export default function CVsSection({ token }: { token: string }) {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {referenceCvs.map(cv => renderCvCard(cv, { showFavoriteStar: true }))}
+            {referenceCvs.map(cv => renderCvCard(cv, {
+              showFavoriteStar: true,
+              showDemoteFromReference: !cv.metadata.is_reference_folder,
+            }))}
           </div>
         )}
       </div>
