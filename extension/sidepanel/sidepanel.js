@@ -1,13 +1,18 @@
 // ============================================================
 // Jean find my Job — Side panel logic
+// Session 9bis v0.9.3 :
+//   - 🆕 #1 : plus de création auto de relance J+7 au "J'ai postulé"
+//   - 🆕 #2 : bouton "✓ J'ai postulé" masqué si la candidature est déjà appliquée
+//             → indicateur "✓ Déjà postulé" affiché à la place
+//   - 🆕 #7 : "J'ai postulé" valide aussi l'étape du parcours côté API
+//             (step_dates.applied = today)
 // Session 9bis-bis v0.9.2 :
-//   - 🆕 Dropdown CV en 2 groupes : ⭐ Mes favoris + 📋 Tous mes CV
-//   - 🆕 Plus de pré-sélection auto (placeholder "— Choisis un CV —")
-//   - 🆕 Bouton "Lancer l'analyse" désactivé tant qu'aucun CV n'est choisi
-//   - 🆕 Lecture data.all (nouveau format de la route extension/user-documents)
+//   - Dropdown CV en 2 groupes : ⭐ Mes favoris + 📋 Tous mes CV
+//   - Plus de pré-sélection auto (placeholder "— Choisis un CV —")
+//   - Bouton "Lancer l'analyse" désactivé tant qu'aucun CV n'est choisi
+//   - Lecture data.all (nouveau format de la route extension/user-documents)
 // Session 7 v0.7.0 :
 //   - Bouton "✓ J'ai postulé" → marque la candidature comme postulée
-//   - Création automatique d'une relance à J+7
 //   - Vue de succès dédiée après mark-applied
 // Session 6 v0.6.1 (final2) :
 //   - Zone documents simplifiée : télécharger CV + bouton "Optimiser mon CV"
@@ -421,6 +426,9 @@ function renderAtsResult(r) {
   renderRecommendations(r.recommandations || []);
 
   setText('doc-cv-name', selectedCvDisplayName);
+
+  // Session 9bis #2 — masquer le bouton "J'ai postulé" si déjà appliqué
+  adjustMarkAppliedButton();
 }
 
 function animateNumber(id, from, to, duration) {
@@ -610,9 +618,71 @@ $('btn-optimize-cv')?.addEventListener('click', () => {
 });
 
 // ============================================================
-// SESSION 7 v0.7.0 — Bouton "✓ J'ai postulé"
-// → Marque la candidature comme postulée dans Jean
-// → Crée automatiquement une action de relance à J+7
+// SESSION 9bis #2 — Lecture du statut courant via Supabase REST
+// On évite de créer une nouvelle route API : l'extension a déjà le token
+// utilisateur donc on lit directement la table jobs (RLS s'applique).
+// ============================================================
+async function fetchJobAppliedStatus(jobId) {
+  if (!jobId || !currentSessionToken) return null;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/jobs?id=eq.${encodeURIComponent(jobId)}&select=status,sub_status,applied_at`,
+      {
+        headers: {
+          'Authorization': `Bearer ${currentSessionToken}`,
+          'apikey': currentSessionToken,
+        },
+      }
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows[0] || null;
+  } catch (e) {
+    console.warn('[fetchJobAppliedStatus] erreur:', e);
+    return null;
+  }
+}
+
+async function adjustMarkAppliedButton() {
+  const btn = $('btn-mark-applied');
+  if (!btn || !currentJobId) return;
+
+  const jobInfo = await fetchJobAppliedStatus(currentJobId);
+  // En cas d'erreur réseau on garde le bouton visible (tolérance) :
+  if (!jobInfo) return;
+
+  const isAlreadyApplied =
+    jobInfo.sub_status === 'applied' || jobInfo.status === 'applied';
+
+  if (isAlreadyApplied) {
+    // Cacher le bouton
+    btn.style.display = 'none';
+    // Afficher un indicateur "Déjà postulé" à la place
+    let info = $('mark-applied-info');
+    if (!info) {
+      info = document.createElement('div');
+      info.id = 'mark-applied-info';
+      info.style.cssText =
+        'padding:10px 12px;background:#F1F8E9;border:1.5px solid #C8E6C9;' +
+        'border-radius:8px;color:#2E7D32;font-weight:700;text-align:center;' +
+        'font-size:13px;';
+      info.textContent = '✓ Déjà postulé';
+      btn.parentNode?.insertBefore(info, btn);
+    } else {
+      info.style.display = 'block';
+    }
+  } else {
+    btn.style.display = '';
+    const info = $('mark-applied-info');
+    if (info) info.style.display = 'none';
+  }
+}
+
+// ============================================================
+// SESSION 7 + 9bis — Bouton "✓ J'ai postulé"
+// → Marque la candidature comme postulée dans Jean (#7 valide aussi
+//   l'étape du parcours côté API)
+// → Plus de création de relance auto à J+7 (#1 retiré)
 // ============================================================
 $('btn-mark-applied')?.addEventListener('click', async () => {
   if (!currentJobId) {
@@ -646,23 +716,9 @@ $('btn-mark-applied')?.addEventListener('click', async () => {
       throw new Error(err.error || `HTTP ${res.status}`);
     }
 
-    const data = await res.json();
+    // On consomme la réponse mais on n'affiche plus de date de relance
+    await res.json().catch(() => ({}));
 
-    // Format date FR (ex: "4 mai 2026")
-    let relanceDateLabel = 'J+7';
-    if (data.relance_date) {
-      try {
-        const d = new Date(data.relance_date + 'T00:00:00');
-        relanceDateLabel = d.toLocaleDateString('fr-FR', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        });
-      } catch (_) {
-        relanceDateLabel = data.relance_date;
-      }
-    }
-    setText('applied-relance-date', relanceDateLabel);
     $('link-view-applied').href = `${JEAN_API_BASE}/dashboard`;
     show('view-applied-success');
   } catch (e) {

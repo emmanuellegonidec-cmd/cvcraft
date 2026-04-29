@@ -56,15 +56,16 @@ export async function POST(
 
     const jobId = params.id
 
-    // 3. Lire le body (cvRef et lmRef sont optionnels)
+    // 3. Lire le body (cvRef et lmRef sont optionnels, conservés pour compat)
     const body = await request.json().catch(() => ({}))
     const cvRef = body.cvRef || null
     const lmRef = body.lmRef || null
 
     // 4. Vérifier que le job existe ET appartient à l'utilisateur
+    //    On lit aussi step_dates pour fusionner les dates des étapes (#7)
     const { data: job, error: jobError } = await supabase
       .from('jobs')
-      .select('id, user_id')
+      .select('id, user_id, step_dates')
       .eq('id', jobId)
       .eq('user_id', user.id)
       .single()
@@ -76,11 +77,27 @@ export async function POST(
       )
     }
 
-    // 5. Mettre à jour le statut de la candidature
+    // 5. Calculer le step_dates mis à jour (#7 — valider les étapes du parcours)
+    //    - to_apply : on écrit la date du jour SEULEMENT si elle est vide,
+    //      pour ne pas écraser une saisie manuelle faite côté Jean web.
+    //      Logique : un clic sur "J'ai postulé" depuis l'extension implique
+    //      que l'étape "Envie de postuler" est de facto déjà passée.
+    //    - applied : on écrit toujours la date du jour.
+    const todayISO = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+    const currentStepDates =
+      ((job as any).step_dates as Record<string, string>) || {}
+    const updatedStepDates: Record<string, string> = {
+      ...currentStepDates,
+      to_apply: currentStepDates.to_apply || todayISO,
+      applied: todayISO,
+    }
+
+    // 6. Mettre à jour le statut de la candidature + step_dates
     const updateData: Record<string, any> = {
       status: 'applied',
       sub_status: 'applied',
       applied_at: new Date().toISOString(),
+      step_dates: updatedStepDates,
     }
 
     const { error: updateError } = await supabase
@@ -97,42 +114,16 @@ export async function POST(
       )
     }
 
-    // 6. Créer une action de relance à J+7
-    const deadlineDate = new Date()
-    deadlineDate.setDate(deadlineDate.getDate() + 7)
-    const deadlineISO = deadlineDate.toISOString().split('T')[0] // YYYY-MM-DD
-
-    const { error: actionError } = await supabase
-      .from('job_step_actions')
-      .insert({
-        user_id: user.id,
-        job_id: jobId,
-        step_id: 'applied',
-        title: 'Relancer le recruteur',
-        sub: 'Si pas de réponse, envoyer une relance polie',
-        icon: '📨',
-        position: 1000,
-        is_custom: true,
-        type: 'action',
-        is_done: false,
-        deadline_date: deadlineISO,
-      })
-
-    // Si la création de relance échoue, on ne fait pas échouer toute la requête
-    // car la mise à jour du statut est la priorité
-    if (actionError) {
-      console.error('Create relance action error:', actionError)
-    }
-
     // 7. Réponse succès
+    //    NB session 9bis #1 : la création auto de relance J+7 a été retirée.
+    //    L'utilisatrice ajoute désormais ses relances manuellement depuis Jean.
     return NextResponse.json(
       {
         ok: true,
         jobId,
         status: 'applied',
         sub_status: 'applied',
-        relance_date: deadlineISO,
-        relance_created: !actionError,
+        applied_date: todayISO,
       },
       { headers: corsHeaders }
     )

@@ -209,6 +209,7 @@
       </details>
 
       <!-- ✨ SESSION 7 v0.7.0 — Zone documents avec bouton "J'ai postulé" -->
+      <!-- 🆕 SESSION 9bis #2 — Le bouton est masqué dynamiquement par sidepanel.js si la candidature est déjà 'applied' -->
       <div id="documents-zone" class="jfmj-documents-zone">
         <div class="jfmj-doc-block">
           <label class="jfmj-field-label">CV utilisé pour l'analyse</label>
@@ -218,11 +219,11 @@
 
         <button id="btn-optimize-cv" class="jfmj-btn jfmj-btn-secondary jfmj-btn-full" style="margin-top: 6px;">🎯 Optimiser ton CV pour cette offre</button>
 
-        <!-- 🆕 SESSION 7 — Bouton "J'ai postulé" -->
+        <!-- 🆕 SESSION 7 — Bouton "J'ai postulé" (masqué si déjà postulé via JS) -->
         <button id="btn-mark-applied" class="jfmj-btn jfmj-btn-primary jfmj-btn-full" style="margin-top: 12px;">✓ J'ai postulé</button>
 
         <p class="jfmj-tip-box">
-          💡 <strong>Astuce :</strong> télécharge ton CV, glisse-dépose-le sur le formulaire de candidature, puis clique sur <strong>"✓ J'ai postulé"</strong> — la candidature avancera dans ton kanban et une relance sera créée pour J+7.
+          💡 <strong>Astuce :</strong> télécharge ton CV, glisse-dépose-le sur le formulaire de candidature, puis clique sur <strong>"✓ J'ai postulé"</strong> — la candidature avancera automatiquement dans ton kanban.
         </p>
       </div>
 
@@ -232,14 +233,12 @@
       </div>
     </section>
 
-    <!-- 🆕 SESSION 7 — Vue succès après "J'ai postulé" -->
+    <!-- 🆕 SESSION 7 + 9bis — Vue succès après "J'ai postulé" (sans mention de relance auto) -->
     <section id="view-applied-success" class="jfmj-view jfmj-hidden">
       <div class="jfmj-success-state">
         <span class="jfmj-emoji-big">🎉</span>
         <h2>Candidature enregistrée !</h2>
-        <p>Ta candidature est passée dans la colonne <strong>"Postulée"</strong> de ton kanban.</p>
-        <p style="margin-top:12px;">📨 <strong>Relance prévue le <span id="applied-relance-date">—</span></strong></p>
-        <p class="jfmj-help-text" style="margin-top:8px;">Si tu n'as pas de réponse d'ici là, on te rappellera de relancer le recruteur.</p>
+        <p>Ta candidature est passée dans la colonne <strong>"Postulée"</strong> de ton kanban et l'étape du parcours est validée.</p>
 
         <a id="link-view-applied" class="jfmj-btn jfmj-btn-primary jfmj-btn-full" target="_blank" style="margin-top:16px;">Ouvrir ton tableau de bord</a>
         <button id="btn-close-applied" class="jfmj-btn jfmj-btn-link">Fermer</button>
