@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { createClient } from '@/lib/supabase/server';
 
-// ──────────────────────────────────────────────────────────────────
-// CORS — autoriser les appels depuis l'extension Chrome
-// ──────────────────────────────────────────────────────────────────
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+// ─────────────────────────────────────────────────────────────────────────
+// Route appelée par l'extension Chrome pour lister les CV de l'utilisateur.
+//
+// Mise à jour session 9bis-bis :
+// - Retourne 2 listes : `favorites` (CV avec is_favorite = true) + `all` (tous, antéchronologique)
+// - Inclut les CV référents (dossier _reference du bucket)
+// - Filtre les CV Creator (non analysables côté serveur, marqués is_analyzable: false)
+// - Pas de pré-sélection automatique : `default_cv_ref` exposé pour info mais l'extension l'ignore
+// ─────────────────────────────────────────────────────────────────────────
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
-}
-
-// ──────────────────────────────────────────────────────────────────
-// Auth : Bearer token (pattern projet, identique aux autres routes extension)
-// ──────────────────────────────────────────────────────────────────
 function createAuthedClient(token: string) {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,132 +19,170 @@ function createAuthedClient(token: string) {
   );
 }
 
-async function getAuth(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.replace('Bearer ', '').trim();
-    const supabase = createAuthedClient(token);
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (!error && user) return { userId: user.id, supabase };
-  }
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return { userId: user?.id ?? null, supabase };
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Helpers display name
-// ──────────────────────────────────────────────────────────────────
-function getJobLabel(job: any): string {
-  if (!job) return 'Offre supprimée';
-  const title = job.title || 'Sans titre';
-  const company = job.company ? ` — ${job.company}` : '';
-  return `${title}${company}`;
+function buildUploadDisplayName(fileName: string, jobTitle?: string, jobCompany?: string): string {
+  const prefix = fileName.toLowerCase().startsWith('cv') ? 'CV' : fileName;
+  if (!jobTitle) return `${prefix} - Offre supprimée`;
+  const parts = [prefix, '-', jobTitle];
+  if (jobCompany) parts.push('—', jobCompany);
+  return parts.join(' ');
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Récupération des CV (Creator + uploads)
-// ──────────────────────────────────────────────────────────────────
-async function getCvs(userId: string, supabase: any, profile: any) {
-  const cvs: any[] = [];
-
-  // Creator CVs
-  const { data: creatorCvs } = await supabase
-    .from('cvs')
-    .select('id, title, created_at')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (creatorCvs && creatorCvs.length) {
-    for (const cv of creatorCvs) {
-      cvs.push({
-        ref: `creator:${cv.id}`,
-        source: 'creator',
-        display_name: cv.title || 'CV sans titre',
-        is_analyzable: false,
-        is_default: profile?.default_cv_ref === `creator:${cv.id}`,
-      });
-    }
-  }
-
-  // Uploaded CVs (bucket job-documents → user_id/job_id/cv*.pdf)
-  const { data: storageList } = await supabase.storage
-    .from('job-documents')
-    .list(userId, { limit: 100, sortBy: { column: 'name', order: 'asc' } });
-
-  if (storageList && storageList.length) {
-    for (const folder of storageList) {
-      // Chaque entrée du niveau 1 est un job_id (dossier)
-      if (!folder.name) continue;
-      const { data: jobFiles } = await supabase.storage
-        .from('job-documents')
-        .list(`${userId}/${folder.name}`, { limit: 50 });
-
-      if (!jobFiles) continue;
-
-      for (const f of jobFiles) {
-        // On ne garde que les fichiers cv*.pdf
-        if (!f.name.toLowerCase().startsWith('cv') || !f.name.toLowerCase().endsWith('.pdf')) continue;
-
-        const filePath = `${userId}/${folder.name}/${f.name}`;
-        // Trouver le job lié pour le display name
-        const { data: linkedJob } = await supabase
-          .from('jobs')
-          .select('title, company')
-          .eq('id', folder.name)
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        cvs.push({
-          ref: `upload:${filePath}`,
-          source: 'upload',
-          display_name: `CV - ${getJobLabel(linkedJob)}`,
-          is_analyzable: true,
-          is_default: profile?.default_cv_ref === `upload:${filePath}`,
-        });
-      }
-    }
-  }
-
-  return cvs;
-}
-
-// ──────────────────────────────────────────────────────────────────
-// GET /api/extension/user-documents
-// Retourne la liste des CV de l'utilisateur (Creator + uploads).
-// Note : la fonctionnalite LM a ete retiree du scope de l'extension
-// en session 6 (pivot UX). La LM reste cote Jean web uniquement.
-// ──────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
-  try {
-    const { userId, supabase } = await getAuth(req);
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401, headers: CORS_HEADERS }
-      );
-    }
+  // ─── Auth ───
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return NextResponse.json(
+      { error: 'Non authentifié' },
+      { status: 401, headers: CORS_HEADERS }
+    );
+  }
 
-    // Récupérer le profil pour la ref CV par défaut
+  const token = authHeader.slice('Bearer '.length);
+  const supabase = createAuthedClient(token);
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: 'Token invalide' },
+      { status: 401, headers: CORS_HEADERS }
+    );
+  }
+
+  try {
+    // ─── Profil ───
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('default_cv_ref')
-      .eq('user_id', userId)
-      .single();
+      .select('default_cv_ref, cv_display_names, cv_references, cv_favorites')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-    const cvs = await getCvs(userId, supabase, profile);
+    const defaultRef: string | null = profile?.default_cv_ref || null;
+    const displayNames: Record<string, string> = profile?.cv_display_names || {};
+    const referenceRefs: string[] = Array.isArray(profile?.cv_references) ? profile.cv_references : [];
+    const favoriteRefs: string[] = Array.isArray(profile?.cv_favorites) ? profile.cv_favorites : [];
+
+    // ─── CV Creator (non analysables côté serveur) ───
+    const { data: creatorCvs } = await supabase
+      .from('cvs')
+      .select('id, title, template, created_at, updated_at')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false });
+
+    const creatorList = (creatorCvs || []).map((cv: any) => {
+      const ref = `creator:${cv.id}`;
+      return {
+        ref,
+        source: 'creator' as const,
+        display_name: displayNames[ref] || cv.title || 'Sans titre',
+        is_default: defaultRef === ref,
+        is_reference: referenceRefs.includes(ref),
+        is_favorite: favoriteRefs.includes(ref),
+        is_analyzable: false, // Les CV Creator ne sont pas analysables côté serveur
+        analysis_blocker: 'Les CV Creator ne sont pas encore analysables depuis l\'extension. Utilise un CV uploadé en PDF.',
+        created_at: cv.created_at,
+        updated_at: cv.updated_at,
+      };
+    });
+
+    // ─── CV uploadés (bucket) ───
+    const { data: folders } = await supabase.storage
+      .from('job-documents')
+      .list(user.id, { limit: 1000, sortBy: { column: 'name', order: 'asc' } });
+
+    const uploadList: any[] = [];
+
+    if (folders && folders.length > 0) {
+      const folderNames = folders
+        .filter((f: any) => !f.name.includes('.'))
+        .map((f: any) => f.name);
+
+      const jobIds = folderNames.filter((n: string) => n !== '_reference');
+
+      let jobsMap: Record<string, any> = {};
+
+      if (jobIds.length > 0) {
+        const { data: jobs } = await supabase
+          .from('jobs')
+          .select('id, title, company')
+          .in('id', jobIds);
+        jobsMap = Object.fromEntries((jobs || []).map((j: any) => [j.id, j]));
+      }
+
+      for (const folderName of folderNames) {
+        const isReferenceFolder = folderName === '_reference';
+
+        const { data: files } = await supabase.storage
+          .from('job-documents')
+          .list(`${user.id}/${folderName}`, { limit: 100 });
+
+        if (!files) continue;
+
+        for (const file of files) {
+          const fname = (file as any).name.toLowerCase();
+          if (!fname.startsWith('cv')) continue;
+
+          const filePath = `${user.id}/${folderName}/${(file as any).name}`;
+          const ref = `upload:${filePath}`;
+
+          let autoDisplayName: string;
+
+          if (isReferenceFolder) {
+            // CV référent uploadé : on prend le nom personnalisé (toujours présent à l'upload)
+            autoDisplayName = displayNames[ref] || 'CV référent';
+          } else {
+            const job = jobsMap[folderName];
+            autoDisplayName = displayNames[ref] || buildUploadDisplayName((file as any).name, job?.title, job?.company);
+          }
+
+          uploadList.push({
+            ref,
+            source: 'upload' as const,
+            display_name: autoDisplayName,
+            is_default: defaultRef === ref,
+            is_reference: isReferenceFolder || referenceRefs.includes(ref),
+            is_favorite: favoriteRefs.includes(ref),
+            is_analyzable: true,
+            analysis_blocker: null,
+            created_at: (file as any).created_at,
+            updated_at: (file as any).updated_at || (file as any).created_at,
+          });
+        }
+      }
+    }
+
+    // ─── Tri global antéchronologique ───
+    const allCvs = [...creatorList, ...uploadList].sort((a, b) => {
+      const ad = new Date(a.updated_at || a.created_at).getTime();
+      const bd = new Date(b.updated_at || b.created_at).getTime();
+      return bd - ad;
+    });
+
+    // ─── Constitution des 2 listes ───
+    const favorites = allCvs.filter(cv => cv.is_favorite);
 
     return NextResponse.json(
       {
-        cvs,
-        default_cv_ref: profile?.default_cv_ref || null,
+        cvs: allCvs, // legacy : compatibilité avec l'ancien format de l'extension
+        favorites,
+        all: allCvs,
+        default_cv_ref: defaultRef, // info, mais l'extension n'auto-sélectionne plus
       },
       { headers: CORS_HEADERS }
     );
-  } catch (e: any) {
-    console.error('[user-documents] erreur:', e);
+  } catch (err: any) {
+    console.error('GET /api/extension/user-documents error:', err);
     return NextResponse.json(
-      { error: e?.message || 'Erreur inattendue' },
+      { error: err.message || 'Erreur serveur' },
       { status: 500, headers: CORS_HEADERS }
     );
   }
