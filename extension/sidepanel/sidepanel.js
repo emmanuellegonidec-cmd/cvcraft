@@ -1,9 +1,14 @@
 // ============================================================
 // Jean find my Job — Side panel logic
+// Session 9bis-bis v0.9.2 :
+//   - 🆕 Dropdown CV en 2 groupes : ⭐ Mes favoris + 📋 Tous mes CV
+//   - 🆕 Plus de pré-sélection auto (placeholder "— Choisis un CV —")
+//   - 🆕 Bouton "Lancer l'analyse" désactivé tant qu'aucun CV n'est choisi
+//   - 🆕 Lecture data.all (nouveau format de la route extension/user-documents)
 // Session 7 v0.7.0 :
-//   - 🆕 Bouton "✓ J'ai postulé" → marque la candidature comme postulée
-//   - 🆕 Création automatique d'une relance à J+7
-//   - 🆕 Vue de succès dédiée après mark-applied
+//   - Bouton "✓ J'ai postulé" → marque la candidature comme postulée
+//   - Création automatique d'une relance à J+7
+//   - Vue de succès dédiée après mark-applied
 // Session 6 v0.6.1 (final2) :
 //   - Zone documents simplifiée : télécharger CV + bouton "Optimiser mon CV"
 //   - LM retirée (sera côté Jean web uniquement)
@@ -211,20 +216,24 @@ async function startAnalysisFlow() {
   show('view-loading');
 
   try {
-    const res = await fetch(`${JEAN_API_BASE}/api/extension/user-documents?type=cv`, {
+    const res = await fetch(`${JEAN_API_BASE}/api/extension/user-documents`, {
       headers: { 'Authorization': `Bearer ${currentSessionToken}` },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
-    const cvs = data.cvs || [];
-    const analyzableCvs = cvs.filter(c => c.is_analyzable);
+    // Session 9bis-bis : on lit data.all (nouveau) avec fallback data.cvs (ancien)
+    const allCvs = Array.isArray(data.all) ? data.all : (data.cvs || []);
+    const favoriteCvs = Array.isArray(data.favorites) ? data.favorites : allCvs.filter(c => c.is_favorite);
+
+    const analyzableCvs = allCvs.filter(c => c.is_analyzable);
 
     if (analyzableCvs.length === 0) {
       show('view-no-cv');
       return;
     }
 
+    // Si un seul CV analysable, on saute la dropdown
     if (analyzableCvs.length === 1) {
       selectedCvRef = analyzableCvs[0].ref;
       selectedCvDisplayName = analyzableCvs[0].display_name;
@@ -232,7 +241,7 @@ async function startAnalysisFlow() {
       return;
     }
 
-    populateCvChooser(cvs, data.default_cv_ref);
+    populateCvChooser(allCvs, favoriteCvs);
     show('view-choose-cv');
   } catch (e) {
     console.error('[analyse - load CVs] erreur:', e);
@@ -240,49 +249,76 @@ async function startAnalysisFlow() {
   }
 }
 
-function populateCvChooser(cvs, defaultRef) {
+// Session 9bis-bis : dropdown en 2 groupes (favoris + tous), pas de pré-sélection auto
+function populateCvChooser(allCvs, favoriteCvs) {
   const select = $('select-cv');
   select.innerHTML = '';
 
-  const analyzable = cvs.filter(c => c.is_analyzable);
-  const nonAnalyzable = cvs.filter(c => !c.is_analyzable);
+  // Placeholder en 1ère position (forcer un choix volontaire)
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = '— Choisis un CV —';
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.appendChild(placeholder);
 
-  let preSelectedRef = null;
-  if (defaultRef && analyzable.find(c => c.ref === defaultRef)) {
-    preSelectedRef = defaultRef;
-  } else if (analyzable.length > 0) {
-    preSelectedRef = analyzable[0].ref;
-  }
-
-  if (analyzable.length > 0) {
-    const grp = document.createElement('optgroup');
-    grp.label = '📄 CV analysables (PDF)';
-    analyzable.forEach(cv => {
-      const opt = document.createElement('option');
-      opt.value = cv.ref;
-      opt.textContent = cv.display_name + (cv.is_default ? ' ⭐' : '');
-      if (cv.ref === preSelectedRef) opt.selected = true;
-      grp.appendChild(opt);
-    });
-    select.appendChild(grp);
-  }
-
-  if (nonAnalyzable.length > 0) {
-    const grp = document.createElement('optgroup');
-    grp.label = '🚫 CV Creator (non analysables ici)';
-    nonAnalyzable.forEach(cv => {
+  // Groupe 1 : ⭐ Mes favoris
+  if (favoriteCvs.length > 0) {
+    const grpFav = document.createElement('optgroup');
+    grpFav.label = '⭐ Mes favoris';
+    favoriteCvs.forEach(cv => {
       const opt = document.createElement('option');
       opt.value = cv.ref;
       opt.textContent = cv.display_name;
-      opt.disabled = true;
-      grp.appendChild(opt);
+      if (!cv.is_analyzable) {
+        opt.disabled = true;
+        opt.textContent += ' (non analysable)';
+      }
+      grpFav.appendChild(opt);
     });
-    select.appendChild(grp);
+    select.appendChild(grpFav);
   }
+
+  // Groupe 2 : 📋 Tous mes CV (sauf ceux déjà dans favoris)
+  const favRefs = new Set(favoriteCvs.map(c => c.ref));
+  const otherCvs = allCvs.filter(c => !favRefs.has(c.ref));
+
+  if (otherCvs.length > 0) {
+    const grpAll = document.createElement('optgroup');
+    grpAll.label = favoriteCvs.length > 0 ? '📋 Tous mes CV' : '📋 Mes CV';
+    otherCvs.forEach(cv => {
+      const opt = document.createElement('option');
+      opt.value = cv.ref;
+      opt.textContent = cv.display_name;
+      if (!cv.is_analyzable) {
+        opt.disabled = true;
+        opt.textContent += ' (non analysable)';
+      }
+      grpAll.appendChild(opt);
+    });
+    select.appendChild(grpAll);
+  }
+
+  // Bouton "Lancer l'analyse" désactivé tant que pas de choix
+  const launchBtn = $('btn-launch-analysis');
+  if (launchBtn) {
+    launchBtn.disabled = true;
+    launchBtn.dataset.originalText = launchBtn.dataset.originalText || launchBtn.textContent;
+  }
+
+  // Activer le bouton dès qu'un CV valide est choisi
+  select.addEventListener('change', () => {
+    if (launchBtn) {
+      launchBtn.disabled = !select.value;
+    }
+  });
 }
 
 $('btn-launch-analysis')?.addEventListener('click', () => {
   const select = $('select-cv');
+  if (!select.value) {
+    return; // Pas de CV choisi, on ignore
+  }
   selectedCvRef = select.value;
   selectedCvDisplayName = select.options[select.selectedIndex]?.text || 'CV';
   launchAnalysis();
@@ -574,7 +610,7 @@ $('btn-optimize-cv')?.addEventListener('click', () => {
 });
 
 // ============================================================
-// 🆕 SESSION 7 v0.7.0 — Bouton "✓ J'ai postulé"
+// SESSION 7 v0.7.0 — Bouton "✓ J'ai postulé"
 // → Marque la candidature comme postulée dans Jean
 // → Crée automatiquement une action de relance à J+7
 // ============================================================
