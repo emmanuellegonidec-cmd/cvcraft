@@ -1,31 +1,28 @@
 // ============================================================
 // Jean find my Job — Side panel logic
+// Session 9bis v0.9.5 — Bloc 2 (fix #4) :
+//   - 🔧 #4 : récupération du prénom/nom utilisateur revue
+//             → on décode le JWT directement (pas d'appel à /auth/v1/user
+//               qui exigeait la clé anon publique non disponible dans l'extension)
+//             → on lit la table 'user_profiles' (first_name + last_name)
+//               via l'API REST Supabase, avec double tentative user_id puis id
+//             → fallback en cascade : metadata JWT → parsing email
+//             → garantit au minimum "EGonidec" pour emmanuelle.gonidec@gmail.com
 // Session 9bis v0.9.4 — Bloc 2 :
-//   - 🆕 #3 : auto-reload du panel quand la session apparaît
-//             (chrome.storage.onChanged détecte le login depuis la popup
-//              et rebascule automatiquement vers l'écran principal)
-//             → gère aussi le logout (retour à view-not-logged-in)
-//   - 🆕 #4 : nom du CV téléchargé personnalisé
-//             → format : [Poste]_[Entreprise]_CV_[Initiale][Nom].pdf
-//             → infos utilisateur lues via /auth/v1/user (Supabase),
-//               fallback : user_metadata.full_name puis parsing de l'email
+//   - #3 : auto-reload du panel quand la session apparaît
+//   - #4 : nom du CV téléchargé personnalisé
 // Session 9bis v0.9.3 :
 //   - #1 : plus de création auto de relance J+7 au "J'ai postulé"
 //   - #2 : bouton "✓ J'ai postulé" masqué si la candidature est déjà appliquée
-//             → indicateur "✓ Déjà postulé" affiché à la place
 //   - #7 : "J'ai postulé" valide aussi l'étape du parcours côté API
-//             (step_dates.applied = today)
 // Session 9bis-bis v0.9.2 :
 //   - Dropdown CV en 2 groupes : ⭐ Mes favoris + 📋 Tous mes CV
-//   - Plus de pré-sélection auto (placeholder "— Choisis un CV —")
-//   - Bouton "Lancer l'analyse" désactivé tant qu'aucun CV n'est choisi
+//   - Plus de pré-sélection auto + bouton désactivé tant que pas de choix
 //   - Lecture data.all (nouveau format de la route extension/user-documents)
 // Session 7 v0.7.0 :
 //   - Bouton "✓ J'ai postulé" → marque la candidature comme postulée
-//   - Vue de succès dédiée après mark-applied
-// Session 6 v0.6.1 (final2) :
+// Session 6 v0.6.1 :
 //   - Zone documents simplifiée : télécharger CV + bouton "Optimiser mon CV"
-//   - LM retirée (sera côté Jean web uniquement)
 // ============================================================
 
 const SUPABASE_URL = 'https://kjsqfgpewjzierlxzdyj.supabase.co';
@@ -77,52 +74,108 @@ async function getSessionToken() {
 }
 
 // ============================================================
-// 🆕 SESSION 9bis #4 — Récupération profil utilisateur (Supabase Auth)
+// 🆕 SESSION 9bis #4 (v0.9.5) — Décodage du JWT Supabase
+// Pas d'appel réseau, 100% fiable.
+// Récupère : email, sub (= user_id auth.users), user_metadata
 // ============================================================
-async function fetchUserInfo() {
-  if (!currentSessionToken) return null;
+function decodeJwtPayload(token) {
+  if (!token) return null;
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: {
-        'Authorization': `Bearer ${currentSessionToken}`,
-        'apikey': currentSessionToken,
-      },
-    });
-    if (!res.ok) return null;
-    return await res.json();
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    // base64url → base64
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    // padding
+    const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+    const json = atob(padded);
+    return JSON.parse(json);
   } catch (e) {
-    console.warn('[fetchUserInfo] erreur:', e);
+    console.warn('[decodeJwtPayload] erreur:', e);
     return null;
   }
 }
 
-/**
- * 🆕 #4 — Construit la partie "InitialeNom" pour le nom de fichier.
- * Stratégie en cascade :
- *   1. user_metadata.first_name + last_name
- *   2. user_metadata.full_name (split sur 1er espace)
- *   3. parsing de l'email (ex: prenom.nom@...)
- */
-function getUserNameForFilename(user) {
-  if (!user) return '';
+// ============================================================
+// 🆕 SESSION 9bis #4 (v0.9.5) — Lecture de la table user_profiles
+// Double tentative : ?user_id=eq.{sub} puis ?id=eq.{sub}
+// Best effort : si la table ou les RLS empêchent la lecture, on retourne null
+// et on basculera sur les fallbacks (metadata JWT puis parsing email).
+// ============================================================
+async function tryFetchUserProfile(filter) {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?${filter}&select=first_name,last_name`,
+      {
+        headers: {
+          'Authorization': `Bearer ${currentSessionToken}`,
+          'apikey': currentSessionToken,
+        },
+      }
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows[0] || null;
+  } catch (e) {
+    console.warn('[tryFetchUserProfile] erreur:', e);
+    return null;
+  }
+}
 
-  const meta = user.user_metadata || {};
-  let firstName = (meta.first_name || meta.firstName || '').trim();
-  let lastName = (meta.last_name || meta.lastName || '').trim();
+async function fetchUserProfileFromDb(userId) {
+  if (!userId || !currentSessionToken) return null;
 
-  // Fallback 1 : full_name
-  if (!firstName && !lastName) {
-    const fullName = (meta.full_name || meta.fullName || meta.name || '').trim();
-    if (fullName) {
-      const parts = fullName.split(/\s+/);
-      firstName = parts[0] || '';
-      lastName = parts.slice(1).join(' ') || '';
+  // Tentative 1 : ?user_id=eq.{sub} (convention la plus courante)
+  let profile = await tryFetchUserProfile(`user_id=eq.${encodeURIComponent(userId)}`);
+  if (profile) return profile;
+
+  // Tentative 2 : ?id=eq.{sub} (si la PK de la table = auth.users.id)
+  profile = await tryFetchUserProfile(`id=eq.${encodeURIComponent(userId)}`);
+  return profile;
+}
+
+// ============================================================
+// 🆕 SESSION 9bis #4 (v0.9.5) — Construction de la partie utilisateur
+// du nom de fichier (ex: "EGonidec").
+// Stratégie en cascade :
+//   1. Table user_profiles (first_name + last_name)
+//   2. user_metadata du JWT (first_name/last_name puis full_name)
+//   3. Parsing de l'email (prenom.nom@... → "EGonidec")
+// ============================================================
+async function buildUserNamePart() {
+  const tokenPayload = decodeJwtPayload(currentSessionToken);
+  if (!tokenPayload) return '';
+
+  let firstName = '';
+  let lastName = '';
+
+  // Tentative 1 : table user_profiles
+  if (tokenPayload.sub) {
+    const profile = await fetchUserProfileFromDb(tokenPayload.sub);
+    if (profile) {
+      firstName = (profile.first_name || '').trim();
+      lastName = (profile.last_name || '').trim();
     }
   }
 
-  // Fallback 2 : parsing email (prenom.nom@... ou prenom_nom@... ou prenom-nom@...)
-  if (!firstName && !lastName && user.email) {
-    const localPart = user.email.split('@')[0];
+  // Tentative 2 : user_metadata du JWT
+  if (!firstName && !lastName) {
+    const meta = tokenPayload.user_metadata || {};
+    firstName = (meta.first_name || meta.firstName || '').trim();
+    lastName = (meta.last_name || meta.lastName || '').trim();
+
+    if (!firstName && !lastName) {
+      const fullName = (meta.full_name || meta.fullName || meta.name || '').trim();
+      if (fullName) {
+        const parts = fullName.split(/\s+/);
+        firstName = parts[0] || '';
+        lastName = parts.slice(1).join(' ') || '';
+      }
+    }
+  }
+
+  // Tentative 3 : parsing email (ex: emmanuelle.gonidec@... → Emmanuelle / Gonidec)
+  if (!firstName && !lastName && tokenPayload.email) {
+    const localPart = tokenPayload.email.split('@')[0];
     const parts = localPart.split(/[._-]/);
     if (parts.length >= 2) {
       firstName = parts[0];
@@ -132,6 +185,15 @@ function getUserNameForFilename(user) {
     }
   }
 
+  return formatNamePart(firstName, lastName);
+}
+
+/**
+ * Construit "InitialeNom" à partir d'un prénom et d'un nom.
+ * Ex: ("Emmanuelle", "GONIDEC") → "EGonidec"
+ *     ("Marie-Claire", "Le Breton") → "MLeBreton"
+ */
+function formatNamePart(firstName, lastName) {
   const cleanFirst = sanitizeFilenamePart(firstName);
   const cleanLast = sanitizeFilenamePart(lastName);
 
@@ -197,14 +259,14 @@ async function init() {
   }
   currentSessionToken = token;
 
-  // 🆕 #4 — Récupère les infos utilisateur pour personnaliser les noms de fichiers.
-  // Non bloquant : si ça échoue, currentUserNamePart restera vide et le nom du
+  // 🆕 #4 — Récupère le prénom/nom utilisateur pour personnaliser les noms de fichiers.
+  // Non bloquant : si tout échoue, currentUserNamePart restera vide et le nom du
   // fichier sera "Poste_Entreprise_CV.pdf" (sans suffixe utilisateur).
   try {
-    const userInfo = await fetchUserInfo();
-    currentUserNamePart = getUserNameForFilename(userInfo);
+    currentUserNamePart = await buildUserNamePart();
+    console.log('[init] currentUserNamePart =', currentUserNamePart || '(vide)');
   } catch (e) {
-    console.warn('[init - fetch user] erreur:', e);
+    console.warn('[init - buildUserNamePart] erreur:', e);
     currentUserNamePart = '';
   }
 
@@ -242,8 +304,6 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   const newToken = newSession?.access_token;
 
   // Cas 1 — Login détecté : la session vient d'apparaître (ou de changer)
-  // On ne re-init que si on est actuellement bloqué sur "non connecté",
-  // sinon on risquerait d'écraser un état utilisateur en cours.
   if (newToken && (!oldToken || newToken !== oldToken)) {
     const notLoggedView = $('view-not-logged-in');
     const isShowingNotLoggedIn =
@@ -394,7 +454,6 @@ async function startAnalysisFlow() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
-    // Session 9bis-bis : on lit data.all (nouveau) avec fallback data.cvs (ancien)
     const allCvs = Array.isArray(data.all) ? data.all : (data.cvs || []);
     const favoriteCvs = Array.isArray(data.favorites) ? data.favorites : allCvs.filter(c => c.is_favorite);
 
@@ -405,7 +464,6 @@ async function startAnalysisFlow() {
       return;
     }
 
-    // Si un seul CV analysable, on saute la dropdown
     if (analyzableCvs.length === 1) {
       selectedCvRef = analyzableCvs[0].ref;
       selectedCvDisplayName = analyzableCvs[0].display_name;
@@ -421,12 +479,10 @@ async function startAnalysisFlow() {
   }
 }
 
-// Session 9bis-bis : dropdown en 2 groupes (favoris + tous), pas de pré-sélection auto
 function populateCvChooser(allCvs, favoriteCvs) {
   const select = $('select-cv');
   select.innerHTML = '';
 
-  // Placeholder en 1ère position (forcer un choix volontaire)
   const placeholder = document.createElement('option');
   placeholder.value = '';
   placeholder.textContent = '— Choisis un CV —';
@@ -434,7 +490,6 @@ function populateCvChooser(allCvs, favoriteCvs) {
   placeholder.selected = true;
   select.appendChild(placeholder);
 
-  // Groupe 1 : ⭐ Mes favoris
   if (favoriteCvs.length > 0) {
     const grpFav = document.createElement('optgroup');
     grpFav.label = '⭐ Mes favoris';
@@ -451,7 +506,6 @@ function populateCvChooser(allCvs, favoriteCvs) {
     select.appendChild(grpFav);
   }
 
-  // Groupe 2 : 📋 Tous mes CV (sauf ceux déjà dans favoris)
   const favRefs = new Set(favoriteCvs.map(c => c.ref));
   const otherCvs = allCvs.filter(c => !favRefs.has(c.ref));
 
@@ -471,14 +525,12 @@ function populateCvChooser(allCvs, favoriteCvs) {
     select.appendChild(grpAll);
   }
 
-  // Bouton "Lancer l'analyse" désactivé tant que pas de choix
   const launchBtn = $('btn-launch-analysis');
   if (launchBtn) {
     launchBtn.disabled = true;
     launchBtn.dataset.originalText = launchBtn.dataset.originalText || launchBtn.textContent;
   }
 
-  // Activer le bouton dès qu'un CV valide est choisi
   select.addEventListener('change', () => {
     if (launchBtn) {
       launchBtn.disabled = !select.value;
@@ -488,9 +540,7 @@ function populateCvChooser(allCvs, favoriteCvs) {
 
 $('btn-launch-analysis')?.addEventListener('click', () => {
   const select = $('select-cv');
-  if (!select.value) {
-    return; // Pas de CV choisi, on ignore
-  }
+  if (!select.value) return;
   selectedCvRef = select.value;
   selectedCvDisplayName = select.options[select.selectedIndex]?.text || 'CV';
   launchAnalysis();
@@ -792,8 +842,6 @@ $('btn-optimize-cv')?.addEventListener('click', () => {
 
 // ============================================================
 // SESSION 9bis #2 — Lecture du statut courant via Supabase REST
-// On évite de créer une nouvelle route API : l'extension a déjà le token
-// utilisateur donc on lit directement la table jobs (RLS s'applique).
 // ============================================================
 async function fetchJobAppliedStatus(jobId) {
   if (!jobId || !currentSessionToken) return null;
@@ -821,16 +869,13 @@ async function adjustMarkAppliedButton() {
   if (!btn || !currentJobId) return;
 
   const jobInfo = await fetchJobAppliedStatus(currentJobId);
-  // En cas d'erreur réseau on garde le bouton visible (tolérance) :
   if (!jobInfo) return;
 
   const isAlreadyApplied =
     jobInfo.sub_status === 'applied' || jobInfo.status === 'applied';
 
   if (isAlreadyApplied) {
-    // Cacher le bouton
     btn.style.display = 'none';
-    // Afficher un indicateur "Déjà postulé" à la place
     let info = $('mark-applied-info');
     if (!info) {
       info = document.createElement('div');
@@ -853,9 +898,6 @@ async function adjustMarkAppliedButton() {
 
 // ============================================================
 // SESSION 7 + 9bis — Bouton "✓ J'ai postulé"
-// → Marque la candidature comme postulée dans Jean (#7 valide aussi
-//   l'étape du parcours côté API)
-// → Plus de création de relance auto à J+7 (#1 retiré)
 // ============================================================
 $('btn-mark-applied')?.addEventListener('click', async () => {
   if (!currentJobId) {
@@ -889,7 +931,6 @@ $('btn-mark-applied')?.addEventListener('click', async () => {
       throw new Error(err.error || `HTTP ${res.status}`);
     }
 
-    // On consomme la réponse mais on n'affiche plus de date de relance
     await res.json().catch(() => ({}));
 
     $('link-view-applied').href = `${JEAN_API_BASE}/dashboard`;
