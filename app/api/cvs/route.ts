@@ -44,8 +44,6 @@ export async function GET(req: NextRequest) {
   // ─────────────────────────────────────────────────────────────
   // MODE "SINGLE CV" — si ?id=xxx est fourni, renvoie la ligne
   // complète de la table cvs (title, template, content, form_data).
-  // Utilisé par l'éditeur pour charger un CV existant à éditer,
-  // et par la page Mes CV pour générer le PDF à la volée.
   // ─────────────────────────────────────────────────────────────
   if (singleId) {
     try {
@@ -73,18 +71,20 @@ export async function GET(req: NextRequest) {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // MODE "LISTE AGRÉGÉE" — comportement historique inchangé.
-  // Retourne tous les CV (creator + uploads) avec leurs refs.
+  // MODE "LISTE AGRÉGÉE" — comportement historique enrichi avec
+  // is_reference et is_favorite (session 9bis-bis).
   // ─────────────────────────────────────────────────────────────
   try {
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('default_cv_ref, cv_display_names')
+      .select('default_cv_ref, cv_display_names, cv_references, cv_favorites')
       .eq('user_id', user.id)
       .maybeSingle();
 
     const defaultRef: string | null = profile?.default_cv_ref || null;
     const displayNames: Record<string, string> = profile?.cv_display_names || {};
+    const referenceRefs: string[] = Array.isArray(profile?.cv_references) ? profile.cv_references : [];
+    const favoriteRefs: string[] = Array.isArray(profile?.cv_favorites) ? profile.cv_favorites : [];
 
     // CV Creator
     const { data: creatorCvs } = await supabase
@@ -103,6 +103,8 @@ export async function GET(req: NextRequest) {
         created_at: cv.created_at,
         updated_at: cv.updated_at,
         is_default: defaultRef === ref,
+        is_reference: referenceRefs.includes(ref),
+        is_favorite: favoriteRefs.includes(ref),
         metadata: {
           template: cv.template,
           cv_id: cv.id,
@@ -118,7 +120,13 @@ export async function GET(req: NextRequest) {
     const uploadList: any[] = [];
 
     if (folders && folders.length > 0) {
-      const jobIds = folders.filter((f: any) => !f.name.includes('.')).map((f: any) => f.name);
+      // On accepte les dossiers UUID (job_id) ET le dossier spécial "_reference"
+      const folderNames = folders
+        .filter((f: any) => !f.name.includes('.'))
+        .map((f: any) => f.name);
+
+      const jobIds = folderNames.filter((n: string) => n !== '_reference');
+
       let jobsMap: Record<string, any> = {};
 
       if (jobIds.length > 0) {
@@ -129,13 +137,12 @@ export async function GET(req: NextRequest) {
         jobsMap = Object.fromEntries((jobs || []).map((j: any) => [j.id, j]));
       }
 
-      for (const folder of folders) {
-        if ((folder as any).name.includes('.')) continue;
+      for (const folderName of folderNames) {
+        const isReferenceFolder = folderName === '_reference';
 
-        const jobId = (folder as any).name;
         const { data: files } = await supabase.storage
           .from('job-documents')
-          .list(`${user.id}/${jobId}`, { limit: 100 });
+          .list(`${user.id}/${folderName}`, { limit: 100 });
 
         if (!files) continue;
 
@@ -143,11 +150,33 @@ export async function GET(req: NextRequest) {
           const fname = (file as any).name.toLowerCase();
           if (!fname.startsWith('cv')) continue;
 
-          const filePath = `${user.id}/${jobId}/${(file as any).name}`;
+          const filePath = `${user.id}/${folderName}/${(file as any).name}`;
           const ref = `upload:${filePath}`;
-          const job = jobsMap[jobId];
 
-          const autoTitle = buildUploadTitle((file as any).name, job?.title, job?.company);
+          let autoTitle: string;
+          let metadata: any;
+
+          if (isReferenceFolder) {
+            // CV référent : pas de job lié, le display_name est obligatoire (rempli au moment de l'upload)
+            autoTitle = displayNames[ref] || 'CV référent';
+            metadata = {
+              file_path: filePath,
+              file_name: (file as any).name,
+              file_size: (file as any).metadata?.size || 0,
+              is_reference_folder: true,
+            };
+          } else {
+            const job = jobsMap[folderName];
+            autoTitle = buildUploadTitle((file as any).name, job?.title, job?.company);
+            metadata = {
+              job_id: folderName,
+              job_title: job?.title || 'Offre supprimée',
+              job_company: job?.company || '',
+              file_path: filePath,
+              file_name: (file as any).name,
+              file_size: (file as any).metadata?.size || 0,
+            };
+          }
 
           uploadList.push({
             ref,
@@ -157,14 +186,9 @@ export async function GET(req: NextRequest) {
             created_at: (file as any).created_at,
             updated_at: (file as any).updated_at || (file as any).created_at,
             is_default: defaultRef === ref,
-            metadata: {
-              job_id: jobId,
-              job_title: job?.title || 'Offre supprimée',
-              job_company: job?.company || '',
-              file_path: filePath,
-              file_name: (file as any).name,
-              file_size: (file as any).metadata?.size || 0,
-            },
+            is_reference: isReferenceFolder || referenceRefs.includes(ref),
+            is_favorite: favoriteRefs.includes(ref),
+            metadata,
           });
         }
       }
@@ -183,11 +207,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST — création ou mise à jour d'un CV Creator
-// Body attendu : { id?, title, template, content, form_data }
-// - Si id fourni → UPDATE de la ligne existante (vérif user_id = user.id)
-// - Si id absent → INSERT d'une nouvelle ligne
-// Renvoie { cv: { id, title, template, created_at, updated_at } }
+// POST — création ou mise à jour d'un CV Creator (inchangé session 9bis-bis)
 export async function POST(req: NextRequest) {
   const { supabase, user } = await getAuth(req);
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
@@ -255,13 +275,14 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// PATCH — étendu session 9bis-bis pour gérer is_reference et is_favorite
 export async function PATCH(req: NextRequest) {
   const { supabase, user } = await getAuth(req);
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
   try {
     const body = await req.json();
-    const { ref, display_name, is_default } = body;
+    const { ref, display_name, is_default, is_reference, is_favorite } = body;
 
     if (!ref || typeof ref !== 'string') {
       return NextResponse.json({ error: 'ref requis' }, { status: 400 });
@@ -279,12 +300,13 @@ export async function PATCH(req: NextRequest) {
 
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('default_cv_ref, cv_display_names')
+      .select('default_cv_ref, cv_display_names, cv_references, cv_favorites')
       .eq('user_id', user.id)
       .maybeSingle();
 
     const updates: any = {};
 
+    // ─── display_name (renommer) ───
     if (display_name !== undefined) {
       const currentNames = { ...(profile?.cv_display_names || {}) };
       const cleaned = typeof display_name === 'string' ? display_name.trim() : '';
@@ -296,10 +318,35 @@ export async function PATCH(req: NextRequest) {
       updates.cv_display_names = currentNames;
     }
 
+    // ─── is_default (CV par défaut, comportement historique) ───
     if (is_default === true) {
       updates.default_cv_ref = ref;
     } else if (is_default === false && profile?.default_cv_ref === ref) {
       updates.default_cv_ref = null;
+    }
+
+    // ─── is_reference (toggle CV référent) ───
+    if (is_reference !== undefined) {
+      const currentRefs: string[] = Array.isArray(profile?.cv_references) ? [...profile.cv_references] : [];
+      if (is_reference === true && !currentRefs.includes(ref)) {
+        currentRefs.push(ref);
+      } else if (is_reference === false) {
+        const idx = currentRefs.indexOf(ref);
+        if (idx >= 0) currentRefs.splice(idx, 1);
+      }
+      updates.cv_references = currentRefs;
+    }
+
+    // ─── is_favorite (toggle favori) ───
+    if (is_favorite !== undefined) {
+      const currentFavs: string[] = Array.isArray(profile?.cv_favorites) ? [...profile.cv_favorites] : [];
+      if (is_favorite === true && !currentFavs.includes(ref)) {
+        currentFavs.push(ref);
+      } else if (is_favorite === false) {
+        const idx = currentFavs.indexOf(ref);
+        if (idx >= 0) currentFavs.splice(idx, 1);
+      }
+      updates.cv_favorites = currentFavs;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -322,6 +369,7 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
+// DELETE — étendu session 9bis-bis pour nettoyer cv_references et cv_favorites
 export async function DELETE(req: NextRequest) {
   const { supabase, user } = await getAuth(req);
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
@@ -355,7 +403,7 @@ export async function DELETE(req: NextRequest) {
 
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('default_cv_ref, cv_display_names')
+      .select('default_cv_ref, cv_display_names, cv_references, cv_favorites')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -370,6 +418,16 @@ export async function DELETE(req: NextRequest) {
       const newNames = { ...names };
       delete newNames[ref];
       cleanupUpdates.cv_display_names = newNames;
+    }
+
+    const refs: string[] = Array.isArray(profile?.cv_references) ? profile.cv_references : [];
+    if (refs.includes(ref)) {
+      cleanupUpdates.cv_references = refs.filter((r: string) => r !== ref);
+    }
+
+    const favs: string[] = Array.isArray(profile?.cv_favorites) ? profile.cv_favorites : [];
+    if (favs.includes(ref)) {
+      cleanupUpdates.cv_favorites = favs.filter((r: string) => r !== ref);
     }
 
     if (Object.keys(cleanupUpdates).length > 0) {
