@@ -1,16 +1,15 @@
 // ============================================================
 // Jean find my Job — Side panel logic
+// Session 9bis v0.9.8 — Quick wins B + D :
+//   - D : interception des codes d'erreur de la route ATS
+//     (CV_NOT_FOUND, CV_EMPTY, CV_NOT_PDF, CREATOR_NOT_SUPPORTED) → on
+//     ramène l'utilisateur au sélecteur de CV via startAnalysisFlow() avec
+//     un message clair, plutôt que de laisser l'erreur sur un cul-de-sac.
+//     La liste des CV est rechargée au passage : si le CV fantôme a été
+//     filtré côté serveur (quick win B), il ne réapparaîtra pas.
 // Session 9bis v0.9.7 — Bloc 6b (complet) :
 //   - Skip ATS direct après capture
-//     → Au clic "Enregistrer pour analyse de ta candidature", on enchaîne
-//       directement sur startAnalysisFlow() (sélection de CV ou analyse
-//       direct si 1 seul CV). Plus d'étape intermédiaire view-success
-//       ou view-already-exists.
-//     → Ces vues restent comme filet de sécurité si l'utilisateur annule
-//       depuis view-choose-cv (la bonne est affichée selon wasAlreadyExisting).
 //   - Badge "Offre déjà capturée" sur view-choose-cv en cas de recapture
-//     → Restaure l'info qui était portée par view-already-exists, sans
-//       casser la fluidité du flow (zéro clic supplémentaire).
 //   - Variable globale wasAlreadyExisting + helpers getCaptureSuccessView()
 //     et updateAlreadyCapturedBadge().
 //   - Fix mineur : le finally de btn-save remet désormais le bon wording.
@@ -40,6 +39,10 @@
 const SUPABASE_URL = 'https://kjsqfgpewjzierlxzdyj.supabase.co';
 const JEAN_API_BASE = 'https://jeanfindmyjob.fr';
 
+// 🆕 Quick win D — Codes d'erreur de la route ATS qui doivent ramener
+// l'utilisateur au sélecteur de CV plutôt que de l'enfermer sur view-error.
+const CV_ERROR_CODES = ['CV_NOT_FOUND', 'CV_EMPTY', 'CV_NOT_PDF', 'CREATOR_NOT_SUPPORTED'];
+
 // ============================================================
 // État global
 // ============================================================
@@ -48,10 +51,7 @@ let currentSessionToken = null;
 let currentCapturedData = null;
 let selectedCvRef = null;
 let selectedCvDisplayName = null;
-// Partie "InitialeNom" déduite du profil utilisateur (ex: "EGonidec")
 let currentUserNamePart = '';
-// 🆕 Bloc 6b — mémorise si la dernière capture a renvoyé "already_exists"
-// pour router correctement en cas d'annulation depuis view-choose-cv.
 let wasAlreadyExisting = false;
 
 // ============================================================
@@ -67,16 +67,10 @@ function setText(id, text) {
   if (el) el.textContent = text || '—';
 }
 
-// 🆕 Bloc 6b — vue de succès appropriée selon le statut de la dernière capture.
-// Utilisée si l'utilisateur annule l'analyse depuis view-choose-cv.
 function getCaptureSuccessView() {
   return wasAlreadyExisting ? 'view-already-exists' : 'view-success';
 }
 
-// 🆕 Bloc 6b — Badge "Offre déjà capturée" sur view-choose-cv en cas de recapture.
-// Restaure l'information perdue avec le skip ATS direct, sans casser la
-// fluidité du flow (l'utilisateur n'a pas de clic supplémentaire à faire).
-// Le badge est créé une seule fois puis montré/caché selon wasAlreadyExisting.
 function updateAlreadyCapturedBadge() {
   const chooseCvView = $('view-choose-cv');
   if (!chooseCvView) return;
@@ -93,7 +87,6 @@ function updateAlreadyCapturedBadge() {
         'font-size:13px;margin:0 0 14px 0;line-height:1.4;' +
         "font-family:'Montserrat',sans-serif;";
       badge.textContent = 'ℹ️ Offre déjà capturée dans tes candidatures';
-      // Insère après le titre (1er enfant) si présent, sinon en tête de vue
       const firstEl = chooseCvView.firstElementChild;
       if (firstEl) {
         firstEl.after(badge);
@@ -147,9 +140,6 @@ function decodeJwtPayload(token) {
   }
 }
 
-// ============================================================
-// SESSION 9bis #4 (v0.9.5) — Lecture de la table user_profiles
-// ============================================================
 async function tryFetchUserProfile(filter) {
   try {
     const res = await fetch(
@@ -178,10 +168,6 @@ async function fetchUserProfileFromDb(userId) {
   return profile;
 }
 
-// ============================================================
-// SESSION 9bis #4 (v0.9.5) — Construction "InitialeNom"
-// Stratégie en cascade : user_profiles → JWT user_metadata → email
-// ============================================================
 async function buildUserNamePart() {
   const tokenPayload = decodeJwtPayload(currentSessionToken);
   if (!tokenPayload) return '';
@@ -229,15 +215,12 @@ async function buildUserNamePart() {
 function formatNamePart(firstName, lastName) {
   const cleanFirst = sanitizeFilenamePart(firstName);
   const cleanLast = sanitizeFilenamePart(lastName);
-
   const initial = cleanFirst ? cleanFirst.charAt(0).toUpperCase() : '';
-
   const lastFormatted = cleanLast
     .split('_')
     .filter(Boolean)
     .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
     .join('');
-
   return initial + lastFormatted;
 }
 
@@ -400,12 +383,7 @@ $('btn-close-ats')?.addEventListener('click', () => window.close());
 $('btn-close-applied')?.addEventListener('click', () => window.close());
 
 // ============================================================
-// Save
-// 🆕 Bloc 6b — Skip ATS direct après capture :
-//   après le POST réussi, on enchaîne directement sur startAnalysisFlow()
-//   au lieu d'afficher view-success / view-already-exists. Les vues fallback
-//   restent prêtes (liens "Voir dans Jean" pré-remplis) si l'utilisateur
-//   annule depuis view-choose-cv.
+// Save (Bloc 6b — skip ATS direct après capture)
 // ============================================================
 $('btn-save')?.addEventListener('click', async () => {
   if (!currentSessionToken) {
@@ -442,26 +420,21 @@ $('btn-save')?.addEventListener('click', async () => {
     currentJobId = result.jobId;
     wasAlreadyExisting = (result.status === 'already_exists');
 
-    // Pré-remplit les liens "Voir dans Jean" des vues fallback
     $('link-view-success').href = `${JEAN_API_BASE}/dashboard`;
     $('link-view-exists').href = `${JEAN_API_BASE}/dashboard`;
 
-    // 🆕 Bloc 6b — Skip direct vers l'analyse ATS, plus d'étape intermédiaire.
     startAnalysisFlow();
   } catch (e) {
     console.error('[save] erreur:', e);
     showError(e.message || 'Erreur lors de la sauvegarde', 'view-recap');
   } finally {
     $('btn-save').disabled = false;
-    // Wording aligné sur le HTML (s9 — tutoiement)
     $('btn-save').textContent = 'Enregistrer pour analyse de ta candidature';
   }
 });
 
 // ============================================================
 // Analyse CV vs offre
-// 🆕 Bloc 6b — boutons "Annuler analyse" / "Retour" routent vers la bonne
-// vue de succès selon le statut de la capture (créée vs déjà existante).
 // ============================================================
 $('btn-analyze-from-success')?.addEventListener('click', () => startAnalysisFlow());
 $('btn-analyze-from-exists')?.addEventListener('click', () => startAnalysisFlow());
@@ -504,7 +477,7 @@ async function startAnalysisFlow() {
 }
 
 function populateCvChooser(allCvs, favoriteCvs) {
-  // 🆕 Bloc 6b — affiche/cache le badge "Offre déjà capturée" selon le statut
+  // Affiche/cache le badge "Offre déjà capturée" selon le statut
   updateAlreadyCapturedBadge();
 
   const select = $('select-cv');
@@ -594,6 +567,27 @@ async function launchAnalysis() {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
+
+      // 🆕 Quick win D — Si l'erreur concerne le CV (introuvable, vide,
+      // pas un PDF, ou Creator non supporté), on ne laisse pas l'utilisateur
+      // sur un cul-de-sac : on stoppe le spinner d'analyse, on affiche le
+      // message d'erreur clair via alert(), puis on relance startAnalysisFlow()
+      // qui rechargera la liste des CV (et le CV fantôme aura disparu si
+      // c'était le cas — quick win B côté serveur).
+      if (err.code && CV_ERROR_CODES.includes(err.code)) {
+        if (analyzingInterval) {
+          clearInterval(analyzingInterval);
+          analyzingInterval = null;
+        }
+        const userMessage = err.error || 'Le CV sélectionné pose problème.';
+        alert(userMessage);
+        // Reset du CV sélectionné pour forcer un nouveau choix
+        selectedCvRef = null;
+        selectedCvDisplayName = null;
+        startAnalysisFlow();
+        return;
+      }
+
       throw new Error(err.error || `HTTP ${res.status}`);
     }
 

@@ -287,6 +287,26 @@ export default function DashboardPage() {
     };
   }, [accessToken, refetchFirstName]);
 
+  // 🆕 Quick win — Auto-ouverture du panel détail quand on arrive avec ?ats=open&jobId=XXX
+  // Utilisé par le bouton "Optimiser mon CV" du side panel de l'extension Chrome.
+  // L'URL est nettoyée après pour éviter une réouverture si l'utilisateur recharge la page.
+  // (Note : pour aller jusqu'à ouvrir automatiquement la modale ATS dans le panel,
+  // il faudra dans une session ultérieure ajouter une prop autoOpenAts à JobDetailPanel.)
+  useEffect(() => {
+    if (loading || jobs.length === 0) return;
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const wantAts = params.get('ats') === 'open';
+    const targetJobId = params.get('jobId');
+    if (!wantAts || !targetJobId) return;
+    const targetJob = jobs.find(j => j.id === targetJobId);
+    if (targetJob) {
+      setSelectedJob(targetJob);
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+  }, [loading, jobs]);
+
   // Stats : 5 indicateurs opérationnels
   const stats = {
     total: jobs.length,

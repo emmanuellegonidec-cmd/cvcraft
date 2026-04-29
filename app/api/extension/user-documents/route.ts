@@ -4,6 +4,15 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 // ─────────────────────────────────────────────────────────────────────────
 // Route appelée par l'extension Chrome pour lister les CV de l'utilisateur.
 //
+// Mise à jour quick win B (29 avril 2026) :
+// - Filtrage des CV "fantômes" : on ignore les dossiers de jobs qui n'existent
+//   plus dans la table `jobs` (offre supprimée par l'utilisateur). Ces CV
+//   restent visibles côté page profil web (où ils peuvent être réutilisés
+//   ou promus en référents), mais sont cachés dans la dropdown extension
+//   pour offrir une sélection propre et utile.
+// - Les CV référents (dossier `_reference/`) restent toujours affichés,
+//   indépendamment de tout job parent (par définition ils n'en ont pas).
+//
 // Mise à jour session 9bis-bis :
 // - Retourne 2 listes : `favorites` (CV avec is_favorite = true) + `all` (tous, antéchronologique)
 // - Inclut les CV référents (dossier _reference du bucket)
@@ -120,6 +129,16 @@ export async function GET(req: NextRequest) {
 
       for (const folderName of folderNames) {
         const isReferenceFolder = folderName === '_reference';
+
+        // 🆕 Quick win B — Filtrer les CV "fantômes"
+        // Si ce n'est pas un CV référent ET que le job parent n'existe plus
+        // dans la table `jobs`, on saute le dossier entier. Ces CV restent
+        // visibles côté page profil web (gestion globale) — ce filtrage ne
+        // s'applique qu'à la dropdown de l'extension, qui sert à choisir un
+        // CV pour analyse, pas à gérer les CV.
+        if (!isReferenceFolder && !jobsMap[folderName]) {
+          continue;
+        }
 
         const { data: files } = await supabase.storage
           .from('job-documents')
