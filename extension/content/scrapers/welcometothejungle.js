@@ -1,7 +1,7 @@
 // extension/content/scrapers/welcometothejungle.js
-// Jean find my Job — Scraper Welcome to the Jungle (session 8 — v0.8.2)
-// Hybride : JSON-LD (metadata + description) + DOM (sections Profil recherché / Qui sont-ils ?)
-// Robuste aux 2 formats observes : Sia (description avec titres en gras) et Bartle (description sans titres + champs separes)
+// Jean find my Job — Scraper Welcome to the Jungle (session 9bis Bloc 5 — v0.9.10)
+// Hybride : JSON-LD (metadata + description) + DOM (sections Profil recherche / Qui sont-ils / Missions cles)
+// Robuste aux 3 formats observes : Sia (description avec titres en gras), Bartle (description sans titres + champs separes), Ecov (Missions cles en span + Qui sont-ils sans <p>)
 
 (function () {
   'use strict';
@@ -82,6 +82,22 @@
     const domComp = extractSectionByH4('Qui sont-ils ?');
     if (domComp) {
       data.companyDescription = domComp;
+      data._extractionMethod = data._extractionMethod === 'json-ld' ? 'json-ld+dom' : 'dom';
+    }
+
+    // 2bis. NEW v0.9.10 : "Missions cles" (cas Ecov ou le label est un span, pas un H4)
+    const domMissions = extractSectionBySpan('Missions clés');
+    if (domMissions) {
+      // Verifie qu'on ne duplique pas si la description JSON-LD contient deja les missions
+      const probe = domMissions.slice(0, 60).toLowerCase();
+      const descHasMissions = data.description && data.description.toLowerCase().indexOf(probe) !== -1;
+      if (!descHasMissions) {
+        if (data.description) {
+          data.description = 'Missions clés\n\n' + domMissions + '\n\n---\n\n' + data.description;
+        } else {
+          data.description = 'Missions clés\n\n' + domMissions;
+        }
+      }
       data._extractionMethod = data._extractionMethod === 'json-ld' ? 'json-ld+dom' : 'dom';
     }
 
@@ -287,16 +303,29 @@
 
   // ============================================================
   // DOM : recherche d'un <h4> par titre, retourne le contenu lisible
+  // 2 strategies en cascade pour gerer les variations de structure :
+  //   A. Le contenu est nextElementSibling du H4 (cas Ecov)
+  //   B. Le contenu est dans les autres enfants du parent du H4 (cas Sia/Bartle classique)
   // ============================================================
   function extractSectionByH4(titleText) {
     const h4s = document.querySelectorAll('h4');
     for (let i = 0; i < h4s.length; i++) {
       const h4 = h4s[i];
       const txt = cleanInline(h4.textContent);
-      if (normalizeForCompare(txt) === normalizeForCompare(titleText)) {
-        const parent = h4.parentElement;
-        if (!parent) continue;
+      if (normalizeForCompare(txt) !== normalizeForCompare(titleText)) continue;
 
+      // Strategie A : nextElementSibling du H4
+      const sibling = h4.nextElementSibling;
+      if (sibling) {
+        const txtA = extractReadableText(sibling);
+        if (txtA && txtA.length > 30) {
+          return txtA;
+        }
+      }
+
+      // Strategie B : tous les autres enfants du parent du H4
+      const parent = h4.parentElement;
+      if (parent) {
         const blocks = [];
         const kids = parent.childNodes;
         for (let j = 0; j < kids.length; j++) {
@@ -305,13 +334,87 @@
           if (kid.nodeType !== 1) continue;
           walk(kid, blocks);
         }
-
         if (blocks.length > 0) {
           return blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
         }
+        // Fallback ultime : si le walker n'a rien trouve mais le parent a du texte,
+        // on prend l'innerText du parent en retirant le H4
+        const clone = parent.cloneNode(true);
+        const h4InClone = clone.querySelector('h4');
+        if (h4InClone) h4InClone.remove();
+        const fallback = cleanMultiline(clone.innerText || clone.textContent || '');
+        if (fallback && fallback.length > 30) return fallback;
       }
     }
     return null;
+  }
+
+  // ============================================================
+  // DOM : recherche d'une section dont le label est un <span> (et non un <h4>)
+  // Cas observe sur l'offre Ecov : "Missions cles" est un span feuille,
+  // et son contenu est dans le sibling d'un ancetre situe a 1-4 niveaux au-dessus.
+  // ============================================================
+  function extractSectionBySpan(labelText) {
+    const spans = document.querySelectorAll('span');
+    const targetNorm = normalizeForCompare(labelText);
+
+    for (let i = 0; i < spans.length; i++) {
+      const span = spans[i];
+      // Span feuille uniquement (pas de child element) pour eviter les faux positifs
+      if (span.children.length > 0) continue;
+      if (normalizeForCompare(cleanInline(span.textContent)) !== targetNorm) continue;
+
+      // Remonter jusqu'a 5 niveaux pour trouver un sibling avec du contenu substantiel
+      let cur = span;
+      for (let level = 0; level < 5; level++) {
+        if (!cur || !cur.parentElement) break;
+        const next = cur.nextElementSibling;
+        if (next && next.textContent && next.textContent.trim().length > 30) {
+          const txt = extractReadableText(next);
+          if (txt && txt.length > 30) return txt;
+        }
+        cur = cur.parentElement;
+      }
+    }
+    return null;
+  }
+
+  // ============================================================
+  // Helper : extrait le texte lisible d'un element.
+  // Utilise walk() pour P/UL en priorite, fallback sur innerText multiline si walk vide
+  // (cas Ecov ou le contenu est du texte plain dans des div imbriquees sans <p>)
+  // ============================================================
+  function extractReadableText(el) {
+    if (!el) return '';
+    const blocks = [];
+    walk(el, blocks);
+    if (blocks.length > 0) {
+      return blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+    // Fallback : pas de P/UL trouves mais l'element contient du texte
+    const txt = el.innerText || el.textContent || '';
+    return cleanMultiline(txt);
+  }
+
+  // Nettoie un texte multi-lignes : trim chaque ligne, supprime les vides, max 1 ligne vide entre blocs
+  function cleanMultiline(s) {
+    if (!s) return '';
+    const lines = String(s).replace(/\r\n/g, '\n').split('\n');
+    const out = [];
+    let prevEmpty = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].replace(/\s+/g, ' ').trim();
+      if (line.length === 0) {
+        if (!prevEmpty && out.length > 0) {
+          out.push('');
+          prevEmpty = true;
+        }
+      } else {
+        out.push(line);
+        prevEmpty = false;
+      }
+    }
+    return out.join('\n').trim();
   }
 
   // ============================================================

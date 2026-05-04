@@ -64,7 +64,7 @@ export default function JobCompanySection({ job, expanded, onToggle }: Props) {
           {job.company_description ? (
             <div style={{ marginBottom: 14 }}>
               <div style={{ position: 'relative', maxHeight: companyDescExpanded ? 'none' : 100, overflow: 'hidden' }}>
-                <p style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontWeight: 500, margin: 0, fontFamily: FONT }}>
+                <p style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontWeight: 500, margin: 0, fontFamily: FONT, whiteSpace: 'pre-wrap' }}>
                   {job.company_description}
                 </p>
                 {!companyDescExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, background: 'linear-gradient(transparent, #fff)' }} />}

@@ -103,6 +103,14 @@ function extractTransmittedBy(notes: string | null): string | null {
   return match ? match[1].trim() : null
 }
 
+// Detecte si une chaine contient des balises HTML structurelles (legacy descriptions).
+// Si oui : rendu via dangerouslySetInnerHTML pour preserver le HTML.
+// Sinon : rendu en texte plain avec whiteSpace pre-wrap pour preserver les sauts de ligne (cas extension).
+function looksLikeHtml(s: string | null | undefined): boolean {
+  if (!s) return false
+  return /<\/?(p|br|ul|ol|li|h[1-6]|div|strong|em|b|i|span)[\s>/]/i.test(s)
+}
+
 // ─── Bandeau collapsible de phase (AVANT / APRÈS) ──────────────────────────
 // Le bandeau est cliquable : au clic il déploie le contenu de la phase.
 // Ouverture par défaut : AVANT si RDV à venir, APRÈS si RDV passé (logique intelligente dans le parent).
@@ -888,8 +896,14 @@ export default function JobDetailPage() {
         <div style={card}>
           <span style={sectionLabel}>Description du poste</span>
           <div style={{ position: 'relative', maxHeight: descExpanded ? 'none' : 200, overflow: 'hidden' }}>
-            <div dangerouslySetInnerHTML={{ __html: job.description }}
-              style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500 }} />
+            {looksLikeHtml(job.description) ? (
+              <div dangerouslySetInnerHTML={{ __html: job.description }}
+                style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500 }} />
+            ) : (
+              <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500, whiteSpace: 'pre-wrap' }}>
+                {job.description}
+              </div>
+            )}
             {!descExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(transparent, #fff)' }} />}
           </div>
           <span onClick={() => setDescExpanded(v => !v)} style={{ fontSize: 13, fontWeight: 700, color: '#111', textDecoration: 'underline', cursor: 'pointer', marginTop: 12, display: 'inline-block', fontFamily: FONT }}>
@@ -1000,3 +1014,4 @@ export default function JobDetailPage() {
     </div>
   )
 }
+
