@@ -1,10 +1,11 @@
 // extension/content/scrapers/francetravail.js
-// Jean find my Job — Scraper France Travail (session 8 v0.8.1 — lisibilite description)
+// Jean find my Job — Scraper France Travail (session 9bis Bloc 6a v0.9.9 — capture vue liste/panneau lateral)
 
 (function () {
   'use strict';
 
   const FT_OFFER_REGEX = /^https:\/\/candidat\.francetravail\.fr\/offres\/recherche\/detail\/([A-Z0-9]+)/i;
+  const FT_LIST_REGEX = /^https:\/\/candidat\.francetravail\.fr\/offres\/recherche/i;
 
   const WORK_SCHEDULE_MAP = {
     FULL_TIME: 'Temps plein',
@@ -18,8 +19,39 @@
   };
 
   function match(url) {
-    const m = url.match(FT_OFFER_REGEX);
-    return m ? m[1].toUpperCase() : null;
+    // 1. Page detail standalone : /offres/recherche/detail/<ID>
+    const mDetail = url.match(FT_OFFER_REGEX);
+    if (mDetail) return mDetail[1].toUpperCase();
+
+    // 2. Vue liste avec panneau lateral : /offres/recherche?... avec une offre ouverte dans le panneau
+    //    Dans ce cas l'URL ne contient pas l'ID, on doit le chercher dans le DOM
+    if (FT_LIST_REGEX.test(url)) {
+      const idFromDom = findOfferIdInDom();
+      if (idFromDom) return idFromDom;
+    }
+
+    return null;
+  }
+
+  // Cherche l'ID d'offre affichee dans le panneau lateral.
+  // Strategies dans l'ordre :
+  //  1. Texte "Offre n° XXXXXXX" present dans le panneau
+  //  2. Lien "Postuler" qui contient l'ID
+  //  3. Attribut data-* ou aria-label sur un container avec un pattern d'ID FT
+  function findOfferIdInDom() {
+    // Pattern : "Offre n° 207SQDC" ou "Offre n 207SQDC"
+    const bodyText = (document.body && document.body.innerText) || '';
+    const offerNumMatch = bodyText.match(/Offre\s*n[°o]?\s*([A-Z0-9]{6,8})/i);
+    if (offerNumMatch) return offerNumMatch[1].toUpperCase();
+
+    // Recherche dans les liens (postuler, partager, etc.)
+    const anchors = document.querySelectorAll('a[href*="/offres/recherche/detail/"]');
+    for (let i = 0; i < anchors.length; i++) {
+      const m = anchors[i].href.match(/\/detail\/([A-Z0-9]{6,8})/i);
+      if (m) return m[1].toUpperCase();
+    }
+
+    return null;
   }
 
   function extract(externalId) {
@@ -51,10 +83,25 @@
     };
 
     // 1. Microdata JobPosting (prioritaire)
+    //    - Page detail standalone : conteneur [itemtype*="JobPosting"] present
+    //    - Panneau lateral : pas de conteneur, mais les [itemprop] sont quand meme presents au niveau document
+    //    --> on fallback sur `document` comme racine de recherche
     const jobPostingEl = document.querySelector('[itemtype*="schema.org/JobPosting"]');
-    if (jobPostingEl) {
-      Object.assign(data, extractFromMicrodata(jobPostingEl));
-      data._extractionMethod = 'microdata';
+    const microdataRoot = jobPostingEl || document;
+    const microdataData = extractFromMicrodata(microdataRoot);
+
+    // On n'ecrase que les champs effectivement trouves
+    let microdataHit = false;
+    for (const key in microdataData) {
+      const val = microdataData[key];
+      const isEmpty = (val === null || val === '' || (Array.isArray(val) && val.length === 0));
+      if (!isEmpty) {
+        data[key] = val;
+        microdataHit = true;
+      }
+    }
+    if (microdataHit) {
+      data._extractionMethod = jobPostingEl ? 'microdata' : 'microdata-fallback-document';
     }
 
     // 2. Fallback texte (champs non couverts par microdata)
@@ -68,7 +115,7 @@
       }
     }
     if (usedText) {
-      data._extractionMethod = data._extractionMethod === 'microdata' ? 'microdata+text' : 'text';
+      data._extractionMethod = (data._extractionMethod || '') + (data._extractionMethod ? '+text' : 'text');
     }
 
     return data;
