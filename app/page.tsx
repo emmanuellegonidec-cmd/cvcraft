@@ -536,7 +536,7 @@ export default async function LandingPage() {
           </div>
           <div>
             <h5 style={{ fontFamily:"'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Entreprise</h5>
-            {[['Contact','mailto:hello@jeanfindmyjob.fr'],['Mentions légales','/mentions-legales'],['Mentions extension Chrome','/extension-mentions-legales'],['Confidentialité','/confidentialite'],['CGU','/cgu'],['Cookies','/cookies']].map(([label,href]) => (
+            {[['Contact','mailto:hello@jeanfindmyjob.fr'],['Mentions légales','/mentions-legales'],['Mentions extension Chrome','/extension-mentions-legales'],['Confidentialité extension Chrome','/extension-confidentialite'],['Confidentialité','/confidentialite'],['CGU','/cgu'],['Cookies','/cookies']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
           </div>
