@@ -80,6 +80,11 @@ export async function POST(request: NextRequest) {
       qualification,
       industry,
       skills,
+      // Session 10 Bloc 1 : nouveau champ texte construit côté scrapers
+      // (concaténation des champs secondaires : Durée / Posté le / Expérience /
+      // Qualification / Formation / Secteur). Modifiable par l'utilisateur dans
+      // le sidepanel avant envoi.
+      informationsComplementaires,
     } = body;
 
     // 4. Validation minimale
@@ -153,10 +158,12 @@ export async function POST(request: NextRequest) {
         qualification: qualification || null,
         industry: industry || null,
         skills: skills && skills.length > 0 ? skills : null,
+        // Session 10 Bloc 1 : persistance du champ texte multi-lignes
+        informations_complementaires: informationsComplementaires || null,
         status: 'to_apply',
         import_status: 'imported_extension',
         parser_name: 'jfmj-extension',
-        parser_version: '0.8.1',
+        parser_version: '0.9.12',
         extraction_confidence: confidence,
       })
       .select('id')
