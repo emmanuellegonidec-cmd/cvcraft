@@ -1,5 +1,7 @@
 // extension/content/scrapers/linkedin.js
 // Jean find my Job — Scraper LinkedIn (session 8 + fix post-session 9 — v0.9.1)
+// Session 10 Bloc 1 — Ajout du champ informationsComplementaires (concatenation des champs secondaires affiches dans le sidepanel)
+//
 // LinkedIn 2026 : DOM 100% en classes CSS obfusquees (hashees) + systeme SDUI
 // Strategie : exploiter les attributs semantiques componentkey (stables) + heuristiques sur textes
 //
@@ -60,6 +62,7 @@
       qualification: null,
       industry: null,
       skills: [],
+      informationsComplementaires: null,
       _extractionMethod: 'dom-sdui'
     };
 
@@ -95,6 +98,10 @@
     logResult('workSchedule', data.workSchedule);
     logResult('experienceLabel', data.experienceLabel);
     logResult('salary', data.salaryMin ? (data.salaryMin + '-' + data.salaryMax + ' ' + data.salaryCurrency + '/' + data.salaryPeriod) : null);
+
+    // Session 10 : construction du texte "Informations complementaires"
+    data.informationsComplementaires = buildInformationsComplementaires(data);
+    logResult('informationsComplementaires', data.informationsComplementaires, true);
 
     console.groupEnd();
     return data;
@@ -486,6 +493,55 @@
   function cleanInline(s) {
     if (!s) return '';
     return String(s).replace(/\s+/g, ' ').trim();
+  }
+
+  // ============================================================
+  // Session 10 : helpers pour le champ "Informations complementaires"
+  // Concatene les champs secondaires en texte multi-lignes (un champ par ligne).
+  // Ce texte est affiche dans le sidepanel (champ editable) et stocke en base
+  // dans la colonne jobs.informations_complementaires.
+  // ============================================================
+  function buildInformationsComplementaires(d) {
+    const lines = [];
+
+    if (d.workingHours) {
+      lines.push('Durée : ' + d.workingHours);
+    }
+    if (d.postedAt) {
+      lines.push('Posté le : ' + formatDateFR(d.postedAt));
+    }
+    if (d.experienceLabel) {
+      lines.push('Expérience : ' + d.experienceLabel);
+    }
+    if (d.qualification) {
+      lines.push('Qualification : ' + d.qualification);
+    }
+    if (d.educationLevel) {
+      lines.push('Formation : ' + d.educationLevel);
+    }
+    if (d.industry) {
+      lines.push('Secteur : ' + d.industry);
+    }
+
+    return lines.length > 0 ? lines.join('\n') : null;
+  }
+
+  // Formate une date en francais : "12 octobre 2025"
+  // Accepte ISO ("2025-10-12T..."), texte deja formate ou autre fallback.
+  function formatDateFR(value) {
+    if (!value) return '';
+    const str = String(value);
+    // Si pas un format ISO, on retourne tel quel
+    if (!/^\d{4}-\d{2}-\d{2}/.test(str)) return str;
+    try {
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return str;
+      const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    } catch (e) {
+      return str;
+    }
   }
 
   // Enregistrement dans le namespace global JFMJ

@@ -1,5 +1,14 @@
 // ============================================================
 // Jean find my Job — Side panel logic
+// Session 10 Bloc 1 — Champ "Informations complémentaires"
+//   - populateRecap() : remplace les 6 setText sur les champs de l'ancien
+//     <details> "Champs détectés" par le pré-remplissage du nouveau textarea
+//     #field-informations-complementaires (alimenté par data.informationsComplementaires
+//     construit côté scrapers).
+//   - btn-save : ajoute informationsComplementaires (texte modifié par l'utilisateur)
+//     au payload envoyé à /api/jobs/from-extension.
+//   - Code défensif : si l'élément n'est pas dans le DOM (HTML pas encore déployé),
+//     on retombe sur la valeur du scraper sans crash.
 // Session 9bis v0.9.8 — Quick wins B + D :
 //   - D : interception des codes d'erreur de la route ATS
 //     (CV_NOT_FOUND, CV_EMPTY, CV_NOT_PDF, CREATOR_NOT_SUPPORTED) → on
@@ -344,14 +353,14 @@ function populateRecap(d) {
   }
   setText('field-salary', salary);
 
-  setText('field-working-hours', d.workingHours);
-  setText('field-posted-at', d.postedAt ? new Date(d.postedAt).toLocaleDateString('fr-FR') : null);
-  setText('field-experience', d.experienceLabel);
-  setText('field-qualification', d.qualification);
-  setText('field-education', d.educationLevel);
-  setText('field-industry', d.industry);
-
   $('field-description').value = d.description || '';
+
+  // Session 10 Bloc 1 : pré-remplissage du nouveau champ "Informations complémentaires"
+  // Texte construit côté scraper (Durée, Posté le, Expérience, Qualification, Formation, Secteur)
+  const infoField = $('field-informations-complementaires');
+  if (infoField) {
+    infoField.value = d.informationsComplementaires || '';
+  }
 
   const chipsContainer = $('field-skills-chips');
   chipsContainer.innerHTML = '';
@@ -391,11 +400,20 @@ $('btn-save')?.addEventListener('click', async () => {
     return;
   }
 
+  // Session 10 Bloc 1 : on récupère la valeur courante (potentiellement éditée) du champ
+  // "Informations complémentaires". Si l'élément n'existe pas dans le DOM (HTML pas encore
+  // déployé), on retombe sur la valeur fournie par le scraper.
+  const infoField = $('field-informations-complementaires');
+  const informationsComplementaires = infoField
+    ? infoField.value
+    : (currentCapturedData?.informationsComplementaires || '');
+
   const payload = {
     ...currentCapturedData,
     title: $('field-title').value,
     company: $('field-company').value,
     description: $('field-description').value,
+    informationsComplementaires: informationsComplementaires,
   };
 
   $('btn-save').disabled = true;

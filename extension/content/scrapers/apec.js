@@ -1,0 +1,405 @@
+// extension/content/scrapers/apec.js
+// Jean find my Job — Scraper APEC (session 9bis — v0.9.11)
+// Session 10 Bloc 1 — Ajout du champ informationsComplementaires (concatenation des champs secondaires affiches dans le sidepanel)
+//
+// Strategie : JSON-LD JobPosting primary (couvre titre, entreprise, lieu, salaire,
+// description, qualifications, dates, secteur, type d'emploi) + DOM fallback uniquement
+// pour contractType (CDI/CDD/Freelance) qui n'est pas dans le JSON-LD APEC.
+//
+// APEC est une SPA Angular qui injecte dynamiquement le JSON-LD au runtime apres
+// chargement client. Notre extension s'execute a document_idle, donc le JSON-LD
+// est present quand on appelle extract().
+
+(function () {
+  'use strict';
+
+  // URL pattern : https://www.apec.fr/candidat/.../detail-offre/{ID}?...
+  // ID format observe : chiffres + lettre finale (ex: 178485022W)
+  const APEC_OFFER_REGEX = /^https:\/\/www\.apec\.fr\/.+\/detail-offre\/([^/?#]+)/i;
+
+  // Mapping employmentType (Schema.org) -> libelle francais (identique a WTJ)
+  const WORK_SCHEDULE_MAP = {
+    FULL_TIME: 'Temps plein',
+    PART_TIME: 'Temps partiel',
+    CONTRACTOR: 'Independant',
+    TEMPORARY: 'Temporaire',
+    INTERN: 'Stage',
+    VOLUNTEER: 'Benevole',
+    PER_DIEM: 'Vacation',
+    OTHER: 'Autre'
+  };
+
+  // Patterns pour detecter le contractType dans le DOM (bandeau meta APEC)
+  const CONTRACT_PATTERNS = [
+    { regex: /\bCDI\b/i, label: 'CDI' },
+    { regex: /\bCDD\b/i, label: 'CDD' },
+    { regex: /Freelance/i, label: 'Freelance' },
+    { regex: /Alternance/i, label: 'Alternance' },
+    { regex: /Stage/i, label: 'Stage' },
+    { regex: /Interim/i, label: 'Interim' }
+  ];
+
+  function match(url) {
+    const m = url.match(APEC_OFFER_REGEX);
+    if (!m) return null;
+    return m[1]; // ex: "178485022W"
+  }
+
+  function extract(externalId) {
+    const data = {
+      source: 'apec',
+      externalId: externalId,
+      url: window.location.href,
+      extractedAt: new Date().toISOString(),
+      title: null,
+      company: null,
+      location: null,
+      contractType: null,
+      workSchedule: null,
+      workingHours: null,
+      salaryMin: null,
+      salaryMax: null,
+      salaryCurrency: null,
+      salaryPeriod: null,
+      description: null,
+      requirements: null,
+      companyDescription: null,
+      postedAt: null,
+      experienceLabel: null,
+      educationLevel: null,
+      qualification: null,
+      industry: null,
+      skills: [],
+      informationsComplementaires: null,
+      _extractionMethod: null
+    };
+
+    // 1. JSON-LD JobPosting : source primaire APEC
+    const ldData = extractFromJsonLd();
+    if (ldData) {
+      Object.assign(data, ldData);
+      data._extractionMethod = 'json-ld';
+    }
+
+    // 2. DOM fallback : contractType (jamais dans le JSON-LD APEC)
+    if (!data.contractType) {
+      const domContract = extractContractTypeFromDom();
+      if (domContract) {
+        data.contractType = domContract;
+        data._extractionMethod = data._extractionMethod === 'json-ld' ? 'json-ld+dom' : 'dom';
+      }
+    }
+
+    // 3. Session 10 : construction du texte "Informations complementaires"
+    data.informationsComplementaires = buildInformationsComplementaires(data);
+
+    return data;
+  }
+
+  // ============================================================
+  // JSON-LD : extraction principale
+  // ============================================================
+  function extractFromJsonLd() {
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (let i = 0; i < scripts.length; i++) {
+      try {
+        const parsed = JSON.parse(scripts[i].textContent);
+        if (parsed && parsed['@type'] === 'JobPosting') {
+          return parseJobPostingLd(parsed);
+        }
+      } catch (e) {
+        // Ignore les blocs non-JSON ou non-JobPosting
+      }
+    }
+    return null;
+  }
+
+  function parseJobPostingLd(j) {
+    const r = {};
+
+    if (j.title) r.title = cleanInline(j.title);
+
+    // Date : APEC envoie "2026-04-08 16:39:23 +0200" -> normalisation ISO
+    if (j.datePosted) {
+      try {
+        const d = new Date(j.datePosted);
+        r.postedAt = !isNaN(d.getTime()) ? d.toISOString() : j.datePosted;
+      } catch (e) {
+        r.postedAt = j.datePosted;
+      }
+    }
+
+    // Description (HTML -> texte lisible avec puces)
+    if (j.description) {
+      r.description = htmlToReadableText(j.description);
+    }
+
+    // Qualifications = "Profil recherche" chez APEC, c'est un champ JSON-LD distinct
+    if (j.qualifications) {
+      const qText = htmlToReadableText(j.qualifications);
+      if (qText) {
+        r.requirements = qText;
+        // Extrait court (200 chars) pour le champ qualification distinct
+        r.qualification = cleanInline(qText).substring(0, 200);
+      }
+    }
+
+    // Type d'emploi / horaires
+    if (j.employmentType) {
+      const raw = String(j.employmentType).toUpperCase();
+      r.workSchedule = WORK_SCHEDULE_MAP[raw] || raw;
+    }
+
+    // Niveau d'education
+    if (j.educationRequirements && j.educationRequirements.credentialCategory) {
+      r.educationLevel = mapEducationLevel(j.educationRequirements.credentialCategory);
+    }
+
+    // Experience : garde-fou anti-bug APEC observe (souvent "1" mois alors
+    // que la description dit "10 ans minimum"). On ignore si < 12 mois.
+    if (j.experienceRequirements && j.experienceRequirements.monthsOfExperience !== undefined) {
+      const months = parseInt(j.experienceRequirements.monthsOfExperience, 10);
+      if (!isNaN(months) && months >= 12) {
+        const years = Math.round(months / 12);
+        r.experienceLabel = years + ' an' + (years > 1 ? 's' : '') + ' minimum';
+      }
+      // Si months < 12 : on ignore (donnee non fiable), experienceLabel reste null
+    }
+
+    // Entreprise (nom + description si presente)
+    if (j.hiringOrganization) {
+      if (j.hiringOrganization.name) {
+        r.company = cleanInline(j.hiringOrganization.name);
+      }
+      if (j.hiringOrganization.description) {
+        r.companyDescription = htmlToReadableText(j.hiringOrganization.description);
+      }
+    }
+
+    // Lieu (postal + ville)
+    let loc = j.jobLocation;
+    if (Array.isArray(loc)) loc = loc[0];
+    if (loc && loc.address) {
+      const addr = loc.address;
+      const city = cleanInline(addr.addressLocality || '');
+      const postal = cleanInline(addr.postalCode || '');
+      if (postal && city) {
+        r.location = postal + ' - ' + city;
+      } else if (city) {
+        r.location = city;
+      } else if (postal) {
+        r.location = postal;
+      }
+    }
+
+    // Secteur d'activite
+    if (j.industry) r.industry = cleanInline(j.industry);
+
+    // Salaire
+    if (j.baseSalary) {
+      const bs = j.baseSalary;
+      if (bs.currency) r.salaryCurrency = bs.currency;
+      if (bs.value && typeof bs.value === 'object') {
+        const v = bs.value;
+        if (v.minValue !== undefined) r.salaryMin = parseNum(v.minValue);
+        if (v.maxValue !== undefined) r.salaryMax = parseNum(v.maxValue);
+        if (v.value !== undefined && (r.salaryMin === null || r.salaryMin === undefined)) {
+          r.salaryMin = parseNum(v.value);
+          r.salaryMax = parseNum(v.value);
+        }
+        if (v.unitText) r.salaryPeriod = v.unitText;
+      }
+    }
+
+    return r;
+  }
+
+  // ============================================================
+  // DOM fallback : contractType (CDI/CDD/Freelance/Stage/Alternance/Interim)
+  // APEC affiche le contrat dans le bandeau meta sous le titre.
+  // Strategie : parcourir les elements courts (length < 30) et chercher les patterns
+  // connus. Le garde-fou de longueur evite les faux positifs sur les descriptions.
+  // ============================================================
+  function extractContractTypeFromDom() {
+    const candidates = document.querySelectorAll('span, p, div, li');
+    for (let i = 0; i < candidates.length; i++) {
+      const el = candidates[i];
+      // Element feuille ou semi-feuille uniquement (pas de gros conteneur)
+      if (el.children.length > 2) continue;
+      const txt = cleanInline(el.textContent);
+      if (!txt || txt.length === 0 || txt.length > 30) continue;
+
+      for (let j = 0; j < CONTRACT_PATTERNS.length; j++) {
+        if (CONTRACT_PATTERNS[j].regex.test(txt)) {
+          return CONTRACT_PATTERNS[j].label;
+        }
+      }
+    }
+    return null;
+  }
+
+  // ============================================================
+  // Helpers (identiques a WTJ pour coherence inter-scrapers)
+  // ============================================================
+
+  function htmlToReadableText(html) {
+    if (!html) return '';
+    // Si c'est deja du texte plain (pas de balises HTML), on retourne tel quel nettoye
+    if (typeof html === 'string' && html.indexOf('<') === -1) {
+      return cleanMultiline(html);
+    }
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(html, 'text/html');
+    } catch (e) {
+      return cleanMultiline(String(html));
+    }
+    const blocks = [];
+    walk(doc.body, blocks);
+    if (blocks.length > 0) {
+      return blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+    // Fallback : pas de P/UL trouves mais texte present
+    return cleanMultiline(doc.body.innerText || doc.body.textContent || '');
+  }
+
+  function cleanMultiline(s) {
+    if (!s) return '';
+    const lines = String(s).replace(/\r\n/g, '\n').split('\n');
+    const out = [];
+    let prevEmpty = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].replace(/\s+/g, ' ').trim();
+      if (line.length === 0) {
+        if (!prevEmpty && out.length > 0) {
+          out.push('');
+          prevEmpty = true;
+        }
+      } else {
+        out.push(line);
+        prevEmpty = false;
+      }
+    }
+    return out.join('\n').trim();
+  }
+
+  function walk(n, out) {
+    if (!n) return;
+    if (n.nodeType === 3) return;
+
+    const tag = n.tagName;
+
+    if (tag === 'UL' || tag === 'OL') {
+      const items = n.querySelectorAll(':scope > li');
+      const itemLines = [];
+      for (let i = 0; i < items.length; i++) {
+        const t = cleanInline(items[i].textContent);
+        if (t) itemLines.push('• ' + t);
+      }
+      if (itemLines.length > 0) {
+        out.push(itemLines.join('\n'));
+      }
+      return;
+    }
+
+    if (tag === 'P') {
+      const clone = n.cloneNode(true);
+      const brs = clone.querySelectorAll('br');
+      for (let i = 0; i < brs.length; i++) {
+        brs[i].replaceWith('\n');
+      }
+      const t = cleanInline(clone.textContent);
+      if (t) out.push(t);
+      return;
+    }
+
+    if (tag === 'BR') return;
+
+    const kids = n.childNodes;
+    for (let i = 0; i < kids.length; i++) {
+      walk(kids[i], out);
+    }
+  }
+
+  function mapEducationLevel(credentialCategory) {
+    const map = {
+      'high school': 'Bac',
+      'associate degree': 'Bac+2',
+      'bachelor degree': 'Bac+3',
+      'professional certificate': 'Certification professionnelle',
+      'postgraduate degree': 'Bac+5 et plus',
+      'doctoral degree': 'Doctorat'
+    };
+    const key = String(credentialCategory).toLowerCase().trim();
+    return map[key] || credentialCategory;
+  }
+
+  function parseNum(v) {
+    if (typeof v === 'number') return v;
+    const n = parseFloat(String(v).replace(',', '.').replace(/[^\d.\-]/g, ''));
+    return isNaN(n) ? null : n;
+  }
+
+  function cleanInline(s) {
+    if (!s) return '';
+    return String(s).replace(/\s+/g, ' ').trim();
+  }
+
+  // ============================================================
+  // Session 10 : helpers pour le champ "Informations complementaires"
+  // Concatene les champs secondaires en texte multi-lignes (un champ par ligne).
+  // Ce texte est affiche dans le sidepanel (champ editable) et stocke en base
+  // dans la colonne jobs.informations_complementaires.
+  // ============================================================
+  function buildInformationsComplementaires(d) {
+    const lines = [];
+
+    if (d.workingHours) {
+      lines.push('Durée : ' + d.workingHours);
+    }
+    if (d.postedAt) {
+      lines.push('Posté le : ' + formatDateFR(d.postedAt));
+    }
+    if (d.experienceLabel) {
+      lines.push('Expérience : ' + d.experienceLabel);
+    }
+    if (d.qualification) {
+      lines.push('Qualification : ' + d.qualification);
+    }
+    if (d.educationLevel) {
+      lines.push('Formation : ' + d.educationLevel);
+    }
+    if (d.industry) {
+      lines.push('Secteur : ' + d.industry);
+    }
+
+    return lines.length > 0 ? lines.join('\n') : null;
+  }
+
+  // Formate une date en francais : "12 octobre 2025"
+  // Accepte ISO ("2025-10-12T..."), texte deja formate ou autre fallback.
+  function formatDateFR(value) {
+    if (!value) return '';
+    const str = String(value);
+    // Si pas un format ISO, on retourne tel quel
+    if (!/^\d{4}-\d{2}-\d{2}/.test(str)) return str;
+    try {
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return str;
+      const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    } catch (e) {
+      return str;
+    }
+  }
+
+  // Enregistrement dans le namespace global JFMJ
+  window.JFMJ_SCRAPERS = window.JFMJ_SCRAPERS || {};
+  window.JFMJ_SCRAPERS.apec = {
+    name: 'apec',
+    label: 'APEC',
+    match: match,
+    extract: extract
+  };
+})();

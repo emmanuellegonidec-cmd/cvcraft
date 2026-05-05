@@ -1,5 +1,7 @@
 // extension/content/scrapers/welcometothejungle.js
 // Jean find my Job — Scraper Welcome to the Jungle (session 9bis Bloc 5 — v0.9.10)
+// Session 10 Bloc 1 — Ajout du champ informationsComplementaires (concatenation des champs secondaires affiches dans le sidepanel)
+//
 // Hybride : JSON-LD (metadata + description) + DOM (sections Profil recherche / Qui sont-ils / Missions cles)
 // Robuste aux 3 formats observes : Sia (description avec titres en gras), Bartle (description sans titres + champs separes), Ecov (Missions cles en span + Qui sont-ils sans <p>)
 
@@ -62,6 +64,7 @@
       qualification: null,
       industry: null,
       skills: [],
+      informationsComplementaires: null,
       _extractionMethod: null
     };
 
@@ -114,6 +117,9 @@
     if (usedDomMeta && data._extractionMethod === 'json-ld') {
       data._extractionMethod = 'json-ld+dom';
     }
+
+    // 4. Session 10 : construction du texte "Informations complementaires"
+    data.informationsComplementaires = buildInformationsComplementaires(data);
 
     return data;
   }
@@ -548,6 +554,55 @@
   function normalizeForCompare(s) {
     if (!s) return '';
     return cleanInline(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  // ============================================================
+  // Session 10 : helpers pour le champ "Informations complementaires"
+  // Concatene les champs secondaires en texte multi-lignes (un champ par ligne).
+  // Ce texte est affiche dans le sidepanel (champ editable) et stocke en base
+  // dans la colonne jobs.informations_complementaires.
+  // ============================================================
+  function buildInformationsComplementaires(d) {
+    const lines = [];
+
+    if (d.workingHours) {
+      lines.push('Durée : ' + d.workingHours);
+    }
+    if (d.postedAt) {
+      lines.push('Posté le : ' + formatDateFR(d.postedAt));
+    }
+    if (d.experienceLabel) {
+      lines.push('Expérience : ' + d.experienceLabel);
+    }
+    if (d.qualification) {
+      lines.push('Qualification : ' + d.qualification);
+    }
+    if (d.educationLevel) {
+      lines.push('Formation : ' + d.educationLevel);
+    }
+    if (d.industry) {
+      lines.push('Secteur : ' + d.industry);
+    }
+
+    return lines.length > 0 ? lines.join('\n') : null;
+  }
+
+  // Formate une date en francais : "12 octobre 2025"
+  // Accepte ISO ("2025-10-12T..."), texte deja formate ou autre fallback.
+  function formatDateFR(value) {
+    if (!value) return '';
+    const str = String(value);
+    // Si pas un format ISO, on retourne tel quel
+    if (!/^\d{4}-\d{2}-\d{2}/.test(str)) return str;
+    try {
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return str;
+      const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    } catch (e) {
+      return str;
+    }
   }
 
   // Enregistrement dans le namespace global JFMJ

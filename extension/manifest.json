@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Jean find my Job",
   "short_name": "Jean",
-  "version": "0.9.10",
+  "version": "0.9.12",
   "description": "Capture des offres, analyse ton CV et suis tes candidatures, sans quitter ton jobboard.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -33,7 +33,8 @@
     "https://jeanfindmyjob.fr/*",
     "https://candidat.francetravail.fr/*",
     "https://www.welcometothejungle.com/*",
-    "https://www.linkedin.com/*"
+    "https://www.linkedin.com/*",
+    "https://www.apec.fr/*"
   ],
   "content_scripts": [
     {
@@ -58,6 +59,15 @@
       "matches": ["https://www.linkedin.com/*"],
       "js": [
         "content/scrapers/linkedin.js",
+        "content/content.js"
+      ],
+      "css": ["content/content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.apec.fr/*"],
+      "js": [
+        "content/scrapers/apec.js",
         "content/content.js"
       ],
       "css": ["content/content.css"],
