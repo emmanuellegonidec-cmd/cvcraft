@@ -1,7 +1,8 @@
 // extension/content/scrapers/linkedin.js
-// Jean find my Job — Scraper LinkedIn (session 8 + fixes post-session 9 — v0.9.3)
+// Jean find my Job — Scraper LinkedIn (session 8 + fixes post-session 9 — v0.9.4)
 // Session 10 Bloc 1 — Ajout du champ informationsComplementaires
 // Session 10 Bloc 2 — Fix description : preservation des sauts de ligne issus des <br> dans les <p>
+//                     (supersede par Bloc 5 ci-dessous)
 // Session 10 Bloc 3 — Fix salaire : regex etendue pour gerer le suffixe periode
 //                     (/yr, /mo, /h, /an, /mois) entre la devise et le separateur.
 //                     Format LinkedIn 2026 : "50K €/yr - 54K €/yr"
@@ -10,6 +11,17 @@
 //                     1) Rejet des chaines contenant "Selectionne"/"Selected" (label sidebar).
 //                     2) Rejet des chaines avec mots colles ([minuscule][MAJUSCULE] sans separateur).
 //                     3) Longueur max reduite de 100 a 80 caracteres.
+// Session 10 Bloc 5 — Refonte du walker pour preserver la mise en page de la description.
+//                     Avant : seuls <p> et <ul>/<ol> etaient traites, les noeuds texte directs
+//                     etaient ignores, les <h3>/<div>/<section> ne faisaient pas separateur.
+//                     Resultat : titres de section colles aux paragraphes ("...go-to-market.
+//                     Indicateurs de succesPipeline...").
+//                     Apres : 1) noeuds texte traites, 2) tags block (<p>, <div>, <h1-6>,
+//                     <section>, <article>, <blockquote>) entoures de \n, 3) <br> partout
+//                     converti en \n, 4) tags inline (<span>, <strong>, <em>) en texte continu,
+//                     5) tags parasites ignores (<style>, <script>, <button>, <svg>, <iframe>).
+//                     Nouvel API : walk(node, acc) ou acc = {text: ''} (au lieu d'un array
+//                     de blocs joints par \n\n).
 //
 // LinkedIn 2026 : DOM 100% en classes CSS obfusquees (hashees) + systeme SDUI
 
@@ -18,6 +30,21 @@
 
   const LI_URL_REGEX = /^https:\/\/www\.linkedin\.com\/jobs\//i;
   const LOG_PREFIX = '[Jean LinkedIn]';
+
+  // Session 10 Bloc 5 : tags reconnus comme block (entoures de \n) ou inline (texte continu).
+  // Tout tag non liste ici (et non dans SKIP_TAGS) est traite comme inline par defaut.
+  const BLOCK_TAGS = new Set([
+    'P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+    'SECTION', 'ARTICLE', 'BLOCKQUOTE', 'PRE',
+    'HEADER', 'FOOTER', 'NAV', 'ASIDE',
+    'TR', 'TD', 'TH', 'TBODY', 'THEAD', 'TFOOT', 'TABLE',
+    'FIGURE', 'FIGCAPTION', 'HR'
+  ]);
+
+  // Session 10 Bloc 5 : tags ignores (contenu et descendants non parcourus).
+  const SKIP_TAGS = new Set([
+    'STYLE', 'SCRIPT', 'BUTTON', 'SVG', 'NOSCRIPT', 'IFRAME', 'IMG', 'CANVAS', 'VIDEO', 'AUDIO'
+  ]);
 
   function match(url) {
     if (!LI_URL_REGEX.test(url)) return null;
@@ -190,8 +217,7 @@
 
   // ============================================================
   // Location : pattern geo "Ville, Region, Pays" dans la TopCard
-  // Session 10 Bloc 4 : ajout de 3 filtres anti-parasites pour rejeter les chaines
-  // aberrantes type "Selectionne, Growth marketingGrowth marketingWebynLevallois-Perret"
+  // Session 10 Bloc 4 : ajout de 3 filtres anti-parasites
   // ============================================================
   function extractLocation() {
     const topCard = getTopCardContainer();
@@ -216,7 +242,6 @@
       const txt = cleanInline(el.textContent);
 
       // Session 10 Bloc 4 : longueur max reduite de 100 a 80 caracteres
-      // (un lieu realiste type "Levallois-Perret, Ile-de-France, France" fait ~40 chars)
       if (!txt || txt.length < 5 || txt.length > 80) continue;
 
       if (/candidat|applicant|personne/i.test(txt)) continue;
@@ -224,14 +249,10 @@
       if (/il y a|ago/i.test(txt)) continue;
       if (/^\d+\s*\+?$/.test(txt)) continue;
 
-      // Session 10 Bloc 4 : filtre anti-parasite #1
-      // "Selectionne" / "Selected" = label d'accessibilite LinkedIn pour l'offre active
-      // dans la sidebar gauche. Si on tombe dessus, c'est qu'on a englobe trop large.
+      // Session 10 Bloc 4 : filtre anti-parasite #1 ("Selectionne"/"Selected")
       if (/sélectionné|selected/i.test(txt)) continue;
 
-      // Session 10 Bloc 4 : filtre anti-parasite #2
-      // Mots colles type "marketingGrowth" ou "WebynLevallois" = signal d'une concatenation
-      // aberrante de spans par textContent. Un vrai lieu n'a jamais ce pattern.
+      // Session 10 Bloc 4 : filtre anti-parasite #2 (mots colles)
       if (concatenatedWordsPattern.test(txt)) continue;
 
       if (locationPattern.test(txt)) {
@@ -243,13 +264,12 @@
 
   // ============================================================
   // Description : SDUI componentkey JobDetails_AboutTheJob
+  // Session 10 Bloc 5 : utilise le nouveau walker rich-text.
   // ============================================================
   function extractDescription() {
     const el = document.querySelector('[componentkey^="JobDetails_AboutTheJob"]');
     if (el) {
-      const blocks = [];
-      walk(el, blocks);
-      const txt = blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+      const txt = extractRichText(el);
       if (txt && txt.length > 50) return txt;
     }
 
@@ -264,9 +284,7 @@
     for (let i = 0; i < fallbacks.length; i++) {
       const f = document.querySelector(fallbacks[i]);
       if (f) {
-        const blocks = [];
-        walk(f, blocks);
-        const txt = blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+        const txt = extractRichText(f);
         if (txt && txt.length > 50) return txt;
       }
     }
@@ -275,21 +293,18 @@
 
   // ============================================================
   // CompanyDescription : SDUI componentkey JobDetails_AboutTheCompany
+  // Session 10 Bloc 5 : utilise le nouveau walker rich-text.
   // ============================================================
   function extractCompanyDescription() {
     const el = document.querySelector('[componentkey^="JobDetails_AboutTheCompany"]');
     if (el) {
-      const blocks = [];
-      walk(el, blocks);
-      const txt = blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+      const txt = extractRichText(el);
       if (txt && txt.length > 50) return txt;
     }
 
     const fallback = document.querySelector('[data-sdui-component*="aboutTheCompany"]');
     if (fallback) {
-      const blocks = [];
-      walk(fallback, blocks);
-      const txt = blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+      const txt = extractRichText(fallback);
       if (txt && txt.length > 50) return txt;
     }
     return null;
@@ -395,8 +410,7 @@
         }
 
         if (result.salaryMin === null) {
-          // Session 10 Bloc 3 : on passe le segment ENTIER (pas seulement la partie tronquee)
-          // car le suffixe periode "/yr" peut etre dans le meme segment que le range.
+          // Session 10 Bloc 3 : on passe le segment ENTIER
           const sal = parseSalaryFromText(seg);
           if (sal) {
             result.salaryMin = sal.min;
@@ -407,8 +421,7 @@
         }
       }
 
-      // Session 10 Bloc 3 : si on n'a rien trouve sur les segments separes,
-      // on retente sur le texte complet (cas ou tout est sur une seule ligne sans "·")
+      // Session 10 Bloc 3 : fallback sur le texte complet
       if (result.salaryMin === null) {
         const sal = parseSalaryFromText(txt);
         if (sal) {
@@ -436,11 +449,7 @@
   }
 
   // ============================================================
-  // Session 10 Bloc 3 : parseSalaryFromText etendu
-  // Ajout d'un groupe optionnel pour le suffixe periode (/yr, /mo, /h, /an, /mois...)
-  // qui peut apparaitre entre la devise et le separateur.
-  // Format LinkedIn 2026 : "50K €/yr - 54K €/yr"
-  // Compatibilite preservee : "50K € - 54K €" sans suffixe matche toujours.
+  // Session 10 Bloc 3 : parseSalaryFromText avec suffixe periode optionnel
   // ============================================================
   function parseSalaryFromText(text) {
     let currency = null;
@@ -449,7 +458,7 @@
     else if (/£|GBP/.test(text)) currency = 'GBP';
     else return null;
 
-    // Pattern 1 : format "X K € - Y K €" avec K (kilo), suffixe periode optionnel
+    // Pattern 1 : format "X K € - Y K €" avec K, suffixe periode optionnel
     let m = text.match(/(\d+(?:[.,]\d+)?)\s*[Kk]\s*[€$£]?(?:\s*\/\s*(?:yr|mo|hr|h|an|mois|year|month|hour))?\s*(?:[-–—]|à|to)\s*(\d+(?:[.,]\d+)?)\s*[Kk]/i);
     if (m) {
       return {
@@ -484,45 +493,79 @@
   }
 
   // ============================================================
-  // Walker recursif (meme contrat que WTJ et FT)
+  // Session 10 Bloc 5 : nouveau walker rich-text.
+  // Strategie : on accumule du texte dans un objet { text }, et on insere des \n
+  // selon la nature des tags traverses (block / inline / parasite).
+  // Le nettoyage final (cleanRichText) collapse les sauts de ligne multiples
+  // et trim chaque ligne.
   // ============================================================
-  function walk(n, out) {
+  function extractRichText(rootEl) {
+    if (!rootEl) return '';
+    const acc = { text: '' };
+    walk(rootEl, acc);
+    return cleanRichText(acc.text);
+  }
+
+  function walk(n, acc) {
     if (!n) return;
-    if (n.nodeType === 3) return;
+
+    // Noeud texte : on ajoute le contenu tel quel.
+    // Le nettoyage des espaces redondants se fait en fin de parcours dans cleanRichText.
+    if (n.nodeType === 3) {
+      if (n.textContent) {
+        acc.text += n.textContent;
+      }
+      return;
+    }
+
+    // Ignorer les autres types de noeuds (commentaires, CDATA, etc.)
+    if (n.nodeType !== 1) return;
 
     const tag = n.tagName;
 
+    // Tags ignores : on ne descend pas dans leurs enfants.
+    if (SKIP_TAGS.has(tag)) return;
+
+    // <br> : saut de ligne, peu importe le contexte.
+    if (tag === 'BR') {
+      acc.text += '\n';
+      return;
+    }
+
+    // <ul>/<ol> : on construit les bullets manuellement.
     if (tag === 'UL' || tag === 'OL') {
+      if (acc.text && !acc.text.endsWith('\n')) {
+        acc.text += '\n';
+      }
       const items = n.querySelectorAll(':scope > li');
-      const itemLines = [];
       for (let i = 0; i < items.length; i++) {
         const t = cleanInline(items[i].textContent);
-        if (t) itemLines.push('• ' + t);
+        if (t) acc.text += '• ' + t + '\n';
       }
-      if (itemLines.length > 0) {
-        out.push(itemLines.join('\n'));
+      acc.text += '\n';
+      return;
+    }
+
+    // Tags block : on entoure le contenu de \n pour creer une separation.
+    if (BLOCK_TAGS.has(tag)) {
+      if (acc.text && !acc.text.endsWith('\n')) {
+        acc.text += '\n';
+      }
+      const kids = n.childNodes;
+      for (let i = 0; i < kids.length; i++) {
+        walk(kids[i], acc);
+      }
+      if (!acc.text.endsWith('\n')) {
+        acc.text += '\n';
       }
       return;
     }
 
-    if (tag === 'P') {
-      const clone = n.cloneNode(true);
-      const brs = clone.querySelectorAll('br');
-      for (let i = 0; i < brs.length; i++) {
-        brs[i].replaceWith('\n');
-      }
-      // Session 10 Bloc 2 : preserve les \n issus des <br> en nettoyant ligne par ligne.
-      // (avant : cleanInline collapsait \s+ en un seul espace et detruisait les sauts de ligne.)
-      const t = cleanMultilineNoEmpty(clone.textContent);
-      if (t) out.push(t);
-      return;
-    }
-
-    if (tag === 'BR' || tag === 'STYLE' || tag === 'SCRIPT' || tag === 'BUTTON' || tag === 'SVG') return;
-
+    // Tags inline (span, strong, em, b, i, a, code, ...) : on descend simplement
+    // sans ajouter de separateur. Le texte se concatene continumemt.
     const kids = n.childNodes;
     for (let i = 0; i < kids.length; i++) {
-      walk(kids[i], out);
+      walk(kids[i], acc);
     }
   }
 
@@ -531,13 +574,33 @@
     return String(s).replace(/\s+/g, ' ').trim();
   }
 
-  // Session 10 Bloc 2 : nettoyage multi-lignes preservant les \n.
-  function cleanMultilineNoEmpty(s) {
+  // Session 10 Bloc 5 : nettoyage final du texte multi-lignes.
+  // - Trim chaque ligne et collapse les espaces internes
+  // - Reduit les sauts de ligne multiples (3+) a 2 (= une ligne vide separatrice)
+  // - Trim global au debut/fin
+  function cleanRichText(s) {
     if (!s) return '';
-    const lines = String(s).split('\n').map(function (l) {
-      return l.replace(/[ \t]+/g, ' ').trim();
-    }).filter(Boolean);
-    return lines.join('\n');
+    const rawLines = String(s).split('\n');
+    const trimmedLines = [];
+    for (let i = 0; i < rawLines.length; i++) {
+      trimmedLines.push(rawLines[i].replace(/[ \t]+/g, ' ').trim());
+    }
+    // Collapse les lignes vides consecutives a une seule
+    const collapsed = [];
+    let prevEmpty = false;
+    for (let i = 0; i < trimmedLines.length; i++) {
+      const line = trimmedLines[i];
+      if (line === '') {
+        if (!prevEmpty) {
+          collapsed.push('');
+        }
+        prevEmpty = true;
+      } else {
+        collapsed.push(line);
+        prevEmpty = false;
+      }
+    }
+    return collapsed.join('\n').trim();
   }
 
   // ============================================================
@@ -592,5 +655,5 @@
     extract: extract
   };
 
-  console.log(LOG_PREFIX + ' Scraper LinkedIn v0.9.3 charge');
+  console.log(LOG_PREFIX + ' Scraper LinkedIn v0.9.4 charge');
 })();
