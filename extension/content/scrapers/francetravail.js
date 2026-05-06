@@ -1,6 +1,7 @@
 // extension/content/scrapers/francetravail.js
 // Jean find my Job — Scraper France Travail (session 9bis Bloc 6a v0.9.9 — capture vue liste/panneau lateral)
 // Session 10 Bloc 1 — Ajout du champ informationsComplementaires (concatenation des champs secondaires affiches dans le sidepanel)
+// Session 10 Bloc 2 — Fix description : preservation des sauts de ligne issus des <br> dans les <p>
 
 (function () {
   'use strict';
@@ -248,10 +249,21 @@
     return String(s).replace(/\s+/g, ' ').trim();
   }
 
+  // Session 10 Bloc 2 : nettoie un texte multi-lignes en preservant les sauts de ligne.
+  // Chaque ligne est nettoyee individuellement (espaces et tabs collapses), les lignes
+  // vides sont retirees, et le tout est rejoint avec \n.
+  function cleanMultiline(s) {
+    if (!s) return '';
+    const lines = String(s).split('\n').map(function (l) {
+      return l.replace(/[ \t]+/g, ' ').trim();
+    }).filter(Boolean);
+    return lines.join('\n');
+  }
+
   // Convertit un sous-arbre DOM en texte lisible :
-  // - <p>     -> texte + saut de ligne
+  // - <p>     -> texte + saut de ligne (les <br> internes sont preserves comme \n)
   // - <ul>    -> chaque <li> sur sa propre ligne, prefixee par "• "
-  // - <br>    -> saut de ligne
+  // - <br>    -> saut de ligne (au top level)
   // - sinon   -> on parcourt les enfants
   function nodeToReadableText(node) {
     if (!node) return '';
@@ -285,7 +297,9 @@
         for (let i = 0; i < brs.length; i++) {
           brs[i].replaceWith('\n');
         }
-        const t = cleanInline(clone.textContent);
+        // Session 10 Bloc 2 : preserve les \n issus des <br> en nettoyant ligne par ligne.
+        // (avant : cleanInline collapsait \s+ en un seul espace et detruisait les sauts de ligne.)
+        const t = cleanMultiline(clone.textContent);
         if (t) out.push(t);
         return;
       }

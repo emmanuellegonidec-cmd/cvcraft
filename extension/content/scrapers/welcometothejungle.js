@@ -1,9 +1,9 @@
 // extension/content/scrapers/welcometothejungle.js
 // Jean find my Job — Scraper Welcome to the Jungle (session 9bis Bloc 5 — v0.9.10)
-// Session 10 Bloc 1 — Ajout du champ informationsComplementaires (concatenation des champs secondaires affiches dans le sidepanel)
+// Session 10 Bloc 1 — Ajout du champ informationsComplementaires
+// Session 10 Bloc 2 — Fix description : preservation des sauts de ligne issus des <br> dans les <p>
 //
 // Hybride : JSON-LD (metadata + description) + DOM (sections Profil recherche / Qui sont-ils / Missions cles)
-// Robuste aux 3 formats observes : Sia (description avec titres en gras), Bartle (description sans titres + champs separes), Ecov (Missions cles en span + Qui sont-ils sans <p>)
 
 (function () {
   'use strict';
@@ -88,10 +88,9 @@
       data._extractionMethod = data._extractionMethod === 'json-ld' ? 'json-ld+dom' : 'dom';
     }
 
-    // 2bis. NEW v0.9.10 : "Missions cles" (cas Ecov ou le label est un span, pas un H4)
+    // 2bis. "Missions cles" (cas Ecov ou le label est un span, pas un H4)
     const domMissions = extractSectionBySpan('Missions clés');
     if (domMissions) {
-      // Verifie qu'on ne duplique pas si la description JSON-LD contient deja les missions
       const probe = domMissions.slice(0, 60).toLowerCase();
       const descHasMissions = data.description && data.description.toLowerCase().indexOf(probe) !== -1;
       if (!descHasMissions) {
@@ -148,7 +147,6 @@
     if (j.title) r.title = cleanInline(j.title);
     if (j.datePosted) r.postedAt = j.datePosted;
 
-    // Description : essai du splitter, fallback sur description complete
     if (j.description) {
       const sections = splitWtjDescription(j.description);
       const knownSections = Object.keys(sections).filter(function (k) {
@@ -156,8 +154,6 @@
       });
 
       if (knownSections.length > 0) {
-        // Format Sia : on utilise les sections detectees
-        // 'Informations supplémentaires' est volontairement ignore
         if (sections['Description du poste']) {
           r.description = sections['Description du poste'];
         }
@@ -168,13 +164,10 @@
           r.companyDescription = sections["Description de l'entreprise"];
         }
 
-        // Si le splitter n'a pas trouve "Description du poste" mais d'autres sections,
-        // fallback sur la description complete pour ne pas perdre l'info
         if (!r.description) {
           r.description = htmlToReadableText(j.description);
         }
       } else {
-        // Format Bartle (ou autre) : aucun titre connu detecte, on prend la description complete
         r.description = htmlToReadableText(j.description);
       }
     }
@@ -215,9 +208,6 @@
 
     if (j.industry) r.industry = cleanInline(j.industry);
 
-    // qualifications (champ JSON-LD distinct, present chez Bartle)
-    // - On l'utilise comme fallback pour requirements si splitter n'a rien trouve
-    // - On stocke aussi un extrait court dans qualification (champ Supabase distinct)
     if (j.qualifications) {
       const q = cleanInline(j.qualifications);
       if (q) {
@@ -309,9 +299,6 @@
 
   // ============================================================
   // DOM : recherche d'un <h4> par titre, retourne le contenu lisible
-  // 2 strategies en cascade pour gerer les variations de structure :
-  //   A. Le contenu est nextElementSibling du H4 (cas Ecov)
-  //   B. Le contenu est dans les autres enfants du parent du H4 (cas Sia/Bartle classique)
   // ============================================================
   function extractSectionByH4(titleText) {
     const h4s = document.querySelectorAll('h4');
@@ -343,8 +330,6 @@
         if (blocks.length > 0) {
           return blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
         }
-        // Fallback ultime : si le walker n'a rien trouve mais le parent a du texte,
-        // on prend l'innerText du parent en retirant le H4
         const clone = parent.cloneNode(true);
         const h4InClone = clone.querySelector('h4');
         if (h4InClone) h4InClone.remove();
@@ -357,8 +342,6 @@
 
   // ============================================================
   // DOM : recherche d'une section dont le label est un <span> (et non un <h4>)
-  // Cas observe sur l'offre Ecov : "Missions cles" est un span feuille,
-  // et son contenu est dans le sibling d'un ancetre situe a 1-4 niveaux au-dessus.
   // ============================================================
   function extractSectionBySpan(labelText) {
     const spans = document.querySelectorAll('span');
@@ -366,11 +349,9 @@
 
     for (let i = 0; i < spans.length; i++) {
       const span = spans[i];
-      // Span feuille uniquement (pas de child element) pour eviter les faux positifs
       if (span.children.length > 0) continue;
       if (normalizeForCompare(cleanInline(span.textContent)) !== targetNorm) continue;
 
-      // Remonter jusqu'a 5 niveaux pour trouver un sibling avec du contenu substantiel
       let cur = span;
       for (let level = 0; level < 5; level++) {
         if (!cur || !cur.parentElement) break;
@@ -385,11 +366,6 @@
     return null;
   }
 
-  // ============================================================
-  // Helper : extrait le texte lisible d'un element.
-  // Utilise walk() pour P/UL en priorite, fallback sur innerText multiline si walk vide
-  // (cas Ecov ou le contenu est du texte plain dans des div imbriquees sans <p>)
-  // ============================================================
   function extractReadableText(el) {
     if (!el) return '';
     const blocks = [];
@@ -397,12 +373,10 @@
     if (blocks.length > 0) {
       return blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
     }
-    // Fallback : pas de P/UL trouves mais l'element contient du texte
     const txt = el.innerText || el.textContent || '';
     return cleanMultiline(txt);
   }
 
-  // Nettoie un texte multi-lignes : trim chaque ligne, supprime les vides, max 1 ligne vide entre blocs
   function cleanMultiline(s) {
     if (!s) return '';
     const lines = String(s).replace(/\r\n/g, '\n').split('\n');
@@ -471,10 +445,6 @@
 
   // ============================================================
   // Walker recursif : produit du texte lisible (paragraphes + puces)
-  // - <p>     -> 1 bloc texte (avec <br> convertis en \n)
-  // - <ul>    -> 1 bloc avec puces "• item" sur lignes successives
-  // - <br>    -> ignore au top level (gere a l'interieur des <p>)
-  // - sinon   -> descend recursivement dans les enfants
   // ============================================================
   function walk(n, out) {
     if (!n) return;
@@ -501,7 +471,9 @@
       for (let i = 0; i < brs.length; i++) {
         brs[i].replaceWith('\n');
       }
-      const t = cleanInline(clone.textContent);
+      // Session 10 Bloc 2 : preserve les \n issus des <br> en nettoyant ligne par ligne.
+      // (avant : cleanInline collapsait \s+ en un seul espace et detruisait les sauts de ligne.)
+      const t = cleanMultilineNoEmpty(clone.textContent);
       if (t) out.push(t);
       return;
     }
@@ -512,6 +484,15 @@
     for (let i = 0; i < kids.length; i++) {
       walk(kids[i], out);
     }
+  }
+
+  // Session 10 Bloc 2 : variante de cleanMultiline sans lignes vides (utilisee dans le walker P).
+  function cleanMultilineNoEmpty(s) {
+    if (!s) return '';
+    const lines = String(s).split('\n').map(function (l) {
+      return l.replace(/[ \t]+/g, ' ').trim();
+    }).filter(Boolean);
+    return lines.join('\n');
   }
 
   function htmlToReadableText(html) {
@@ -558,9 +539,6 @@
 
   // ============================================================
   // Session 10 : helpers pour le champ "Informations complementaires"
-  // Concatene les champs secondaires en texte multi-lignes (un champ par ligne).
-  // Ce texte est affiche dans le sidepanel (champ editable) et stocke en base
-  // dans la colonne jobs.informations_complementaires.
   // ============================================================
   function buildInformationsComplementaires(d) {
     const lines = [];
@@ -587,12 +565,9 @@
     return lines.length > 0 ? lines.join('\n') : null;
   }
 
-  // Formate une date en francais : "12 octobre 2025"
-  // Accepte ISO ("2025-10-12T..."), texte deja formate ou autre fallback.
   function formatDateFR(value) {
     if (!value) return '';
     const str = String(value);
-    // Si pas un format ISO, on retourne tel quel
     if (!/^\d{4}-\d{2}-\d{2}/.test(str)) return str;
     try {
       const d = new Date(str);

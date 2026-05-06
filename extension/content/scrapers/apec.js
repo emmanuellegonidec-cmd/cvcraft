@@ -1,14 +1,11 @@
 // extension/content/scrapers/apec.js
 // Jean find my Job — Scraper APEC (session 9bis — v0.9.11)
-// Session 10 Bloc 1 — Ajout du champ informationsComplementaires (concatenation des champs secondaires affiches dans le sidepanel)
+// Session 10 Bloc 1 — Ajout du champ informationsComplementaires
+// Session 10 Bloc 2 — Fix description : preservation des sauts de ligne issus des <br> dans les <p>
 //
 // Strategie : JSON-LD JobPosting primary (couvre titre, entreprise, lieu, salaire,
 // description, qualifications, dates, secteur, type d'emploi) + DOM fallback uniquement
 // pour contractType (CDI/CDD/Freelance) qui n'est pas dans le JSON-LD APEC.
-//
-// APEC est une SPA Angular qui injecte dynamiquement le JSON-LD au runtime apres
-// chargement client. Notre extension s'execute a document_idle, donc le JSON-LD
-// est present quand on appelle extract().
 
 (function () {
   'use strict';
@@ -216,9 +213,6 @@
 
   // ============================================================
   // DOM fallback : contractType (CDI/CDD/Freelance/Stage/Alternance/Interim)
-  // APEC affiche le contrat dans le bandeau meta sous le titre.
-  // Strategie : parcourir les elements courts (length < 30) et chercher les patterns
-  // connus. Le garde-fou de longueur evite les faux positifs sur les descriptions.
   // ============================================================
   function extractContractTypeFromDom() {
     const candidates = document.querySelectorAll('span, p, div, li');
@@ -239,7 +233,7 @@
   }
 
   // ============================================================
-  // Helpers (identiques a WTJ pour coherence inter-scrapers)
+  // Helpers
   // ============================================================
 
   function htmlToReadableText(html) {
@@ -308,7 +302,9 @@
       for (let i = 0; i < brs.length; i++) {
         brs[i].replaceWith('\n');
       }
-      const t = cleanInline(clone.textContent);
+      // Session 10 Bloc 2 : preserve les \n issus des <br> en nettoyant ligne par ligne.
+      // (avant : cleanInline collapsait \s+ en un seul espace et detruisait les sauts de ligne.)
+      const t = cleanMultilineNoEmpty(clone.textContent);
       if (t) out.push(t);
       return;
     }
@@ -319,6 +315,17 @@
     for (let i = 0; i < kids.length; i++) {
       walk(kids[i], out);
     }
+  }
+
+  // Variante de cleanMultiline : retire les lignes vides (utile dans le walker P
+  // ou les sauts \n\n successifs sont du bruit, vs. cleanMultiline qui preserve
+  // les paragraphes pour les descriptions plain text).
+  function cleanMultilineNoEmpty(s) {
+    if (!s) return '';
+    const lines = String(s).split('\n').map(function (l) {
+      return l.replace(/[ \t]+/g, ' ').trim();
+    }).filter(Boolean);
+    return lines.join('\n');
   }
 
   function mapEducationLevel(credentialCategory) {
@@ -347,9 +354,6 @@
 
   // ============================================================
   // Session 10 : helpers pour le champ "Informations complementaires"
-  // Concatene les champs secondaires en texte multi-lignes (un champ par ligne).
-  // Ce texte est affiche dans le sidepanel (champ editable) et stocke en base
-  // dans la colonne jobs.informations_complementaires.
   // ============================================================
   function buildInformationsComplementaires(d) {
     const lines = [];
@@ -376,12 +380,9 @@
     return lines.length > 0 ? lines.join('\n') : null;
   }
 
-  // Formate une date en francais : "12 octobre 2025"
-  // Accepte ISO ("2025-10-12T..."), texte deja formate ou autre fallback.
   function formatDateFR(value) {
     if (!value) return '';
     const str = String(value);
-    // Si pas un format ISO, on retourne tel quel
     if (!/^\d{4}-\d{2}-\d{2}/.test(str)) return str;
     try {
       const d = new Date(str);

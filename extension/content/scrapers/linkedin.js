@@ -1,14 +1,9 @@
 // extension/content/scrapers/linkedin.js
 // Jean find my Job — Scraper LinkedIn (session 8 + fix post-session 9 — v0.9.1)
-// Session 10 Bloc 1 — Ajout du champ informationsComplementaires (concatenation des champs secondaires affiches dans le sidepanel)
+// Session 10 Bloc 1 — Ajout du champ informationsComplementaires
+// Session 10 Bloc 2 — Fix description : preservation des sauts de ligne issus des <br> dans les <p>
 //
 // LinkedIn 2026 : DOM 100% en classes CSS obfusquees (hashees) + systeme SDUI
-// Strategie : exploiter les attributs semantiques componentkey (stables) + heuristiques sur textes
-//
-// v0.9.1 (fix post-session 9) : split explicite contractType / workSchedule sur le separateur "·"
-// pour eviter "CDD · Temps plein" colle dans un seul champ. Ajout d'une normalisation
-// (CDI, CDD, Stage, Alternance, etc.) pour avoir une casse coherente quelle que soit
-// la langue du compte LinkedIn.
 
 (function () {
   'use strict';
@@ -216,7 +211,7 @@
   }
 
   // ============================================================
-  // Description : SDUI componentkey JobDetails_AboutTheJob (NOUVEAU)
+  // Description : SDUI componentkey JobDetails_AboutTheJob
   // ============================================================
   function extractDescription() {
     const el = document.querySelector('[componentkey^="JobDetails_AboutTheJob"]');
@@ -325,11 +320,6 @@
 
   // ============================================================
   // Insights : contractType, workSchedule, experienceLabel, salary
-  // Scan tous les textes courts du body, applique les regex keywords
-  //
-  // v0.9.1 : split explicite sur "·" (point median LinkedIn) avant regex pour
-  // garantir que "CDD · Temps plein" se traduit en contractType="CDD" +
-  // workSchedule="Temps plein" sans collision possible.
   // ============================================================
   function extractInsights() {
     const result = {
@@ -351,9 +341,7 @@
       const txt = cleanInline(el.textContent);
       if (!txt || txt.length < 2 || txt.length > 200) continue;
 
-      // NOUVEAU v0.9.1 : split sur le separateur LinkedIn "·" (point median U+00B7)
-      // ou "•" (bullet U+2022) si present. Sinon on traite le texte entier comme une
-      // seule partie. Cela evite que "CDD · Temps plein" tombe dans un seul champ.
+      // Split sur le separateur LinkedIn "·" (point median U+00B7) ou "•" (bullet U+2022)
       const parts = txt.split(/\s*[·•]\s*/).map(function (p) { return cleanInline(p); }).filter(Boolean);
       const segments = parts.length > 1 ? parts : [txt];
 
@@ -390,11 +378,6 @@
     return result;
   }
 
-  // ============================================================
-  // Normalisation du contractType : casse coherente quelle que soit
-  // la langue du compte LinkedIn (FR/EN). On retombe toujours sur
-  // les memes valeurs canoniques cote Jean.
-  // ============================================================
   function normalizeContractType(raw) {
     const v = (raw || '').trim();
     if (/^cdi$/i.test(v) || /^permanent$/i.test(v)) return 'CDI';
@@ -404,7 +387,6 @@
     if (/^freelance$/i.test(v) || /^independant$/i.test(v)) return 'Freelance';
     if (/^contract$/i.test(v) || /^temporaire$/i.test(v)) return 'Temporaire';
     if (/^interim$/i.test(v) || /^intérim$/i.test(v)) return 'Intérim';
-    // Fallback : capitalisation simple
     return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
   }
 
@@ -415,7 +397,6 @@
     else if (/£|GBP/.test(text)) currency = 'GBP';
     else return null;
 
-    // Range avec K
     let m = text.match(/(\d+(?:[.,]\d+)?)\s*[Kk]\s*[€$£]?\s*(?:[-–—]|à|to)\s*(\d+(?:[.,]\d+)?)\s*[Kk]/i);
     if (m) {
       return {
@@ -426,7 +407,6 @@
       };
     }
 
-    // Range avec nombres complets
     m = text.match(/(\d{1,3}(?:[\s,.]\d{3})+)\s*[€$£]?\s*(?:[-–—]|à|to)\s*(\d{1,3}(?:[\s,.]\d{3})+)/i);
     if (m) {
       return {
@@ -477,7 +457,9 @@
       for (let i = 0; i < brs.length; i++) {
         brs[i].replaceWith('\n');
       }
-      const t = cleanInline(clone.textContent);
+      // Session 10 Bloc 2 : preserve les \n issus des <br> en nettoyant ligne par ligne.
+      // (avant : cleanInline collapsait \s+ en un seul espace et detruisait les sauts de ligne.)
+      const t = cleanMultilineNoEmpty(clone.textContent);
       if (t) out.push(t);
       return;
     }
@@ -495,11 +477,17 @@
     return String(s).replace(/\s+/g, ' ').trim();
   }
 
+  // Session 10 Bloc 2 : nettoyage multi-lignes preservant les \n.
+  function cleanMultilineNoEmpty(s) {
+    if (!s) return '';
+    const lines = String(s).split('\n').map(function (l) {
+      return l.replace(/[ \t]+/g, ' ').trim();
+    }).filter(Boolean);
+    return lines.join('\n');
+  }
+
   // ============================================================
   // Session 10 : helpers pour le champ "Informations complementaires"
-  // Concatene les champs secondaires en texte multi-lignes (un champ par ligne).
-  // Ce texte est affiche dans le sidepanel (champ editable) et stocke en base
-  // dans la colonne jobs.informations_complementaires.
   // ============================================================
   function buildInformationsComplementaires(d) {
     const lines = [];
@@ -526,12 +514,9 @@
     return lines.length > 0 ? lines.join('\n') : null;
   }
 
-  // Formate une date en francais : "12 octobre 2025"
-  // Accepte ISO ("2025-10-12T..."), texte deja formate ou autre fallback.
   function formatDateFR(value) {
     if (!value) return '';
     const str = String(value);
-    // Si pas un format ISO, on retourne tel quel
     if (!/^\d{4}-\d{2}-\d{2}/.test(str)) return str;
     try {
       const d = new Date(str);
