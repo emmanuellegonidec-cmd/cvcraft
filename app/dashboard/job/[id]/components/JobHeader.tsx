@@ -33,7 +33,7 @@ interface Props {
 export default function JobHeader({ job, onBack, onEdit, onDelete, onGenerateCV }: Props) {
   const [isAdmin, setIsAdmin] = useState(false)
 
- useEffect(() => {
+  useEffect(() => {
     const supabase = createClient()
     supabase.auth.getSession().then(({ data }) => {
       setIsAdmin(data.session?.user?.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID)
@@ -47,6 +47,37 @@ export default function JobHeader({ job, onBack, onEdit, onDelete, onGenerateCV 
       : job.salary_min ? `À partir de ${job.salary_min.toLocaleString('fr-FR')} €`
       : job.salary_max ? `Jusqu'à ${job.salary_max.toLocaleString('fr-FR')} €`
       : null
+
+  // Session 10 Bloc 3 : boutons Modifier / Supprimer remis en texte + picto.
+  // Les classes CSS globales .btn-edit / .btn-delete masquaient le texte (probablement
+  // font-size: 0 ou text-indent: -9999px) ne laissant que les pictos. On contourne en
+  // utilisant des styles inline cohérents avec le reste du header sombre.
+  const editBtnStyle: React.CSSProperties = {
+    background: '#fff',
+    color: '#111',
+    fontSize: 12,
+    fontWeight: 800,
+    padding: '8px 14px',
+    borderRadius: 8,
+    border: '2px solid #fff',
+    cursor: 'pointer',
+    fontFamily: FONT,
+    whiteSpace: 'nowrap',
+    flex: 1,
+  }
+  const deleteBtnStyle: React.CSSProperties = {
+    background: 'transparent',
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 800,
+    padding: '8px 14px',
+    borderRadius: 8,
+    border: '2px solid #E8151B',
+    cursor: 'pointer',
+    fontFamily: FONT,
+    whiteSpace: 'nowrap',
+    flex: 1,
+  }
 
   return (
     <div style={{ background: '#111', borderRadius: 12, padding: '22px 26px', marginBottom: 14, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, border: '2px solid #111', boxShadow: '3px 3px 0 #E8151B', flexWrap: 'wrap' }}>
@@ -88,8 +119,8 @@ export default function JobHeader({ job, onBack, onEdit, onDelete, onGenerateCV 
           </button>
         )}
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="btn-edit" onClick={onEdit}>✏️ Modifier</button>
-          <button className="btn-delete" onClick={onDelete}>🗑️ Supprimer</button>
+          <button onClick={onEdit} style={editBtnStyle}>✏️ Modifier</button>
+          <button onClick={onDelete} style={deleteBtnStyle}>🗑️ Supprimer</button>
         </div>
       </div>
     </div>
