@@ -1,10 +1,15 @@
 // extension/content/scrapers/linkedin.js
-// Jean find my Job — Scraper LinkedIn (session 8 + fix post-session 9 — v0.9.2)
+// Jean find my Job — Scraper LinkedIn (session 8 + fixes post-session 9 — v0.9.3)
 // Session 10 Bloc 1 — Ajout du champ informationsComplementaires
 // Session 10 Bloc 2 — Fix description : preservation des sauts de ligne issus des <br> dans les <p>
 // Session 10 Bloc 3 — Fix salaire : regex etendue pour gerer le suffixe periode
 //                     (/yr, /mo, /h, /an, /mois) entre la devise et le separateur.
 //                     Format LinkedIn 2026 : "50K €/yr - 54K €/yr"
+// Session 10 Bloc 4 — Fix lieu : filtres anti-parasites pour rejeter les chaines aberrantes
+//                     type "Selectionne, Growth marketingGrowth marketingWebynLevallois-Perret".
+//                     1) Rejet des chaines contenant "Selectionne"/"Selected" (label sidebar).
+//                     2) Rejet des chaines avec mots colles ([minuscule][MAJUSCULE] sans separateur).
+//                     3) Longueur max reduite de 100 a 80 caracteres.
 //
 // LinkedIn 2026 : DOM 100% en classes CSS obfusquees (hashees) + systeme SDUI
 
@@ -185,6 +190,8 @@
 
   // ============================================================
   // Location : pattern geo "Ville, Region, Pays" dans la TopCard
+  // Session 10 Bloc 4 : ajout de 3 filtres anti-parasites pour rejeter les chaines
+  // aberrantes type "Selectionne, Growth marketingGrowth marketingWebynLevallois-Perret"
   // ============================================================
   function extractLocation() {
     const topCard = getTopCardContainer();
@@ -193,6 +200,13 @@
     // Pattern : 2-4 segments separes par virgules, chaque segment commence par majuscule
     const locationPattern = /^[A-ZÀ-Ÿ][\w\s\-'À-ÿ.()]+(?:,\s*[A-ZÀ-Ÿ][\w\s\-'À-ÿ.()]+){1,3}$/;
 
+    // Session 10 Bloc 4 : detecte les mots colles (ex: "marketingGrowth", "WebynLevallois")
+    // qui apparaissent quand textContent aplatit plusieurs spans adjacents en un seul bloc.
+    // [minuscule][MAJUSCULE] sans separateur entre = signal d'une concatenation aberrante.
+    // Note : "Ile-de-France", "Levallois-Perret", "Saint-Etienne" ne matchent pas car les
+    // tirets servent de separateurs, donc pas de risque de faux positifs sur de vrais lieux.
+    const concatenatedWordsPattern = /[a-zà-ÿ][A-ZÀ-Ÿ]/;
+
     for (let i = 0; i < candidates.length; i++) {
       // Ignorer les elements qui ont des enfants block (on veut le texte feuille)
       const el = candidates[i];
@@ -200,11 +214,25 @@
       if (childCount > 2) continue;
 
       const txt = cleanInline(el.textContent);
-      if (!txt || txt.length < 5 || txt.length > 100) continue;
+
+      // Session 10 Bloc 4 : longueur max reduite de 100 a 80 caracteres
+      // (un lieu realiste type "Levallois-Perret, Ile-de-France, France" fait ~40 chars)
+      if (!txt || txt.length < 5 || txt.length > 80) continue;
+
       if (/candidat|applicant|personne/i.test(txt)) continue;
       if (/republication|reposted/i.test(txt)) continue;
       if (/il y a|ago/i.test(txt)) continue;
       if (/^\d+\s*\+?$/.test(txt)) continue;
+
+      // Session 10 Bloc 4 : filtre anti-parasite #1
+      // "Selectionne" / "Selected" = label d'accessibilite LinkedIn pour l'offre active
+      // dans la sidebar gauche. Si on tombe dessus, c'est qu'on a englobe trop large.
+      if (/sélectionné|selected/i.test(txt)) continue;
+
+      // Session 10 Bloc 4 : filtre anti-parasite #2
+      // Mots colles type "marketingGrowth" ou "WebynLevallois" = signal d'une concatenation
+      // aberrante de spans par textContent. Un vrai lieu n'a jamais ce pattern.
+      if (concatenatedWordsPattern.test(txt)) continue;
 
       if (locationPattern.test(txt)) {
         return txt;
@@ -564,5 +592,5 @@
     extract: extract
   };
 
-  console.log(LOG_PREFIX + ' Scraper LinkedIn v0.9.2 charge');
+  console.log(LOG_PREFIX + ' Scraper LinkedIn v0.9.3 charge');
 })();
