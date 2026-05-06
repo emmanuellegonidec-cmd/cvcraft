@@ -79,6 +79,10 @@ interface Job {
   company_description: string | null; company_website: string | null
   company_size: string | null; department: string | null; source_platform: string | null
   recruitment_process: string | null
+  // Session 10 Bloc 1 : champ texte multi-lignes regroupant les infos secondaires
+  // (durée, expérience, formation, secteur...) variables selon le site source.
+  // Pré-rempli par les scrapers de l'extension, modifiable via EditJobModal.
+  informations_complementaires: string | null
   hidden_steps: string[] | null
   step_dates: Record<string, string> | null
 }
@@ -253,6 +257,8 @@ export default function JobDetailPage() {
   const [descExpanded, setDescExpanded] = useState(false)
   const [recruitmentExpanded, setRecruitmentExpanded] = useState(false)
   const [companyExpanded, setCompanyExpanded] = useState(true)
+  // Session 10 Bloc 1 : état d'expansion pour la nouvelle section
+  const [infosExpanded, setInfosExpanded] = useState(false)
   const [notes, setNotes] = useState('')
   const [contacts, setContacts] = useState<ContactMin[]>([])
   const [jobContacts, setJobContacts] = useState<JobContactEnriched[]>([])
@@ -277,6 +283,8 @@ export default function JobDetailPage() {
     salary_text: '', description: '',
     company_description: '', company_website: '', company_size: '',
     recruitment_process: '',
+    // Session 10 Bloc 1
+    informations_complementaires: '',
   })
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
@@ -560,6 +568,8 @@ export default function JobDetailPage() {
       description: job.description || '', company_description: job.company_description || '',
       company_website: job.company_website || '', company_size: job.company_size || '',
       recruitment_process: job.recruitment_process || '',
+      // Session 10 Bloc 1
+      informations_complementaires: job.informations_complementaires || '',
     })
     setShowEditModal(true)
   }
@@ -927,6 +937,27 @@ export default function JobDetailPage() {
         )}
 
         <JobCompanySection job={job} expanded={companyExpanded} onToggle={() => setCompanyExpanded(v => !v)} />
+
+        {/* ═══ SESSION 10 BLOC 1 : Informations complémentaires ═══════════════
+            Nouvelle section placée juste après "À propos de l'entreprise".
+            Contenu pré-rempli par les scrapers (Durée, Posté le, Expérience,
+            Qualification, Formation, Secteur), modifiable via EditJobModal.
+            Sauts de ligne préservés via white-space: pre-wrap.
+            Affichée uniquement si la valeur est non-vide. */}
+        {(job.informations_complementaires) && (
+          <div style={card}>
+            <span style={sectionLabel}>Informations complémentaires</span>
+            <div style={{ position: 'relative', maxHeight: infosExpanded ? 'none' : 180, overflow: 'hidden' }}>
+              <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500, whiteSpace: 'pre-wrap' }}>
+                {job.informations_complementaires}
+              </div>
+              {!infosExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, background: 'linear-gradient(transparent, #fff)' }} />}
+            </div>
+            <span onClick={() => setInfosExpanded(v => !v)} style={{ fontSize: 13, fontWeight: 700, color: '#111', textDecoration: 'underline', cursor: 'pointer', marginTop: 10, display: 'inline-block', fontFamily: FONT }}>
+              {infosExpanded ? 'Réduire ↑' : 'Lire la suite →'}
+            </span>
+          </div>
+        )}
       </div>
 
       {job && (
@@ -1014,4 +1045,3 @@ export default function JobDetailPage() {
     </div>
   )
 }
-

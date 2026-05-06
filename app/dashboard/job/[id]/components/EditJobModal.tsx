@@ -9,10 +9,13 @@ interface EditForm {
   job_type: string
   salary_text: string
   description: string
- company_description: string
+  company_description: string
   company_website: string
   company_size: string
   recruitment_process: string
+  // Session 10 Bloc 1 : champ texte multi-lignes regroupant les infos secondaires
+  // (durée, expérience, formation, secteur...) variables selon le site source.
+  informations_complementaires: string
 }
 
 interface Props {
@@ -63,6 +66,13 @@ export default function EditJobModal({ editForm, onChange, onSave, onClose }: Pr
             <label className="fl">🏢 À propos de l&apos;entreprise</label>
             <textarea className="fi" value={editForm.company_description} onChange={e => onChange('company_description', e.target.value)}
               rows={3} style={{ resize: 'vertical', marginBottom: 0 }} placeholder="Secteur d'activité, valeurs, taille, histoire..." />
+          </div>
+          {/* Session 10 Bloc 1 : nouveau champ "Informations complémentaires" placé juste après "À propos de l'entreprise" */}
+          <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
+            <label className="fl">📋 Informations complémentaires</label>
+            <textarea className="fi" value={editForm.informations_complementaires} onChange={e => onChange('informations_complementaires', e.target.value)}
+              rows={5} style={{ resize: 'vertical', minHeight: 100, marginBottom: 0 }}
+              placeholder={'Durée : 35h\nExpérience : 2 ans\nFormation : Bac+2\nSecteur : ...'} />
           </div>
           <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
             <label className="fl">🗂️ Processus de recrutement</label>
