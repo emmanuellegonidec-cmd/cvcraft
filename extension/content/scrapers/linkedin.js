@@ -1,7 +1,10 @@
 // extension/content/scrapers/linkedin.js
-// Jean find my Job — Scraper LinkedIn (session 8 + fix post-session 9 — v0.9.1)
+// Jean find my Job — Scraper LinkedIn (session 8 + fix post-session 9 — v0.9.2)
 // Session 10 Bloc 1 — Ajout du champ informationsComplementaires
 // Session 10 Bloc 2 — Fix description : preservation des sauts de ligne issus des <br> dans les <p>
+// Session 10 Bloc 3 — Fix salaire : regex etendue pour gerer le suffixe periode
+//                     (/yr, /mo, /h, /an, /mois) entre la devise et le separateur.
+//                     Format LinkedIn 2026 : "50K €/yr - 54K €/yr"
 //
 // LinkedIn 2026 : DOM 100% en classes CSS obfusquees (hashees) + systeme SDUI
 
@@ -364,6 +367,8 @@
         }
 
         if (result.salaryMin === null) {
+          // Session 10 Bloc 3 : on passe le segment ENTIER (pas seulement la partie tronquee)
+          // car le suffixe periode "/yr" peut etre dans le meme segment que le range.
           const sal = parseSalaryFromText(seg);
           if (sal) {
             result.salaryMin = sal.min;
@@ -371,6 +376,18 @@
             result.salaryCurrency = sal.currency;
             result.salaryPeriod = sal.period;
           }
+        }
+      }
+
+      // Session 10 Bloc 3 : si on n'a rien trouve sur les segments separes,
+      // on retente sur le texte complet (cas ou tout est sur une seule ligne sans "·")
+      if (result.salaryMin === null) {
+        const sal = parseSalaryFromText(txt);
+        if (sal) {
+          result.salaryMin = sal.min;
+          result.salaryMax = sal.max;
+          result.salaryCurrency = sal.currency;
+          result.salaryPeriod = sal.period;
         }
       }
     }
@@ -390,6 +407,13 @@
     return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
   }
 
+  // ============================================================
+  // Session 10 Bloc 3 : parseSalaryFromText etendu
+  // Ajout d'un groupe optionnel pour le suffixe periode (/yr, /mo, /h, /an, /mois...)
+  // qui peut apparaitre entre la devise et le separateur.
+  // Format LinkedIn 2026 : "50K €/yr - 54K €/yr"
+  // Compatibilite preservee : "50K € - 54K €" sans suffixe matche toujours.
+  // ============================================================
   function parseSalaryFromText(text) {
     let currency = null;
     if (/€|EUR/.test(text)) currency = 'EUR';
@@ -397,7 +421,8 @@
     else if (/£|GBP/.test(text)) currency = 'GBP';
     else return null;
 
-    let m = text.match(/(\d+(?:[.,]\d+)?)\s*[Kk]\s*[€$£]?\s*(?:[-–—]|à|to)\s*(\d+(?:[.,]\d+)?)\s*[Kk]/i);
+    // Pattern 1 : format "X K € - Y K €" avec K (kilo), suffixe periode optionnel
+    let m = text.match(/(\d+(?:[.,]\d+)?)\s*[Kk]\s*[€$£]?(?:\s*\/\s*(?:yr|mo|hr|h|an|mois|year|month|hour))?\s*(?:[-–—]|à|to)\s*(\d+(?:[.,]\d+)?)\s*[Kk]/i);
     if (m) {
       return {
         min: parseFloat(m[1].replace(',', '.')) * 1000,
@@ -407,7 +432,8 @@
       };
     }
 
-    m = text.match(/(\d{1,3}(?:[\s,.]\d{3})+)\s*[€$£]?\s*(?:[-–—]|à|to)\s*(\d{1,3}(?:[\s,.]\d{3})+)/i);
+    // Pattern 2 : format "45 000 € - 60 000 €", suffixe periode optionnel
+    m = text.match(/(\d{1,3}(?:[\s,.]\d{3})+)\s*[€$£]?(?:\s*\/\s*(?:yr|mo|hr|h|an|mois|year|month|hour))?\s*(?:[-–—]|à|to)\s*(\d{1,3}(?:[\s,.]\d{3})+)/i);
     if (m) {
       return {
         min: parseInt(m[1].replace(/[\s,.]/g, ''), 10),
@@ -538,5 +564,5 @@
     extract: extract
   };
 
-  console.log(LOG_PREFIX + ' Scraper LinkedIn v0.9.1 charge');
+  console.log(LOG_PREFIX + ' Scraper LinkedIn v0.9.2 charge');
 })();
