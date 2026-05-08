@@ -220,7 +220,7 @@ export default function LancementSemaine1Page() {
         .slide { width: 320px; height: 320px; flex: none; border: 2.5px solid #111; border-radius: 10px; overflow: hidden; box-shadow: 4px 4px 0 #111; padding: 28px; display: flex; flex-direction: column; font-size: 28px; position: relative; scroll-snap-align: start; }
         .sl-cover { background: #111; color: #fff; align-items: stretch; justify-content: space-between; text-align: center; }
         .sl-cover .stamp-row { display: flex; justify-content: flex-end; }
-        .sl-cover .stamp { background: #E8151B; color: #fff; padding: 8px 16px; border: 2px solid #111; font-size: 16px; font-weight: 900; transform: rotate(6deg); text-transform: uppercase; letter-spacing: .04em; box-shadow: 3px 3px 0 #111; }
+        .sl-cover .stamp { display: inline-flex; align-items: center; justify-content: center; background: #E8151B; color: #fff; padding: 10px 18px 8px; border: 2px solid #111; font-size: 16px; font-weight: 900; transform: rotate(6deg); text-transform: uppercase; letter-spacing: .04em; box-shadow: 3px 3px 0 #111; line-height: 1; }
         .sl-cover .ti-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px 0; }
         .sl-cover .ti { font-size: 42px; font-weight: 900; letter-spacing: -.02em; line-height: 1.05; color: #fff; }
         .sl-cover .ti em { color: #F5C400; font-style: italic; }
@@ -232,7 +232,7 @@ export default function LancementSemaine1Page() {
         .sl-body .bd { font-size: 19px; color: #555; font-weight: 600; line-height: 1.4; }
         .sl-end { background: #E8151B; color: #fff; align-items: center; justify-content: center; text-align: center; gap: 22px; }
         .sl-end .ti { font-size: 38px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; }
-        .sl-end .cta { background: #F5C400; color: #111; padding: 12px 22px; border: 2px solid #111; border-radius: 8px; font-size: 17px; font-weight: 800; line-height: 1.2; box-shadow: 3px 3px 0 #111; }
+        .sl-end .cta { display: inline-flex; align-items: center; justify-content: center; background: #F5C400; color: #111; padding: 14px 22px 12px; border: 2px solid #111; border-radius: 8px; font-size: 17px; font-weight: 800; line-height: 1; box-shadow: 3px 3px 0 #111; }
 
         /* Post 3 story burst */
         .story { aspect-ratio: 1080/1920; width: 100%; max-width: 240px; border: 2.5px solid #111; border-radius: 14px; overflow: hidden; box-shadow: 5px 5px 0 #111; background: #F5C400; background-image: radial-gradient(#111 1.5px, transparent 1.5px); background-size: 14px 14px; padding: 8%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; }
