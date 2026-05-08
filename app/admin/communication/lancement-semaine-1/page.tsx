@@ -75,52 +75,17 @@ export default function LancementSemaine1Page() {
     if (document.fonts && document.fonts.ready) {
       await document.fonts.ready
     }
-
     const rect = node.getBoundingClientRect()
-    const scale = Math.min(targetWidth / rect.width, targetHeight / rect.height)
-
-    const wrapper = document.createElement('div')
-    wrapper.style.cssText = [
-      'position: fixed',
-      'left: -99999px',
-      'top: 0',
-      `width: ${targetWidth}px`,
-      `height: ${targetHeight}px`,
-      'overflow: hidden',
-      'background: #FAFAFA',
-      'pointer-events: none',
-      'z-index: -1',
-    ].join(';')
-
-    const clone = node.cloneNode(true) as HTMLElement
-    clone.style.width = `${rect.width}px`
-    clone.style.height = `${rect.height}px`
-    clone.style.flex = 'none'
-    clone.style.transform = `scale(${scale})`
-    clone.style.transformOrigin = 'top left'
-    clone.style.position = 'absolute'
-    clone.style.left = '0'
-    clone.style.top = '0'
-    clone.style.margin = '0'
-    clone.style.boxShadow = 'none'
-
-    wrapper.appendChild(clone)
-    document.body.appendChild(wrapper)
-
-    try {
-      const dataUrl = await toPng(wrapper, {
-        pixelRatio: 1,
-        cacheBust: true,
-        width: targetWidth,
-        height: targetHeight,
-      })
-      const link = document.createElement('a')
-      link.download = filename
-      link.href = dataUrl
-      link.click()
-    } finally {
-      document.body.removeChild(wrapper)
-    }
+    const pixelRatio = Math.max(targetWidth / rect.width, targetHeight / rect.height)
+    const dataUrl = await toPng(node, {
+      pixelRatio,
+      cacheBust: true,
+      backgroundColor: '#FAFAFA',
+    })
+    const link = document.createElement('a')
+    link.download = filename
+    link.href = dataUrl
+    link.click()
   }
 
   const copyCaption = async (text: string, idx: number) => {
@@ -247,21 +212,21 @@ export default function LancementSemaine1Page() {
         .sq-1 .logo b { color: #E8151B; }
 
         /* Post 2 carousel */
-        .car { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 520px; }
-        .slide { aspect-ratio: 1/1; border: 2px solid #111; border-radius: 6px; overflow: hidden; box-shadow: 2px 2px 0 #111; padding: 11%; display: flex; flex-direction: column; font-size: 9px; position: relative; }
+        .car { display: flex; gap: 14px; width: 100%; overflow-x: auto; padding: 6px 6px 14px; scroll-snap-type: x mandatory; }
+        .slide { flex: 0 0 360px; aspect-ratio: 1/1; border: 2.5px solid #111; border-radius: 10px; overflow: hidden; box-shadow: 4px 4px 0 #111; padding: 36px; display: flex; flex-direction: column; font-size: 32px; position: relative; scroll-snap-align: start; }
         .sl-cover { background: #111; color: #fff; justify-content: center; align-items: center; text-align: center; }
-        .sl-cover .stamp { position: absolute; top: 6px; right: 6px; background: #E8151B; color: #fff; padding: 2px 6px; border: 1.5px solid #111; font-size: 7px; font-weight: 900; transform: rotate(8deg); text-transform: uppercase; }
-        .sl-cover .ti { font-size: 14px; font-weight: 900; letter-spacing: -.02em; line-height: 1.05; color: #fff; }
+        .sl-cover .stamp { position: absolute; top: 18px; right: 18px; background: #E8151B; color: #fff; padding: 6px 14px; border: 2px solid #111; font-size: 14px; font-weight: 900; transform: rotate(8deg); text-transform: uppercase; letter-spacing: .04em; }
+        .sl-cover .ti { font-size: 44px; font-weight: 900; letter-spacing: -.02em; line-height: 1.05; color: #fff; }
         .sl-cover .ti em { color: #F5C400; font-style: italic; }
-        .sl-cover .swp { position: absolute; bottom: 8px; font-size: 8px; color: #F5C400; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+        .sl-cover .swp { position: absolute; bottom: 22px; font-size: 14px; color: #F5C400; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
         .sl-body { background: #FAFAFA; justify-content: space-between; }
-        .sl-body .n { font-size: 18px; font-weight: 900; color: #F5C400; -webkit-text-stroke: 1.5px #111; line-height: 1; }
-        .sl-body .ti { font-size: 10px; font-weight: 900; letter-spacing: -.01em; line-height: 1.15; margin: 6px 0 4px; }
+        .sl-body .n { font-size: 64px; font-weight: 900; color: #F5C400; -webkit-text-stroke: 2.5px #111; line-height: 1; }
+        .sl-body .ti { font-size: 32px; font-weight: 900; letter-spacing: -.01em; line-height: 1.15; margin: 14px 0 10px; }
         .sl-body .ti em { color: #E8151B; font-style: italic; }
-        .sl-body .bd { font-size: 7.5px; color: #555; font-weight: 600; line-height: 1.4; }
+        .sl-body .bd { font-size: 19px; color: #555; font-weight: 600; line-height: 1.4; }
         .sl-end { background: #E8151B; color: #fff; justify-content: center; text-align: center; }
-        .sl-end .ti { font-size: 11px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 6px; }
-        .sl-end .cta { background: #F5C400; color: #111; padding: 4px 8px; border: 1.5px solid #111; border-radius: 4px; font-size: 7px; font-weight: 800; display: inline-block; align-self: center; line-height: 1.2; }
+        .sl-end .ti { font-size: 36px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 18px; }
+        .sl-end .cta { background: #F5C400; color: #111; padding: 10px 18px; border: 2px solid #111; border-radius: 8px; font-size: 16px; font-weight: 800; display: inline-block; align-self: center; line-height: 1.2; }
 
         /* Post 3 story burst */
         .story { aspect-ratio: 1080/1920; width: 100%; max-width: 240px; border: 2.5px solid #111; border-radius: 14px; overflow: hidden; box-shadow: 5px 5px 0 #111; background: #F5C400; background-image: radial-gradient(#111 1.5px, transparent 1.5px); background-size: 14px 14px; padding: 8%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; }
@@ -305,7 +270,7 @@ export default function LancementSemaine1Page() {
         @media (max-width: 900px) {
           .post-body { grid-template-columns: 1fr; }
           .post-visual { border-right: none; border-bottom: 2px solid #111; }
-          .car { grid-template-columns: repeat(3, 1fr); }
+          .slide { flex: 0 0 280px; }
           .recap-grid { grid-template-columns: 1fr; }
         }
       `}</style>
