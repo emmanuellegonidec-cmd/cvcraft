@@ -8,7 +8,8 @@ const navItems = [
   { href: '/admin/users', label: '👥 Utilisateurs' },
   { href: '/admin/articles', label: '✍️ Articles' },
   { href: "/admin/bugs", label: "🐛 Bugs", emoji: "🐛" },
-  { href: '/admin/communication', label: '📣 Communication' },
+  { href: '/admin/communication', label: '📣 Communication', exact: true },
+  { href: '/admin/communication/lancement-semaine-1', label: '🚀 Lancement S1' },
 ]
 
 export default function AdminNav() {
