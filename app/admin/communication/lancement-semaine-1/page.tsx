@@ -213,7 +213,7 @@ export default function LancementSemaine1Page() {
 
         /* Post 2 carousel */
         .car { display: flex; gap: 14px; width: 100%; max-width: 100%; overflow-x: auto; padding: 6px 6px 14px; scroll-snap-type: x mandatory; min-width: 0; }
-        .slide { flex: 0 0 320px; aspect-ratio: 1/1; border: 2.5px solid #111; border-radius: 10px; overflow: hidden; box-shadow: 4px 4px 0 #111; padding: 32px; display: flex; flex-direction: column; font-size: 28px; position: relative; scroll-snap-align: start; }
+        .slide { width: 320px; height: 320px; flex: none; border: 2.5px solid #111; border-radius: 10px; overflow: hidden; box-shadow: 4px 4px 0 #111; padding: 32px; display: flex; flex-direction: column; font-size: 28px; position: relative; scroll-snap-align: start; }
         .sl-cover { background: #111; color: #fff; justify-content: center; align-items: center; text-align: center; }
         .sl-cover .stamp { position: absolute; top: 18px; right: 18px; background: #E8151B; color: #fff; padding: 6px 14px; border: 2px solid #111; font-size: 14px; font-weight: 900; transform: rotate(8deg); text-transform: uppercase; letter-spacing: .04em; }
         .sl-cover .ti { font-size: 44px; font-weight: 900; letter-spacing: -.02em; line-height: 1.05; color: #fff; }
@@ -270,7 +270,7 @@ export default function LancementSemaine1Page() {
         @media (max-width: 900px) {
           .post-body { grid-template-columns: 1fr; }
           .post-visual { border-right: none; border-bottom: 2px solid #111; }
-          .slide { flex: 0 0 280px; }
+          .slide { width: 280px; height: 280px; }
           .recap-grid { grid-template-columns: 1fr; }
         }
       `}</style>
