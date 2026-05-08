@@ -75,25 +75,49 @@ export default function LancementSemaine1Page() {
     if (document.fonts && document.fonts.ready) {
       await document.fonts.ready
     }
+
     const rect = node.getBoundingClientRect()
-    const scale = Math.max(targetWidth / rect.width, targetHeight / rect.height)
-    const dataUrl = await toPng(node, {
-      width: targetWidth,
-      height: targetHeight,
-      pixelRatio: 1,
-      cacheBust: true,
-      backgroundColor: '#FAFAFA',
-      style: {
-        transform: `scale(${scale})`,
-        transformOrigin: 'top left',
-        width: `${rect.width}px`,
-        height: `${rect.height}px`,
-      },
-    })
-    const link = document.createElement('a')
-    link.download = filename
-    link.href = dataUrl
-    link.click()
+    const scale = Math.min(targetWidth / rect.width, targetHeight / rect.height)
+
+    const wrapper = document.createElement('div')
+    wrapper.style.cssText = [
+      'position: fixed',
+      'left: -99999px',
+      'top: 0',
+      `width: ${targetWidth}px`,
+      `height: ${targetHeight}px`,
+      'overflow: hidden',
+      'background: #FAFAFA',
+      'pointer-events: none',
+      'z-index: -1',
+    ].join(';')
+
+    const clone = node.cloneNode(true) as HTMLElement
+    clone.style.transform = `scale(${scale})`
+    clone.style.transformOrigin = 'top left'
+    clone.style.position = 'absolute'
+    clone.style.left = '0'
+    clone.style.top = '0'
+    clone.style.margin = '0'
+    clone.style.boxShadow = 'none'
+
+    wrapper.appendChild(clone)
+    document.body.appendChild(wrapper)
+
+    try {
+      const dataUrl = await toPng(wrapper, {
+        pixelRatio: 1,
+        cacheBust: true,
+        width: targetWidth,
+        height: targetHeight,
+      })
+      const link = document.createElement('a')
+      link.download = filename
+      link.href = dataUrl
+      link.click()
+    } finally {
+      document.body.removeChild(wrapper)
+    }
   }
 
   const copyCaption = async (text: string, idx: number) => {
