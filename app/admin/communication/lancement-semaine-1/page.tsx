@@ -217,20 +217,22 @@ export default function LancementSemaine1Page() {
 
         /* Post 2 carousel */
         .car { display: flex; gap: 14px; width: 100%; max-width: 100%; overflow-x: auto; padding: 6px 6px 14px; scroll-snap-type: x mandatory; min-width: 0; }
-        .slide { width: 320px; height: 320px; flex: none; border: 2.5px solid #111; border-radius: 10px; overflow: hidden; box-shadow: 4px 4px 0 #111; padding: 32px; display: flex; flex-direction: column; font-size: 28px; position: relative; scroll-snap-align: start; }
-        .sl-cover { background: #111; color: #fff; justify-content: center; align-items: center; text-align: center; }
-        .sl-cover .stamp { position: absolute; top: 18px; right: 18px; background: #E8151B; color: #fff; padding: 6px 14px; border: 2px solid #111; font-size: 14px; font-weight: 900; transform: rotate(8deg); text-transform: uppercase; letter-spacing: .04em; }
-        .sl-cover .ti { font-size: 44px; font-weight: 900; letter-spacing: -.02em; line-height: 1.05; color: #fff; }
+        .slide { width: 320px; height: 320px; flex: none; border: 2.5px solid #111; border-radius: 10px; overflow: hidden; box-shadow: 4px 4px 0 #111; padding: 28px; display: flex; flex-direction: column; font-size: 28px; position: relative; scroll-snap-align: start; }
+        .sl-cover { background: #111; color: #fff; align-items: stretch; justify-content: space-between; text-align: center; }
+        .sl-cover .stamp-row { display: flex; justify-content: flex-end; }
+        .sl-cover .stamp { background: #E8151B; color: #fff; padding: 8px 16px; border: 2px solid #111; font-size: 16px; font-weight: 900; transform: rotate(6deg); text-transform: uppercase; letter-spacing: .04em; box-shadow: 3px 3px 0 #111; }
+        .sl-cover .ti-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px 0; }
+        .sl-cover .ti { font-size: 42px; font-weight: 900; letter-spacing: -.02em; line-height: 1.05; color: #fff; }
         .sl-cover .ti em { color: #F5C400; font-style: italic; }
-        .sl-cover .swp { position: absolute; bottom: 22px; font-size: 14px; color: #F5C400; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
+        .sl-cover .swp { font-size: 14px; color: #F5C400; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
         .sl-body { background: #FAFAFA; justify-content: space-between; }
         .sl-body .n { font-size: 64px; font-weight: 900; color: #F5C400; -webkit-text-stroke: 2.5px #111; line-height: 1; }
         .sl-body .ti { font-size: 32px; font-weight: 900; letter-spacing: -.01em; line-height: 1.15; margin: 14px 0 10px; }
         .sl-body .ti em { color: #E8151B; font-style: italic; }
         .sl-body .bd { font-size: 19px; color: #555; font-weight: 600; line-height: 1.4; }
-        .sl-end { background: #E8151B; color: #fff; justify-content: center; text-align: center; }
-        .sl-end .ti { font-size: 36px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 18px; }
-        .sl-end .cta { background: #F5C400; color: #111; padding: 10px 18px; border: 2px solid #111; border-radius: 8px; font-size: 16px; font-weight: 800; display: inline-block; align-self: center; line-height: 1.2; }
+        .sl-end { background: #E8151B; color: #fff; align-items: center; justify-content: center; text-align: center; gap: 22px; }
+        .sl-end .ti { font-size: 38px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; }
+        .sl-end .cta { background: #F5C400; color: #111; padding: 12px 22px; border: 2px solid #111; border-radius: 8px; font-size: 17px; font-weight: 800; line-height: 1.2; box-shadow: 3px 3px 0 #111; }
 
         /* Post 3 story burst */
         .story { aspect-ratio: 1080/1920; width: 100%; max-width: 240px; border: 2.5px solid #111; border-radius: 14px; overflow: hidden; box-shadow: 5px 5px 0 #111; background: #F5C400; background-image: radial-gradient(#111 1.5px, transparent 1.5px); background-size: 14px 14px; padding: 8%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; }
@@ -380,8 +382,8 @@ export default function LancementSemaine1Page() {
             <div className="post-visual">
               <div className="car" ref={visual2}>
                 <div className="slide sl-cover" style={{ background: '#111', color: '#fff' }} ref={(el) => { visual2Slides.current[0] = el }}>
-                  <div className="stamp">Procès</div>
-                  <div className="ti">Le procès<br />de votre <em>tableur.</em></div>
+                  <div className="stamp-row"><div className="stamp">Procès</div></div>
+                  <div className="ti-wrap"><div className="ti">Le procès<br />de votre <em>tableur.</em></div></div>
                   <div className="swp">Swipe →</div>
                 </div>
                 <div className="slide sl-body" style={{ background: '#FAFAFA' }} ref={(el) => { visual2Slides.current[1] = el }}>
