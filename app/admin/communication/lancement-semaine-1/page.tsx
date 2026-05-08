@@ -187,8 +187,8 @@ export default function LancementSemaine1Page() {
         .pl-tag { background: #fff; border: 2px solid #111; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; box-shadow: 2px 2px 0 #111; }
 
         .post-body { display: grid; grid-template-columns: 1fr 1.1fr; gap: 0; }
-        .post-visual { background: #FAFAFA; padding: 30px; display: flex; align-items: center; justify-content: center; border-right: 2px solid #111; }
-        .post-text { padding: 30px; }
+        .post-visual { background: #FAFAFA; padding: 30px; display: flex; align-items: center; justify-content: center; border-right: 2px solid #111; min-width: 0; overflow: hidden; }
+        .post-text { padding: 30px; min-width: 0; }
         .post-text h3 { font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: .08em; margin: 0 0 10px; }
         .caption { background: #FAFAFA; border: 2px solid #111; border-radius: 10px; padding: 18px; font-size: 14px; line-height: 1.7; font-weight: 500; white-space: pre-wrap; box-shadow: 2px 2px 0 #111; }
         .caption :global(em) { color: #E8151B; font-style: italic; font-weight: 600; }
@@ -212,8 +212,8 @@ export default function LancementSemaine1Page() {
         .sq-1 .logo b { color: #E8151B; }
 
         /* Post 2 carousel */
-        .car { display: flex; gap: 14px; width: 100%; overflow-x: auto; padding: 6px 6px 14px; scroll-snap-type: x mandatory; }
-        .slide { flex: 0 0 360px; aspect-ratio: 1/1; border: 2.5px solid #111; border-radius: 10px; overflow: hidden; box-shadow: 4px 4px 0 #111; padding: 36px; display: flex; flex-direction: column; font-size: 32px; position: relative; scroll-snap-align: start; }
+        .car { display: flex; gap: 14px; width: 100%; max-width: 100%; overflow-x: auto; padding: 6px 6px 14px; scroll-snap-type: x mandatory; min-width: 0; }
+        .slide { flex: 0 0 320px; aspect-ratio: 1/1; border: 2.5px solid #111; border-radius: 10px; overflow: hidden; box-shadow: 4px 4px 0 #111; padding: 32px; display: flex; flex-direction: column; font-size: 28px; position: relative; scroll-snap-align: start; }
         .sl-cover { background: #111; color: #fff; justify-content: center; align-items: center; text-align: center; }
         .sl-cover .stamp { position: absolute; top: 18px; right: 18px; background: #E8151B; color: #fff; padding: 6px 14px; border: 2px solid #111; font-size: 14px; font-weight: 900; transform: rotate(8deg); text-transform: uppercase; letter-spacing: .04em; }
         .sl-cover .ti { font-size: 44px; font-weight: 900; letter-spacing: -.02em; line-height: 1.05; color: #fff; }
