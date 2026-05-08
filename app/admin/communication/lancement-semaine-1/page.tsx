@@ -72,12 +72,23 @@ export default function LancementSemaine1Page() {
   ) => {
     if (!node) return
     const { toPng } = await import('html-to-image')
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready
+    }
     const rect = node.getBoundingClientRect()
-    const pixelRatio = Math.max(targetWidth / rect.width, targetHeight / rect.height)
+    const scale = Math.max(targetWidth / rect.width, targetHeight / rect.height)
     const dataUrl = await toPng(node, {
-      pixelRatio,
+      width: targetWidth,
+      height: targetHeight,
+      pixelRatio: 1,
       cacheBust: true,
       backgroundColor: '#FAFAFA',
+      style: {
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+      },
     })
     const link = document.createElement('a')
     link.download = filename
