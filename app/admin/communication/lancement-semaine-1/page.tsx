@@ -1,13 +1,135 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+
+const CAPTION_1 = `Salut. On est Jean find my Job.
+
+On vient tuer votre tableur Excel de candidatures. Faites vos adieux, soyez brefs.
+
+Vous savez, celui avec 14 onglets, 3 couleurs incohérentes, et une colonne "À relancer" que vous n'ouvrez jamais. Oui, celui-là.
+
+Jean find my Job, c'est le tableau de bord qu'on aurait voulu avoir pendant nos propres recherches. Vos candidatures rangées, relancées, scorées. Vous, vous vous occupez du reste.
+
+À la place, on vous propose un tableau de bord visuel où vos candidatures vivent, bougent, et vous rappellent gentiment qu'il faut relancer Marie chez LVMH avant qu'elle ne vous oublie.
+
+C'est gratuit. C'est français. C'est dispo maintenant.
+
+→ jeanfindmyjob.fr
+
+PS : on accepte les dons de vieux tableurs pour notre musée.
+
+#JeanFindMyJob #SansLeChaos #RechercheDemploi #CVAvecJean`
+
+const CAPTION_2 = `⚖️ Aujourd'hui, on juge votre tableur Excel de candidatures.
+
+Trois chefs d'accusation. Trois faits avérés. Un verdict sans appel.
+
+Swipez, c'est de la justice express.
+
+(Le tableur n'a pas voulu se présenter pour sa défense. Il était en train de planter.)
+
+#JeanFindMyJob #SansLeChaos #RechercheDemploi #OrganiseTaRecherche #KanbanCarrière`
+
+const CAPTION_3 = `Visuel principal : "RIP EXCEL — 2007–aujourd'hui"
+
+Sticker swipe-up / lien :
+"Adieu à votre meilleur ennemi → jeanfindmyjob.fr"
+
+Sticker question (interactif) :
+"Combien d'onglets dans le vôtre ?"
+[champ ouvert]`
+
+const CAPTION_4 = `Sondage du dimanche. Soyez honnêtes, on ne juge pas. (Si.)
+
+A · Une œuvre d'art codée en couleur 🎨
+B · Honnêtement, c'est du bazar 😅
+C · J'en ai pas, et c'est encore pire 🫠
+
+Réponse en commentaire — on lit tout, on rigole avec vous, et on vous dit comment Jean range tout ça à votre place.
+
+#JeanFindMyJob #SansLeChaos #RechercheDemploi`
 
 export default function LancementSemaine1Page() {
   const router = useRouter()
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [copied, setCopied] = useState<number | null>(null)
+
+  const visual1 = useRef<HTMLDivElement>(null)
+  const visual2 = useRef<HTMLDivElement>(null)
+  const visual2Slides = useRef<(HTMLDivElement | null)[]>([])
+  const visual3 = useRef<HTMLDivElement>(null)
+  const visual4 = useRef<HTMLDivElement>(null)
+
+  const downloadFromNode = async (
+    node: HTMLElement | null,
+    filename: string,
+    targetWidth: number,
+    targetHeight: number,
+  ) => {
+    if (!node) return
+    const { toPng } = await import('html-to-image')
+    const rect = node.getBoundingClientRect()
+    const pixelRatio = Math.max(targetWidth / rect.width, targetHeight / rect.height)
+    const dataUrl = await toPng(node, {
+      pixelRatio,
+      cacheBust: true,
+      backgroundColor: '#FAFAFA',
+    })
+    const link = document.createElement('a')
+    link.download = filename
+    link.href = dataUrl
+    link.click()
+  }
+
+  const copyCaption = async (text: string, idx: number) => {
+    await navigator.clipboard.writeText(text)
+    setCopied(idx)
+    setTimeout(() => setCopied((c) => (c === idx ? null : c)), 2000)
+  }
+
+  const downloadPost1 = async () => {
+    setBusy('1')
+    try {
+      await downloadFromNode(visual1.current, 'jean-post-1-arrivee.png', 1080, 1080)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const downloadPost2 = async () => {
+    setBusy('2')
+    try {
+      for (let i = 0; i < visual2Slides.current.length; i++) {
+        const slide = visual2Slides.current[i]
+        if (!slide) continue
+        await downloadFromNode(slide, `jean-post-2-slide-${i + 1}.png`, 1080, 1080)
+      }
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const downloadPost3 = async () => {
+    setBusy('3')
+    try {
+      await downloadFromNode(visual3.current, 'jean-post-3-story.png', 1080, 1920)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const downloadPost4 = async () => {
+    setBusy('4')
+    try {
+      await downloadFromNode(visual4.current, 'jean-post-4-sondage.png', 1080, 1080)
+    } finally {
+      setBusy(null)
+    }
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -133,6 +255,15 @@ export default function LancementSemaine1Page() {
         .rules ul { margin: 0; padding-left: 22px; font-size: 14px; line-height: 1.9; font-weight: 500; }
         .rules ul :global(b) { font-weight: 800; }
 
+        .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; border: 2px solid #111; line-height: 1; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-yellow { background: #F5C400; color: #111; box-shadow: 3px 3px 0 #111; }
+        .btn-yellow:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #111; }
+        .btn-dark { background: #111; color: #fff; box-shadow: 3px 3px 0 #E8151B; }
+        .btn-dark:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #E8151B; }
+        .btn-ok { background: #1A7A4A; color: #fff; box-shadow: 3px 3px 0 #111; }
+
         @media (max-width: 900px) {
           .post-body { grid-template-columns: 1fr; }
           .post-visual { border-right: none; border-bottom: 2px solid #111; }
@@ -173,7 +304,7 @@ export default function LancementSemaine1Page() {
           </header>
           <div className="post-body">
             <div className="post-visual">
-              <div className="sq sq-1">
+              <div className="sq sq-1" ref={visual1}>
                 <span className="eyb-pill">⚡ Bonjour</span>
                 <h2>
                   On vient tuer votre tableur <em>Excel de candidatures.</em><br />
@@ -207,6 +338,14 @@ export default function LancementSemaine1Page() {
                 PS : on accepte les dons de vieux tableurs pour notre musée.
               </div>
               <div className="hashtags">#JeanFindMyJob #SansLeChaos #RechercheDemploi #CVAvecJean</div>
+              <div className="actions">
+                <button className={`btn ${copied === 1 ? 'btn-ok' : 'btn-yellow'}`} onClick={() => copyCaption(CAPTION_1, 1)}>
+                  {copied === 1 ? '✓ Copié' : '📋 Copier la caption'}
+                </button>
+                <button className="btn btn-dark" onClick={downloadPost1} disabled={busy === '1'}>
+                  {busy === '1' ? '⏳ Génération…' : '🖼️ Télécharger le visuel (1080×1080)'}
+                </button>
+              </div>
               <div className="why">
                 <b>🎯 Pourquoi ça marche</b>
                 L&apos;humour désamorce le pitch. &quot;Tuer votre tableur avec amour&quot; + le PS musée = on retient. Le post n&apos;est pas vendeur, il est <em>vivant</em>. Reprenez la même structure pour LinkedIn (vouvoiement) et IG (tutoiement).
@@ -232,34 +371,34 @@ export default function LancementSemaine1Page() {
           </header>
           <div className="post-body">
             <div className="post-visual">
-              <div className="car">
-                <div className="slide sl-cover">
+              <div className="car" ref={visual2}>
+                <div className="slide sl-cover" ref={(el) => { visual2Slides.current[0] = el }}>
                   <div className="stamp">Procès</div>
                   <div className="ti">Le procès<br />de votre <em>tableur.</em></div>
                   <div className="swp">Swipe →</div>
                 </div>
-                <div className="slide sl-body">
+                <div className="slide sl-body" ref={(el) => { visual2Slides.current[1] = el }}>
                   <div className="n">01</div>
                   <div>
                     <div className="ti">Il vous <em>ment.</em></div>
                     <div className="bd">&quot;Relance faite ✓&quot; — date : il y a 23 jours.</div>
                   </div>
                 </div>
-                <div className="slide sl-body">
+                <div className="slide sl-body" ref={(el) => { visual2Slides.current[2] = el }}>
                   <div className="n">02</div>
                   <div>
                     <div className="ti">Il vous <em>épuise.</em></div>
                     <div className="bd">14 onglets. Personne n&apos;a 14 onglets de joie.</div>
                   </div>
                 </div>
-                <div className="slide sl-body">
+                <div className="slide sl-body" ref={(el) => { visual2Slides.current[3] = el }}>
                   <div className="n">03</div>
                   <div>
                     <div className="ti">Il vous <em>ghoste.</em></div>
                     <div className="bd">Aucun rappel, aucune notif. Il s&apos;en fiche.</div>
                   </div>
                 </div>
-                <div className="slide sl-end">
+                <div className="slide sl-end" ref={(el) => { visual2Slides.current[4] = el }}>
                   <div className="ti">Verdict :<br />remplacé.</div>
                   <div className="cta">Découvrir Jean →</div>
                 </div>
@@ -277,6 +416,14 @@ export default function LancementSemaine1Page() {
                 (Le tableur n&apos;a pas voulu se présenter pour sa défense. Il était en train de planter.)
               </div>
               <div className="hashtags">#JeanFindMyJob #SansLeChaos #RechercheDemploi #OrganiseTaRecherche #KanbanCarrière</div>
+              <div className="actions">
+                <button className={`btn ${copied === 2 ? 'btn-ok' : 'btn-yellow'}`} onClick={() => copyCaption(CAPTION_2, 2)}>
+                  {copied === 2 ? '✓ Copié' : '📋 Copier la caption'}
+                </button>
+                <button className="btn btn-dark" onClick={downloadPost2} disabled={busy === '2'}>
+                  {busy === '2' ? '⏳ Génération…' : '🖼️ Télécharger les 5 slides (1080×1080)'}
+                </button>
+              </div>
               <div className="why">
                 <b>🎯 Pourquoi ça marche</b>
                 Le format &quot;procès&quot; est un cliché instantanément lisible. Il transforme un post produit en un mini-spectacle. La parenthèse finale (&quot;il était en train de planter&quot;) est ce qui fait sourire et partager.
@@ -301,7 +448,7 @@ export default function LancementSemaine1Page() {
           </header>
           <div className="post-body">
             <div className="post-visual">
-              <div className="story">
+              <div className="story" ref={visual3}>
                 <div className="star s1">★</div>
                 <div className="burst">RIP<br />EXCEL</div>
                 <div className="sub">2007 – aujourd&apos;hui</div>
@@ -322,6 +469,14 @@ export default function LancementSemaine1Page() {
                 &quot;Combien d&apos;onglets dans le vôtre ?&quot;
                 {'\n'}
                 [champ ouvert]
+              </div>
+              <div className="actions">
+                <button className={`btn ${copied === 3 ? 'btn-ok' : 'btn-yellow'}`} onClick={() => copyCaption(CAPTION_3, 3)}>
+                  {copied === 3 ? '✓ Copié' : '📋 Copier le texte'}
+                </button>
+                <button className="btn btn-dark" onClick={downloadPost3} disabled={busy === '3'}>
+                  {busy === '3' ? '⏳ Génération…' : '🖼️ Télécharger la story (1080×1920)'}
+                </button>
               </div>
               <div className="why">
                 <b>🎯 Pourquoi ça marche</b>
@@ -348,7 +503,7 @@ export default function LancementSemaine1Page() {
           </header>
           <div className="post-body">
             <div className="post-visual">
-              <div className="sq sq-4">
+              <div className="sq sq-4" ref={visual4}>
                 <span className="tag">📊 Sondage du dimanche</span>
                 <h2>Votre tableur de candidatures, <em>il ressemble à quoi ?</em></h2>
                 <div className="opts">
@@ -373,6 +528,14 @@ export default function LancementSemaine1Page() {
                 <em>Réponse en commentaire</em> — on lit tout, on rigole avec vous, et on vous dit comment Jean range tout ça à votre place.
               </div>
               <div className="hashtags">#JeanFindMyJob #SansLeChaos #RechercheDemploi</div>
+              <div className="actions">
+                <button className={`btn ${copied === 4 ? 'btn-ok' : 'btn-yellow'}`} onClick={() => copyCaption(CAPTION_4, 4)}>
+                  {copied === 4 ? '✓ Copié' : '📋 Copier la caption'}
+                </button>
+                <button className="btn btn-dark" onClick={downloadPost4} disabled={busy === '4'}>
+                  {busy === '4' ? '⏳ Génération…' : '🖼️ Télécharger le visuel (1080×1080)'}
+                </button>
+              </div>
               <div className="why">
                 <b>🎯 Pourquoi ça marche</b>
                 Un sondage = de l&apos;engagement <strong>garanti</strong> (l&apos;algo adore). Le ton &quot;on ne juge pas. (Si.)&quot; donne la permission de répondre B sans honte. Sur LinkedIn, utilisez le sondage natif (4 options max). Sur IG, le sticker sondage en story OU les commentaires.
