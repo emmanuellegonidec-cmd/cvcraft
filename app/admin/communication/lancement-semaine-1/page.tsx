@@ -71,17 +71,21 @@ export default function LancementSemaine1Page() {
     targetHeight: number,
   ) => {
     if (!node) return
-    const { toPng } = await import('html-to-image')
+    const html2canvas = (await import('html2canvas')).default
     if (document.fonts && document.fonts.ready) {
       await document.fonts.ready
     }
     const rect = node.getBoundingClientRect()
-    const pixelRatio = Math.max(targetWidth / rect.width, targetHeight / rect.height)
-    const dataUrl = await toPng(node, {
-      pixelRatio,
-      cacheBust: true,
-      backgroundColor: '#FAFAFA',
+    const scale = Math.max(targetWidth / rect.width, targetHeight / rect.height)
+    const canvas = await html2canvas(node, {
+      scale,
+      backgroundColor: null,
+      useCORS: true,
+      logging: false,
+      width: rect.width,
+      height: rect.height,
     })
+    const dataUrl = canvas.toDataURL('image/png')
     const link = document.createElement('a')
     link.download = filename
     link.href = dataUrl
