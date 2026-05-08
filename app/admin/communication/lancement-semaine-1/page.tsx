@@ -226,8 +226,8 @@ export default function LancementSemaine1Page() {
         .sl-cover { background: #111; color: #fff; align-items: stretch; justify-content: space-between; text-align: center; }
         .sl-cover .stamp-row { display: flex; justify-content: flex-end; }
         .sl-cover .stamp { display: inline-block; background: #E8151B; color: #fff; padding: 6px 16px; border: 2px solid #111; font-size: 16px; font-weight: 900; transform: rotate(6deg); text-transform: uppercase; letter-spacing: .04em; box-shadow: 3px 3px 0 #111; line-height: 1.4; }
-        .is-exporting .stamp { padding: 8px 16px 5px; }
-        .is-exporting .cta { padding: 12px 22px 8px; }
+        .is-exporting .stamp { padding: 10px 16px 4px; }
+        .is-exporting .cta { padding: 13px 22px 7px; }
         .sl-cover .ti-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px 0; }
         .sl-cover .ti { font-size: 42px; font-weight: 900; letter-spacing: -.02em; line-height: 1.05; color: #fff; }
         .sl-cover .ti em { color: #F5C400; font-style: italic; }
