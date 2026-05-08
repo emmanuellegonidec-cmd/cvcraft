@@ -375,33 +375,33 @@ export default function LancementSemaine1Page() {
           <div className="post-body">
             <div className="post-visual">
               <div className="car" ref={visual2}>
-                <div className="slide sl-cover" ref={(el) => { visual2Slides.current[0] = el }}>
+                <div className="slide sl-cover" style={{ background: '#111', color: '#fff' }} ref={(el) => { visual2Slides.current[0] = el }}>
                   <div className="stamp">Procès</div>
                   <div className="ti">Le procès<br />de votre <em>tableur.</em></div>
                   <div className="swp">Swipe →</div>
                 </div>
-                <div className="slide sl-body" ref={(el) => { visual2Slides.current[1] = el }}>
+                <div className="slide sl-body" style={{ background: '#FAFAFA' }} ref={(el) => { visual2Slides.current[1] = el }}>
                   <div className="n">01</div>
                   <div>
                     <div className="ti">Il vous <em>ment.</em></div>
                     <div className="bd">&quot;Relance faite ✓&quot; — date : il y a 23 jours.</div>
                   </div>
                 </div>
-                <div className="slide sl-body" ref={(el) => { visual2Slides.current[2] = el }}>
+                <div className="slide sl-body" style={{ background: '#FAFAFA' }} ref={(el) => { visual2Slides.current[2] = el }}>
                   <div className="n">02</div>
                   <div>
                     <div className="ti">Il vous <em>épuise.</em></div>
                     <div className="bd">14 onglets. Personne n&apos;a 14 onglets de joie.</div>
                   </div>
                 </div>
-                <div className="slide sl-body" ref={(el) => { visual2Slides.current[3] = el }}>
+                <div className="slide sl-body" style={{ background: '#FAFAFA' }} ref={(el) => { visual2Slides.current[3] = el }}>
                   <div className="n">03</div>
                   <div>
                     <div className="ti">Il vous <em>ghoste.</em></div>
                     <div className="bd">Aucun rappel, aucune notif. Il s&apos;en fiche.</div>
                   </div>
                 </div>
-                <div className="slide sl-end" ref={(el) => { visual2Slides.current[4] = el }}>
+                <div className="slide sl-end" style={{ background: '#E8151B', color: '#fff' }} ref={(el) => { visual2Slides.current[4] = el }}>
                   <div className="ti">Verdict :<br />remplacé.</div>
                   <div className="cta">Découvrir Jean →</div>
                 </div>
