@@ -93,6 +93,9 @@ export default function LancementSemaine1Page() {
     ].join(';')
 
     const clone = node.cloneNode(true) as HTMLElement
+    clone.style.width = `${rect.width}px`
+    clone.style.height = `${rect.height}px`
+    clone.style.flex = 'none'
     clone.style.transform = `scale(${scale})`
     clone.style.transformOrigin = 'top left'
     clone.style.position = 'absolute'
