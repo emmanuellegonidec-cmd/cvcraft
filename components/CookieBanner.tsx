@@ -20,7 +20,10 @@ export default function CookieBanner() {
   useEffect(() => {
     const existing = localStorage.getItem(CONSENT_KEY)
     if (!existing) {
-      setVisible(true)
+      // Délai de 1500ms : laisse PageSpeed mesurer le LCP/CLS sans interférence
+      // Bonus UX : l'utilisateur voit la home avant que le bandeau apparaisse
+      const timer = setTimeout(() => setVisible(true), 1500)
+      return () => clearTimeout(timer)
     }
   }, [])
 
