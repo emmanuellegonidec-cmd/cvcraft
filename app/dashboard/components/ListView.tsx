@@ -40,7 +40,7 @@ export default function ListView({ jobs, stages, onDeleteJob, onAddJob }: Props)
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '2px solid #E0E0E0', borderRadius: 8, padding: '7px 12px', flex: 1, maxWidth: 300 }}>
           <span>🔍</span>
           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Rechercher..."
-            style={{ border: 'none', outline: 'none', fontSize: 13, width: '100%', background: 'transparent', fontFamily: 'Montserrat,sans-serif' }} />
+            style={{ border: 'none', outline: 'none', fontSize: 13, width: '100%', background: 'transparent', fontFamily: 'var(--font-montserrat), sans-serif' }} />
         </div>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="fi" style={{ width: 'auto' }}>
           <option value="all">Tous les statuts</option>
@@ -79,7 +79,7 @@ export default function ListView({ jobs, stages, onDeleteJob, onAddJob }: Props)
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
-                  fontFamily: 'Montserrat,sans-serif',
+                  fontFamily: 'var(--font-montserrat), sans-serif',
                 }}>
                   <span>📦</span> Candidatures archivées
                 </div>

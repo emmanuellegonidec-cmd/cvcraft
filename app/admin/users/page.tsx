@@ -57,7 +57,7 @@ export default async function AdminUsersPage() {
         <div>
           <h1
             className="text-3xl font-black mb-1"
-            style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}
+            style={{ fontFamily: 'var(--font-montserrat), sans-serif', color: '#111' }}
           >
             👥 Utilisateurs
           </h1>
@@ -76,37 +76,37 @@ export default async function AdminUsersPage() {
             <tr style={{ backgroundColor: '#111', color: '#F5C400' }}>
               <th
                 className="text-left px-4 py-3 font-black"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}
               >
                 Utilisateur
               </th>
               <th
                 className="text-left px-4 py-3 font-black"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}
               >
                 Email
               </th>
               <th
                 className="text-left px-4 py-3 font-black"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}
               >
                 Poste actuel
               </th>
               <th
                 className="text-left px-4 py-3 font-black"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}
               >
                 Offres
               </th>
               <th
                 className="text-left px-4 py-3 font-black"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}
               >
                 Inscrit le
               </th>
               <th
                 className="text-left px-4 py-3 font-black"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}
               >
                 Dernière connexion
               </th>
@@ -140,7 +140,7 @@ export default async function AdminUsersPage() {
                       <div className="flex items-center gap-3">
                         <div
                           className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0"
-                          style={{ backgroundColor: '#E8151B', fontFamily: 'Montserrat, sans-serif' }}
+                          style={{ backgroundColor: '#E8151B', fontFamily: 'var(--font-montserrat), sans-serif' }}
                         >
                           {initials}
                         </div>
@@ -161,7 +161,7 @@ export default async function AdminUsersPage() {
                         style={{
                           backgroundColor: user.job_count > 0 ? '#F5C400' : '#f3f4f6',
                           color: '#111',
-                          fontFamily: 'Montserrat, sans-serif',
+                          fontFamily: 'var(--font-montserrat), sans-serif',
                         }}
                       >
                         {user.job_count}

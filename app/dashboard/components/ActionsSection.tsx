@@ -186,16 +186,16 @@ export default function ActionsSection({
   return (
     <div style={{ padding: 16 }}>
       {loading ? (
-        <p style={{ fontSize: 13, color: '#888', fontFamily: 'Montserrat, sans-serif' }}>Chargement...</p>
+        <p style={{ fontSize: 13, color: '#888', fontFamily: 'var(--font-montserrat), sans-serif' }}>Chargement...</p>
       ) : isEmpty ? (
-        <p style={{ fontSize: 13, color: '#888', fontFamily: 'Montserrat, sans-serif', textAlign: 'center', padding: '20px 0' }}>
+        <p style={{ fontSize: 13, color: '#888', fontFamily: 'var(--font-montserrat), sans-serif', textAlign: 'center', padding: '20px 0' }}>
           {compact && '✅ '}{emptyText}
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {upcoming.length > 0 && (
             <>
-              <p style={{ fontSize: 10, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'Montserrat, sans-serif', marginBottom: 4 }}>À venir</p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'var(--font-montserrat), sans-serif', marginBottom: 4 }}>À venir</p>
               {upcoming.map(action => (
                 <ActionCard
                   key={action.id}
@@ -211,7 +211,7 @@ export default function ActionsSection({
           )}
           {past.length > 0 && (
             <>
-              <p style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'Montserrat, sans-serif', marginTop: 8, marginBottom: 4 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'var(--font-montserrat), sans-serif', marginTop: 8, marginBottom: 4 }}>
                 {compact ? 'En retard' : 'Passées'}
               </p>
               {past.map(action => (
@@ -232,7 +232,7 @@ export default function ActionsSection({
 
       {deleteTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
-          <div style={{ background: '#fff', border: '2px solid #E8151B', borderRadius: 12, boxShadow: '4px 4px 0 #E8151B', padding: 28, maxWidth: 420, width: '100%', fontFamily: 'Montserrat, sans-serif' }}>
+          <div style={{ background: '#fff', border: '2px solid #E8151B', borderRadius: 12, boxShadow: '4px 4px 0 #E8151B', padding: 28, maxWidth: 420, width: '100%', fontFamily: 'var(--font-montserrat), sans-serif' }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <div style={{ fontSize: 32, marginBottom: 10 }}>⚠️</div>
               <h3 style={{ fontSize: 16, fontWeight: 900, color: '#E8151B', margin: '0 0 8px' }}>Supprimer cet événement ?</h3>
@@ -240,8 +240,8 @@ export default function ActionsSection({
               {deleteTarget.organisateur && <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0' }}>{deleteTarget.organisateur}</p>}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setDeleteTarget(null)} style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 700, background: '#fff', border: '2px solid #ccc', borderRadius: 8, cursor: 'pointer', fontFamily: 'Montserrat, sans-serif' }}>Annuler</button>
-              <button onClick={() => handleDelete(deleteTarget.id)} style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 800, background: '#E8151B', color: '#fff', border: '2px solid #E8151B', borderRadius: 8, cursor: 'pointer', fontFamily: 'Montserrat, sans-serif' }}>Supprimer</button>
+              <button onClick={() => setDeleteTarget(null)} style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 700, background: '#fff', border: '2px solid #ccc', borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--font-montserrat), sans-serif' }}>Annuler</button>
+              <button onClick={() => handleDelete(deleteTarget.id)} style={{ flex: 1, padding: '10px', fontSize: 13, fontWeight: 800, background: '#E8151B', color: '#fff', border: '2px solid #E8151B', borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--font-montserrat), sans-serif' }}>Supprimer</button>
             </div>
           </div>
         </div>
@@ -307,7 +307,7 @@ function ActionCard({ action, contactsMap, formatDate, onEdit, onDelete, onQuick
 
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13, color: '#111' }}>
+          <span style={{ fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 700, fontSize: 13, color: '#111' }}>
             {action.nom}
           </span>
           {action.categorie && (
@@ -333,16 +333,16 @@ function ActionCard({ action, contactsMap, formatDate, onEdit, onDelete, onQuick
         </div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {action.organisateur && (
-            <span style={{ fontSize: 11, color: '#555', fontFamily: 'Montserrat, sans-serif' }}>📍 {action.organisateur}</span>
+            <span style={{ fontSize: 11, color: '#555', fontFamily: 'var(--font-montserrat), sans-serif' }}>📍 {action.organisateur}</span>
           )}
-          <span style={{ fontSize: 11, color: '#555', fontFamily: 'Montserrat, sans-serif' }}>
+          <span style={{ fontSize: 11, color: '#555', fontFamily: 'var(--font-montserrat), sans-serif' }}>
             📅 {formatDate(action.date_debut)}{action.date_fin && ` → ${formatDate(action.date_fin)}`}
           </span>
         </div>
 
         {linkedContacts.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
-            <span style={{ fontSize: 11, color: '#888', marginRight: 2, fontFamily: 'Montserrat, sans-serif' }}>👥</span>
+            <span style={{ fontSize: 11, color: '#888', marginRight: 2, fontFamily: 'var(--font-montserrat), sans-serif' }}>👥</span>
             {linkedContacts.map((c) => (
               <span
                 key={c.id}
@@ -367,11 +367,11 @@ function ActionCard({ action, contactsMap, formatDate, onEdit, onDelete, onQuick
                   fontSize: 9,
                   fontWeight: 900,
                   color: '#111',
-                  fontFamily: 'Montserrat, sans-serif',
+                  fontFamily: 'var(--font-montserrat), sans-serif',
                 }}>
                   {getInitials(c.name)}
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#111', fontFamily: 'Montserrat, sans-serif' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#111', fontFamily: 'var(--font-montserrat), sans-serif' }}>
                   {c.name}
                 </span>
               </span>
@@ -380,11 +380,11 @@ function ActionCard({ action, contactsMap, formatDate, onEdit, onDelete, onQuick
         )}
 
         {action.note && (
-          <p style={{ fontSize: 11, color: '#777', marginTop: 4, fontFamily: 'Montserrat, sans-serif' }}>{action.note}</p>
+          <p style={{ fontSize: 11, color: '#777', marginTop: 4, fontFamily: 'var(--font-montserrat), sans-serif' }}>{action.note}</p>
         )}
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        <button onClick={onEdit} style={{ background: 'none', border: '1.5px solid #111', padding: '4px 10px', cursor: 'pointer', fontSize: 11, fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>✏️</button>
+        <button onClick={onEdit} style={{ background: 'none', border: '1.5px solid #111', padding: '4px 10px', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 600 }}>✏️</button>
         <button onClick={onDelete} style={{ background: 'none', border: '1.5px solid #E8151B', padding: '4px 10px', cursor: 'pointer', fontSize: 11, color: '#E8151B' }}>🗑</button>
       </div>
     </div>

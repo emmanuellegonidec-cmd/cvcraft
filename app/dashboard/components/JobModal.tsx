@@ -213,7 +213,7 @@ export default function JobModal({
             {visibleOptions.map(opt => (
               <button key={opt.mode}
                 onClick={() => setAddJobMode(opt.mode)}
-                style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', textAlign: 'left', boxShadow: '2px 2px 0 #111', width: '100%' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1rem 1.25rem', cursor: 'pointer', fontFamily: 'var(--font-montserrat), sans-serif', textAlign: 'left', boxShadow: '2px 2px 0 #111', width: '100%' }}
                 onMouseOver={e => { (e.currentTarget as HTMLElement).style.transform = 'translate(-1px,-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '3px 3px 0 #E8151B'; }}
                 onMouseOut={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '2px 2px 0 #111'; }}>
                 <span style={{ fontSize: 24 }}>{opt.icon}</span>
@@ -235,7 +235,7 @@ export default function JobModal({
         {addJobMode === 'url' && !editingJobId && isAdmin && (
           <div>
             <button onClick={() => { setAddJobMode(null); setImportError(false); setImportUrl(''); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 12, fontFamily: 'Montserrat,sans-serif' }}>← Retour</button>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-montserrat), sans-serif' }}>← Retour</button>
             <div style={{ marginBottom: 14 }}>
               <label className="fl">URL de l&apos;offre</label>
               <input className="fi" placeholder="https://www.linkedin.com/jobs/view/..." value={importUrl} onChange={e => setImportUrl(e.target.value)} />

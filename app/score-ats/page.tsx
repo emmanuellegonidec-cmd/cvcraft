@@ -217,10 +217,10 @@ const recommandations = [
 function NumBadge({ num, label }: { num: string; label: string }) {
   return (
     <div className="mb-6 inline-flex items-center gap-3 border-2 border-[#111] bg-[#F5C400] px-4 py-2 shadow-[3px_3px_0_#111]">
-      <span className="font-['Montserrat'] text-2xl font-black leading-none text-[#111]">
+      <span className="font-montserrat text-2xl font-black leading-none text-[#111]">
         {num}
       </span>
-      <span className="font-['Montserrat'] text-sm font-black tracking-widest text-[#111]">
+      <span className="font-montserrat text-sm font-black tracking-widest text-[#111]">
         {label}
       </span>
     </div>
@@ -256,7 +256,7 @@ export default function ScoreAtsPage() {
         {/* HERO */}
         <section className="border-b-2 border-[#111] bg-white">
           <div className="mx-auto max-w-5xl px-6 py-20 md:py-28">
-            <h1 className="font-['Montserrat'] text-4xl font-black leading-tight md:text-6xl">
+            <h1 className="font-montserrat text-4xl font-black leading-tight md:text-6xl">
               Score ATS contextualisé : 6 notes détaillées pour chaque candidature
             </h1>
             <p className="mt-6 max-w-3xl text-lg md:text-xl">
@@ -290,7 +290,7 @@ export default function ScoreAtsPage() {
             <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
               {stats.map((s) => (
                 <div key={s.main} className="text-center">
-                  <div className="font-['Montserrat'] text-3xl font-black leading-none text-[#F5C400] md:text-4xl">
+                  <div className="font-montserrat text-3xl font-black leading-none text-[#F5C400] md:text-4xl">
                     {s.main}
                   </div>
                   <div className="mt-3 text-xs text-gray-400 md:text-sm">{s.sub}</div>
@@ -304,7 +304,7 @@ export default function ScoreAtsPage() {
         <section id="le-probleme" className="border-b-2 border-[#111] bg-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
             <NumBadge num="01" label="LE PROBLÈME" />
-            <h2 className="font-['Montserrat'] text-3xl font-black md:text-4xl">
+            <h2 className="font-montserrat text-3xl font-black md:text-4xl">
               Un score ATS « dans le vide » ne sert à rien
             </h2>
             <div className="mt-8 grid gap-8 md:grid-cols-2">
@@ -319,7 +319,7 @@ export default function ScoreAtsPage() {
                 </p>
               </div>
               <div className="border-2 border-[#111] bg-white p-6 shadow-[3px_3px_0_#111]">
-                <p className="font-['Montserrat'] text-xl font-black">Notre approche</p>
+                <p className="font-montserrat text-xl font-black">Notre approche</p>
                 <p className="mt-4 text-lg">
                   Jean find my Job analyse votre CV <strong>en contexte</strong> : face à
                   l'offre que vous visez réellement. Le score et les recommandations sont
@@ -334,7 +334,7 @@ export default function ScoreAtsPage() {
         <section className="border-b-2 border-[#111] bg-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
             <NumBadge num="02" label="NOTRE ANALYSE" />
-            <h2 className="font-['Montserrat'] text-3xl font-black md:text-4xl">
+            <h2 className="font-montserrat text-3xl font-black md:text-4xl">
               Une analyse complète et contextualisée
             </h2>
             <p className="mt-4 max-w-3xl text-lg">
@@ -348,7 +348,7 @@ export default function ScoreAtsPage() {
                   key={item.titre}
                   className={`border-2 border-[#111] bg-white p-6 ${item.shadow}`}
                 >
-                  <h3 className="font-['Montserrat'] text-lg font-black uppercase">
+                  <h3 className="font-montserrat text-lg font-black uppercase">
                     {item.titre}
                   </h3>
                   <p className="mt-3 text-sm leading-relaxed">{item.desc}</p>
@@ -362,7 +362,7 @@ export default function ScoreAtsPage() {
         <section className="border-b-2 border-[#111] bg-[#111] text-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
             <NumBadge num="03" label="LE RAPPORT" />
-            <h2 className="font-['Montserrat'] text-3xl font-black text-[#F5C400] md:text-4xl">
+            <h2 className="font-montserrat text-3xl font-black text-[#F5C400] md:text-4xl">
               Un rapport d'analyse clair et actionnable
             </h2>
             <p className="mt-4 max-w-3xl text-lg text-gray-200">
@@ -391,24 +391,24 @@ export default function ScoreAtsPage() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="font-['Montserrat'] text-3xl font-black text-[#1A7A4A]">
+                      <span className="font-montserrat text-3xl font-black text-[#1A7A4A]">
                         87
                       </span>
                       <span className="text-xs text-[#1A7A4A]">/100</span>
                     </div>
                   </div>
                   <div className="flex-1">
-                    <div className="font-['Montserrat'] text-xs font-black tracking-wider text-[#F5C400]">
+                    <div className="font-montserrat text-xs font-black tracking-wider text-[#F5C400]">
                       SCORE ATS
                     </div>
-                    <div className="mt-1 font-['Montserrat'] text-xl font-black text-white md:text-2xl">
+                    <div className="mt-1 font-montserrat text-xl font-black text-white md:text-2xl">
                       Excellent niveau de compatibilité
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="rounded-full bg-[#F5C400] px-3 py-1 font-['Montserrat'] text-xs font-black text-[#111]">
+                      <span className="rounded-full bg-[#F5C400] px-3 py-1 font-montserrat text-xs font-black text-[#111]">
                         1 majeure
                       </span>
-                      <span className="rounded-full bg-[#444] px-3 py-1 font-['Montserrat'] text-xs text-gray-200">
+                      <span className="rounded-full bg-[#444] px-3 py-1 font-montserrat text-xs text-gray-200">
                         3 mineures
                       </span>
                     </div>
@@ -422,11 +422,11 @@ export default function ScoreAtsPage() {
                     key={d.name}
                     className="rounded-lg border border-gray-200 bg-white p-4"
                   >
-                    <div className="font-['Montserrat'] text-xs font-black tracking-wider text-gray-600">
+                    <div className="font-montserrat text-xs font-black tracking-wider text-gray-600">
                       {d.name}
                     </div>
                     <div
-                      className="mt-1 font-['Montserrat'] text-2xl font-black"
+                      className="mt-1 font-montserrat text-2xl font-black"
                       style={{ color: d.color }}
                     >
                       {d.score}
@@ -454,7 +454,7 @@ export default function ScoreAtsPage() {
               <div>
                 <div className="grid grid-cols-1 gap-3 rounded-lg bg-white p-4 sm:grid-cols-2">
                   <div className="rounded-md border border-[#1A7A4A] bg-[#E6F4EA] p-4">
-                    <div className="font-['Montserrat'] text-xs font-black tracking-wider text-[#1A7A4A]">
+                    <div className="font-montserrat text-xs font-black tracking-wider text-[#1A7A4A]">
                       POINTS FORTS
                     </div>
                     <ul className="mt-3 space-y-1.5 text-sm text-[#1A7A4A]">
@@ -467,7 +467,7 @@ export default function ScoreAtsPage() {
                     </ul>
                   </div>
                   <div className="rounded-md border border-[#E8151B] bg-[#FCE6E7] p-4">
-                    <div className="font-['Montserrat'] text-xs font-black tracking-wider text-[#E8151B]">
+                    <div className="font-montserrat text-xs font-black tracking-wider text-[#E8151B]">
                       POINTS FAIBLES
                     </div>
                     <ul className="mt-3 space-y-1.5 text-sm text-[#A02020]">
@@ -489,14 +489,14 @@ export default function ScoreAtsPage() {
               {/* Bloc 3 : Recommandations hiérarchisées */}
               <div>
                 <div className="rounded-lg bg-white p-5">
-                  <div className="font-['Montserrat'] text-xs font-black tracking-wider text-gray-700">
+                  <div className="font-montserrat text-xs font-black tracking-wider text-gray-700">
                     RECOMMANDATIONS
                   </div>
                   <ul className="mt-4 space-y-3">
                     {recommandations.map((r, i) => (
                       <li key={i} className="flex items-start gap-3">
                         <span
-                          className={`shrink-0 px-2 py-0.5 font-['Montserrat'] text-xs font-black ${
+                          className={`shrink-0 px-2 py-0.5 font-montserrat text-xs font-black ${
                             r.severity === "MAJEURE"
                               ? "bg-[#F5C400] text-[#111]"
                               : "bg-gray-300 text-gray-700"
@@ -520,7 +520,7 @@ export default function ScoreAtsPage() {
        {/* 8 POINTS À VÉRIFIER */}
         <section className="border-b-2 border-[#111] bg-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
-            <h2 className="font-['Montserrat'] text-3xl font-black md:text-4xl">
+            <h2 className="font-montserrat text-3xl font-black md:text-4xl">
               8 points à vérifier sur votre CV avant de postuler
             </h2>
             <p className="mt-4 max-w-3xl text-lg">
@@ -534,10 +534,10 @@ export default function ScoreAtsPage() {
                   key={p.num}
                   className="flex flex-col items-center border-2 border-[#111] bg-white p-6 text-center shadow-[3px_3px_0_#111]"
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#111] bg-[#F5C400] font-['Montserrat'] text-2xl font-black text-[#111]">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#111] bg-[#F5C400] font-montserrat text-2xl font-black text-[#111]">
                     {p.num}
                   </div>
-                  <h3 className="mt-4 font-['Montserrat'] text-base font-black text-[#111]">
+                  <h3 className="mt-4 font-montserrat text-base font-black text-[#111]">
                     {p.titre}
                   </h3>
                   <p className="mt-3 text-sm leading-relaxed text-[#555]">{p.desc}</p>
@@ -550,7 +550,7 @@ export default function ScoreAtsPage() {
         {/* POURQUOI L'ANALYSE CONTEXTUALISÉE CHANGE TOUT */}
         <section className="border-b-2 border-[#111] bg-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
-            <h2 className="font-['Montserrat'] text-3xl font-black md:text-4xl">
+            <h2 className="font-montserrat text-3xl font-black md:text-4xl">
               Pourquoi l'analyse contextualisée change tout
             </h2>
 
@@ -560,7 +560,7 @@ export default function ScoreAtsPage() {
                   key={item.titre}
                   className={`border-2 border-[#111] bg-white p-6 ${item.shadow}`}
                 >
-                  <h3 className="font-['Montserrat'] text-lg font-black uppercase">
+                  <h3 className="font-montserrat text-lg font-black uppercase">
                     {item.titre}
                   </h3>
                   <p className="mt-3 text-sm leading-relaxed">{item.desc}</p>
@@ -573,7 +573,7 @@ export default function ScoreAtsPage() {
         {/* AU-DELÀ DU SCORE */}
         <section className="border-b-2 border-[#111] bg-[#111] text-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
-            <h2 className="font-['Montserrat'] text-3xl font-black text-[#F5C400] md:text-4xl">
+            <h2 className="font-montserrat text-3xl font-black text-[#F5C400] md:text-4xl">
               Au-delà du score ATS : pilotez toute votre recherche
             </h2>
             <p className="mt-4 max-w-3xl text-lg text-gray-200">
@@ -588,7 +588,7 @@ export default function ScoreAtsPage() {
                   className="border-2 border-[#333] bg-[#1a1a1a] p-6"
                 >
                   <div className="text-3xl">{f.emoji}</div>
-                  <h3 className="mt-3 font-['Montserrat'] text-lg font-black text-[#F5C400]">
+                  <h3 className="mt-3 font-montserrat text-lg font-black text-[#F5C400]">
                     {f.titre}
                   </h3>
                   <p className="mt-2 text-sm text-gray-300">{f.desc}</p>
@@ -610,7 +610,7 @@ export default function ScoreAtsPage() {
         {/* FAQ */}
         <section className="border-b-2 border-[#111] bg-white">
           <div className="mx-auto max-w-5xl px-6 py-20">
-            <h2 className="font-['Montserrat'] text-3xl font-black md:text-4xl">
+            <h2 className="font-montserrat text-3xl font-black md:text-4xl">
               Questions fréquentes
             </h2>
             <div className="mt-10 space-y-4">
@@ -619,7 +619,7 @@ export default function ScoreAtsPage() {
                   key={idx}
                   className="group border-2 border-[#111] bg-white p-6 shadow-[3px_3px_0_#111]"
                 >
-                  <summary className="flex cursor-pointer items-center justify-between font-['Montserrat'] text-lg font-black">
+                  <summary className="flex cursor-pointer items-center justify-between font-montserrat text-lg font-black">
                     {item.question}
                     <span className="ml-4 text-2xl transition group-open:rotate-45">+</span>
                   </summary>
@@ -633,7 +633,7 @@ export default function ScoreAtsPage() {
         {/* CTA FINAL */}
         <section className="bg-[#111] text-white">
           <div className="mx-auto max-w-5xl px-6 py-20 text-center">
-            <h2 className="font-['Montserrat'] text-3xl font-black text-[#F5C400] md:text-5xl">
+            <h2 className="font-montserrat text-3xl font-black text-[#F5C400] md:text-5xl">
               Testez gratuitement l'analyse ATS sur votre première candidature
             </h2>
             <p className="mt-6 text-lg">

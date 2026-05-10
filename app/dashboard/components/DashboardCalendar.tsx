@@ -63,7 +63,7 @@ const navBtnStyle: React.CSSProperties = {
   background: '#fff', border: '1.5px solid #CCC', borderRadius: 6,
   width: 28, height: 28, cursor: 'pointer', color: '#555',
   fontSize: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  fontFamily: 'Montserrat,sans-serif', padding: 0,
+  fontFamily: 'var(--font-montserrat), sans-serif', padding: 0,
 };
 
 function sameDay(a: Date, b: Date) {
@@ -263,7 +263,7 @@ function EventCard({
         ...statusStyle,
         borderRadius: 5, padding: '5px 8px', marginBottom: 3,
         cursor: 'pointer',
-        fontFamily: 'Montserrat,sans-serif', overflow: 'hidden',
+        fontFamily: 'var(--font-montserrat), sans-serif', overflow: 'hidden',
         userSelect: 'none', opacity: statusStyle.opacity ?? (isArchived ? 0.65 : 1),
         border: statusStyle.border || (isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(0,0,0,0.3)' : 'none'),
       }}
@@ -549,7 +549,7 @@ export default function DashboardCalendar({
             {(['week', 'month'] as const).map(v => (
               <button key={v} onClick={() => { setCalView(v); setOffset(0); }} style={{
                 padding: '4px 12px', fontSize: 12, fontWeight: 700,
-                fontFamily: 'Montserrat,sans-serif',
+                fontFamily: 'var(--font-montserrat), sans-serif',
                 border: '2px solid #111', borderRadius: 6, cursor: 'pointer',
                 background: calView === v ? '#111' : '#fff',
                 color: calView === v ? '#F5C400' : '#111',
@@ -592,7 +592,7 @@ export default function DashboardCalendar({
       <>
         <NavBar periodLabel={periodLabel} />
         {onEmptySlotClick && (
-          <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 8, fontFamily: 'Montserrat,sans-serif' }}>
+          <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 8, fontFamily: 'var(--font-montserrat), sans-serif' }}>
             💡 Astuce : cliquez sur un créneau libre pour créer un événement ou une action
           </div>
         )}
@@ -693,7 +693,7 @@ export default function DashboardCalendar({
                           borderRadius: 5,
                           padding: '4px 7px',
                           cursor: 'pointer',
-                          fontFamily: 'Montserrat,sans-serif',
+                          fontFamily: 'var(--font-montserrat), sans-serif',
                           overflow: 'hidden',
                           userSelect: 'none',
                           opacity: statusStyle.opacity ?? (isArchived ? 0.65 : 1),
@@ -762,7 +762,7 @@ export default function DashboardCalendar({
       <>
         <NavBar periodLabel={periodLabel} />
         {onEmptySlotClick && (
-          <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 8, fontFamily: 'Montserrat,sans-serif' }}>
+          <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 8, fontFamily: 'var(--font-montserrat), sans-serif' }}>
             💡 Astuce : cliquez sur un jour pour créer un événement ou une action
           </div>
         )}
@@ -840,12 +840,12 @@ export default function DashboardCalendar({
         background: '#FAFAFA',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 16, fontWeight: 900, color: '#111', fontFamily: 'Montserrat,sans-serif', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+          <span style={{ fontSize: 16, fontWeight: 900, color: '#111', fontFamily: 'var(--font-montserrat), sans-serif', textTransform: 'uppercase', letterSpacing: '.06em' }}>
             📅 Calendrier
           </span>
         </div>
         <button onClick={() => setVisibleState(v => !v)} style={{
-          fontSize: 11, fontWeight: 800, fontFamily: 'Montserrat,sans-serif',
+          fontSize: 11, fontWeight: 800, fontFamily: 'var(--font-montserrat), sans-serif',
           background: 'transparent', border: '1.5px solid #CCC', borderRadius: 6,
           padding: '3px 10px', cursor: 'pointer', color: '#555', whiteSpace: 'nowrap',
         }}>{visible ? 'Masquer' : 'Afficher'}</button>

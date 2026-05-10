@@ -34,7 +34,7 @@ export default function AdminNav() {
       >
         <div
           className="text-xl font-black"
-          style={{ fontFamily: 'Montserrat, sans-serif', color: '#F5C400' }}
+          style={{ fontFamily: 'var(--font-montserrat), sans-serif', color: '#F5C400' }}
         >
           JEAN
         </div>
@@ -54,7 +54,7 @@ export default function AdminNav() {
             href={item.href}
             className="flex items-center px-4 py-3 rounded font-bold text-sm transition-all"
             style={{
-              fontFamily: 'Montserrat, sans-serif',
+              fontFamily: 'var(--font-montserrat), sans-serif',
               backgroundColor: isActive(item.href, item.exact) ? '#F5C400' : 'transparent',
               color: isActive(item.href, item.exact) ? '#111' : '#fff',
               borderLeft: isActive(item.href, item.exact) ? '4px solid #E8151B' : '4px solid transparent',
@@ -71,7 +71,7 @@ export default function AdminNav() {
           href="/dashboard"
           className="flex items-center px-4 py-3 rounded font-bold text-sm transition-all"
           style={{
-            fontFamily: 'Montserrat, sans-serif',
+            fontFamily: 'var(--font-montserrat), sans-serif',
             color: '#aaa',
             backgroundColor: 'transparent',
           }}

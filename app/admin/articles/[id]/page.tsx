@@ -171,7 +171,7 @@ export default function AdminEditArticlePage() {
   return (
     <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-black" style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}>
+        <h1 className="text-3xl font-black" style={{ fontFamily: 'var(--font-montserrat), sans-serif', color: '#111' }}>
           ✍️ Éditer l&apos;article
         </h1>
         <button onClick={() => router.push('/admin/articles')} className="text-sm font-semibold text-gray-500 hover:text-gray-800">
@@ -182,7 +182,7 @@ export default function AdminEditArticlePage() {
       {/* Statut */}
       <div className="flex items-center gap-3 mb-6">
         <span className="text-sm font-bold text-gray-500">Statut :</span>
-        <span className="px-3 py-1 rounded text-xs font-black" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: form.published ? '#F5C400' : '#f3f4f6', color: form.published ? '#111' : '#888', border: form.published ? '1px solid #111' : '1px solid #ddd' }}>
+        <span className="px-3 py-1 rounded text-xs font-black" style={{ fontFamily: 'var(--font-montserrat), sans-serif', backgroundColor: form.published ? '#F5C400' : '#f3f4f6', color: form.published ? '#111' : '#888', border: form.published ? '1px solid #111' : '1px solid #ddd' }}>
           {form.published ? '✅ Publié' : '📝 Brouillon'}
         </span>
       </div>
@@ -199,18 +199,18 @@ export default function AdminEditArticlePage() {
 
         {/* Titre */}
         <div>
-          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Titre *</label>
+          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>Titre *</label>
           <input type="text" name="title" value={form.title} onChange={handleChange} className="w-full px-4 py-3 rounded text-sm font-medium outline-none" style={{ border: '2px solid #111' }} />
         </div>
 
         {/* Slug + Catégorie */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Slug (URL)</label>
+            <label className="block text-sm font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>Slug (URL)</label>
             <input type="text" name="slug" value={form.slug} onChange={handleChange} className="w-full px-4 py-3 rounded text-sm font-medium outline-none" style={{ border: '2px solid #111', backgroundColor: '#fafafa' }} />
           </div>
           <div>
-            <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Catégorie</label>
+            <label className="block text-sm font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>Catégorie</label>
             <select name="category" value={form.category} onChange={handleChange} className="w-full px-4 py-3 rounded text-sm font-medium outline-none" style={{ border: '2px solid #111' }}>
               {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
@@ -219,7 +219,7 @@ export default function AdminEditArticlePage() {
 
         {/* Extrait */}
         <div>
-          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Extrait</label>
+          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>Extrait</label>
           <textarea name="excerpt" value={form.excerpt} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded text-sm font-medium outline-none resize-none" style={{ border: '2px solid #111' }} />
         </div>
 
@@ -236,7 +236,7 @@ export default function AdminEditArticlePage() {
 
         {/* Image de couverture */}
         <div>
-          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>
             🖼️ Image de couverture
             <span className="ml-2 text-xs font-normal text-gray-400">1200×630px recommandé · JPG/PNG/WebP · max 5MB</span>
           </label>
@@ -245,7 +245,7 @@ export default function AdminEditArticlePage() {
           <div className="flex items-center gap-3 mb-3">
             <label
               className="px-4 py-2 rounded text-sm font-black cursor-pointer"
-              style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: uploadingCover ? '#f3f4f6' : '#111', color: uploadingCover ? '#888' : '#F5C400', border: '2px solid #111', boxShadow: uploadingCover ? 'none' : '3px 3px 0 #E8151B' }}
+              style={{ fontFamily: 'var(--font-montserrat), sans-serif', backgroundColor: uploadingCover ? '#f3f4f6' : '#111', color: uploadingCover ? '#888' : '#F5C400', border: '2px solid #111', boxShadow: uploadingCover ? 'none' : '3px 3px 0 #E8151B' }}
             >
               {uploadingCover ? '⏳ Upload...' : '📁 Uploader une image'}
               <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={handleCoverUpload} style={{ display: 'none' }} disabled={uploadingCover} />
@@ -300,7 +300,7 @@ export default function AdminEditArticlePage() {
 
         {/* Éditeur */}
         <div>
-          <label className="block text-sm font-black mb-2" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+          <label className="block text-sm font-black mb-2" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>
             Contenu de l&apos;article
             <span className="ml-2 text-xs font-normal text-gray-400">📁 Upload = image depuis votre ordinateur (nom SEO auto) · 🌐 URL img = image externe</span>
           </label>
@@ -317,15 +317,15 @@ export default function AdminEditArticlePage() {
       {/* Boutons */}
       <div className="flex items-center justify-between">
         <div className="flex gap-3">
-          <button onClick={() => handleSave()} disabled={saving || !tokenReady} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#fff', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: (saving || !tokenReady) ? 0.6 : 1 }}>
+          <button onClick={() => handleSave()} disabled={saving || !tokenReady} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'var(--font-montserrat), sans-serif', backgroundColor: '#fff', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: (saving || !tokenReady) ? 0.6 : 1 }}>
             {saving ? 'Sauvegarde...' : '💾 Sauvegarder'}
           </button>
           {form.published ? (
-            <button onClick={() => handleSave(false)} disabled={saving} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#f3f4f6', color: '#555', border: '2px solid #ddd', opacity: saving ? 0.6 : 1 }}>
+            <button onClick={() => handleSave(false)} disabled={saving} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'var(--font-montserrat), sans-serif', backgroundColor: '#f3f4f6', color: '#555', border: '2px solid #ddd', opacity: saving ? 0.6 : 1 }}>
               Dépublier
             </button>
           ) : (
-            <button onClick={() => handleSave(true)} disabled={saving || !tokenReady} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#F5C400', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: (saving || !tokenReady) ? 0.6 : 1 }}>
+            <button onClick={() => handleSave(true)} disabled={saving || !tokenReady} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'var(--font-montserrat), sans-serif', backgroundColor: '#F5C400', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: (saving || !tokenReady) ? 0.6 : 1 }}>
               🚀 Publier
             </button>
           )}

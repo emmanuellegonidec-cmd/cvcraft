@@ -45,7 +45,7 @@ export default function RgpdConsentModal({
         justifyContent: 'center',
         zIndex: 9999,
         padding: 16,
-        fontFamily: 'Montserrat, sans-serif',
+        fontFamily: 'var(--font-montserrat), sans-serif',
       }}
       onClick={onClose}
     >
@@ -126,7 +126,7 @@ export default function RgpdConsentModal({
               fontSize: 14,
               fontWeight: 700,
               cursor: 'pointer',
-              fontFamily: 'Montserrat, sans-serif',
+              fontFamily: 'var(--font-montserrat), sans-serif',
             }}
           >
             Annuler
@@ -143,7 +143,7 @@ export default function RgpdConsentModal({
               fontSize: 14,
               fontWeight: 800,
               cursor: checked ? 'pointer' : 'not-allowed',
-              fontFamily: 'Montserrat, sans-serif',
+              fontFamily: 'var(--font-montserrat), sans-serif',
               boxShadow: checked ? '3px 3px 0 #E8151B' : 'none',
               transition: 'all 0.12s',
             }}

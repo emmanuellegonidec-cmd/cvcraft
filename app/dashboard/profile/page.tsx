@@ -58,7 +58,7 @@ const inputStyle: React.CSSProperties = {
   padding: '10px 12px',
   border: '2px solid #111',
   borderRadius: 6,
-  fontFamily: 'Montserrat, sans-serif',
+  fontFamily: 'var(--font-montserrat), sans-serif',
   fontSize: 14,
   fontWeight: 500,
   background: '#fff',
@@ -245,7 +245,7 @@ export default function ProfilePage() {
 
       {/* Header */}
       <div style={{ background: '#111', color: '#fff', padding: '0 32px', display: 'flex', alignItems: 'center', gap: 16, height: 64, borderBottom: '3px solid #F5C400', position: 'sticky', top: 0, zIndex: 100 }}>
-        <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: '2px solid #444', color: '#fff', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13 }}>
+        <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: '2px solid #444', color: '#fff', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 700, fontSize: 13 }}>
           ← Retour
         </button>
         <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#E8151B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 16, color: '#fff', border: '2px solid #333', flexShrink: 0 }}>
@@ -337,7 +337,7 @@ export default function ProfilePage() {
               {CONTRACT_OPTIONS.map((ct) => {
                 const active = (profile.contract_types ?? []).includes(ct);
                 return (
-                  <button key={ct} onClick={() => toggleContract(ct)} style={{ padding: '7px 14px', border: `2px solid ${active ? '#111' : '#ccc'}`, borderRadius: 6, background: active ? '#111' : '#fff', color: active ? '#F5C400' : '#555', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: active ? '2px 2px 0 #F5C400' : 'none', transition: 'all 0.15s' }}>
+                  <button key={ct} onClick={() => toggleContract(ct)} style={{ padding: '7px 14px', border: `2px solid ${active ? '#111' : '#ccc'}`, borderRadius: 6, background: active ? '#111' : '#fff', color: active ? '#F5C400' : '#555', fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: active ? '2px 2px 0 #F5C400' : 'none', transition: 'all 0.15s' }}>
                     {ct}
                   </button>
                 );
@@ -348,7 +348,7 @@ export default function ProfilePage() {
 
         {/* Bouton enregistrer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 32 }}>
-          <button onClick={handleSave} disabled={saving} style={{ background: saved ? '#1A7A4A' : '#F5C400', color: saved ? '#fff' : '#111', border: '2px solid #111', borderRadius: 8, padding: '12px 32px', fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 15, cursor: saving ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #111', transition: 'all 0.15s' }}>
+          <button onClick={handleSave} disabled={saving} style={{ background: saved ? '#1A7A4A' : '#F5C400', color: saved ? '#fff' : '#111', border: '2px solid #111', borderRadius: 8, padding: '12px 32px', fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 900, fontSize: 15, cursor: saving ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #111', transition: 'all 0.15s' }}>
             {saving ? '⏳ Enregistrement…' : saved ? '✅ Enregistré !' : '💾 Enregistrer le profil'}
           </button>
         </div>
@@ -380,7 +380,7 @@ export default function ProfilePage() {
           {pwdError && <div style={{ background: '#FEE', border: '2px solid #E8151B', borderRadius: 6, padding: '10px 14px', fontSize: 13, color: '#E8151B', fontWeight: 600 }}>{pwdError}</div>}
           {pwdSuccess && <div style={{ background: '#EFF9F3', border: '2px solid #1A7A4A', borderRadius: 6, padding: '10px 14px', fontSize: 13, color: '#1A7A4A', fontWeight: 700 }}>✅ Mot de passe mis à jour avec succès !</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button onClick={handleChangePassword} disabled={pwdSaving || !newPassword || !confirmPassword} style={{ background: '#111', color: '#fff', border: '2px solid #111', borderRadius: 8, padding: '11px 28px', fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontSize: 14, cursor: pwdSaving || !newPassword || !confirmPassword ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #555', opacity: !newPassword || !confirmPassword ? 0.5 : 1, transition: 'all 0.15s' }}>
+            <button onClick={handleChangePassword} disabled={pwdSaving || !newPassword || !confirmPassword} style={{ background: '#111', color: '#fff', border: '2px solid #111', borderRadius: 8, padding: '11px 28px', fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 900, fontSize: 14, cursor: pwdSaving || !newPassword || !confirmPassword ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #555', opacity: !newPassword || !confirmPassword ? 0.5 : 1, transition: 'all 0.15s' }}>
               {pwdSaving ? '⏳ Mise à jour…' : '🔒 Mettre à jour le mot de passe'}
             </button>
           </div>
@@ -392,7 +392,7 @@ export default function ProfilePage() {
           <p style={{ fontSize: 14, color: '#555', marginBottom: 20, lineHeight: 1.6 }}>
             La suppression de votre compte est <strong>irréversible</strong>. Toutes vos données seront effacées définitivement : offres d'emploi, contacts, échanges, documents (CV, lettres de motivation).
           </p>
-          <button onClick={() => setShowDeleteModal(true)} style={{ background: '#fff', color: '#E8151B', border: '2px solid #E8151B', borderRadius: 8, padding: '10px 24px', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '2px 2px 0 #E8151B' }}>
+          <button onClick={() => setShowDeleteModal(true)} style={{ background: '#fff', color: '#E8151B', border: '2px solid #E8151B', borderRadius: 8, padding: '10px 24px', fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '2px 2px 0 #E8151B' }}>
             Supprimer mon compte
           </button>
         </div>
@@ -401,7 +401,7 @@ export default function ProfilePage() {
       {/* Modale suppression */}
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 24 }}>
-          <div style={{ background: '#fff', border: '3px solid #E8151B', borderRadius: 12, boxShadow: '5px 5px 0 #E8151B', maxWidth: 480, width: '100%', padding: 32, fontFamily: 'Montserrat, sans-serif' }}>
+          <div style={{ background: '#fff', border: '3px solid #E8151B', borderRadius: 12, boxShadow: '5px 5px 0 #E8151B', maxWidth: 480, width: '100%', padding: 32, fontFamily: 'var(--font-montserrat), sans-serif' }}>
             <div style={{ fontSize: 20, fontWeight: 900, color: '#E8151B', marginBottom: 12 }}>⚠️ Suppression définitive</div>
             <p style={{ fontSize: 14, color: '#333', lineHeight: 1.7, marginBottom: 20 }}>
               Cette action est <strong>irréversible</strong>.<br />
@@ -410,8 +410,8 @@ export default function ProfilePage() {
             </p>
             <input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="SUPPRIMER" style={{ ...inputStyle, borderColor: '#E8151B', marginBottom: 20 }} />
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} style={{ padding: '10px 20px', border: '2px solid #111', borderRadius: 6, background: '#fff', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>Annuler</button>
-              <button onClick={handleDeleteAccount} disabled={deleteConfirmText !== 'SUPPRIMER' || deleting} style={{ padding: '10px 20px', border: '2px solid #E8151B', borderRadius: 6, background: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#eee', color: deleteConfirmText === 'SUPPRIMER' ? '#fff' : '#aaa', fontFamily: 'Montserrat, sans-serif', fontWeight: 900, cursor: deleteConfirmText === 'SUPPRIMER' ? 'pointer' : 'not-allowed', fontSize: 14 }}>
+              <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} style={{ padding: '10px 20px', border: '2px solid #111', borderRadius: 6, background: '#fff', fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>Annuler</button>
+              <button onClick={handleDeleteAccount} disabled={deleteConfirmText !== 'SUPPRIMER' || deleting} style={{ padding: '10px 20px', border: '2px solid #E8151B', borderRadius: 6, background: deleteConfirmText === 'SUPPRIMER' ? '#E8151B' : '#eee', color: deleteConfirmText === 'SUPPRIMER' ? '#fff' : '#aaa', fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 900, cursor: deleteConfirmText === 'SUPPRIMER' ? 'pointer' : 'not-allowed', fontSize: 14 }}>
                 {deleting ? 'Suppression…' : 'Supprimer définitivement'}
               </button>
             </div>

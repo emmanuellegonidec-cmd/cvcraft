@@ -41,7 +41,7 @@ export default function AdminCommunicationPage() {
     <div className="max-w-2xl">
       <h1
         className="text-3xl font-black mb-2"
-        style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}
+        style={{ fontFamily: 'var(--font-montserrat), sans-serif', color: '#111' }}
       >
         📣 Communication
       </h1>
@@ -70,7 +70,7 @@ export default function AdminCommunicationPage() {
         <div>
           <label
             className="block text-sm font-black mb-1"
-            style={{ fontFamily: 'Montserrat, sans-serif' }}
+            style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}
           >
             Objet de l'email *
           </label>
@@ -89,7 +89,7 @@ export default function AdminCommunicationPage() {
         <div>
           <label
             className="block text-sm font-black mb-1"
-            style={{ fontFamily: 'Montserrat, sans-serif' }}
+            style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}
           >
             Corps du message *
           </label>
@@ -116,7 +116,7 @@ export default function AdminCommunicationPage() {
             disabled={!canSend || sending}
             className="px-6 py-3 font-black text-sm rounded transition-all"
             style={{
-              fontFamily: 'Montserrat, sans-serif',
+              fontFamily: 'var(--font-montserrat), sans-serif',
               backgroundColor: canSend ? '#F5C400' : '#f3f4f6',
               color: canSend ? '#111' : '#aaa',
               border: `2px solid ${canSend ? '#111' : '#ddd'}`,
@@ -139,7 +139,7 @@ export default function AdminCommunicationPage() {
               disabled={sending}
               className="px-4 py-2 font-black text-sm rounded"
               style={{
-                fontFamily: 'Montserrat, sans-serif',
+                fontFamily: 'var(--font-montserrat), sans-serif',
                 backgroundColor: '#E8151B',
                 color: '#fff',
                 border: '2px solid #E8151B',

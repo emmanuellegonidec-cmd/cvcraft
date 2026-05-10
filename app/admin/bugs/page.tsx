@@ -39,19 +39,19 @@ export default function AdminBugsPage() {
     <div style={{ display: "flex", minHeight: "100vh", background: "#f5f5f5" }}>
       <AdminNav />
       <main style={{ flex: 1, padding: "2rem" }}>
-        <h1 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 900, fontSize: 28, marginBottom: 8 }}>
+        <h1 style={{ fontFamily: "var(--font-montserrat), sans-serif", fontWeight: 900, fontSize: 28, marginBottom: 8 }}>
           🐛 Bugs signalés
         </h1>
-        <p style={{ color: "#666", fontFamily: "Montserrat, sans-serif", fontSize: 14, marginBottom: 32 }}>
+        <p style={{ color: "#666", fontFamily: "var(--font-montserrat), sans-serif", fontSize: 14, marginBottom: 32 }}>
           Remontées des utilisateurs via le chatbot
         </p>
 
         {loading ? (
-          <p style={{ fontFamily: "Montserrat, sans-serif" }}>Chargement...</p>
+          <p style={{ fontFamily: "var(--font-montserrat), sans-serif" }}>Chargement...</p>
         ) : bugs.length === 0 ? (
           <div style={{
             background: "#fff", border: "2px solid #111", padding: "2rem",
-            textAlign: "center", fontFamily: "Montserrat, sans-serif",
+            textAlign: "center", fontFamily: "var(--font-montserrat), sans-serif",
             boxShadow: "4px 4px 0 #111",
           }}>
             Aucun bug signalé pour le moment 🎉
@@ -64,7 +64,7 @@ export default function AdminBugsPage() {
                 border: "2px solid #111",
                 boxShadow: "4px 4px 0 #111",
                 padding: "1.25rem 1.5rem",
-                fontFamily: "Montserrat, sans-serif",
+                fontFamily: "var(--font-montserrat), sans-serif",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>

@@ -71,7 +71,7 @@ export default function SeoFields({
       border: '2px solid #F5C400',
       borderRadius: 10,
       padding: 20,
-      fontFamily: 'Montserrat, sans-serif',
+      fontFamily: 'var(--font-montserrat), sans-serif',
     }}>
       <div style={{ fontSize: 14, fontWeight: 900, color: '#111', marginBottom: 4 }}>
         🔍 SEO — Comment ton article apparaîtra sur Google
@@ -101,7 +101,7 @@ export default function SeoFields({
             borderRadius: 6,
             border: `2px solid ${titleLen > 65 ? '#E8151B' : '#111'}`,
             fontSize: 13,
-            fontFamily: 'Montserrat, sans-serif',
+            fontFamily: 'var(--font-montserrat), sans-serif',
             outline: 'none',
           }}
         />
@@ -131,7 +131,7 @@ export default function SeoFields({
             borderRadius: 6,
             border: `2px solid ${descLen > 170 ? '#E8151B' : '#111'}`,
             fontSize: 13,
-            fontFamily: 'Montserrat, sans-serif',
+            fontFamily: 'var(--font-montserrat), sans-serif',
             outline: 'none',
             resize: 'vertical',
           }}
@@ -168,7 +168,7 @@ export default function SeoFields({
               fontWeight: 900,
               color: '#111',
               flexShrink: 0,
-              fontFamily: 'Montserrat, sans-serif',
+              fontFamily: 'var(--font-montserrat), sans-serif',
             }}>J</div>
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3, minWidth: 0 }}>
               <span style={{ fontSize: 14, color: '#202124', fontWeight: 500 }}>Jean Find My Job</span>

@@ -65,7 +65,7 @@ export default function Sidebar({
     borderRadius: 0,
     background: 'transparent',
     color: '#aaa',
-    fontFamily: 'Montserrat, sans-serif',
+    fontFamily: 'var(--font-montserrat), sans-serif',
     fontWeight: 500,
     fontSize: 14,
     cursor: 'pointer',
@@ -111,7 +111,7 @@ export default function Sidebar({
       background: '#0f0f0f',
       display: 'flex', flexDirection: 'column',
       height: '100vh', position: 'sticky', top: 0,
-      fontFamily: 'Montserrat, sans-serif',
+      fontFamily: 'var(--font-montserrat), sans-serif',
       borderRight: '1px solid #1e1e1e',
       overflow: 'hidden',
     }}>
@@ -161,7 +161,7 @@ export default function Sidebar({
             </button>
             <button
               onClick={() => router.push('/dashboard/cv-creator')}
-              style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 6px 22px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#aaa', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+              style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 6px 22px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#aaa', fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#F5C400'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#aaa'; }}
             >
@@ -190,7 +190,7 @@ export default function Sidebar({
             width: '100%', padding: '9px 12px',
             border: '1px solid #242424', borderRadius: 8,
             background: 'transparent', cursor: 'pointer',
-            fontFamily: 'Montserrat, sans-serif', transition: 'all 0.12s',
+            fontFamily: 'var(--font-montserrat), sans-serif', transition: 'all 0.12s',
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#F5C400'; (e.currentTarget as HTMLButtonElement).style.background = '#161616'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#242424'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
@@ -211,7 +211,7 @@ export default function Sidebar({
             width: '100%', padding: '7px 12px', marginTop: 2,
             border: 'none', borderRadius: 6,
             background: 'transparent', color: '#aaa',
-            fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 12,
+            fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 600, fontSize: 12,
             cursor: 'pointer', transition: 'color 0.12s',
           }}
           onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = '#E8151B'}

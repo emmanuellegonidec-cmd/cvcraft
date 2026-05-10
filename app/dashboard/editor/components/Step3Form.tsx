@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { CVFormData, Experience, Education } from '@/lib/types';
 import { TemplateId, FontId } from '@/lib/cv-config';
 
-const FONT = 'Montserrat, sans-serif';
+const FONT = 'var(--font-montserrat), sans-serif';
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
 const inputStyle: React.CSSProperties = {

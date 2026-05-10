@@ -65,7 +65,7 @@ export default function SpontaneousMode({ contacts, setNewJob, onSave, onClose, 
     <div>
       <button
         onClick={() => { onBack(); setSpontError(null); }}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#888', fontWeight: 700, marginBottom: 16, fontFamily: 'var(--font-montserrat), sans-serif' }}>
         ← Retour
       </button>
 

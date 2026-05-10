@@ -128,7 +128,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
 
       {/* NAV */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: '#fff', borderBottom: '2.5px solid #111', position: 'sticky', top: 0, zIndex: 100 }}>
-        <Link href="/" style={{ textDecoration: 'none', fontFamily: 'Montserrat,sans-serif', fontSize: '0.95rem', fontWeight: 900, color: '#111' }}>
+        <Link href="/" style={{ textDecoration: 'none', fontFamily: 'var(--font-montserrat), sans-serif', fontSize: '0.95rem', fontWeight: 900, color: '#111' }}>
           Jean <span style={{ color: '#E8151B' }}>find my Job</span>
         </Link>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -233,7 +233,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         {/* Articles liés */}
         {related.length > 0 && (
           <div style={{ maxWidth: 860, margin: '4rem auto 0' }}>
-            <h4 style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 20, borderBottom: '2px solid #111', paddingBottom: 8, fontFamily: 'Montserrat, sans-serif' }}>
+            <h4 style={{ fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 20, borderBottom: '2px solid #111', paddingBottom: 8, fontFamily: 'var(--font-montserrat), sans-serif' }}>
               Dans la même catégorie
             </h4>
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(related.length, 3)}, 1fr)`, gap: '1.5rem' }}>

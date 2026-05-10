@@ -22,7 +22,7 @@ export default function SecureStorageNotice({ compact = false, style }: SecureSt
         fontSize: 11,
         color: '#666',
         lineHeight: 1.5,
-        fontFamily: 'Montserrat, sans-serif',
+        fontFamily: 'var(--font-montserrat), sans-serif',
         ...style,
       }}>
         🔒 Stockage sécurisé · Conservation 2 ans ·{' '}
@@ -39,7 +39,7 @@ export default function SecureStorageNotice({ compact = false, style }: SecureSt
       fontSize: 12,
       color: '#666',
       lineHeight: 1.5,
-      fontFamily: 'Montserrat, sans-serif',
+      fontFamily: 'var(--font-montserrat), sans-serif',
       ...style,
     }}>
       🔒 <strong>Stockage sécurisé</strong> · Vos données sont chiffrées et hébergées en UE. Conservation 2 ans après dernière connexion.{' '}

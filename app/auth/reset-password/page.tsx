@@ -10,7 +10,7 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const inputStyle: React.CSSProperties = { width: '100%', border: '2px solid #E0E0E0', borderRadius: 8, padding: '11px 14px', fontFamily: 'Montserrat, sans-serif', fontSize: 14, fontWeight: 500, outline: 'none', color: '#111', background: '#fff', boxSizing: 'border-box' };
+  const inputStyle: React.CSSProperties = { width: '100%', border: '2px solid #E0E0E0', borderRadius: 8, padding: '11px 14px', fontFamily: 'var(--font-montserrat), sans-serif', fontSize: 14, fontWeight: 500, outline: 'none', color: '#111', background: '#fff', boxSizing: 'border-box' };
   const labelStyle: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 };
 
   async function handleSubmit(e: React.FormEvent) {
@@ -32,11 +32,11 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div style={{ fontFamily: 'Montserrat, sans-serif', minHeight: '100vh', background: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ fontFamily: 'var(--font-montserrat), sans-serif', minHeight: '100vh', background: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 2.5rem', background: '#fff', borderBottom: '2.5px solid #111' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <img src="/logojeanfindmyjob.webp" alt="Jean Find My Job" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
-          <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '1rem', fontWeight: 900, color: '#111' }}>
+          <span style={{ fontFamily: 'var(--font-montserrat), sans-serif', fontSize: '1rem', fontWeight: 900, color: '#111' }}>
             Jean <span style={{ color: '#E8151B' }}>Find My Job</span>
           </span>
         </Link>
@@ -78,7 +78,7 @@ export default function ResetPasswordPage() {
                   border: '2px solid #111',
                   borderRadius: 8,
                   padding: 13,
-                  fontFamily: 'Montserrat, sans-serif',
+                  fontFamily: 'var(--font-montserrat), sans-serif',
                   fontSize: 14,
                   fontWeight: 800,
                   textDecoration: 'none',
@@ -102,7 +102,7 @@ export default function ResetPasswordPage() {
                 <input style={inputStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vous@email.com" required />
               </div>
 
-              <button type="submit" disabled={loading} style={{ width: '100%', background: loading ? '#555' : '#111', color: '#F5C400', border: '2px solid #111', borderRadius: 8, padding: 13, fontFamily: 'Montserrat, sans-serif', fontSize: 14, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #E8151B', letterSpacing: '0.02em' }}>
+              <button type="submit" disabled={loading} style={{ width: '100%', background: loading ? '#555' : '#111', color: '#F5C400', border: '2px solid #111', borderRadius: 8, padding: 13, fontFamily: 'var(--font-montserrat), sans-serif', fontSize: 14, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #E8151B', letterSpacing: '0.02em' }}>
                 {loading ? 'Envoi en cours...' : 'Envoyer le lien →'}
               </button>
 

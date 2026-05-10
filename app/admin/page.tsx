@@ -84,7 +84,7 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-3xl font-black mb-2" style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}>
+      <h1 className="text-3xl font-black mb-2" style={{ fontFamily: 'var(--font-montserrat), sans-serif', color: '#111' }}>
         Tableau de bord
       </h1>
       <p className="text-gray-500 mb-8 text-sm font-medium">Vue d'ensemble de Jean Find My Job</p>
@@ -97,7 +97,7 @@ export default function AdminDashboard() {
               <span className="text-2xl">{card.icon}</span>
               <span className="text-xs font-bold px-2 py-1 rounded" style={{ backgroundColor: card.color, color: '#111' }}>↑</span>
             </div>
-            <div className="text-4xl font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}>{card.value}</div>
+            <div className="text-4xl font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif', color: '#111' }}>{card.value}</div>
             <div className="text-sm font-bold text-gray-700">{card.label}</div>
             <div className="text-xs text-gray-400 mt-1">{card.sub}</div>
           </div>
@@ -106,7 +106,7 @@ export default function AdminDashboard() {
 
       {/* Derniers inscrits */}
       <div className="bg-white rounded p-6" style={{ border: '2px solid #111', boxShadow: '4px 4px 0px #111' }}>
-        <h2 className="text-lg font-black mb-4" style={{ fontFamily: 'Montserrat, sans-serif' }}>👤 Derniers inscrits</h2>
+        <h2 className="text-lg font-black mb-4" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>👤 Derniers inscrits</h2>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b-2 border-gray-100">

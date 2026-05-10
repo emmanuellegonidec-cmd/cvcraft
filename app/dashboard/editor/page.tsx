@@ -15,7 +15,7 @@ import { Step4Generate } from './components/Step4Generate';
 import { Step5Preview } from './components/Step5Preview';
 import { Step6Save } from './components/Step6Save';
 
-const FONT = 'Montserrat, sans-serif';
+const FONT = 'var(--font-montserrat), sans-serif';
 
 const DEMO_FORM: Partial<CVFormData> = {
   firstName: 'Jean', lastName: 'Doe',
@@ -373,7 +373,7 @@ function CVPreviewWrapper({ form, photo, template, accentColor, font }: any) {
 export default function EditorPage() {
   return (
     <Suspense fallback={
-      <div style={{ padding: '4rem', textAlign: 'center', color: '#111', fontFamily: 'Montserrat, sans-serif', fontWeight: 700 }}>
+      <div style={{ padding: '4rem', textAlign: 'center', color: '#111', fontFamily: 'var(--font-montserrat), sans-serif', fontWeight: 700 }}>
         Chargement...
       </div>
     }>

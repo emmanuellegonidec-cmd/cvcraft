@@ -119,7 +119,7 @@ export default function AdminNewArticlePage() {
   return (
     <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-black" style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}>✍️ Nouvel article</h1>
+        <h1 className="text-3xl font-black" style={{ fontFamily: 'var(--font-montserrat), sans-serif', color: '#111' }}>✍️ Nouvel article</h1>
         <button onClick={() => router.push('/admin/articles')} className="text-sm font-semibold text-gray-500 hover:text-gray-800">← Retour</button>
       </div>
 
@@ -135,19 +135,19 @@ export default function AdminNewArticlePage() {
 
         {/* Titre */}
         <div>
-          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Titre *</label>
+          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>Titre *</label>
           <input type="text" value={form.title} onChange={handleTitleChange} placeholder="Ex : 5 conseils pour décrocher un entretien après 50 ans" className="w-full px-4 py-3 rounded text-sm font-medium outline-none" style={{ border: '2px solid #111' }} />
         </div>
 
         {/* Slug + Catégorie */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Slug (URL)</label>
+            <label className="block text-sm font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>Slug (URL)</label>
             <input type="text" name="slug" value={form.slug} onChange={handleChange} className="w-full px-4 py-3 rounded text-sm font-medium outline-none" style={{ border: '2px solid #111', backgroundColor: '#fafafa' }} />
             <p className="text-xs text-gray-400 mt-1">Généré automatiquement depuis le titre.</p>
           </div>
           <div>
-            <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Catégorie</label>
+            <label className="block text-sm font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>Catégorie</label>
             <select name="category" value={form.category} onChange={handleChange} className="w-full px-4 py-3 rounded text-sm font-medium outline-none" style={{ border: '2px solid #111' }}>
               {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
@@ -156,7 +156,7 @@ export default function AdminNewArticlePage() {
 
         {/* Extrait */}
         <div>
-          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>Extrait (affiché sur la landing page)</label>
+          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>Extrait (affiché sur la landing page)</label>
           <textarea name="excerpt" value={form.excerpt} onChange={handleChange} rows={2} placeholder="Résumé court affiché sous le titre..." className="w-full px-4 py-3 rounded text-sm font-medium outline-none resize-none" style={{ border: '2px solid #111' }} />
         </div>
 
@@ -172,7 +172,7 @@ export default function AdminNewArticlePage() {
         />
 
         {/* Règles images */}
-        <div style={{ backgroundColor: '#fffbe6', border: '2px solid #F5C400', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12, fontFamily: 'Montserrat, sans-serif' }}>
+        <div style={{ backgroundColor: '#fffbe6', border: '2px solid #F5C400', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12, fontFamily: 'var(--font-montserrat), sans-serif' }}>
           <div style={{ fontWeight: 800, color: '#111', marginBottom: 4 }}>📐 Règles pour les images du blog</div>
           <ul style={{ margin: 0, paddingLeft: 16, color: '#555', lineHeight: 1.8 }}>
             <li><strong>Dimensions :</strong> 1200 × 630 px (format 16/9 recommandé)</li>
@@ -184,12 +184,12 @@ export default function AdminNewArticlePage() {
 
         {/* Image de couverture */}
         <div>
-          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+          <label className="block text-sm font-black mb-1" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>
             🖼️ Image de couverture
             <span className="ml-2 text-xs font-normal text-gray-400">1200×630px · JPG/PNG/WebP · max 5MB</span>
           </label>
           <div className="flex items-center gap-3 mb-3">
-            <label className="px-4 py-2 rounded text-sm font-black cursor-pointer" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: uploadingCover ? '#f3f4f6' : '#111', color: uploadingCover ? '#888' : '#F5C400', border: '2px solid #111', boxShadow: uploadingCover ? 'none' : '3px 3px 0 #E8151B' }}>
+            <label className="px-4 py-2 rounded text-sm font-black cursor-pointer" style={{ fontFamily: 'var(--font-montserrat), sans-serif', backgroundColor: uploadingCover ? '#f3f4f6' : '#111', color: uploadingCover ? '#888' : '#F5C400', border: '2px solid #111', boxShadow: uploadingCover ? 'none' : '3px 3px 0 #E8151B' }}>
               {uploadingCover ? '⏳ Upload...' : '📁 Uploader une image'}
               <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={handleCoverUpload} style={{ display: 'none' }} disabled={uploadingCover || !tokenReady} />
             </label>
@@ -210,7 +210,7 @@ export default function AdminNewArticlePage() {
 
         {/* Éditeur */}
         <div>
-          <label className="block text-sm font-black mb-2" style={{ fontFamily: 'Montserrat, sans-serif' }}>Contenu de l&apos;article</label>
+          <label className="block text-sm font-black mb-2" style={{ fontFamily: 'var(--font-montserrat), sans-serif' }}>Contenu de l&apos;article</label>
           <RichEditor
             content={form.content}
             onChange={html => setForm(f => ({ ...f, content: html }))}
@@ -220,10 +220,10 @@ export default function AdminNewArticlePage() {
       </div>
 
       <div className="flex gap-3">
-        <button onClick={() => handleSave(false)} disabled={saving || !tokenReady} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#fff', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: (saving || !tokenReady) ? 0.6 : 1 }}>
+        <button onClick={() => handleSave(false)} disabled={saving || !tokenReady} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'var(--font-montserrat), sans-serif', backgroundColor: '#fff', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: (saving || !tokenReady) ? 0.6 : 1 }}>
           {saving ? 'Sauvegarde...' : '💾 Sauvegarder en brouillon'}
         </button>
-        <button onClick={() => handleSave(true)} disabled={saving || !tokenReady} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: '#F5C400', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: (saving || !tokenReady) ? 0.6 : 1 }}>
+        <button onClick={() => handleSave(true)} disabled={saving || !tokenReady} className="px-6 py-3 font-black text-sm rounded" style={{ fontFamily: 'var(--font-montserrat), sans-serif', backgroundColor: '#F5C400', color: '#111', border: '2px solid #111', boxShadow: '3px 3px 0px #111', opacity: (saving || !tokenReady) ? 0.6 : 1 }}>
           {saving ? 'Publication...' : '🚀 Publier maintenant'}
         </button>
       </div>
