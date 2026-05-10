@@ -105,7 +105,6 @@ export default async function ArticlePage({ params }: { params: { slug: string }
   return (
     <div style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", background: '#fff', color: '#111', minHeight: '100vh' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
         .article-content h1 { font-size: 2rem; font-weight: 900; margin: 2rem 0 1rem; color: #111; letter-spacing: -0.02em; line-height: 1.2; }
         .article-content h2 { font-size: 1.5rem; font-weight: 800; margin: 2rem 0 0.75rem; color: #111; padding-bottom: 8px; border-bottom: 2px solid #F5C400; }

@@ -92,14 +92,6 @@ export default function SynthesePage() {
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap';
-    document.head.appendChild(link);
-    return () => { document.head.removeChild(link); };
-  }, []);
-
   const fetchData = async () => {
     setLoading(true);
     try {

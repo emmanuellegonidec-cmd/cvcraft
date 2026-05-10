@@ -3,10 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
-import { Montserrat } from 'next/font/google';
 import CVsSection from './components/CVsSection';
 import LMsSection from './components/LMsSection';
-const montserrat = Montserrat({ subsets: ['latin'], weight: ['500', '600', '700', '800', '900'] });
 
 interface UserProfile {
   first_name?: string;
@@ -231,7 +229,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className={montserrat.className} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa', fontFamily: 'var(--font-montserrat), sans-serif' }}>
         <div style={{ fontSize: 16, color: '#111', fontWeight: 600 }}>Chargement…</div>
       </div>
     );
@@ -241,7 +239,7 @@ export default function ProfilePage() {
   const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || email?.split('@')[0] || 'Mon profil';
 
   return (
-    <div className={montserrat.className} style={{ minHeight: '100vh', background: '#fafafa' }}>
+    <div style={{ minHeight: '100vh', background: '#fafafa', fontFamily: 'var(--font-montserrat), sans-serif' }}>
 
       {/* Header */}
       <div style={{ background: '#111', color: '#fff', padding: '0 32px', display: 'flex', alignItems: 'center', gap: 16, height: 64, borderBottom: '3px solid #F5C400', position: 'sticky', top: 0, zIndex: 100 }}>

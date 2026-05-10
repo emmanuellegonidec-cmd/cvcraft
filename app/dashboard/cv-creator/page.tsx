@@ -214,7 +214,6 @@ export default function CVCreatorPage() {
 
   return (
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800;900&display=swap');`}</style>
       <div style={{ display: 'flex', height: '100vh', fontFamily: FONT, overflow: 'hidden' }}>
 
         {/* ── SIDEBAR ── */}

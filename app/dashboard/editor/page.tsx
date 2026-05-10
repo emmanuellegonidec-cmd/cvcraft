@@ -132,7 +132,6 @@ function EditorContent() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800;900&display=swap');
         * { box-sizing: border-box; }
         .editor-page { font-family: var(--font-montserrat), 'Montserrat', sans-serif; display: flex; height: 100vh; overflow: hidden; }
         .editor-sidebar { width: 200px; min-width: 200px; background: #0f0f0f; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; border-right: 1px solid #1e1e1e; flex-shrink: 0; }

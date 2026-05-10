@@ -688,7 +688,6 @@ export default function JobDetailPage() {
 
   return (
     <div style={{ background: '#F5F5F0', minHeight: '100vh', fontFamily: FONT, display: 'flex' }}>
-      <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
       <style>{`
         .jfmj-sidebar { display: flex; }
         .jfmj-main { flex: 1; padding: 24px 28px 64px; min-width: 0; }
