@@ -4,7 +4,6 @@ import FaqSection from './FaqSection';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import Image from 'next/image'
 import CTAButton from '@/components/landing/CTAButton'
-import Script from 'next/script'
 
 type Article = {
   id: string
@@ -63,7 +62,7 @@ export default async function LandingPage() {
 
   return (
     <>
-      <Script id="schema-org" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <div
   style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", background: '#FFFFFF', color: '#111111', lineHeight: '1.6' }}>
       <style>{`
