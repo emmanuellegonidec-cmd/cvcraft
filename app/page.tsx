@@ -27,6 +27,17 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Outils': '#555',
 }
 
+// Formatage de date manuel et déterministe (évite les divergences entre
+// Node.js et Chrome sur toLocaleDateString — cause classique d'hydration mismatch)
+function formatDateFR(iso: string): string {
+  const months = [
+    'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+    'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+  ]
+  const d = new Date(iso)
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+}
+
 async function getPublishedArticles(): Promise<Article[]> {
   try {
     const adminClient = createSupabaseClient(
@@ -444,9 +455,7 @@ export default async function LandingPage() {
             <div className="blog-grid" style={{ display:'grid',gridTemplateColumns:`repeat(${Math.min(articles.length,3)},1fr)`,gap:'1.5rem' }}>
               {articles.map((article) => {
                 const catColor = CATEGORY_COLORS[article.category] ?? '#111'
-                const dateStr = article.published_at
-                  ? new Date(article.published_at).toLocaleDateString('fr-FR',{ day:'numeric',month:'long',year:'numeric' })
-                  : ''
+                const dateStr = article.published_at ? formatDateFR(article.published_at) : ''
                 return (
                   <Link key={article.id} href={`/blog/${article.slug}`} className="blog-card">
                     <div style={{ height:180,background:article.cover_image_url?'transparent':`linear-gradient(135deg,${catColor} 0%,${catColor}cc 100%)`,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden' }}>
