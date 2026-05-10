@@ -236,7 +236,7 @@ export default async function LandingPage() {
         <div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>01</div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>📋 Tableau de bord</div>
-          <h3 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Votre recherche,<br />enfin organisée</h3>
+          <h2 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Votre recherche,<br />enfin organisée</h2>
           <p style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Fini les Post-it et les tableurs. Toutes vos candidatures dans un seul tableau de bord visuel — vous savez exactement où vous en êtes, à chaque instant..</p>
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
             {[
@@ -286,7 +286,7 @@ export default async function LandingPage() {
         <div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>02</div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>🗂️ Parcours par offre</div>
-          <h3 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Chaque candidature<br />a son propre<br />parcours</h3>
+          <h2 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Chaque candidature<br />a son propre<br />parcours</h2>
           <p style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Fini les étapes génériques. Pour chaque offre, vous construisez votre parcours sur mesure — avec les vraies étapes vécues, les vraies dates, et rien de superflu.</p>
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
             {[
@@ -311,7 +311,7 @@ export default async function LandingPage() {
         <div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>03</div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",display:'inline-block',background:'#FDEAEA',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>🎯 Score ATS</div>
-          <h3 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Votre CV passe-t-il<br />les filtres<br />automatiques ?</h3>
+          <h2 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Votre CV passe-t-il<br />les filtres<br />automatiques ?</h2>
           <p style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>70% des CVs sont éliminés avant d&apos;atteindre un recruteur. Jean analyse votre CV face à la description du poste et vous dit exactement où améliorer vos chances.</p>
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
             {[
@@ -367,7 +367,7 @@ export default async function LandingPage() {
                   {s.num}
                 </div>
                 <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:10,fontWeight:800,color:'#F5C400',letterSpacing:'0.1em',marginBottom:8,textTransform:'uppercase' }}>Étape {s.num}</div>
-                <h4 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",color:'#fff',fontSize:'0.95rem',fontWeight:800,marginBottom:10,lineHeight:1.35 }}>{s.title}</h4>
+                <h3 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",color:'#fff',fontSize:'0.95rem',fontWeight:800,marginBottom:10,lineHeight:1.35 }}>{s.title}</h3>
                 <p style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",color:'rgba(255,255,255,0.6)',fontSize:13,lineHeight:1.7,fontWeight:500 }}>{s.desc}</p>
               </div>
             ))}
@@ -398,7 +398,7 @@ export default async function LandingPage() {
               
               <div key={f.title} className="feat-card">
                 <div style={{ fontSize:24,marginBottom:12 }}>{f.icon}</div>
-                <h4 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:15,fontWeight:800,marginBottom:6 }}>{f.title}</h4>
+                <h3 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:15,fontWeight:800,marginBottom:6 }}>{f.title}</h3>
                 <p style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:13,color:'#555',lineHeight:1.6,fontWeight:500 }}>{f.desc}</p>
               </div>
             ))}
@@ -530,19 +530,19 @@ export default async function LandingPage() {
             <NewsletterForm />
           </div>
           <div>
-            <h5 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Produit</h5>
+            <h3 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Produit</h3>
            {[['Tableau de bord','#fonctionnalites'],['Score ATS','/score-ats'],['Votre parcours par candidature','#fonctionnalites'],['Suivi contacts','#fonctionnalites'],['Statistiques','#fonctionnalites']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
           </div>
           <div>
-            <h5 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Ressources</h5>
+            <h3 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Ressources</h3>
             {[['Blog','/blog'],['FAQ','#faq'],['Chaîne YouTube','https://www.youtube.com/channel/UCDgezWysIr83yW5dUlkKbSg']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link" target={href.startsWith('http')?'_blank':undefined} rel={href.startsWith('http')?'noopener noreferrer':undefined}>{label}</a>
             ))}
           </div>
           <div>
-            <h5 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Entreprise</h5>
+            <h3 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Entreprise</h3>
             {[['Contact','mailto:hello@jeanfindmyjob.fr'],['Mentions légales','/mentions-legales'],['Mentions extension Chrome','/extension-mentions-legales'],['Confidentialité extension Chrome','/extension-confidentialite'],['Confidentialité','/confidentialite'],['CGU','/cgu'],['Cookies','/cookies']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
