@@ -53,7 +53,7 @@ export default function CookieBanner() {
           role="dialog"
           aria-label="Bandeau de consentement aux cookies"
           className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t-4 border-black"
-          style={{ fontFamily: 'Montserrat, sans-serif', boxShadow: '0 -8px 0 0 rgba(0,0,0,1)' }}
+          style={{ fontFamily: 'var(--font-montserrat), Montserrat, sans-serif', boxShadow: '0 -8px 0 0 rgba(0,0,0,1)' }}
         >
           <div className="max-w-6xl mx-auto p-6 md:p-8">
             <div className="flex flex-col md:flex-row md:items-center gap-6">
@@ -121,7 +121,7 @@ export default function CookieBanner() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div
             className="bg-white border-4 border-black max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-            style={{ fontFamily: 'Montserrat, sans-serif', boxShadow: '8px 8px 0 0 rgba(0,0,0,1)' }}
+            style={{ fontFamily: 'var(--font-montserrat), Montserrat, sans-serif', boxShadow: '8px 8px 0 0 rgba(0,0,0,1)' }}
           >
             <div className="p-6 md:p-8 border-b-4 border-black">
               <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: '#111' }}>
