@@ -1,8 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-
 :root {
   /* Couleurs Jean Find My Job */
   --red: #E8151B;
@@ -19,7 +17,6 @@
   --muted: #6B6B6B;
   --border: #E0E0E0;
   --shadow: 0 4px 24px rgba(0,0,0,0.10);
-
   /* Aliases pour compatibilité avec le code existant */
   --accent: var(--red);
   --accent-light: var(--red-light);
@@ -28,24 +25,20 @@
   --amber: #D97706;
   --amber-light: #FEF3C7;
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-
 body {
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
   background: var(--cream);
   color: var(--ink);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
-
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
   font-weight: 800;
   line-height: 1.2;
 }
-
 /* Cards */
 .card {
   background: var(--white);
@@ -54,7 +47,6 @@ h1, h2, h3, h4, h5, h6 {
   padding: 1.5rem;
   box-shadow: 4px 4px 0px var(--ink);
 }
-
 /* Buttons */
 .btn-primary {
   display: inline-flex;
@@ -65,7 +57,7 @@ h1, h2, h3, h4, h5, h6 {
   border: 2px solid var(--ink);
   border-radius: 8px;
   padding: 12px 24px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -79,7 +71,6 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 5px 5px 0px var(--red);
 }
 .btn-primary:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px var(--red); }
-
 .btn-secondary {
   display: inline-flex;
   align-items: center;
@@ -89,7 +80,7 @@ h1, h2, h3, h4, h5, h6 {
   border: 2px solid var(--ink);
   border-radius: 8px;
   padding: 12px 24px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -98,7 +89,6 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 3px 3px 0px var(--border);
 }
 .btn-secondary:hover { background: var(--warm); transform: translate(-1px, -1px); box-shadow: 4px 4px 0px var(--border); }
-
 .btn-accent {
   display: inline-flex;
   align-items: center;
@@ -108,7 +98,7 @@ h1, h2, h3, h4, h5, h6 {
   border: 2px solid var(--ink);
   border-radius: 8px;
   padding: 12px 24px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -119,11 +109,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 .btn-accent:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0px var(--ink); }
 .btn-accent:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px var(--ink); }
-
 /* Form elements */
 input, textarea, select {
   width: 100%;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
   font-size: 14px;
   border: 2px solid var(--border);
   border-radius: 8px;
@@ -139,7 +128,6 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 3px rgba(232, 21, 27, 0.1);
 }
 textarea { resize: vertical; }
-
 label {
   display: block;
   font-size: 11px;
