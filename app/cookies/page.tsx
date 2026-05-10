@@ -12,17 +12,17 @@ export const metadata: Metadata = {
 
 export default function CookiesPage() {
   return (
-    <div style={{ fontFamily: "'Montserrat', sans-serif", background: '#fff', color: '#111', minHeight: '100vh' }}>
+    <div style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", background: '#fff', color: '#111', minHeight: '100vh' }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');`}</style>
 
       {/* NAV */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: '#fff', borderBottom: '2.5px solid #111', position: 'sticky', top: 0, zIndex: 100 }}>
         <Link href="/" style={{ textDecoration: 'none' }}>
-          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '0.95rem', fontWeight: 900, color: '#111' }}>
+          <span style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontSize: '0.95rem', fontWeight: 900, color: '#111' }}>
             Jean <span style={{ color: '#E8151B' }}>find my Job</span>
           </span>
         </Link>
-        <Link href="/" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: '#111', textDecoration: 'none', fontWeight: 700 }}>← Retour à l&apos;accueil</Link>
+        <Link href="/" style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontSize: 13, color: '#111', textDecoration: 'none', fontWeight: 700 }}>← Retour à l&apos;accueil</Link>
       </nav>
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '4rem 2rem' }}>
@@ -79,9 +79,9 @@ Conformément aux recommandations CNIL 2021, le bouton "Tout refuser" est aussi 
         </div>
 
         <div style={{ marginTop: '2rem', textAlign: 'center', display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/confidentialite" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: '#E8151B', fontWeight: 700, textDecoration: 'underline' }}>Politique de confidentialité →</Link>
-          <Link href="/cgu" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: '#E8151B', fontWeight: 700, textDecoration: 'underline' }}>Consulter les CGU →</Link>
-          <Link href="/mentions-legales" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: '#E8151B', fontWeight: 700, textDecoration: 'underline' }}>Mentions légales →</Link>
+          <Link href="/confidentialite" style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontSize: 13, color: '#E8151B', fontWeight: 700, textDecoration: 'underline' }}>Politique de confidentialité →</Link>
+          <Link href="/cgu" style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontSize: 13, color: '#E8151B', fontWeight: 700, textDecoration: 'underline' }}>Consulter les CGU →</Link>
+          <Link href="/mentions-legales" style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontSize: 13, color: '#E8151B', fontWeight: 700, textDecoration: 'underline' }}>Mentions légales →</Link>
         </div>
       </main>
     </div>

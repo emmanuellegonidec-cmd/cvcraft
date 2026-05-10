@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase';
 import { pdf } from '@react-pdf/renderer';
 import { CVPdf } from '@/lib/pdf-generator';
 
-const FONT = "'Montserrat', sans-serif";
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 const TEMPLATE_LABELS: Record<string, string> = {
   classic: 'Classique', modern: 'Moderne', minimal: 'Minimaliste',

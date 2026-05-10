@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import CreateContactModal from '@/components/CreateContactModal'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 interface Contact {
   id: string

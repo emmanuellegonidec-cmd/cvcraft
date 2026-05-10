@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   to_apply:    { bg: '#F5F5F0', color: '#888' },

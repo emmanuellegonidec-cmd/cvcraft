@@ -20,7 +20,7 @@ import LinkedLMsSection from './components/LinkedLMsSection'
 import RgpdConsentModal from '@/components/RgpdConsentModal'
 import SecureStorageNotice from '@/components/SecureStorageNotice'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 const BASE_STEPS = [
   { id: 'to_apply',          label: 'Envie de postuler',      num: 1 },

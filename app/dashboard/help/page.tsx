@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-const FONT = "'Montserrat', sans-serif";
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 const TOPICS = [
   {

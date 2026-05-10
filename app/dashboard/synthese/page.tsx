@@ -217,22 +217,22 @@ export default function SynthesePage() {
     <>
       <style>{`
         * { box-sizing: border-box; }
-        .synthese-page { font-family: 'Montserrat', sans-serif; display: flex; min-height: 100vh; background: #f5f5f0; }
+        .synthese-page { font-family: var(--font-montserrat), 'Montserrat', sans-serif; display: flex; min-height: 100vh; background: #f5f5f0; }
         .synthese-sidebar { width: 200px; min-width: 200px; background: #0f0f0f; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; border-right: 1px solid #1e1e1e; }
         .synthese-content { flex: 1; padding: 36px 44px; max-width: 1200px; }
-        .section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-family: 'Montserrat', sans-serif; }
+        .section-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-family: var(--font-montserrat), 'Montserrat', sans-serif; }
         .stat-card { background: #fff; border: 2px solid #111; border-radius: 8px; padding: 16px 18px; box-shadow: 4px 4px 0 #111; }
         table { width: 100%; border-collapse: collapse; background: #fff; border: 2px solid #111; table-layout: fixed; }
-        th { background: #111; color: #fff; text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; font-family: 'Montserrat', sans-serif; }
-        td { padding: 10px 12px; border-bottom: 1px solid #e5e5e5; font-size: 12px; font-family: 'Montserrat', sans-serif; color: #111; vertical-align: top; }
+        th { background: #111; color: #fff; text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; font-family: var(--font-montserrat), 'Montserrat', sans-serif; }
+        td { padding: 10px 12px; border-bottom: 1px solid #e5e5e5; font-size: 12px; font-family: var(--font-montserrat), 'Montserrat', sans-serif; color: #111; vertical-align: top; }
         tr:last-child td { border-bottom: none; }
         tr:nth-child(even) td { background: #fafafa; }
         [contenteditable]:focus { outline: 2px solid #F5C400; background: #fffde7 !important; border-radius: 2px; }
-        .btn-yellow { background: #F5C400; border: 2px solid #111; border-radius: 4px; padding: 9px 20px; font-size: 13px; font-weight: 700; color: #111; cursor: pointer; box-shadow: 3px 3px 0 #111; font-family: 'Montserrat', sans-serif; }
-        .btn-red { background: #E8151B; border: 2px solid #111; border-radius: 4px; padding: 9px 20px; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: 4px 4px 0 #111; font-family: 'Montserrat', sans-serif; }
-        .btn-delete { background: transparent; border: 1px solid #ddd; border-radius: 4px; padding: 3px 8px; font-size: 11px; color: #bbb; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.12s; }
+        .btn-yellow { background: #F5C400; border: 2px solid #111; border-radius: 4px; padding: 9px 20px; font-size: 13px; font-weight: 700; color: #111; cursor: pointer; box-shadow: 3px 3px 0 #111; font-family: var(--font-montserrat), 'Montserrat', sans-serif; }
+        .btn-red { background: #E8151B; border: 2px solid #111; border-radius: 4px; padding: 9px 20px; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: 4px 4px 0 #111; font-family: var(--font-montserrat), 'Montserrat', sans-serif; }
+        .btn-delete { background: transparent; border: 1px solid #ddd; border-radius: 4px; padding: 3px 8px; font-size: 11px; color: #bbb; cursor: pointer; font-family: var(--font-montserrat), 'Montserrat', sans-serif; transition: all 0.12s; }
         .btn-delete:hover { background: #FCEBEB; border-color: #E8151B; color: #E8151B; }
-        input[type=date], select { border: 2px solid #111; border-radius: 4px; padding: 7px 10px; font-size: 13px; font-family: 'Montserrat', sans-serif; background: #fff; color: #111; }
+        input[type=date], select { border: 2px solid #111; border-radius: 4px; padding: 7px 10px; font-size: 13px; font-family: var(--font-montserrat), 'Montserrat', sans-serif; background: #fff; color: #111; }
         .note-editable:empty:before { content: 'Écrire ici...'; color: #ccc; font-style: italic; }
         .print-title { display: none; }
         @media print {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 export interface CreatedContact {
   id: string

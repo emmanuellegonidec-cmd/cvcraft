@@ -47,11 +47,11 @@ export default function SignupPage() {
   }
 
   return (
-    <div style={{ fontFamily: "'Montserrat', sans-serif", minHeight: '100vh', background: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", minHeight: '100vh', background: '#FAFAFA', display: 'flex', flexDirection: 'column' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
-        .auth-input { width: 100%; border: 2px solid #E0E0E0; border-radius: 8px; padding: 11px 14px; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 500; outline: none; color: #111; background: #fff; transition: border-color 0.15s; }
+        .auth-input { width: 100%; border: 2px solid #E0E0E0; border-radius: 8px; padding: 11px 14px; font-family: var(--font-montserrat), 'Montserrat', sans-serif; font-size: 14px; font-weight: 500; outline: none; color: #111; background: #fff; transition: border-color 0.15s; }
         .auth-input:focus { border-color: #111; box-shadow: 0 0 0 3px rgba(17,17,17,0.06); }
         .auth-label { display: block; font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
       `}</style>

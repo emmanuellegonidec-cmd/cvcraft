@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import ViewLMModal, { downloadLMAsPDF } from './ViewLMModal'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 // ────────────────────────────────────────────────────────────────
 // Types

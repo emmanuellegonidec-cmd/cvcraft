@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase'
 import ATSScoreModal from './ATSScoreModal'
 import GenerateLMModal from './GenerateLMModal'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 const ICON_CHOICES = ['⭐','📄','✉️','🎯','🔍','📅','🔔','📋','🏢','💬','⚖️','✅','❌','📊','🔧','👤','🧠','💡','🚀','🤝','📞','📝','🗓️','💼','🎤','📌']
 

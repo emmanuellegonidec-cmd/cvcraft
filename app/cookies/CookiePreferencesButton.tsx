@@ -13,7 +13,7 @@ export default function CookiePreferencesButton() {
     <button
       onClick={handleReset}
       style={{
-        fontFamily: "'Montserrat', sans-serif",
+        fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
         display: 'inline-flex',
         alignItems: 'center',
         gap: 8,

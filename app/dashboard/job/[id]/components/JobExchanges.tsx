@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { JobExchange, ExchangeType, EXCHANGE_TYPE_LABELS } from '@/lib/types'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })

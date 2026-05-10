@@ -56,7 +56,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
           border: 'none',
           borderBottom: open ? '2px solid #111' : 'none',
           cursor: 'pointer',
-          fontFamily: "'Montserrat', sans-serif",
+          fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
           fontSize: 14,
           fontWeight: 800,
           color: '#111',
@@ -97,7 +97,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
           color: '#555',
           lineHeight: 1.75,
           fontWeight: 500,
-          fontFamily: "'Montserrat', sans-serif",
+          fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
         }}>
           {a}
         </div>
@@ -111,9 +111,9 @@ export default function FaqSection() {
     <section id="faq" style={{ padding: '5rem 2rem', background: '#111', borderBottom: '2.5px solid #111' }}>
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid rgba(255,255,255,0.2)', borderRadius: 20, padding: '5px 16px', fontSize: 12, fontWeight: 800, color: '#111', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: "'Montserrat', sans-serif" }}>Vos questions</div>
-          <h2 style={{ fontSize: '2.2rem', color: '#fff', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '0.5rem', fontFamily: "'Montserrat', sans-serif" }}>Foire aux questions</h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 500, fontSize: 14, fontFamily: "'Montserrat', sans-serif" }}>Tout ce que vous avez toujours voulu savoir sur Jean</p>
+          <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid rgba(255,255,255,0.2)', borderRadius: 20, padding: '5px 16px', fontSize: 12, fontWeight: 800, color: '#111', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>Vos questions</div>
+          <h2 style={{ fontSize: '2.2rem', color: '#fff', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '0.5rem', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>Foire aux questions</h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 500, fontSize: 14, fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>Tout ce que vous avez toujours voulu savoir sur Jean</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {FAQ_ITEMS.map((item) => (
@@ -121,10 +121,10 @@ export default function FaqSection() {
           ))}
         </div>
         <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 500, marginBottom: '1rem', fontFamily: "'Montserrat', sans-serif" }}>Vous avez une autre question ?</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 500, marginBottom: '1rem', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>Vous avez une autre question ?</p>
           <a
             href="mailto:hello@jeanfindmyjob.fr"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#111', color: '#F5C400', border: '2.5px solid #F5C400', borderRadius: 8, padding: '11px 24px', fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 800, cursor: 'pointer', textDecoration: 'none', boxShadow: '3px 3px 0 #F5C400', letterSpacing: '0.02em' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#111', color: '#F5C400', border: '2.5px solid #F5C400', borderRadius: 8, padding: '11px 24px', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontSize: 13, fontWeight: 800, cursor: 'pointer', textDecoration: 'none', boxShadow: '3px 3px 0 #F5C400', letterSpacing: '0.02em' }}
           >
             Contactez-nous →
           </a>

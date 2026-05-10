@@ -65,7 +65,7 @@ interface ATSScoreModalProps {
 }
 
 const MAX_ANALYSES = 3
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 export default function ATSScoreModal({
   isOpen,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 const STATUS_LABELS: Record<string, string> = {
   applied:     'Postulé',

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { pdf, Document, Page, Text, StyleSheet } from '@react-pdf/renderer'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 // ────────────────────────────────────────────────────────────────
 // Composant React-PDF pour générer la LM en PDF

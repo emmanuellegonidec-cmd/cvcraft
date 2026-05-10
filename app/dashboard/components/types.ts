@@ -157,18 +157,18 @@ export const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
   * { box-sizing: border-box; }
   ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: #E0E0E0; border-radius: 3px; }
-  .nav-btn { display: flex; align-items: center; gap: 9px; padding: 8px 12px; margin: 1px 6px; border-radius: 8px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.55); cursor: pointer; border: none; background: transparent; width: calc(100% - 12px); text-align: left; font-family: 'Montserrat', sans-serif; transition: all 0.15s; }
+  .nav-btn { display: flex; align-items: center; gap: 9px; padding: 8px 12px; margin: 1px 6px; border-radius: 8px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.55); cursor: pointer; border: none; background: transparent; width: calc(100% - 12px); text-align: left; font-family: var(--font-montserrat), 'Montserrat', sans-serif; transition: all 0.15s; }
   .nav-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); }
   .nav-btn.active { background: rgba(232,21,27,0.2); color: #fff; border-left: 3px solid #E8151B; padding-left: 9px; }
   .jcard { background: #fff; border: 2px solid #111; border-radius: 8px; padding: 10px; margin-bottom: 7px; cursor: pointer; box-shadow: 2px 2px 0 #111; transition: all 0.15s; }
   .jcard:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 #E8151B; border-color: #E8151B; }
-  .btn-main { display: inline-flex; align-items: center; gap: 6px; background: #111; color: #F5C400; border: 2px solid #111; border-radius: 8px; padding: 9px 18px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 2px 2px 0 #E8151B; letter-spacing: 0.02em; transition: all 0.15s; }
+  .btn-main { display: inline-flex; align-items: center; gap: 6px; background: #111; color: #F5C400; border: 2px solid #111; border-radius: 8px; padding: 9px 18px; font-family: var(--font-montserrat), 'Montserrat', sans-serif; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 2px 2px 0 #E8151B; letter-spacing: 0.02em; transition: all 0.15s; }
   .btn-main:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 #E8151B; }
   .btn-main:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  .btn-ghost { display: inline-flex; align-items: center; gap: 6px; background: #fff; color: #111; border: 2px solid #111; border-radius: 8px; padding: 9px 18px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 2px 2px 0 #E0E0E0; transition: all 0.15s; }
+  .btn-ghost { display: inline-flex; align-items: center; gap: 6px; background: #fff; color: #111; border: 2px solid #111; border-radius: 8px; padding: 9px 18px; font-family: var(--font-montserrat), 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 2px 2px 0 #E0E0E0; transition: all 0.15s; }
   .btn-ghost:hover { background: #F4F4F4; }
   .pill { display: inline-flex; align-items: center; border-radius: 5px; padding: 2px 7px; font-size: 10px; font-weight: 700; }
-  .fi { width: 100%; border: 2px solid #E0E0E0; border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: 'Montserrat', sans-serif; outline: none; transition: border-color 0.15s; background: #fff; }
+  .fi { width: 100%; border: 2px solid #E0E0E0; border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: var(--font-montserrat), 'Montserrat', sans-serif; outline: none; transition: border-color 0.15s; background: #fff; }
   .fi:focus { border-color: #111; box-shadow: 0 0 0 3px rgba(17,17,17,0.06); }
   .fl { display: block; font-size: 10px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
   .modal-bg { position: fixed; inset: 0; background: rgba(15,14,12,0.6); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 1rem; }
@@ -181,9 +181,9 @@ export const GLOBAL_STYLES = `
   .lrow:hover { background: #FAFAFA; }
   .ccard { background: #fff; border: 2px solid #111; border-radius: 10px; padding: 1rem; box-shadow: 2px 2px 0 #111; transition: all 0.2s; }
   .ccard:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 #E8151B; }
-  .cbtn { flex: 1; padding: 5px; border-radius: 6px; border: 1.5px solid #E0E0E0; background: transparent; font-size: 11px; font-weight: 700; color: #888; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.15s; }
+  .cbtn { flex: 1; padding: 5px; border-radius: 6px; border: 1.5px solid #E0E0E0; background: transparent; font-size: 11px; font-weight: 700; color: #888; cursor: pointer; font-family: var(--font-montserrat), 'Montserrat', sans-serif; transition: all 0.15s; }
   .cbtn:hover { background: #FDEAEA; color: #E8151B; border-color: #E8151B; }
-  .doc-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 6px; border: 1.5px solid #E0E0E0; background: #fff; font-size: 11px; font-weight: 700; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.15s; }
+  .doc-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 6px; border: 1.5px solid #E0E0E0; background: #fff; font-size: 11px; font-weight: 700; cursor: pointer; font-family: var(--font-montserrat), 'Montserrat', sans-serif; transition: all 0.15s; }
   .doc-btn:hover { border-color: #111; background: #F4F4F4; }
   .doc-btn.done { border-color: #1A7A4A; background: #E8F5EE; color: #1A7A4A; }
   .check-box { width: 16px; height: 16px; border: 2px solid #E0E0E0; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }

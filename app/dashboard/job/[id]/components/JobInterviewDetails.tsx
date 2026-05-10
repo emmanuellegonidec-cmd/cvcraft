@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 interface Job {
   id: string

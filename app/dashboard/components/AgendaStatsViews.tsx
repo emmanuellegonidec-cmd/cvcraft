@@ -27,7 +27,7 @@ const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> 
   presentiel: { label: '🏢 Présentiel', color: '#1A7A4A', bg: '#E8F5EE' },
 };
 
-const FONT = "'Montserrat', sans-serif";
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 const INTERVIEW_DEFAULT_IDS = new Set(['phone_interview', 'hr_interview', 'manager_interview']);
 const NON_INTERVIEW_DEFAULT_IDS = new Set(['to_apply', 'applied', 'offer', 'archived']);

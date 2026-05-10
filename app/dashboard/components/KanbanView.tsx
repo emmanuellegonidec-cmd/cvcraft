@@ -11,7 +11,7 @@ import { Job } from '@/lib/jobs';
 import { Stage, formatRelative, getSubStatusLabel, isJobToProcess } from './types';
 import { HeartDisplay } from './HeartComponents';
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 const SOURCE_MAP: Record<string, { bg: string; color: string; label: string }> = {
   'linkedin':              { bg: '#0A66C2', color: '#fff',    label: 'LinkedIn' },

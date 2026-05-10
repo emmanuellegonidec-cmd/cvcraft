@@ -129,7 +129,7 @@ export default function BugChatWidget() {
             flexDirection: "column",
             overflow: "hidden",
             zIndex: 999,
-            fontFamily: "'Montserrat', sans-serif",
+            fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
           }}
         >
           {/* HEADER */}
@@ -181,7 +181,7 @@ export default function BugChatWidget() {
                     padding: "8px 12px",
                     fontSize: 12,
                     lineHeight: 1.5,
-                    fontFamily: "'Montserrat', sans-serif",
+                    fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
                     border: "2px solid #111",
                     background: m.success ? "#F5C400" : m.role === "user" ? "#1B4F72" : "#fff",
                     color: m.role === "user" ? "#fff" : "#111",
@@ -222,7 +222,7 @@ export default function BugChatWidget() {
                 border: "none",
                 padding: "10px 12px",
                 fontSize: 12,
-                fontFamily: "'Montserrat', sans-serif",
+                fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
                 outline: "none",
                 background: "#fff",
                 color: "#111",
@@ -240,7 +240,7 @@ export default function BugChatWidget() {
                   fontWeight: 900,
                   cursor: "pointer",
                   color: "#F5C400",
-                  fontFamily: "'Montserrat', sans-serif",
+                  fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
                 }}
               >
                 + Nouveau

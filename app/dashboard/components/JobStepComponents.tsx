@@ -5,7 +5,7 @@ import {
   useDroppable,
 } from '@dnd-kit/core'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

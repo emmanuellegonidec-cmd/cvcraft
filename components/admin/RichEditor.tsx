@@ -249,7 +249,7 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
 
       {/* Zone d'édition */}
       <style>{`
-        .prose-editor{min-height:500px;padding:24px 28px;font-family:'Montserrat',sans-serif;font-size:15px;line-height:1.7;color:#111;outline:none;}
+        .prose-editor{min-height:500px;padding:24px 28px;font-family:var(--font-montserrat),'Montserrat',sans-serif;font-size:15px;line-height:1.7;color:#111;outline:none;}
         .prose-editor h1{font-size:2rem;font-weight:900;margin:1.5rem 0 0.75rem;color:#111;letter-spacing:-0.02em;}
         .prose-editor h2{font-size:1.5rem;font-weight:800;margin:1.25rem 0 0.5rem;color:#111;}
         .prose-editor h3{font-size:1.2rem;font-weight:700;margin:1rem 0 0.5rem;color:#111;}

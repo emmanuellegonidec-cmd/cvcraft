@@ -33,7 +33,7 @@ const STATUS_TO_SUB: Record<string, string> = {
   archived:    'archived',
 };
 
-const FONT = "'Montserrat', sans-serif";
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 export default function DashboardPage() {
   const router = useRouter();

@@ -26,7 +26,7 @@ interface CV {
   };
 }
 
-const FONT = "'Montserrat', sans-serif";
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 const inputStyle: React.CSSProperties = {
   width: '100%',

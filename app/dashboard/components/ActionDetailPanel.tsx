@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
 import LinkedContactsBlock from '@/components/LinkedContactsBlock';
 
-const FONT = "'Montserrat', sans-serif";
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 const EVENT_CATEGORIES = [
   'Atelier', 'Formation', 'Coaching', 'Networking',

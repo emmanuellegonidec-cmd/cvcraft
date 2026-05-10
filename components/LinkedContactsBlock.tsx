@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase'
 import ContactPicker, { PickableContact } from './ContactPicker'
 import CreateContactModal, { CreatedContact } from './CreateContactModal'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 interface LinkedContact {
   id: string

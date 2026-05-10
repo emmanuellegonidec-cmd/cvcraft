@@ -1,6 +1,6 @@
 'use client'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 interface EditForm {
   title: string

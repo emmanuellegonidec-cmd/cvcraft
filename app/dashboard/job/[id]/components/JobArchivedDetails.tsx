@@ -1,6 +1,6 @@
 'use client'
 
-const FONT = "'Montserrat', sans-serif"
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
 const REASONS = [
   { id: 'refus_recruteur', label: '❌ Refus recruteur', desc: "Le recruteur n'a pas retenu ma candidature" },

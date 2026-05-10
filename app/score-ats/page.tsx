@@ -240,7 +240,7 @@ export default function ScoreAtsPage() {
       />
 
       {/* NAV */}
-      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: '#fff', borderBottom: '2.5px solid #111', position: 'sticky', top: 0, zIndex: 100, fontFamily: "'Montserrat', sans-serif" }}>
+      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: '#fff', borderBottom: '2.5px solid #111', position: 'sticky', top: 0, zIndex: 100, fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>
         <Link href="/" style={{ textDecoration: 'none', fontSize: '0.95rem', fontWeight: 900, color: '#111' }}>
           Jean <span style={{ color: '#E8151B' }}>find my Job</span>
         </Link>
@@ -656,7 +656,7 @@ export default function ScoreAtsPage() {
 
       {/* FOOTER */}
       <div style={{ borderTop: '2.5px solid #111', padding: '2rem', textAlign: 'center', background: '#fff' }}>
-        <p style={{ fontSize: 13, color: '#888', fontWeight: 500, fontFamily: "'Montserrat', sans-serif" }}>
+        <p style={{ fontSize: 13, color: '#888', fontWeight: 500, fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>
           © 2026 Jean find my Job ·{' '}
           <Link href="/" style={{ color: '#E8151B', textDecoration: 'none', fontWeight: 700 }}>Retour à l&apos;accueil</Link>
         </p>
