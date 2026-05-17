@@ -1,11 +1,19 @@
 // ============================================================
 // Jean find my Job — Side panel logic
+// Session 11 — Variante A : 3 boutons côte à côte (Enregistrer / Tester CV / Supprimer)
+//   - Ancien btn-cancel → renommé btn-delete (même comportement : retour à view-empty)
+//   - Ancien btn-save (1 bouton "Enregistrer pour analyse de ta candidature")
+//     → remplacé par 2 boutons :
+//       - btn-save-only : sauvegarde + affiche l'écran de succès (view-success
+//         ou view-already-exists selon le statut)
+//       - btn-test-cv   : sauvegarde + va directement à l'analyse (skip view-success)
+//   - Logique de sauvegarde factorisée dans saveJob({ thenAnalyze }).
 // Session 10 Bloc 1 — Champ "Informations complémentaires"
 //   - populateRecap() : remplace les 6 setText sur les champs de l'ancien
 //     <details> "Champs détectés" par le pré-remplissage du nouveau textarea
 //     #field-informations-complementaires (alimenté par data.informationsComplementaires
 //     construit côté scrapers).
-//   - btn-save : ajoute informationsComplementaires (texte modifié par l'utilisateur)
+//   - saveJob : ajoute informationsComplementaires (texte modifié par l'utilisateur)
 //     au payload envoyé à /api/jobs/from-extension.
 //   - Code défensif : si l'élément n'est pas dans le DOM (HTML pas encore déployé),
 //     on retombe sur la valeur du scraper sans crash.
@@ -385,16 +393,28 @@ function populateRecap(d) {
 // ============================================================
 // Boutons fermeture
 // ============================================================
-$('btn-cancel')?.addEventListener('click', () => show('view-empty'));
+// Session 11 — "Supprimer" remplace l'ancien "Annuler" (même comportement : retour à view-empty)
+$('btn-delete')?.addEventListener('click', () => show('view-empty'));
 $('btn-close-success')?.addEventListener('click', () => window.close());
 $('btn-close-exists')?.addEventListener('click', () => window.close());
 $('btn-close-ats')?.addEventListener('click', () => window.close());
 $('btn-close-applied')?.addEventListener('click', () => window.close());
 
 // ============================================================
-// Save (Bloc 6b — skip ATS direct après capture)
+// Session 11 — Sauvegarde (Variante A : 3 boutons)
+//   - btn-save-only : enregistre + écran de succès
+//   - btn-test-cv   : enregistre + va directement à l'analyse (skip view-success)
+// La logique est factorisée dans saveJob({ thenAnalyze }).
 // ============================================================
-$('btn-save')?.addEventListener('click', async () => {
+$('btn-save-only')?.addEventListener('click', async () => {
+  await saveJob({ thenAnalyze: false });
+});
+
+$('btn-test-cv')?.addEventListener('click', async () => {
+  await saveJob({ thenAnalyze: true });
+});
+
+async function saveJob({ thenAnalyze }) {
   if (!currentSessionToken) {
     show('view-not-logged-in');
     return;
@@ -416,8 +436,17 @@ $('btn-save')?.addEventListener('click', async () => {
     informationsComplementaires: informationsComplementaires,
   };
 
-  $('btn-save').disabled = true;
-  $('btn-save').textContent = '⏳ Enregistrement…';
+  // Désactive les 3 boutons pendant la sauvegarde
+  const saveBtn = $('btn-save-only');
+  const testBtn = $('btn-test-cv');
+  const deleteBtn = $('btn-delete');
+  const clickedBtn = thenAnalyze ? testBtn : saveBtn;
+  const originalText = clickedBtn?.textContent;
+
+  if (saveBtn) saveBtn.disabled = true;
+  if (testBtn) testBtn.disabled = true;
+  if (deleteBtn) deleteBtn.disabled = true;
+  if (clickedBtn) clickedBtn.textContent = '⏳…';
 
   try {
     const res = await fetch(`${JEAN_API_BASE}/api/jobs/from-extension`, {
@@ -441,15 +470,23 @@ $('btn-save')?.addEventListener('click', async () => {
     $('link-view-success').href = `${JEAN_API_BASE}/dashboard`;
     $('link-view-exists').href = `${JEAN_API_BASE}/dashboard`;
 
-    startAnalysisFlow();
+    if (thenAnalyze) {
+      // "Tester CV" : on saute l'écran de succès et on va directement à l'analyse
+      startAnalysisFlow();
+    } else {
+      // "Enregistrer" : on affiche l'écran de succès (ou "déjà existant" si l'offre existait déjà)
+      show(getCaptureSuccessView());
+    }
   } catch (e) {
     console.error('[save] erreur:', e);
     showError(e.message || 'Erreur lors de la sauvegarde', 'view-recap');
   } finally {
-    $('btn-save').disabled = false;
-    $('btn-save').textContent = 'Enregistrer pour analyse de ta candidature';
+    if (saveBtn) saveBtn.disabled = false;
+    if (testBtn) testBtn.disabled = false;
+    if (deleteBtn) deleteBtn.disabled = false;
+    if (clickedBtn) clickedBtn.textContent = originalText;
   }
-});
+}
 
 // ============================================================
 // Analyse CV vs offre
