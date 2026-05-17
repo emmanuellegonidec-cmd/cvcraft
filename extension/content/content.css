@@ -49,10 +49,15 @@
   opacity: 0.75 !important;
 }
 
+/* Session 10 Bloc B — picto remplacé par le "J" Jean (cohérence marque).
+   font-weight 900 pour Montserrat Black, font-size légèrement plus grand
+   que le label pour bien marquer le "J" comme logo et pas comme une lettre du texte. */
 #jfmj-capture-btn .jfmj-btn-icon {
-  font-size: 18px !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
   line-height: 1 !important;
   display: inline-block !important;
+  font-family: 'Montserrat', 'Arial Black', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif !important;
 }
 
 #jfmj-capture-btn .jfmj-btn-label {

@@ -33,9 +33,11 @@
     btn.type = 'button';
     btn.setAttribute('aria-label', 'Capturer cette offre dans Jean find my Job');
 
+    // Session 10 Bloc B — Remplacement de l'emoji 📋 par le "J" Jean
+    // pour cohérence de marque avec l'icône de l'extension (style brutaliste).
     const icon = document.createElement('span');
     icon.className = 'jfmj-btn-icon';
-    icon.textContent = '📋';
+    icon.textContent = 'J';
 
     const label = document.createElement('span');
     label.className = 'jfmj-btn-label';
