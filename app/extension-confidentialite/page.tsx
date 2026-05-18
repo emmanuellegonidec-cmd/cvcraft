@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Politique de confidentialité — Extension Chrome — Jean find my Job',
-  description: 'Politique de confidentialité dédiée à l\'extension Chrome Jean find my Job : finalité unique, permissions demandées, données collectées, conformité Chrome Web Store et RGPD.',
+  description: 'Politique de confidentialité de l\'extension Chrome Jean find my Job : finalité unique, permissions, données collectées, conformité Chrome Web Store et RGPD.',
   alternates: {
     canonical: 'https://jeanfindmyjob.fr/extension-confidentialite',
   },
@@ -34,180 +34,150 @@ export default function ExtensionConfidentialitePage() {
         {/* Encart de contexte */}
         <div style={{ marginBottom: '2rem', padding: '1.25rem 1.5rem', background: '#FFF8E1', border: '2px solid #F5C400', borderRadius: 12 }}>
           <p style={{ fontSize: 14, color: '#444', lineHeight: 1.7, fontWeight: 500, margin: 0 }}>
-            Cette politique de confidentialité concerne <strong>uniquement l&apos;extension Chrome Jean find my Job</strong>. Elle complète la <Link href="/confidentialite" style={{ color: '#111', fontWeight: 700, textDecoration: 'underline' }}>politique de confidentialité générale du site</Link> et les <Link href="/extension-mentions-legales" style={{ color: '#111', fontWeight: 700, textDecoration: 'underline' }}>mentions légales de l&apos;extension</Link>. En cas de divergence sur un point spécifique à l&apos;extension Chrome, la présente page prévaut.
+            Cette politique concerne <strong>uniquement l&apos;extension Chrome Jean find my Job</strong>. Elle complète la <Link href="/confidentialite" style={{ color: '#111', fontWeight: 700, textDecoration: 'underline' }}>politique générale du site</Link> et les <Link href="/extension-mentions-legales" style={{ color: '#111', fontWeight: 700, textDecoration: 'underline' }}>mentions légales de l&apos;extension</Link>.
           </p>
         </div>
 
         {[
           {
-            title: '1. Qui sommes-nous ?',
-            content: `L'extension Chrome « Jean find my Job » est éditée par Emmanuelle Gonidec, entrepreneur individuel exerçant sous le nom commercial « Jean find my Job » (siège social : 87 rue Didot, 75014 Paris, France — SIREN 844 130 245).
+            title: '1. Responsable du traitement',
+            content: `L'extension Chrome « Jean find my Job » est éditée par Emmanuelle Gonidec, entrepreneur individuel exerçant sous le nom commercial « Jean find my Job » (SIREN 844 130 245, 87 rue Didot, 75014 Paris, France).
 
-Le responsable du traitement des données est Jean find my Job, joignable à l'adresse : hello@jeanfindmyjob.fr. Pour toute question spécifique à l'extension, vous pouvez utiliser cette même adresse en précisant « Extension Chrome » dans l'objet du message.
-
-Les mentions légales complètes de l'extension sont disponibles sur la page dédiée /extension-mentions-legales.`
+Responsable du traitement : Jean find my Job, joignable à hello@jeanfindmyjob.fr (objet : « Extension Chrome »).`
           },
           {
             title: '2. Finalité unique de l\'extension',
-            content: `Conformément aux exigences du Chrome Web Store (Single Purpose Policy), l'extension Jean find my Job a une finalité unique et clairement définie :
+            content: `Conformément à la Single Purpose Policy du Chrome Web Store, l'extension a une finalité unique :
 
-🎯 Permettre aux utilisateurs de capturer une offre d'emploi consultée sur une plateforme de recrutement compatible, afin de la suivre dans leur tableau de bord de candidatures Jean find my Job, et d'analyser la compatibilité de leur CV avec cette offre.
+🎯 Permettre à l'utilisateur de capturer une offre d'emploi consultée sur une plateforme de recrutement compatible, afin de la suivre dans son tableau de bord Jean find my Job et d'analyser sa compatibilité avec son CV.
 
-Toutes les fonctionnalités de l'extension (capture d'offres, analyse de CV, marquage « J'ai postulé ») servent exclusivement cette finalité unique.
-
-La liste technique des plateformes sur lesquelles l'extension est activable figure dans la description de l'extension sur le Chrome Web Store ainsi que dans la section 4 ci-dessous (host_permissions).`
+Toutes les fonctionnalités (capture, analyse, marquage de candidature) servent exclusivement cette finalité.`
           },
           {
-            title: '3. Données collectées par l\'extension',
+            title: '3. Données collectées',
             content: `L'extension collecte uniquement les données strictement nécessaires à son fonctionnement.
 
-📌 Données d'authentification (stockées localement dans votre navigateur) :
-- Le jeton de session (token) délivré par notre fournisseur d'authentification lorsque vous vous connectez à votre compte Jean find my Job depuis l'extension. Ce jeton est stocké dans chrome.storage.local et n'est ni envoyé ni partagé avec un tiers.
-- Votre adresse e-mail de compte (lue depuis le jeton de session, uniquement pour personnaliser l'affichage et nommer correctement les fichiers téléchargés).
+📌 Données d'authentification — stockées localement dans votre navigateur :
+Un jeton de session vous permet de rester connecté à votre compte Jean find my Job. Ce jeton n'est partagé avec aucun tiers.
 
-📌 Données d'offres d'emploi (envoyées à votre tableau de bord Jean) :
-Quand vous cliquez sur « Capturer cette offre », l'extension lit uniquement les informations publiques de l'offre affichée à l'écran : titre du poste, nom de l'entreprise, lieu, type de contrat, rythme de travail, salaire (si publié), description, compétences, niveau d'expérience, formation, qualification, secteur, date de publication. Ces données sont transmises au serveur Jean find my Job et stockées dans la base de données associée à votre compte.
+📌 Données d'offres d'emploi — envoyées à votre tableau de bord Jean :
+Lors d'un clic volontaire sur « Capturer cette offre », l'extension lit les données publiques affichées dans l'annonce (intitulé, employeur, localisation, contrat, conditions, description et autres informations visibles). Ces données sont transmises à votre espace personnel.
 
-📌 Données d'analyse CV (si vous lancez l'analyse) :
-Quand vous lancez « Analyser cette offre avec ton CV », l'extension envoie au serveur Jean find my Job la référence du CV que vous avez sélectionné (CV déjà présent dans votre compte, jamais re-uploadé depuis l'extension). Le serveur Jean lit alors ce CV pour réaliser l'analyse via l'IA Claude. Aucun nouveau document n'est créé par l'extension elle-même.
+📌 Données d'analyse de CV — uniquement si vous lancez l'analyse :
+L'extension transmet une référence vers le CV que vous avez sélectionné dans votre compte (le CV n'est jamais ré-uploadé depuis l'extension). L'analyse est réalisée par un service tiers d'intelligence artificielle.
 
 📌 Données de statut de candidature :
-Quand vous cliquez sur « J'ai postulé », l'extension transmet uniquement l'identifiant de la candidature concernée pour mettre à jour son statut côté serveur Jean.
+Le clic sur « J'ai postulé » met à jour le statut de la candidature dans votre tableau de bord.
 
 ❌ Données que l'extension NE collecte PAS :
-- L'historique de navigation
-- Les pages visitées en dehors des plateformes de recrutement compatibles listées en section 4
-- Les contenus saisis dans des formulaires (e-mails, mots de passe, recherches)
-- Les données personnelles affichées sur les plateformes compatibles (profils tiers, messagerie, fil d'actualité, contacts)
+- Aucun historique de navigation
+- Aucune donnée en dehors des pages d'offres des plateformes compatibles
+- Aucune donnée saisie dans des formulaires (e-mails, mots de passe, recherches)
+- Aucune donnée privée affichée sur les plateformes (profils, messagerie, fil d'actualité)
 - Aucune donnée biométrique, financière ou de santé`
           },
           {
-            title: '4. Justification des permissions Chrome demandées',
-            content: `Chrome impose à toute extension de justifier explicitement chaque permission demandée. Voici les nôtres et leur usage strict.
+            title: '4. Justification des permissions Chrome',
+            content: `Chrome impose à toute extension de justifier explicitement chaque permission demandée.
 
-🔑 Permission « storage » : utilisée pour conserver localement votre jeton de session entre deux ouvertures du navigateur, afin que vous n'ayez pas à vous reconnecter à chaque clic. Aucune autre donnée n'est stockée via cette permission.
+🔑 storage : conservation locale du jeton de session entre deux ouvertures du navigateur, pour éviter une reconnexion à chaque clic.
 
-🔑 Permission « activeTab » : utilisée uniquement au moment où vous cliquez sur le bouton « Capturer cette offre ». L'extension lit alors la page d'offre que vous regardez activement, et exclusivement cette page. Elle n'a aucun accès aux autres onglets ouverts.
+🔑 activeTab : lecture, au moment du clic sur « Capturer », de la page d'offre que vous regardez activement (et exclusivement celle-ci).
 
-🔑 Permission « sidePanel » : utilisée pour afficher le panneau latéral Jean à droite de votre navigateur (offre capturée, score ATS, boutons d'action). Cette permission n'autorise aucune lecture de contenu.
+🔑 sidePanel : affichage du panneau latéral Jean dans votre navigateur.
 
 🔑 host_permissions :
-- https://kjsqfgpewjzierlxzdyj.supabase.co/* — pour vous authentifier auprès de notre fournisseur d'identité Supabase et lire/écrire vos données dans votre espace personnel (votre compte uniquement).
-- https://jeanfindmyjob.fr/* — pour appeler les API du service Jean (création de candidature, analyse ATS, marquage « J'ai postulé »).
-- https://www.linkedin.com/* — pour activer la capture d'offre uniquement sur les pages d'offres d'emploi de ce domaine.
-- https://candidat.francetravail.fr/* — pour activer la capture d'offre uniquement sur les pages d'offres d'emploi de ce domaine.
-- https://www.welcometothejungle.com/* — pour activer la capture d'offre uniquement sur les pages d'offres d'emploi de ce domaine.
-- https://www.apec.fr/* — pour activer la capture d'offre uniquement sur les pages d'offres d'emploi de ce domaine.
+- https://kjsqfgpewjzierlxzdyj.supabase.co/* — URL technique de notre fournisseur d'authentification et de base de données.
+- https://jeanfindmyjob.fr/* — URL de notre service.
+- https://www.linkedin.com/* — activation de la capture uniquement sur les pages d'offres de ce domaine.
+- https://candidat.francetravail.fr/* — activation de la capture uniquement sur les pages d'offres de ce domaine.
+- https://www.welcometothejungle.com/* — activation de la capture uniquement sur les pages d'offres de ce domaine.
+- https://www.apec.fr/* — activation de la capture uniquement sur les pages d'offres de ce domaine.
 
-L'extension ne demande pas la permission « <all_urls> » ni aucune autorisation globale d'accès au web. Elle ne s'exécute que sur les domaines explicitement listés ci-dessus.`
+L'extension ne demande pas la permission « <all_urls> » et ne s'exécute que sur les domaines explicitement listés ci-dessus.`
           },
           {
-            title: '5. Comportement de l\'extension sur les sites pris en charge',
-            content: `Sur les plateformes de recrutement compatibles listées en section 4, l'extension reste passive jusqu'à ce que vous cliquiez sur le bouton « Capturer cette offre » qu'elle affiche en bas à droite de la page.
+            title: '5. Comportement sur les sites compatibles',
+            content: `Sur les plateformes de recrutement compatibles listées en section 4, l'extension reste passive jusqu'à un clic explicite de votre part sur le bouton « Capturer cette offre ».
 
-Au clic, l'extension lit uniquement les éléments publics d'une page d'offre d'emploi (titre du poste, entreprise, description, lieu, contrat, etc.). Elle ne lit pas et ne transmet pas :
-- Les données privées de votre profil utilisateur sur le site visité
-- Les contenus de votre messagerie ou de vos conversations
-- Les profils ou contenus d'autres utilisateurs
-- Les fils d'actualité ou contenus en dehors des pages d'offres d'emploi
-
-Sur tout site qui n'est pas dans la liste des plateformes compatibles, l'extension est totalement inactive : aucune lecture, aucun bouton affiché, aucune requête envoyée.`
+Sur tout autre site, l'extension est totalement inactive : aucune lecture, aucun bouton affiché, aucune requête envoyée.`
           },
           {
-            title: '6. Relations avec les sites tiers',
-            content: `Les domaines figurant dans la section 4 (host_permissions) correspondent à des plateformes de recrutement publiques, sur lesquelles l'extension est techniquement compatible. Ces domaines et les marques qui leur sont associées restent la propriété exclusive de leurs titulaires respectifs ; ils sont mentionnés à des fins strictement descriptives et techniques (justification obligatoire des permissions auprès du Chrome Web Store).
+            title: '6. Sites tiers',
+            content: `Les domaines listés en section 4 correspondent à des plateformes de recrutement publiques sur lesquelles l'extension est techniquement compatible. Ils sont mentionnés à des fins strictement descriptives, conformément aux exigences du Chrome Web Store.
 
-Aucune affiliation, partenariat, sponsoring, accord commercial ou cautionnement n'existe entre Jean find my Job et ces plateformes. L'extension se contente, à la demande explicite et volontaire de l'utilisateur, de lire le contenu d'une page d'offre que celui-ci consulte de son propre chef dans son navigateur.
+Aucune affiliation, partenariat ou cautionnement n'existe entre Jean find my Job et ces plateformes. L'extension se contente, à votre demande explicite, de lire le contenu d'une page que vous consultez volontairement.
 
-L'utilisateur est invité à respecter les conditions générales d'utilisation propres à chaque plateforme. L'éditeur de Jean find my Job décline toute responsabilité en cas de litige entre l'utilisateur et une plateforme tierce consécutif à l'usage de l'extension.`
+Vous êtes invité(e) à respecter les conditions générales de chaque plateforme tierce. L'éditeur décline toute responsabilité en cas de litige entre vous et une plateforme tierce.`
           },
           {
-            title: '7. Hébergement et sous-traitants',
-            content: `Les données collectées par l'extension sont transmises à votre espace personnel Jean find my Job, hébergé chez nos sous-traitants techniques :
+            title: '7. Sous-traitants et transferts',
+            content: `Vos données sont traitées par des sous-traitants techniques sélectionnés pour leur conformité au RGPD :
 
-- Supabase (base de données, authentification, stockage des fichiers) — chiffrement AES-256, hébergement en Union Européenne (région eu-west-1)
-- Vercel (hébergement web) — infrastructure sécurisée avec hébergement en Union Européenne
-- Anthropic Claude (analyse IA du score ATS uniquement) — société américaine, traitement ponctuel des données aux États-Unis, sans stockage de vos données au-delà de la requête
+- Un fournisseur d'hébergement web et de base de données situé dans l'Union Européenne.
+- Un fournisseur de services d'intelligence artificielle situé aux États-Unis, sollicité uniquement au moment où vous lancez une analyse de CV.
 
 Aucun de ces sous-traitants n'est autorisé à utiliser vos données à ses propres fins commerciales.
 
-🌍 Transferts hors UE : seul le calcul du score ATS implique un transfert ponctuel vers Anthropic (États-Unis). Ce transfert est encadré par les Clauses Contractuelles Types (CCT) de la Commission Européenne et, le cas échéant, la certification au Data Privacy Framework UE-US, conformément aux articles 44 à 49 du RGPD. Vous disposez d'un droit d'opposition (voir section 10).
-
-Pour le détail complet de notre architecture et de nos engagements de sécurité, consultez la politique de confidentialité générale.`
+🌍 Transferts hors UE : le calcul du score de compatibilité implique un transfert ponctuel vers les États-Unis. Ce transfert est encadré par les garanties prévues aux articles 44 à 49 du RGPD (Clauses Contractuelles Types et, le cas échéant, certification au cadre transatlantique en vigueur). Vous disposez d'un droit d'opposition (voir section 10).`
           },
           {
             title: '8. Durée de conservation',
-            content: `Les données capturées via l'extension sont conservées dans votre espace personnel Jean tant que votre compte est actif, et au maximum 2 ans après votre dernière connexion, conformément aux recommandations de la CNIL et à l'article 5(1)(e) du RGPD.
+            content: `Les données capturées sont conservées dans votre espace personnel tant que votre compte est actif, et au maximum 2 ans après votre dernière connexion, conformément aux recommandations de la CNIL et à l'article 5(1)(e) du RGPD.
 
-En cas de désinstallation de l'extension, les données déjà capturées dans votre tableau de bord Jean restent disponibles tant que votre compte n'est pas supprimé. Pour effacer une candidature précise ou supprimer entièrement votre compte, rendez-vous dans /dashboard ou /dashboard/profile (zone de danger en bas de page).
+Vous pouvez supprimer une candidature précise ou l'intégralité de votre compte à tout moment depuis votre espace personnel.
 
-Le jeton de session stocké localement dans votre navigateur est effacé automatiquement à la désinstallation de l'extension.`
+Le jeton de session stocké localement dans votre navigateur est automatiquement effacé à la désinstallation de l'extension.`
           },
           {
             title: '9. Conformité Chrome Web Store',
-            content: `Conformément aux règles du programme développeur Chrome Web Store, nous nous engageons explicitement sur les points suivants.
+            content: `Conformément au programme développeur Chrome Web Store :
 
-🔒 Limited Use Policy : les données collectées via l'extension sont utilisées exclusivement pour fournir le service décrit dans la finalité unique (section 2). Elles ne sont jamais :
-- Vendues, louées ou cédées à des tiers
-- Utilisées à des fins publicitaires ou de profilage commercial
-- Transférées à des annonceurs, courtiers de données, ou tout autre acteur externe à des fins de monétisation
-- Utilisées pour entraîner des modèles d'IA
+🔒 Limited Use Policy — les données collectées sont utilisées exclusivement pour la finalité unique décrite en section 2. Elles ne sont jamais vendues, louées, partagées à des fins publicitaires, ni utilisées pour entraîner des modèles d'intelligence artificielle.
 
-🔒 Données utilisateur : nous ne collectons que les données nécessaires à la finalité unique de l'extension. Aucune collecte secondaire, aucune télémétrie comportementale en dehors des actions volontaires de l'utilisateur (clic sur « Capturer », « Analyser », « J'ai postulé »).
+🔒 Aucune collecte secondaire — pas de télémétrie comportementale en dehors des actions volontaires de l'utilisateur.
 
-🔒 Sécurité : la transmission des données entre l'extension et nos serveurs est chiffrée en HTTPS/TLS. Le jeton d'authentification est limité dans le temps et révocable à tout moment via la déconnexion.
+🔒 Sécurité — la transmission entre l'extension et nos serveurs est chiffrée en HTTPS/TLS. Le jeton d'authentification est limité dans le temps et révocable.
 
-🔒 Modifications : toute évolution significative de la collecte de données ou des permissions demandées sera communiquée via une mise à jour de cette politique et, si nécessaire, via un message dans l'extension.`
+🔒 Modifications — toute évolution significative de la collecte de données sera communiquée via une mise à jour de cette politique.`
           },
           {
-            title: '10. Vos droits (RGPD) et comment les exercer',
-            content: `L'extension étant un point d'entrée vers votre compte Jean find my Job, l'exercice de vos droits RGPD se fait dans les mêmes conditions que pour le service principal.
+            title: '10. Vos droits (RGPD)',
+            content: `Vous disposez des droits suivants concernant vos données :
 
-🔍 Droit d'accès (article 15) — consulter l'ensemble des données capturées via l'extension : accessible directement depuis /dashboard.
+🔍 Droit d'accès (art. 15)
+✏️ Droit de rectification (art. 16)
+🗑️ Droit à l'effacement (art. 17)
+📦 Droit à la portabilité (art. 20)
+✋ Droit d'opposition (art. 21)
+⏸️ Droit à la limitation (art. 18)
 
-✏️ Droit de rectification (article 16) — modifier ou supprimer une candidature capturée : depuis la page détail de la candidature dans /dashboard.
+L'essentiel de ces droits s'exerce directement depuis votre espace personnel (consultation, rectification, suppression d'une candidature, suppression du compte). Pour toute autre demande (portabilité au format JSON, limitation, opposition à l'analyse par IA), écrivez à hello@jeanfindmyjob.fr.
 
-🗑️ Droit à l'effacement (article 17) — supprimer une candidature spécifique ou l'intégralité de votre compte : suppression unitaire depuis le tableau de bord, suppression de compte depuis /dashboard/profile.
+Délai de réponse : 1 mois (article 12 du RGPD).
 
-📦 Droit à la portabilité (article 20) — récupérer vos données au format JSON : demande à hello@jeanfindmyjob.fr.
-
-✋ Droit d'opposition (article 21) — vous opposer à un traitement spécifique (notamment le transfert vers Anthropic pour l'analyse ATS) : il vous suffit de ne pas utiliser cette fonctionnalité ; vous pouvez également désinstaller l'extension à tout moment sans conséquence sur le reste du service.
-
-⏸️ Droit à la limitation (article 18) : demande à hello@jeanfindmyjob.fr.
-
-Délai de réponse : 1 mois conformément à l'article 12 du RGPD.
-
-Recours auprès de la CNIL : si vous estimez vos droits non respectés, vous pouvez introduire une réclamation auprès de la CNIL via www.cnil.fr.`
+Si vous estimez vos droits non respectés, vous pouvez introduire une réclamation auprès de la CNIL via www.cnil.fr.`
           },
           {
-            title: '11. Désinstallation de l\'extension',
-            content: `Vous pouvez désinstaller l'extension à tout moment depuis la page chrome://extensions/ de votre navigateur, ou en faisant un clic droit sur l'icône Jean dans la barre d'outils Chrome, puis « Supprimer de Chrome ».
+            title: '11. Désinstallation',
+            content: `Vous pouvez désinstaller l'extension à tout moment depuis la page chrome://extensions/ de votre navigateur, ou par clic droit sur l'icône Jean dans la barre d'outils Chrome.
 
-À la désinstallation :
-- Le jeton de session stocké localement (chrome.storage.local) est effacé automatiquement par Chrome.
-- Les données déjà capturées dans votre tableau de bord Jean restent intactes — vous pouvez continuer à les consulter et les gérer depuis jeanfindmyjob.fr.
-- Pour supprimer aussi ces données, rendez-vous dans /dashboard (suppression unitaire) ou /dashboard/profile (suppression complète du compte).`
+À la désinstallation, le jeton de session local est automatiquement effacé. Les données déjà capturées dans votre tableau de bord Jean restent intactes — pour les supprimer, rendez-vous dans votre espace personnel.`
           },
           {
-            title: '12. Modifications de cette politique',
-            content: `Cette politique peut évoluer pour refléter des changements techniques de l'extension, des évolutions réglementaires, ou de nouvelles exigences du Chrome Web Store.
-
-Toute modification significative sera signalée par :
-- Une mise à jour de la date « Dernière mise à jour » en haut de cette page
-- Si la modification touche la collecte ou la finalité, une notification claire dans l'extension elle-même lors de votre prochaine session
-
-Nous vous encourageons à consulter cette page périodiquement.`
+            title: '12. Modifications',
+            content: `Cette politique peut évoluer pour refléter des changements techniques, réglementaires, ou de nouvelles exigences du Chrome Web Store. Toute modification significative sera signalée par une mise à jour de la date en haut de page et, si nécessaire, par une notification dans l'extension.`
           },
           {
             title: '13. Contact',
-            content: `Pour toute question, demande d'exercice de vos droits, ou réclamation relative à l'extension Chrome Jean find my Job :
+            content: `Pour toute question ou demande relative à vos données :
 
-📧 hello@jeanfindmyjob.fr (en précisant « Extension Chrome » dans l'objet)
+📧 hello@jeanfindmyjob.fr (objet : « Extension Chrome »)
 
-Vous pouvez aussi consulter :
-- Les mentions légales de l'extension : /extension-mentions-legales
-- La politique de confidentialité générale du service : /confidentialite
-- Les conditions générales d'utilisation : /cgu`
+Voir aussi :
+- Mentions légales de l'extension : /extension-mentions-legales
+- Politique de confidentialité générale : /confidentialite
+- Conditions générales d'utilisation : /cgu`
           },
         ].map((section) => (
           <div key={section.title} style={{ marginBottom: '2rem', padding: '1.5rem', border: '2px solid #111', borderRadius: 12, boxShadow: '3px 3px 0 #111' }}>
