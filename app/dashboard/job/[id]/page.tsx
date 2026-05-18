@@ -19,6 +19,7 @@ import JobContacts, { JobContactEnriched } from './components/JobContacts'
 import LinkedLMsSection from './components/LinkedLMsSection'
 import RgpdConsentModal from '@/components/RgpdConsentModal'
 import SecureStorageNotice from '@/components/SecureStorageNotice'
+import CreateContactModal from '@/components/CreateContactModal'
 
 const FONT = "var(--font-montserrat), 'Montserrat', sans-serif"
 
@@ -290,16 +291,13 @@ export default function JobDetailPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
 
+  // ─── Modale "Créer un contact" : on s'appuie désormais sur le composant
+  //     standalone <CreateContactModal />. On garde juste un flag d'ouverture
+  //     et 2 champs pour pré-remplir le prénom/nom quand on vient du bandeau
+  //     "Offre transmise par X".
   const [showCreateContact, setShowCreateContact] = useState(false)
-  const [contactFirstName, setContactFirstName] = useState('')
-  const [contactLastName, setContactLastName] = useState('')
-  const [contactRole, setContactRole] = useState('')
-  const [contactCompany, setContactCompany] = useState('')
-  const [contactEmail, setContactEmail] = useState('')
-  const [contactPhone, setContactPhone] = useState('')
-  const [contactLinkedin, setContactLinkedin] = useState('')
-  const [contactSaving, setContactSaving] = useState(false)
-  const [contactSaved, setContactSaved] = useState(false)
+  const [prefillFirstName, setPrefillFirstName] = useState('')
+  const [prefillLastName, setPrefillLastName] = useState('')
 
   const loadJob = useCallback(async () => {
     const supabase = createClient()
@@ -626,30 +624,14 @@ export default function JobDetailPage() {
     setExchanges(prev => prev.filter(e => e.id !== id))
   }
 
+  // Ouvre la modale "Créer un contact" en pré-remplissant le prénom/nom
+  // à partir d'une chaîne libre (ex : "Philippe Martin" depuis "Transmis par X").
+  // Si transmittedBy est vide, on ouvre la modale vide.
   function openCreateContact(transmittedBy: string) {
-    const parts = transmittedBy.trim().split(/\s+/)
-    setContactFirstName(parts[0] || ''); setContactLastName(parts.slice(1).join(' ') || '')
-    setContactRole(''); setContactCompany(job?.company || '')
-    setContactEmail(''); setContactPhone(''); setContactLinkedin('')
-    setContactSaved(false); setShowCreateContact(true)
-  }
-
-  async function saveContact() {
-    setContactSaving(true)
-    const fullName = [contactFirstName.trim(), contactLastName.trim()].filter(Boolean).join(' ')
-    const token = getToken()
-    const res = await fetch('/api/contacts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ name: fullName, role: contactRole.trim() || null, company: contactCompany.trim() || null, email: contactEmail.trim() || null, phone: contactPhone.trim() || null, linkedin: contactLinkedin.trim() || null, job_id: jobId }),
-    })
-    setContactSaving(false)
-    if (res.ok) {
-      setContactSaved(true)
-      await loadContacts()
-      await loadJobContacts()
-      setTimeout(() => setShowCreateContact(false), 1500)
-    }
+    const parts = transmittedBy.trim().split(/\s+/).filter(Boolean)
+    setPrefillFirstName(parts[0] || '')
+    setPrefillLastName(parts.slice(1).join(' ') || '')
+    setShowCreateContact(true)
   }
 
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#999', fontWeight: 700, fontSize: 15 }}>Chargement…</p></div>
@@ -996,45 +978,20 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {showCreateContact && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '0 20px' }}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 26, width: '100%', maxWidth: 480, border: '2px solid #111', boxShadow: '4px 4px 0 #7C3AED', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: 0, fontFamily: FONT }}>Créer une fiche contact</h3>
-              <button onClick={() => setShowCreateContact(false)} style={{ width: 28, height: 28, borderRadius: 6, border: '2px solid #111', background: '#fff', cursor: 'pointer', fontWeight: 800 }}>✕</button>
-            </div>
-            <div style={{ background: '#F5F0FF', border: '1.5px solid #7C3AED', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 12, fontWeight: 700, color: '#5B21B6', fontFamily: FONT }}>
-              Ce contact sera lié à : <strong>{job.title}</strong> — {job.company}
-            </div>
-            {contactSaved ? (
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#1A7A4A', fontFamily: FONT }}>Contact créé avec succès !</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                  <div style={{ marginBottom: 14 }}><label className="fl">Prénom *</label><input className="fi" value={contactFirstName} onChange={e => setContactFirstName(e.target.value)} placeholder="Philippe" autoFocus /></div>
-                  <div style={{ marginBottom: 14 }}><label className="fl">Nom *</label><input className="fi" value={contactLastName} onChange={e => setContactLastName(e.target.value)} placeholder="Martin" /></div>
-                </div>
-                <div style={{ marginBottom: 14 }}><label className="fl">Fonction / Poste</label><input className="fi" value={contactRole} onChange={e => setContactRole(e.target.value)} placeholder="Ex : DRH, Directeur Marketing..." /></div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                  <div style={{ marginBottom: 14 }}><label className="fl">Entreprise</label><input className="fi" value={contactCompany} onChange={e => setContactCompany(e.target.value)} /></div>
-                  <div style={{ marginBottom: 14 }}><label className="fl">Email</label><input className="fi" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} /></div>
-                  <div style={{ marginBottom: 14 }}><label className="fl">Téléphone</label><input className="fi" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} /></div>
-                  <div style={{ marginBottom: 14 }}><label className="fl">LinkedIn</label><input className="fi" value={contactLinkedin} onChange={e => setContactLinkedin(e.target.value)} /></div>
-                </div>
-                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                  <button onClick={() => setShowCreateContact(false)} style={{ flex: 1, background: '#F9F9F7', color: '#555', fontSize: 13, fontWeight: 700, padding: '10px 0', borderRadius: 9, border: '1.5px solid #ddd', cursor: 'pointer', fontFamily: FONT }}>Annuler</button>
-                  <button onClick={saveContact} disabled={!contactFirstName.trim() || contactSaving}
-                    style={{ flex: 2, background: (!contactFirstName.trim() || contactSaving) ? '#eee' : '#7C3AED', color: (!contactFirstName.trim() || contactSaving) ? '#aaa' : '#fff', fontSize: 13, fontWeight: 800, padding: '10px 0', borderRadius: 9, border: 'none', cursor: contactFirstName.trim() ? 'pointer' : 'not-allowed', fontFamily: FONT, boxShadow: contactFirstName.trim() ? '2px 2px 0 #111' : 'none' }}>
-                    {contactSaving ? '…' : 'Créer le contact →'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {/* ═══ Modale "Créer un contact" — composant standalone unifié ═══════════
+          Remplace l'ancienne modale dupliquée. Pré-remplit le prénom/nom
+          quand on vient du bandeau "Offre transmise par X", et l'entreprise
+          à partir du job courant. */}
+      <CreateContactModal
+        isOpen={showCreateContact}
+        onClose={() => setShowCreateContact(false)}
+        onCreated={() => { loadContacts(); loadJobContacts() }}
+        linkToLabel={`${job.title} — ${job.company}`}
+        jobId={jobId}
+        defaultCompany={job.company || ''}
+        defaultFirstName={prefillFirstName}
+        defaultLastName={prefillLastName}
+      />
 
       <RgpdConsentModal
         isOpen={rgpdModalOpen}
