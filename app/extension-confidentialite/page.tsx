@@ -28,7 +28,7 @@ export default function ExtensionConfidentialitePage() {
         <div style={{ marginBottom: '2.5rem' }}>
           <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 800, color: '#111', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Légal — Extension Chrome</div>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Politique de confidentialité de l&apos;extension Chrome</h1>
-          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 4 mai 2026</p>
+          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 17 mai 2026</p>
         </div>
 
         {/* Encart de contexte */}
@@ -51,9 +51,11 @@ Les mentions légales complètes de l'extension sont disponibles sur la page dé
             title: '2. Finalité unique de l\'extension',
             content: `Conformément aux exigences du Chrome Web Store (Single Purpose Policy), l'extension Jean find my Job a une finalité unique et clairement définie :
 
-🎯 Permettre aux utilisateurs de capturer une offre d'emploi consultée sur LinkedIn, France Travail ou Welcome to the Jungle (et autres sites de recherche d'emploi pris en charge ultérieurement), afin de la suivre dans leur tableau de bord de candidatures Jean find my Job, et d'analyser la compatibilité de leur CV avec cette offre.
+🎯 Permettre aux utilisateurs de capturer une offre d'emploi consultée sur une plateforme de recrutement compatible, afin de la suivre dans leur tableau de bord de candidatures Jean find my Job, et d'analyser la compatibilité de leur CV avec cette offre.
 
-Toutes les fonctionnalités de l'extension (capture d'offres, analyse de CV, marquage « J'ai postulé ») servent exclusivement cette finalité unique.`
+Toutes les fonctionnalités de l'extension (capture d'offres, analyse de CV, marquage « J'ai postulé ») servent exclusivement cette finalité unique.
+
+La liste technique des plateformes sur lesquelles l'extension est activable figure dans la description de l'extension sur le Chrome Web Store ainsi que dans la section 4 ci-dessous (host_permissions).`
           },
           {
             title: '3. Données collectées par l\'extension',
@@ -74,9 +76,9 @@ Quand vous cliquez sur « J'ai postulé », l'extension transmet uniquement l'id
 
 ❌ Données que l'extension NE collecte PAS :
 - L'historique de navigation
-- Les pages visitées en dehors de LinkedIn, France Travail et Welcome to the Jungle
+- Les pages visitées en dehors des plateformes de recrutement compatibles listées en section 4
 - Les contenus saisis dans des formulaires (e-mails, mots de passe, recherches)
-- Les données personnelles affichées sur LinkedIn (profils tiers, messagerie, fil d'actualité)
+- Les données personnelles affichées sur les plateformes compatibles (profils tiers, messagerie, fil d'actualité, contacts)
 - Aucune donnée biométrique, financière ou de santé`
           },
           {
@@ -92,15 +94,16 @@ Quand vous cliquez sur « J'ai postulé », l'extension transmet uniquement l'id
 🔑 host_permissions :
 - https://kjsqfgpewjzierlxzdyj.supabase.co/* — pour vous authentifier auprès de notre fournisseur d'identité Supabase et lire/écrire vos données dans votre espace personnel (votre compte uniquement).
 - https://jeanfindmyjob.fr/* — pour appeler les API du service Jean (création de candidature, analyse ATS, marquage « J'ai postulé »).
-- https://www.linkedin.com/* — pour activer la capture d'offre uniquement sur les pages d'offres LinkedIn.
-- https://candidat.francetravail.fr/* — pour activer la capture d'offre uniquement sur les pages d'offres France Travail.
-- https://www.welcometothejungle.com/* — pour activer la capture d'offre uniquement sur les pages d'offres Welcome to the Jungle.
+- https://www.linkedin.com/* — pour activer la capture d'offre uniquement sur les pages d'offres d'emploi de ce domaine.
+- https://candidat.francetravail.fr/* — pour activer la capture d'offre uniquement sur les pages d'offres d'emploi de ce domaine.
+- https://www.welcometothejungle.com/* — pour activer la capture d'offre uniquement sur les pages d'offres d'emploi de ce domaine.
+- https://www.apec.fr/* — pour activer la capture d'offre uniquement sur les pages d'offres d'emploi de ce domaine.
 
 L'extension ne demande pas la permission « <all_urls> » ni aucune autorisation globale d'accès au web. Elle ne s'exécute que sur les domaines explicitement listés ci-dessus.`
           },
           {
             title: '5. Comportement de l\'extension sur les sites pris en charge',
-            content: `Sur les sites de recherche d'emploi pris en charge (LinkedIn, France Travail, Welcome to the Jungle — et autres ajoutés ultérieurement), l'extension reste passive jusqu'à ce que vous cliquiez sur le bouton « Capturer cette offre » qu'elle affiche en bas à droite de la page.
+            content: `Sur les plateformes de recrutement compatibles listées en section 4, l'extension reste passive jusqu'à ce que vous cliquiez sur le bouton « Capturer cette offre » qu'elle affiche en bas à droite de la page.
 
 Au clic, l'extension lit uniquement les éléments publics d'une page d'offre d'emploi (titre du poste, entreprise, description, lieu, contrat, etc.). Elle ne lit pas et ne transmet pas :
 - Les données privées de votre profil utilisateur sur le site visité
@@ -108,17 +111,15 @@ Au clic, l'extension lit uniquement les éléments publics d'une page d'offre d'
 - Les profils ou contenus d'autres utilisateurs
 - Les fils d'actualité ou contenus en dehors des pages d'offres d'emploi
 
-Sur LinkedIn spécifiquement, l'extension n'accède pas à votre profil personnel, à vos contacts, à votre messagerie, ni à aucune donnée privée d'autres utilisateurs. Elle ne s'active que sur les pages d'offres d'emploi.
-
-Sur tout site qui n'est pas dans la liste des sites pris en charge, l'extension est totalement inactive : aucune lecture, aucun bouton affiché, aucune requête envoyée.`
+Sur tout site qui n'est pas dans la liste des plateformes compatibles, l'extension est totalement inactive : aucune lecture, aucun bouton affiché, aucune requête envoyée.`
           },
           {
-            title: '6. Mentions sur les marques et sites tiers',
-            content: `Les marques tierces citées dans la présente politique (LinkedIn, France Travail, Welcome to the Jungle, et autres ajoutées ultérieurement) restent la propriété exclusive de leurs titulaires respectifs. Elles ne sont mentionnées qu'à des fins descriptives, pour identifier les sites sur lesquels l'extension est techniquement compatible.
+            title: '6. Relations avec les sites tiers',
+            content: `Les domaines figurant dans la section 4 (host_permissions) correspondent à des plateformes de recrutement publiques, sur lesquelles l'extension est techniquement compatible. Ces domaines et les marques qui leur sont associées restent la propriété exclusive de leurs titulaires respectifs ; ils sont mentionnés à des fins strictement descriptives et techniques (justification obligatoire des permissions auprès du Chrome Web Store).
 
-Aucune affiliation, partenariat, sponsoring, accord commercial ou cautionnement n'existe entre Jean find my Job et ces sites. L'extension lit, à la demande explicite de l'utilisateur, le contenu d'une page d'offre que celui-ci consulte volontairement.
+Aucune affiliation, partenariat, sponsoring, accord commercial ou cautionnement n'existe entre Jean find my Job et ces plateformes. L'extension se contente, à la demande explicite et volontaire de l'utilisateur, de lire le contenu d'une page d'offre que celui-ci consulte de son propre chef dans son navigateur.
 
-L'utilisateur est invité à respecter les conditions générales d'utilisation propres à chaque site tiers. L'éditeur de Jean find my Job décline toute responsabilité en cas de litige entre l'utilisateur et un site tiers consécutif à l'usage de l'extension.`
+L'utilisateur est invité à respecter les conditions générales d'utilisation propres à chaque plateforme. L'éditeur de Jean find my Job décline toute responsabilité en cas de litige entre l'utilisateur et une plateforme tierce consécutif à l'usage de l'extension.`
           },
           {
             title: '7. Hébergement et sous-traitants',
