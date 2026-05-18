@@ -25,10 +25,14 @@ interface Props {
   jobId?: string | null
   // Pré-remplissage du champ Entreprise
   defaultCompany?: string
+  // Pré-remplissage Prénom / Nom (ex : depuis "Transmis par X" sur une offre)
+  defaultFirstName?: string
+  defaultLastName?: string
 }
 
 export default function CreateContactModal({
-  isOpen, onClose, onCreated, linkToLabel, jobId, defaultCompany,
+  isOpen, onClose, onCreated, linkToLabel, jobId,
+  defaultCompany, defaultFirstName, defaultLastName,
 }: Props) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -42,8 +46,8 @@ export default function CreateContactModal({
 
   useEffect(() => {
     if (isOpen) {
-      setFirstName('')
-      setLastName('')
+      setFirstName(defaultFirstName || '')
+      setLastName(defaultLastName || '')
       setRole('')
       setCompany(defaultCompany || '')
       setEmail('')
@@ -52,7 +56,7 @@ export default function CreateContactModal({
       setError('')
       setSaving(false)
     }
-  }, [isOpen, defaultCompany])
+  }, [isOpen, defaultCompany, defaultFirstName, defaultLastName])
 
   if (!isOpen) return null
 
