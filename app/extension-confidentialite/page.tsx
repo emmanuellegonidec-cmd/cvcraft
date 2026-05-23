@@ -28,7 +28,7 @@ export default function ExtensionConfidentialitePage() {
         <div style={{ marginBottom: '2.5rem' }}>
           <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 800, color: '#111', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Légal — Extension Chrome</div>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Politique de confidentialité de l&apos;extension Chrome</h1>
-          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 17 mai 2026</p>
+          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 23 mai 2026</p>
         </div>
 
         {/* Encart de contexte */}
@@ -81,8 +81,6 @@ Le clic sur « J'ai postulé » met à jour le statut de la candidature dans vot
             content: `Chrome impose à toute extension de justifier explicitement chaque permission demandée.
 
 🔑 storage : conservation locale du jeton de session entre deux ouvertures du navigateur, pour éviter une reconnexion à chaque clic.
-
-🔑 activeTab : lecture, au moment du clic sur « Capturer », de la page d'offre que vous regardez activement (et exclusivement celle-ci).
 
 🔑 sidePanel : affichage du panneau latéral Jean dans votre navigateur.
 
