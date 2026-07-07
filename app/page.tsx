@@ -291,7 +291,7 @@ export default async function LandingPage() {
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
             {[
               'Étapes standards incluses : entretien tél, RH, manager, offre',
-              'Ajoutez vos propres étapes : Entretien DRH, cas pratique, etc.',
+              'Ajoutez vos propres étapes : entretien DRH, cas pratique, etc.',
               'Contacts liés à chaque offre (recruteur, RH, manager) et historique de vos échanges',
               'Actions à faire, documents, comptes-rendus et notes : tout est centralisé par candidature',
             ].map(item => (
@@ -358,7 +358,7 @@ export default async function LandingPage() {
           <div className="steps-grid">
             {[
               { num:'1', title:'Vous créez votre profil', desc:"Un compte sécurisé et c'est parti. Jean prépare la base. Prêt à postuler sans repartir de zéro à chaque fois.", ia:false },
-              { num:'2', title:'Vous ajoutez vos candidatures', desc:"Importez le PDF de l'offre ou saisissez-la manuellement. Chaque candidature a son propre parcours de suivi entièrement personnalisable, avec ses contacts et ses étapes.", ia:false },
+              { num:'2', title:'Vous ajoutez vos offres', desc:"Capturez, importez, saisissez vos offres d'emploi. Chaque candidature a son propre parcours de suivi entièrement personnalisable, avec ses contacts et ses étapes.", ia:false },
               { num:'3', title:'Vous suivez sans vous perdre', desc:"Toutes vos candidatures au même endroit. Vous savez où vous en êtes, à chaque instant, sans réfléchir.", ia:false },
               { num:'4', title:"L'IA vous aide à mieux candidater", desc:"Jean vous donne un coup de main quand vous en avez besoin — analyser votre CV face à une offre, comprendre les attentes d'un poste, préparer vos entretiens.", ia:true },
             ].map(s => (
@@ -531,7 +531,7 @@ export default async function LandingPage() {
           </div>
           <div>
             <h3 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:11,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'1rem',borderBottom:'2px solid #111',paddingBottom:8 }}>Produit</h3>
-           {[['Tableau de bord','#fonctionnalites'],['Score ATS','/score-ats'],['Votre parcours par candidature','#fonctionnalites'],['Suivi contacts','#fonctionnalites'],['Statistiques','#fonctionnalites']].map(([label,href]) => (
+           {[['Extension Google Chrome','#fonctionnalites'],['Tableau de bord','#fonctionnalites'],['Score ATS','/score-ats'],['Votre parcours par candidature','#fonctionnalites'],['Suivi contacts','#fonctionnalites'],['Statistiques','#fonctionnalites']].map(([label,href]) => (
               <a key={label} href={href} className="footer-link">{label}</a>
             ))}
           </div>
