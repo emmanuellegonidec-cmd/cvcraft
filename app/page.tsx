@@ -385,12 +385,12 @@ export default async function LandingPage() {
           </div>
           <div className="feats-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1.5rem' }}>
            {[
+              { icon:'🔌',title:'Extension Chrome',desc:'Installez l\'extension et capturez automatiquement les offres depuis les jobboards' },
               { icon:'📊',title:'Tableau de bord kanban',desc:'5 colonnes pour visualiser toutes vos candidatures d\'un coup d\'œil — de l\'envie de postuler à l\'offre reçue.' },
               { icon:'🗂️',title:'Parcours par candidature',desc:'Étapes, dates, notes, contacts et documents : tout est centralisé par offre en un seul endroit.' },
               { icon:'🎯',title:'Score ATS',desc:'Analysez votre CV face à la description du poste et maximisez vos chances de passer les filtres automatiques.' },
               { icon:'👥',title:'Contacts',desc:'Liez recruteurs, RH, managers et référents à chaque candidature. Historique de vos échanges et relances, rangés par offre.' },
               { icon:'📋',title:'Synthèse & export PDF',desc:'Générez un bilan complet de votre recherche d\'emploi, exportable en PDF — idéal pour votre conseiller emploi.' },
-              { icon:'📥',title:'Import PDF d\'offre',desc:'Importez le PDF d\'une offre téléchargée et Jean extrait automatiquement le poste, l\'entreprise, la description et les compétences requises.' },
               { icon:'📅',title:'Calendrier intégré',desc:'Visualisez vos entretiens et relances à venir en vue semaine ou mois.' },
               { icon:'⚡',title:'Événements',desc:'Ateliers, formations, coaching, RDV conseil — suivez tout ce qui gravite autour de votre recherche.' },
               { icon:'📈',title:'Statistiques',desc:'Taux de réponse, entretiens, propositions : pilotez votre recherche avec les données.' },
