@@ -182,7 +182,7 @@ export default async function LandingPage() {
               <span style={{ display:'block',whiteSpace:'nowrap' }}>dans le chaos</span>
             </h1>
             <p className="fade3" style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.05rem',color:'#555',marginBottom:'2rem',lineHeight:1.75,maxWidth:460,fontWeight:500 }}>
-              Jean find my Job centralise votre recherche d&apos;emploi — tableau de bord, suivi de candidatures, contacts, score ATS. Tout au même endroit, enfin.
+              Jean find my Job organise votre recherche d&apos;emploi. Enregistrez vos offres, suivez vos candidatures et gardez tout au même endroit, enfin.
             </p>
             <div className="fade4" style={{ display:'flex',gap:12,flexWrap:'wrap',alignItems:'center' }}>
               <CTAButton href="/auth/signup" label="Commencer gratuitement →" eventName="cta_hero" className="btn-black" style={{ fontSize:15,padding:'14px 32px' }} />
