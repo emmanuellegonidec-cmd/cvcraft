@@ -175,6 +175,7 @@ Règles strictes :
 // ============================================================
 // PROMPT DE GÉNÉRATION DE LETTRE DE MOTIVATION
 // Session 6b.1 — 27 avril 2026
+// MàJ 07 juillet 2026 — ajout RÈGLE #9 anti-excuses / anti-report à l'entretien
 // ============================================================
 //
 // Principe directeur : la lettre est centrée sur les BESOINS DE L'ENTREPRISE,
@@ -184,6 +185,8 @@ Règles strictes :
 //
 // Posture : humble, factuelle, au service du projet de l'entreprise.
 // Pas d'auto-célébration, pas de promesses creuses, pas de superlatifs.
+// Pas d'excuses, pas de report des preuves "à l'entretien", pas de méta-commentaire
+// sur ce que la lettre contient ou ne contient pas.
 // ============================================================
 
 export interface LMUserProfile {
@@ -269,7 +272,7 @@ PIPELINE OBLIGATOIRE EN 3 ÉTAPES
 ÉTAPE 1 — DIAGNOSTIC SILENCIEUX
 Lis attentivement les données en entrée et identifie en silence :
 - 2-3 missions, exigences ou éléments de contexte clairs de l'entreprise pour ce poste (déduits de l'offre, sans les surinterpréter)
-- Pour chaque élément, 1 preuve chiffrée dans le profil/CV qui démontre que le candidat sait y répondre (% de croissance, montants gérés, tailles d'équipe, nombre de projets/clients, durée d'expertise sur le domaine concerné)
+- Pour chaque élément, 1 preuve concrète dans le profil/CV qui démontre que le candidat sait y répondre (% de croissance, montants gérés, tailles d'équipe, nombre de projets/clients, durée d'expertise sur le domaine concerné — ou, à défaut de chiffre, un fait concret : intitulé de poste, périmètre, responsabilité tenue)
 - 1 angle d'entreprise (mission, projet récent, valeur, positionnement) qui peut servir d'accroche si l'offre en mentionne un
 
 Tu ne retournes PAS ce diagnostic. Il sert uniquement à structurer la lettre.
@@ -280,23 +283,25 @@ P1 — Accroche orientée entreprise (3-4 phrases) :
 S'appuie sur ce que l'entreprise dit explicitement (offre, mission, contexte). Mentionne le nom de l'entreprise et l'intitulé du poste. Reformule un point précis du texte de l'offre — ne diagnostique pas, ne décrète pas un enjeu central. Ne commence PAS par "Je vous écris...", "C'est avec un grand intérêt...", "Suite à votre annonce...".
 
 P2 — Adéquation besoin/preuve (4-6 phrases) :
-Pour 1-2 missions/exigences identifiées à l'étape 1, fournis la preuve concrète issue du parcours du candidat. Chaque preuve = une phrase qui décrit le contexte + le résultat chiffré. Format type : "Vous mentionnez [élément précis de l'offre]. Sur ce type d'enjeu, j'ai [verbe d'action] [contexte concret] avec [résultat chiffré exact]." Préserve les chiffres EXACTS issus du profil/CV.
+Pour 1-2 missions/exigences identifiées à l'étape 1, fournis la preuve concrète issue du parcours du candidat. Chaque preuve = une phrase qui décrit le contexte + le résultat (chiffré si disponible). Format type : "Vous mentionnez [élément précis de l'offre]. Sur ce type d'enjeu, j'ai [verbe d'action] [contexte concret] avec [résultat chiffré exact]." Préserve les chiffres EXACTS issus du profil/CV. Si aucun chiffre n'est disponible, affirme le fait concret avec assurance (au présent), SANS jamais signaler l'absence de chiffre ni renvoyer la preuve à plus tard.
 
 P3 — Apport concret pour l'entreprise (3-4 phrases) :
 Projette l'expertise du candidat sur les missions du poste. Comment cette expérience peut se traduire en valeur opérationnelle pour l'entreprise (économies, accélération, structuration, sécurisation, déblocage). Reste factuel, pas de promesses creuses ni de superlatifs ("je serai un atout précieux", "je m'engage à dépasser vos objectifs"). Si tu n'as pas matière, sois bref plutôt que générique.
 
 P4 — Conclusion sobre + formule de politesse (2-3 phrases) :
-Invitation à un échange (sans formule cliché). Pas de "Je suis à votre disposition...", pas de "N'hésitez pas...". Termine par ${closing}.
+Invitation à un échange (sans formule cliché). Pas de "Je suis à votre disposition...", pas de "N'hésitez pas...". L'invitation à l'échange NE sert PAS à reporter des preuves ou des chiffres "pour plus tard" (voir RÈGLE #9). Termine par ${closing}.
 
 ÉTAPE 3 — RÉDACTION
-Rédige la lettre en appliquant les 8 règles ci-dessous.
+Rédige la lettre en appliquant les 9 règles ci-dessous.
 
 ═══════════════════════════════════════════════════════════════
-8 RÈGLES STRICTES
+9 RÈGLES STRICTES
 ═══════════════════════════════════════════════════════════════
 
-RÈGLE #1 — PREUVE PAR LES CHIFFRES, EXCLUSIVEMENT DEPUIS LE PROFIL/CV
-Toute affirmation sur le candidat (compétence, réalisation, expertise) DOIT être démontrée par un chiffre ou un fait précis présent dans les données en entrée (profil, CV). N'invente AUCUN chiffre, AUCUNE expérience, AUCUNE compétence, AUCUN outil, AUCUN projet, AUCUN diplôme. Si une affirmation ne peut pas être démontrée par une donnée d'entrée, NE LA FAIS PAS. Au moins 1 chiffre exact dans le P2, idéalement 1 dans le P3.
+RÈGLE #1 — PREUVE PAR LES FAITS, EXCLUSIVEMENT DEPUIS LE PROFIL/CV
+Toute affirmation sur le candidat (compétence, réalisation, expertise) DOIT être démontrée par un chiffre ou un fait précis présent dans les données en entrée (profil, CV). N'invente AUCUN chiffre, AUCUNE expérience, AUCUNE compétence, AUCUN outil, AUCUN projet, AUCUN diplôme. Si une affirmation ne peut pas être démontrée par une donnée d'entrée, NE LA FAIS PAS.
+- Si le profil/CV contient des chiffres : utilise-les (au moins 1 dans le P2, idéalement 1 dans le P3).
+- S'il n'y a AUCUN chiffre disponible : n'en invente pas et ne signale pas leur absence. Appuie-toi sur les faits concrets présents (intitulés de poste, domaines d'expertise, durées, périmètres, responsabilités) et fais une lettre PLUS COURTE. Une lettre courte et factuelle vaut mieux qu'une lettre longue qui comble le vide par des excuses ou des promesses.
 
 RÈGLE #2 — HUMILITÉ ET POSTURE DE SERVICE
 Le candidat se positionne au service du projet de l'entreprise. JAMAIS d'auto-célébration. Bannir : "Je suis le candidat idéal", "Mon profil est parfaitement aligné", "Mon parcours unique", "Mes compétences exceptionnelles", "Je vous garantis...", "Je suis convaincu(e) d'être...".
@@ -317,13 +322,21 @@ RÈGLE #5 — NE PAS RÉSUMER LE CV
 La lettre n'est PAS un résumé du CV. Elle DONNE ENVIE de lire le CV. Cite MAXIMUM 2 expériences précises (pas plus). Pas de liste exhaustive de compétences. Pas de chronologie de carrière. Choisis les éléments qui répondent DIRECTEMENT aux besoins identifiés à l'étape 1.
 
 RÈGLE #6 — TON ET LONGUEUR
-Respecte le ton et la longueur cible (fourchette ±5%). Compte la formule d'appel et la formule de politesse dans le total.
+Respecte le ton et la longueur cible (fourchette ±5%). Compte la formule d'appel et la formule de politesse dans le total. Exception : si le profil/CV est pauvre en éléments concrets, une lettre plus courte que la cible est PRÉFÉRABLE à une lettre étirée par du remplissage (voir RÈGLE #1 et RÈGLE #9).
 
 RÈGLE #7 — FORMAT DE SORTIE
 Tu retournes UNIQUEMENT la lettre, sans préambule ("Voici la lettre :"), sans explication, sans markdown, sans gras, sans italique, sans listes, sans balises HTML, sans en-tête (objet, date, adresses), sans signature. L'utilisateur ajoutera la signature lui-même. Tu commences directement par la formule d'appel.
 
 RÈGLE #8 — ANTI-PROMESSES, ANTI-SUPERLATIFS
 Pas de promesses non démontrables ("Je m'engage à dépasser vos objectifs", "Je transformerai votre équipe"). Pas de superlatifs gratuits ("expertise unique", "compétences exceptionnelles", "résultats remarquables"). Faits, chiffres, actions concrètes uniquement.
+
+RÈGLE #9 — INTERDICTION ABSOLUE DES EXCUSES ET DES MÉTA-COMMENTAIRES SUR LA LETTRE
+La lettre ne parle JAMAIS d'elle-même, ni de ce qui lui manque, ni de ce que le candidat "fera plus tard". Interdit sans exception :
+- Signaler une absence : "je ne dispose pas ici de...", "je n'ai pas d'historique chiffré à vous transmettre ici", "faute de place", "sans pouvoir détailler ici".
+- Reporter une preuve à l'entretien : "je vous les transmettrai lors d'un entretien", "pièces à l'appui", "chiffres à l'appui", "je tiens à le faire avec précision lors d'un entretien", "je vous présenterai les résultats concrets lors d'un échange".
+- Commenter le contenu de la lettre : "les éléments chiffrés qui n'ont pas leur place dans cette lettre", "dans le cadre de cet échange", "je ne peux pas détailler ici mais...".
+
+Le candidat écrit avec ce qu'il a. S'il a des chiffres, il les met. S'il n'en a pas, il affirme des faits concrets au présent, avec assurance et sobriété, et fait une lettre plus courte — SANS jamais mentionner que quelque chose manque, ni promettre de compléter plus tard. L'invitation à l'échange du P4 est une simple ouverture polie, jamais un renvoi des preuves à un moment ultérieur.
 
 ═══════════════════════════════════════════════════════════════
 EXEMPLES CONCRETS
@@ -347,6 +360,14 @@ EXEMPLES CONCRETS
 
 ✅ BON (reformule l'offre + preuve chiffrée tirée du profil) :
 "Vous mentionnez la structuration d'un programme CRM premium parmi les missions du poste. Chez [entreprise X], j'ai déployé un programme qui a fait passer le taux d'ouverture de 12% à 50%, sur un budget annuel de 1,4 M€ et 21 clients grands comptes (66k€ en moyenne). La logique d'individualisation par segment que vous évoquez dans le contexte du poste rejoint directement ce que ce dispositif a permis de mettre en place."
+
+--- QUAND PEU OU PAS DE CHIFFRES SONT DISPONIBLES (RÈGLE #9) ---
+
+❌ MAUVAIS (excuses, report à l'entretien, méta-commentaire sur la lettre) :
+"Je ne dispose pas, dans le cadre de cet échange, d'un historique chiffré à vous transmettre ici, mais je tiens à le faire avec précision lors d'un entretien, pièces à l'appui. Je souhaite vous présenter les résultats concrets obtenus, avec les chiffres précis, éléments qui n'ont pas leur place dans cette lettre mais trouveront naturellement la leur dans un entretien."
+
+✅ BON (faits concrets, assurance sobre, aucune mention d'absence) :
+"Le pilotage par KPIs (MQLs, MRR, ROI) que vous placez au cœur de la stratégie marketing France correspond à mon quotidien sur des fonctions comparables : gestion d'un budget local, animation d'une équipe marketing et reporting régulier auprès de la direction. Le développement de partenariats et la présence sur les salons professionnels RH que vous décrivez rejoignent directement mon expérience à l'interface entre production de contenu, animation de réseau et pilotage d'équipe."
 
 ═══════════════════════════════════════════════════════════════
 DONNÉES EN ENTRÉE
@@ -381,5 +402,5 @@ ${cvBlock}
 DEMANDE FINALE
 ═══════════════════════════════════════════════════════════════
 
-Rédige maintenant la lettre de motivation en appliquant strictement le principe directeur, le pipeline en 3 étapes et les 8 règles. Retourne UNIQUEMENT la lettre, en commençant par la formule d'appel.`;
+Rédige maintenant la lettre de motivation en appliquant strictement le principe directeur, le pipeline en 3 étapes et les 9 règles. Retourne UNIQUEMENT la lettre, en commençant par la formule d'appel.`;
 }
