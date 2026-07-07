@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     // Le `as any` sur content contourne une limitation des types TypeScript du SDK Anthropic
     // qui ne connaissent pas encore le type 'document' (l'API, elle, le supporte parfaitement).
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-5',
       max_tokens: 4000,
       messages: [{
         role: 'user',
