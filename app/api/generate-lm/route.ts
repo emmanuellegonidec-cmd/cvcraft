@@ -237,14 +237,22 @@ export async function POST(req: NextRequest) {
     userContent.push({ type: 'text', text: prompt });
 
     // ── 6. Appel Claude ──
+    // Sonnet 5 active la "réflexion" (thinking) par défaut : cela consomme des
+    // tokens inutiles pour une lettre de motivation et place un bloc "thinking"
+    // avant le texte. On la désactive pour économiser la consommation et pour
+    // que la réponse ne contienne que le texte final.
     const message = await client.messages.create({
       model: 'claude-sonnet-5',
       max_tokens: 2000,
+      thinking: { type: 'disabled' },
       messages: [{ role: 'user', content: userContent as any }],
-    });
+    } as any);
 
+    // On récupère le bloc de type "text" (et non le premier bloc, qui peut être
+    // un bloc "thinking" selon le modèle) — extraction robuste.
+    const textBlock = message.content.find((b: any) => b.type === 'text');
     const rawContent =
-      message.content[0]?.type === 'text' ? message.content[0].text : '';
+      textBlock && (textBlock as any).type === 'text' ? (textBlock as any).text : '';
 
     if (!rawContent || rawContent.trim().length === 0) {
       return NextResponse.json(
