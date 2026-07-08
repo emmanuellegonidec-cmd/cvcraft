@@ -359,7 +359,7 @@ Rappel :
     })
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-5',
       max_tokens: 4000,
       system: ATS_SYSTEM_PROMPT,
       messages: [
