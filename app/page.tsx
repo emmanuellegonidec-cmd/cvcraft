@@ -292,7 +292,7 @@ export default async function LandingPage() {
               'Vue globale : 5 grandes étapes claires, de l\'envie de postuler à l\'offre reçue',
               'Statistiques de votre recherche en temps réel',
               'Calendrier intégré : visualisez vos relances et entretiens à venir…',
-              'Événements : ateliers, formations, RDV conseil — tout est dans le calendrier',
+              'Événements & actions : ateliers, formations, RDV conseil — tout est dans le calendrier',
               
             ].map(item => (
               <li key={item} style={{ display:'flex',gap:10,fontSize:14,fontWeight:600,fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif" }}>
