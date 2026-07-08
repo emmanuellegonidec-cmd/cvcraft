@@ -171,7 +171,7 @@ export default function SeoFields({
               fontFamily: 'Montserrat, sans-serif',
             }}>J</div>
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3, minWidth: 0 }}>
-              <span style={{ fontSize: 14, color: '#202124', fontWeight: 500 }}>Jean Find My Job</span>
+              <span style={{ fontSize: 14, color: '#202124', fontWeight: 500 }}>Jean find my Job</span>
               <span style={{ fontSize: 12, color: '#4d5156', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 https://jeanfindmyjob.fr &rsaquo; blog &rsaquo; {truncate(previewSlug, 35)}
               </span>

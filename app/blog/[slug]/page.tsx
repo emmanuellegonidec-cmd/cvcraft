@@ -20,7 +20,7 @@ export async function generateMetadata(
 
   if (!article) {
     return {
-      title: 'Article — Jean Find My Job',
+      title: 'Article — Jean find my Job',
       description: 'Conseils et ressources pour votre recherche d\'emploi.',
     }
   }

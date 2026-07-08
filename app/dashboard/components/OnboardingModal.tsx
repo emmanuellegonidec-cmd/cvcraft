@@ -6,7 +6,7 @@ const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 const SCREENS = [
   {
-    title: 'Bienvenue sur Jean Find My Job',
+    title: 'Bienvenue sur Jean find my Job',
     content: (
       <div>
         <p style={{ margin: '0 0 12px', fontFamily: FONT }}>
@@ -158,7 +158,7 @@ const SCREENS = [
         </p>
         <div style={{ border: '2px solid #111', borderRadius: 12, padding: '20px 16px', background: '#FFFDE7', boxShadow: '3px 3px 0 #111', textAlign: 'center' as const }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>🎯</div>
-          <div style={{ fontWeight: 900, fontSize: 16, color: '#111', fontFamily: FONT, marginBottom: 4 }}>Jean Find My Job</div>
+          <div style={{ fontWeight: 900, fontSize: 16, color: '#111', fontFamily: FONT, marginBottom: 4 }}>Jean find my Job</div>
           <div style={{ fontSize: 12, color: '#555', fontFamily: FONT }}>Ton allié pour une recherche organisée</div>
         </div>
         <p style={{ margin: '14px 0 0', fontSize: 11, color: '#888', textAlign: 'center' as const, fontFamily: FONT }}>
@@ -205,7 +205,7 @@ export default function OnboardingModal({ onAddJob }: { onAddJob: () => void }) 
 
         {/* HEADER blanc avec logo */}
         <div style={{ background: '#fff', borderBottom: '3px solid #111', padding: '16px 22px 14px', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          <img src="/logojeanfindmyjob.webp" alt="Jean Find My Job" style={{ height: 80, width: 'auto', display: 'block' }} />
+          <img src="/logojeanfindmyjob.webp" alt="Jean find my Job" style={{ height: 80, width: 'auto', display: 'block' }} />
           <button onClick={close} style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: '#aaa', fontSize: 20, cursor: 'pointer', padding: 0 }}>✕</button>
           <div style={{ color: '#111', fontWeight: 900, fontSize: 17, marginTop: 10, lineHeight: 1.25, fontFamily: FONT }}>
             {screen.title}

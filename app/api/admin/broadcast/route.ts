@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       batch.map(async (email) => {
         try {
           await resend.emails.send({
-            from: 'Jean Find My Job <hello@jeanfindmyjob.fr>',
+            from: 'Jean find my Job <hello@jeanfindmyjob.fr>',
             to: email,
             subject: subject.trim(),
             html: `
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
                         <tr>
                           <td style="background:#fafafa;border-top:2px solid #f0f0f0;padding:16px 32px;text-align:center;">
                             <p style="font-size:11px;color:#aaa;margin:0;">
-                              © 2026 Jean Find My Job · <a href="https://jeanfindmyjob.fr" style="color:#E8151B;text-decoration:none;">jeanfindmyjob.fr</a>
+                              © 2026 Jean find my Job · <a href="https://jeanfindmyjob.fr" style="color:#E8151B;text-decoration:none;">jeanfindmyjob.fr</a>
                             </p>
                           </td>
                         </tr>

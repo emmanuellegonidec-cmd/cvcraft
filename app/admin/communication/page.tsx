@@ -79,7 +79,7 @@ export default function AdminCommunicationPage() {
             name="subject"
             value={form.subject}
             onChange={handleChange}
-            placeholder="Ex : Nouveauté sur Jean Find My Job 🚀"
+            placeholder="Ex : Nouveauté sur Jean find my Job 🚀"
             className="w-full px-4 py-3 rounded text-sm font-medium outline-none"
             style={{ border: '2px solid #111' }}
           />

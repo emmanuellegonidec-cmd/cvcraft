@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     description:
       "Suivez vos candidatures, organisez vos relances et optimisez votre CV avec le score ATS. Outil gratuit pour réussir votre recherche d'emploi.",
     url: "https://jeanfindmyjob.fr",
-    siteName: "Jean Find My Job",
+    siteName: "Jean find my Job",
     locale: "fr_FR",
     type: "website",
     images: [
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
         url: '/logojeanfindmyjob.webp',
         width: 1200,
         height: 630,
-        alt: 'Jean Find My Job — Suivez et optimisez vos candidatures',
+        alt: 'Jean find my Job — Suivez et optimisez vos candidatures',
       },
     ],
   },

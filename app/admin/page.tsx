@@ -87,7 +87,7 @@ export default function AdminDashboard() {
       <h1 className="text-3xl font-black mb-2" style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}>
         Tableau de bord
       </h1>
-      <p className="text-gray-500 mb-8 text-sm font-medium">Vue d'ensemble de Jean Find My Job</p>
+      <p className="text-gray-500 mb-8 text-sm font-medium">Vue d'ensemble de Jean find my Job</p>
 
       {/* Stats cards */}
       <div className="grid grid-cols-3 gap-4 mb-10">
