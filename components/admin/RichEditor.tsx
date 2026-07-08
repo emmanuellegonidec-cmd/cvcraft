@@ -31,7 +31,7 @@ function normalizeInternalUrl(url: string): string {
 }
 
 const ToolbarButton = ({ onClick, active, title, children }: { onClick: () => void; active?: boolean; title: string; children: React.ReactNode }) => (
-  <button type="button" onClick={onClick} title={title} className="px-2 py-1 rounded text-sm font-bold transition-all" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: active ? '#F5C400' : 'transparent', color: active ? '#111' : '#444', border: active ? '1px solid #111' : '1px solid transparent' }}>
+  <button type="button" onClick={onClick} title={title} className="px-2 py-1 rounded text-sm font-bold transition-all" style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", backgroundColor: active ? '#F5C400' : 'transparent', color: active ? '#111' : '#444', border: active ? '1px solid #111' : '1px solid transparent' }}>
     {children}
   </button>
 )
@@ -175,7 +175,7 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
         <Divider />
         <ToolbarButton onClick={() => { setShowLinkInput(!showLinkInput); setShowImageInput(false); setShowCtaInput(false) }} active={showLinkInput || editor.isActive('link')} title="Lien externe">🔗 Lien</ToolbarButton>
         <ToolbarButton onClick={() => { setShowImageInput(!showImageInput); setShowLinkInput(false); setShowCtaInput(false) }} active={showImageInput} title="Image par URL">🌐 URL img</ToolbarButton>
-        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Uploader une image (nom SEO généré automatiquement)" className="px-2 py-1 rounded text-sm font-bold" style={{ fontFamily: 'Montserrat, sans-serif', backgroundColor: 'transparent', color: '#444', border: '1px solid transparent' }}>
+        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Uploader une image (nom SEO généré automatiquement)" className="px-2 py-1 rounded text-sm font-bold" style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", backgroundColor: 'transparent', color: '#444', border: '1px solid transparent' }}>
           {uploading ? '⏳ Upload...' : '📁 Upload'}
         </button>
         <input ref={fileInputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif" onChange={handleFileUpload} style={{ display: 'none' }} />
@@ -195,7 +195,7 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
       {/* Popup alt SEO après upload */}
       {showAltPopup && (
         <div ref={altPopupRef} className="px-4 py-3 flex items-center gap-3 flex-wrap" style={{ backgroundColor: '#f0fdf4', borderBottom: '2px solid #16a34a' }}>
-          <span className="text-xs font-black" style={{ color: '#16a34a', fontFamily: 'Montserrat, sans-serif' }}>✅ Image uploadée — Texte alternatif SEO :</span>
+          <span className="text-xs font-black" style={{ color: '#16a34a', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>✅ Image uploadée — Texte alternatif SEO :</span>
           <input
             ref={altInputRef}
             type="text"
@@ -206,7 +206,7 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
             style={{ border: '1px solid #16a34a', minWidth: 250 }}
             onKeyDown={e => e.key === 'Enter' && insertImageWithAlt()}
           />
-          <button type="button" onClick={insertImageWithAlt} className="px-3 py-1 rounded text-xs font-black" style={{ backgroundColor: '#16a34a', color: '#fff', border: '1px solid #16a34a', fontFamily: 'Montserrat, sans-serif' }}>
+          <button type="button" onClick={insertImageWithAlt} className="px-3 py-1 rounded text-xs font-black" style={{ backgroundColor: '#16a34a', color: '#fff', border: '1px solid #16a34a', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>
             Insérer
           </button>
           <button type="button" onClick={() => { setPendingImageUrl(''); setPendingAlt(''); setShowAltPopup(false) }} className="px-3 py-1 rounded text-xs font-bold" style={{ backgroundColor: '#f3f4f6', color: '#555' }}>
@@ -218,9 +218,9 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
       {/* Input lien */}
       {showLinkInput && (
         <div className="flex items-center gap-2 px-3 py-2" style={{ backgroundColor: '#fffbe6', borderBottom: '1px solid #F5C400' }}>
-          <span className="text-xs font-bold" style={{ fontFamily: 'Montserrat, sans-serif' }}>URL :</span>
+          <span className="text-xs font-bold" style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>URL :</span>
           <input type="url" value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://..." className="flex-1 px-3 py-1 rounded text-sm outline-none" style={{ border: '1px solid #ddd' }} onKeyDown={e => e.key === 'Enter' && addLink()} />
-          <button type="button" onClick={addLink} className="px-3 py-1 rounded text-xs font-black" style={{ backgroundColor: '#F5C400', color: '#111', border: '1px solid #111', fontFamily: 'Montserrat, sans-serif' }}>Insérer</button>
+          <button type="button" onClick={addLink} className="px-3 py-1 rounded text-xs font-black" style={{ backgroundColor: '#F5C400', color: '#111', border: '1px solid #111', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>Insérer</button>
           <button type="button" onClick={() => setShowLinkInput(false)} className="px-3 py-1 rounded text-xs font-bold" style={{ backgroundColor: '#f3f4f6', color: '#555' }}>✕</button>
         </div>
       )}
@@ -228,10 +228,10 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
       {/* Input image URL */}
       {showImageInput && (
         <div className="flex items-center gap-2 px-3 py-2 flex-wrap" style={{ backgroundColor: '#fffbe6', borderBottom: '1px solid #F5C400' }}>
-          <span className="text-xs font-bold" style={{ fontFamily: 'Montserrat, sans-serif' }}>Image :</span>
+          <span className="text-xs font-bold" style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>Image :</span>
           <input type="url" value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://..." className="flex-1 px-3 py-1 rounded text-sm outline-none" style={{ border: '1px solid #ddd', minWidth: 200 }} />
           <input type="text" value={imageAlt} onChange={e => setImageAlt(e.target.value)} placeholder="Texte alt SEO (important !)" className="px-3 py-1 rounded text-sm outline-none" style={{ border: '1px solid #ddd', width: 200 }} />
-          <button type="button" onClick={addImageFromUrl} className="px-3 py-1 rounded text-xs font-black" style={{ backgroundColor: '#F5C400', color: '#111', border: '1px solid #111', fontFamily: 'Montserrat, sans-serif' }}>Insérer</button>
+          <button type="button" onClick={addImageFromUrl} className="px-3 py-1 rounded text-xs font-black" style={{ backgroundColor: '#F5C400', color: '#111', border: '1px solid #111', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>Insérer</button>
           <button type="button" onClick={() => setShowImageInput(false)} className="px-3 py-1 rounded text-xs font-bold" style={{ backgroundColor: '#f3f4f6', color: '#555' }}>✕</button>
         </div>
       )}
@@ -239,10 +239,10 @@ export default function RichEditor({ content, onChange, token }: RichEditorProps
       {/* Input CTA */}
       {showCtaInput && (
         <div className="flex items-center gap-2 px-3 py-2 flex-wrap" style={{ backgroundColor: '#fffbe6', borderBottom: '1px solid #F5C400' }}>
-          <span className="text-xs font-bold" style={{ fontFamily: 'Montserrat, sans-serif' }}>CTA :</span>
+          <span className="text-xs font-bold" style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>CTA :</span>
           <input type="text" value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder="Texte du bouton" className="px-3 py-1 rounded text-sm outline-none" style={{ border: '1px solid #ddd', width: 180 }} />
           <input type="url" value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder="https://..." className="flex-1 px-3 py-1 rounded text-sm outline-none" style={{ border: '1px solid #ddd', minWidth: 200 }} />
-          <button type="button" onClick={addCta} className="px-3 py-1 rounded text-xs font-black" style={{ backgroundColor: '#F5C400', color: '#111', border: '1px solid #111', fontFamily: 'Montserrat, sans-serif' }}>Insérer</button>
+          <button type="button" onClick={addCta} className="px-3 py-1 rounded text-xs font-black" style={{ backgroundColor: '#F5C400', color: '#111', border: '1px solid #111', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>Insérer</button>
           <button type="button" onClick={() => setShowCtaInput(false)} className="px-3 py-1 rounded text-xs font-bold" style={{ backgroundColor: '#f3f4f6', color: '#555' }}>✕</button>
         </div>
       )}

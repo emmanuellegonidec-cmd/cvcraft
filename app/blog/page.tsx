@@ -65,7 +65,7 @@ export default async function BlogIndexPage() {
 
       {/* NAV */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: '#fff', borderBottom: '2.5px solid #111', position: 'sticky', top: 0, zIndex: 100 }}>
-        <Link href="/" style={{ textDecoration: 'none', fontFamily: 'Montserrat,sans-serif', fontSize: '0.95rem', fontWeight: 900, color: '#111' }}>
+        <Link href="/" style={{ textDecoration: 'none', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontSize: '0.95rem', fontWeight: 900, color: '#111' }}>
           Jean <span style={{ color: '#E8151B' }}>find my Job</span>
         </Link>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>

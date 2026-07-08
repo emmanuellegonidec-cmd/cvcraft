@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { CVFormData } from '@/lib/types';
 
-const FONT = 'Montserrat, sans-serif';
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 interface Props {
   form: CVFormData;

@@ -3,7 +3,7 @@
 import { CVFormData } from '@/lib/types';
 import { TemplateId, splitSkills } from '@/lib/cv-config';
 
-const FONT = 'Montserrat, sans-serif';
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 interface Props {
   form: CVFormData;

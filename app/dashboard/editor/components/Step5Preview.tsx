@@ -5,7 +5,7 @@ import { CVFormData } from '@/lib/types';
 import { TemplateId, FontId } from '@/lib/cv-config';
 import { CVPreview } from './CVPreview';
 
-const FONT = 'Montserrat, sans-serif';
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 interface Props {
   form: CVFormData;

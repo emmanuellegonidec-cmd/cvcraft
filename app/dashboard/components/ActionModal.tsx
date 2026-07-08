@@ -158,7 +158,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
         }}
         onClick={e => e.stopPropagation()}
       >
-        <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#111' }}>
+        <h2 style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#111' }}>
           {action?.id ? 'Modifier l\'événement' : '+ Ajouter un événement'}
         </h2>
 
@@ -235,7 +235,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
                     background: statut === s.value ? s.color : '#fff',
                     color: statut === s.value ? '#fff' : '#111',
                     cursor: 'pointer',
-                    fontFamily: 'Montserrat, sans-serif',
+                    fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
                     fontWeight: 700,
                     fontSize: 12,
                   }}
@@ -271,7 +271,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
             style={{
               padding: '8px 20px', border: '2px solid #111',
               background: '#fff', cursor: 'pointer',
-              fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 13,
+              fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontWeight: 600, fontSize: 13,
             }}
           >
             Annuler
@@ -282,7 +282,7 @@ export default function ActionModal({ isOpen, onClose, onSave, action, initialDa
             style={{
               padding: '8px 20px', border: '2px solid #111',
               background: '#F5C400', cursor: 'pointer',
-              fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 13,
+              fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontWeight: 700, fontSize: 13,
               boxShadow: '2px 2px 0 #111',
               opacity: loading ? 0.7 : 1,
             }}
@@ -301,7 +301,7 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 700,
   color: '#555',
   marginBottom: 5,
-  fontFamily: 'Montserrat, sans-serif',
+  fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
 }
@@ -310,7 +310,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '8px 10px',
   border: '1.5px solid #111',
-  fontFamily: 'Montserrat, sans-serif',
+  fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
   fontSize: 13,
   color: '#111',
   background: '#fff',

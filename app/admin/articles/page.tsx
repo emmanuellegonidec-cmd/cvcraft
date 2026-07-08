@@ -30,7 +30,7 @@ export default async function AdminArticlesPage() {
         <div>
           <h1
             className="text-3xl font-black mb-1"
-            style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}
+            style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", color: '#111' }}
           >
             ✍️ Articles
           </h1>
@@ -42,7 +42,7 @@ export default async function AdminArticlesPage() {
           href="/admin/articles/new"
           className="px-5 py-3 font-black text-sm rounded transition-all"
           style={{
-            fontFamily: 'Montserrat, sans-serif',
+            fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
             backgroundColor: '#F5C400',
             color: '#111',
             border: '2px solid #111',
@@ -65,7 +65,7 @@ export default async function AdminArticlesPage() {
             href="/admin/articles/new"
             className="inline-block px-5 py-3 font-black text-sm rounded"
             style={{
-              fontFamily: 'Montserrat, sans-serif',
+              fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
               backgroundColor: '#111',
               color: '#F5C400',
               border: '2px solid #111',
@@ -87,7 +87,7 @@ export default async function AdminArticlesPage() {
                 <span
                   className="mt-1 px-2 py-1 rounded text-xs font-black flex-shrink-0"
                   style={{
-                    fontFamily: 'Montserrat, sans-serif',
+                    fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
                     backgroundColor: article.published ? '#F5C400' : '#f3f4f6',
                     color: article.published ? '#111' : '#888',
                     border: article.published ? '1px solid #111' : '1px solid #ddd',
@@ -100,7 +100,7 @@ export default async function AdminArticlesPage() {
                 <div className="min-w-0">
                   <div
                     className="font-black text-base text-gray-900 truncate"
-                    style={{ fontFamily: 'Montserrat, sans-serif' }}
+                    style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}
                   >
                     {article.title}
                   </div>
@@ -126,7 +126,7 @@ export default async function AdminArticlesPage() {
                   href={`/admin/articles/${article.id}`}
                   className="px-4 py-2 font-bold text-sm rounded transition-all"
                   style={{
-                    fontFamily: 'Montserrat, sans-serif',
+                    fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
                     backgroundColor: '#111',
                     color: '#F5C400',
                     border: '2px solid #111',

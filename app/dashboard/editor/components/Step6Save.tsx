@@ -7,7 +7,7 @@ import { TemplateId, FontId } from '@/lib/cv-config';
 import RgpdConsentModal from '@/components/RgpdConsentModal';
 import SecureStorageNotice from '@/components/SecureStorageNotice';
 
-const FONT = 'Montserrat, sans-serif';
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 interface Props {
   form: CVFormData;

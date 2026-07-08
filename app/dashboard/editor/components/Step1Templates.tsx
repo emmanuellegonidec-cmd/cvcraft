@@ -2,7 +2,7 @@
 
 import { CV_TEMPLATES, CV_PALETTES, CV_FONTS, TemplateId, FontId, getAtsLabel } from '@/lib/cv-config';
 
-const FONT = 'Montserrat, sans-serif';
+const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 
 interface Props {
   template: TemplateId;

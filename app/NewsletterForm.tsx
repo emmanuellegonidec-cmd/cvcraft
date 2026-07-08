@@ -38,12 +38,12 @@ export default function NewsletterForm() {
               onChange={e => setEmail(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
               placeholder="votre@email.com"
-              style={{ flex: 1, border: '2px solid #E0E0E0', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontFamily: 'Montserrat,sans-serif', outline: 'none' }}
+              style={{ flex: 1, border: '2px solid #E0E0E0', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", outline: 'none' }}
             />
             <button
               onClick={handleSubmit}
               disabled={status === 'loading'}
-              style={{ background: '#111', color: '#F5C400', border: '2px solid #111', borderRadius: 6, padding: '7px 12px', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', whiteSpace: 'nowrap', opacity: status === 'loading' ? 0.6 : 1 }}
+              style={{ background: '#111', color: '#F5C400', border: '2px solid #111', borderRadius: 6, padding: '7px 12px', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", whiteSpace: 'nowrap', opacity: status === 'loading' ? 0.6 : 1 }}
             >
               {status === 'loading' ? '...' : 'OK →'}
             </button>

@@ -265,24 +265,24 @@ export default function SynthesePage() {
             <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>Recherche</div>
             {['Tableau de bord','Candidatures','Contacts','Entretiens','Événements','Statistiques'].map(label => (
               <button key={label} onClick={() => router.push('/dashboard')}
-                style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s' }}
+                style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
               >{label}</button>
             ))}
             <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '16px 8px 8px' }}>Outils</div>
-            <button style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid #E8151B', borderRadius: 0, background: '#1c1c1c', color: '#fff', fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+            <button style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid #E8151B', borderRadius: 0, background: '#1c1c1c', color: '#fff', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontWeight: 700, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
               Synthèse
             </button>
             <button onClick={() => router.push('/dashboard/help')}
-              style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s' }}
+              style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', border: 'none', borderLeft: '3px solid transparent', borderRadius: 0, background: 'transparent', color: '#888', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.12s' }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#161616'; (e.currentTarget as HTMLButtonElement).style.color = '#ccc'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#888'; }}
             >Help</button>
           </div>
           <div style={{ borderTop: '1px solid #1e1e1e', padding: '10px 10px 8px', flexShrink: 0 }}>
             <button onClick={() => router.push('/dashboard/profile')}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', border: '1px solid #242424', borderRadius: 8, background: 'transparent', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', transition: 'all 0.12s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', border: '1px solid #242424', borderRadius: 8, background: 'transparent', cursor: 'pointer', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", transition: 'all 0.12s' }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#F5C400'; (e.currentTarget as HTMLButtonElement).style.background = '#161616'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#242424'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
             >
@@ -290,7 +290,7 @@ export default function SynthesePage() {
               <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Mon profil</div>
             </button>
             <button onClick={() => router.push('/')}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', marginTop: 2, border: 'none', borderRadius: 6, background: 'transparent', color: '#444', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'color 0.12s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', marginTop: 2, border: 'none', borderRadius: 6, background: 'transparent', color: '#444', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'color 0.12s' }}
               onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = '#E8151B'}
               onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = '#444'}
             >⎋ Déconnexion</button>
@@ -300,15 +300,15 @@ export default function SynthesePage() {
         <div className="synthese-content">
 
           <div className="screen-title no-print" style={{ marginBottom: 28 }}>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#111', margin: 0, fontFamily: 'Montserrat,sans-serif' }}>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#111', margin: 0, fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>
               Synthèse <span style={{ color: '#E8151B' }}>de mes candidatures</span>
             </h1>
             <p style={{ fontSize: 14, color: '#888', marginTop: 4 }}>Exportez un bilan complet de votre recherche d'emploi</p>
           </div>
 
           <div className="print-title">
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111', margin: '0 0 4px 0', fontFamily: 'Montserrat,sans-serif' }}>Bilan d'activité</h1>
-            <p style={{ fontSize: 13, color: '#555', margin: 0, fontFamily: 'Montserrat,sans-serif' }}>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111', margin: '0 0 4px 0', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>Bilan d'activité</h1>
+            <p style={{ fontSize: 13, color: '#555', margin: 0, fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>
               Période : {formatDateFr(dateFrom)} → {formatDateFr(dateTo)}
             </p>
             <div style={{ borderBottom: '3px solid #F5C400', marginTop: 12, marginBottom: 20 }} />
@@ -340,8 +340,8 @@ export default function SynthesePage() {
               { label: 'Taux de réponse', value: `${stats.tauxReponse}%` },
             ].map(s => (
               <div key={s.label} className="stat-card">
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#111', fontFamily: 'Montserrat,sans-serif' }}>{s.value}</div>
-                <div style={{ fontSize: 11, color: '#888', marginTop: 2, fontWeight: 500, fontFamily: 'Montserrat,sans-serif' }}>{s.label}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#111', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: '#888', marginTop: 2, fontWeight: 500, fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -394,7 +394,7 @@ export default function SynthesePage() {
                         <td>
                           <div style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>{stepInfo.label}</div>
                           {stepInfo.step !== null && (
-                            <div style={{ fontSize: 10, color: '#888', marginTop: 2, fontFamily: 'Montserrat,sans-serif' }}>
+                            <div style={{ fontSize: 10, color: '#888', marginTop: 2, fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>
                               Étape {stepInfo.step}/{stepInfo.total}
                             </div>
                           )}

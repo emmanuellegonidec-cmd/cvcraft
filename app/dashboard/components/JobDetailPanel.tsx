@@ -196,7 +196,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
                 fontSize: 11, fontWeight: 700, color: '#111',
                 background: '#F5C400', border: '2px solid #111',
                 borderRadius: 6, padding: '4px 12px', cursor: 'pointer',
-                fontFamily: 'Montserrat,sans-serif',
+                fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
                 boxShadow: '2px 2px 0 #111',
                 display: 'inline-flex', alignItems: 'center', gap: 4,
               }}
@@ -243,7 +243,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
                   fontSize: 11, fontWeight: 800, color: '#111',
                   background: '#F5C400', border: '2px solid #111',
                   borderRadius: 6, padding: '5px 14px', cursor: 'pointer',
-                  fontFamily: 'Montserrat,sans-serif', boxShadow: '2px 2px 0 #111',
+                  fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", boxShadow: '2px 2px 0 #111',
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                 }}
               >
@@ -339,7 +339,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
                       border: `2px solid ${interviewType === t.id ? '#F5C400' : '#E0E0E0'}`,
                       background: interviewType === t.id ? '#F5C400' : '#fff',
                       color: interviewType === t.id ? '#111' : '#888',
-                      cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', transition: 'all 0.15s',
+                      cursor: 'pointer', fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", transition: 'all 0.15s',
                     }}
                   >
                     {t.label}

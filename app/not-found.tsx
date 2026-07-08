@@ -10,7 +10,7 @@ export default function NotFound() {
   return (
     <main
       className="min-h-screen bg-white flex items-center justify-center px-6 py-12"
-      style={{ fontFamily: 'Montserrat, sans-serif', color: '#111' }}
+      style={{ fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif", color: '#111' }}
     >
       <div className="max-w-2xl w-full text-center">
         <div
