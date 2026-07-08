@@ -237,10 +237,10 @@ export default async function LandingPage() {
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>01</div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>🔌 Extension Chrome</div>
           <h2 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Capturez une offre<br />en un clic,<br />sans copier-coller</h2>
-          <p style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Installez l&apos;extension Chrome et enregistrez n&apos;importe quelle offre directement depuis LinkedIn, France Travail, Welcome to the Jungle ou l&apos;APEC. Fini le copier-coller : l&apos;offre arrive dans votre tableau de bord, prête à suivre.</p>
+          <p style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Installez l&apos;extension Chrome et enregistrez n&apos;importe quelle offre directement depuis les plateformes d\'emploi. Fini le copier-coller : l&apos;offre arrive dans votre tableau de bord, prête à suivre.</p>
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
             {[
-              'Capturez vos offres directement depuis les plateformes d\'emploi',
+              'Capturez vos offres directement depuis les sites d\'emploi',
               'Un panneau latéral pour enregistrer l\'offre sans quitter la page',
               'Testez votre CV face à l\'offre et obtenez un score ATS depuis l\'extension',
               'L\'offre et ses infos clés arrivent directement dans votre tableau de bord',
