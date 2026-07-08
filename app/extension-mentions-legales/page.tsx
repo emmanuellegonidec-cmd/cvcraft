@@ -40,14 +40,13 @@ export default function ExtensionMentionsLegalesPage() {
         {[
           {
             title: '1. Éditeur',
-            content: `Emmanuelle Gonidec
+            content: `EG
 Entrepreneur individuel exerçant sous le nom commercial « Jean find my Job »
-87 rue Didot, 75014 Paris, France
 SIREN : 844 130 245
 N° TVA intracommunautaire : FR10844130245
 
 Contact : hello@jeanfindmyjob.fr
-Directeur de la publication : Emmanuelle Gonidec.`
+Directeur de la publication : EG.`
           },
           {
             title: '2. Hébergement',
@@ -74,7 +73,7 @@ L'éditeur se réserve le droit de suspendre l'accès en cas d'usage abusif, fra
           },
           {
             title: '5. Propriété intellectuelle',
-            content: `L'ensemble des éléments composant l'extension (code, design, marque « Jean find my Job », logo, contenus) est la propriété exclusive d'Emmanuelle Gonidec, ou fait l'objet d'une autorisation d'usage. Toute reproduction, représentation ou exploitation non autorisée est interdite, conformément aux articles L. 335-2 et suivants du Code de la propriété intellectuelle.
+            content: `L'ensemble des éléments composant l'extension (code, design, marque « Jean find my Job », logo, contenus) est la propriété exclusive d'EG, ou fait l'objet d'une autorisation d'usage. Toute reproduction, représentation ou exploitation non autorisée est interdite, conformément aux articles L. 335-2 et suivants du Code de la propriété intellectuelle.
 
 Les marques des plateformes sur lesquelles l'extension est techniquement compatible restent la propriété de leurs titulaires respectifs et ne sont pas reprises sur la présente page.`
           },

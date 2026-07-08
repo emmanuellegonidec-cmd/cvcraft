@@ -41,7 +41,7 @@ export default function ExtensionConfidentialitePage() {
         {[
           {
             title: '1. Responsable du traitement',
-            content: `L'extension Chrome « Jean find my Job » est éditée par Emmanuelle Gonidec, entrepreneur individuel exerçant sous le nom commercial « Jean find my Job » (SIREN 844 130 245, 87 rue Didot, 75014 Paris, France).
+            content: `L'extension Chrome « Jean find my Job » est éditée par EG, entrepreneur individuel exerçant sous le nom commercial « Jean find my Job » (SIREN 844 130 245).
 
 Responsable du traitement : Jean find my Job, joignable à hello@jeanfindmyjob.fr (objet : « Extension Chrome »).`
           },

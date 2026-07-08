@@ -36,9 +36,7 @@ export default function MentionsLegalesPage() {
             title: '1. Éditeur du site',
             content: `Le site jeanfindmyjob.fr est édité par :
 
-Emmanuelle Gonidec
-Entrepreneur individuel exerçant sous le nom commercial « Jean find my Job »
-87 rue Didot, 75014 Paris, France
+EG - Entrepreneur individuel exerçant sous le nom commercial « Jean find my Job »
 SIREN : 844 130 245
 SIRET : 844 130 245 00013
 N° TVA intracommunautaire : FR10844130245
@@ -48,7 +46,7 @@ Contact : hello@jeanfindmyjob.fr`
           },
           {
             title: '2. Directrice de la publication',
-            content: `La directrice de la publication est Emmanuelle Gonidec, dirigeante de l'entreprise individuelle.`
+            content: `La directrice de la publication est EG, dirigeante de l'entreprise individuelle.`
           },
           {
             title: '3. Hébergement du site',
@@ -69,7 +67,7 @@ Site web : supabase.com`
           },
           {
             title: '4. Propriété intellectuelle',
-            content: `L'ensemble des éléments composant le site jeanfindmyjob.fr (textes, images, vidéos, logos, marques, code source, design, charte graphique, base de données) sont la propriété exclusive d'Emmanuelle Gonidec ou de ses partenaires, et sont protégés par les lois françaises et internationales relatives à la propriété intellectuelle.
+            content: `L'ensemble des éléments composant le site jeanfindmyjob.fr (textes, images, vidéos, logos, marques, code source, design, charte graphique, base de données) sont la propriété exclusive d'EG ou de ses partenaires, et sont protégés par les lois françaises et internationales relatives à la propriété intellectuelle.
 
 Toute reproduction, représentation, modification, publication, adaptation, totale ou partielle, des éléments du site, quel que soit le moyen ou le procédé utilisé, est interdite sans autorisation écrite préalable de l'éditeur. Toute exploitation non autorisée constitue une contrefaçon sanctionnée par les articles L.335-2 et suivants du Code de la propriété intellectuelle.`
           },
