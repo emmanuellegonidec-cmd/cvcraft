@@ -422,7 +422,7 @@ export default async function LandingPage() {
           </div>
           <div className="feats-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1.5rem' }}>
            {[
-              { icon:'🔌',title:'Extension Google Chrome',desc:'Installez l\'extension et capturez automatiquement les offres depuis les jobboards' },
+              { icon:'🔌',title:'Extension Google Chrome',desc:'Installez l\'extension et capturez automatiquement les offres depuis les jobboards.' },
               { icon:'📊',title:'Tableau de bord kanban',desc:'5 colonnes pour visualiser toutes vos candidatures d\'un coup d\'œil — de l\'envie de postuler à l\'offre reçue.' },
               { icon:'🗂️',title:'Parcours par candidature',desc:'Étapes, dates, notes, contacts et documents : tout est centralisé par offre en un seul endroit.' },
               { icon:'🎯',title:'Score ATS',desc:'Analysez votre CV face à la description du poste et maximisez vos chances de passer les filtres automatiques.' },

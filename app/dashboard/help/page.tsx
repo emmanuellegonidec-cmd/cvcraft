@@ -31,6 +31,100 @@ const TOPICS = [
     ),
   },
   {
+  icon: '🔌',
+  title: "Comment utiliser l'extension Chrome ?",
+  content: (
+    <div>
+      <p
+        style={{
+          margin: '0 0 12px',
+          fontSize: 13,
+          color: '#555',
+          fontFamily: FONT,
+          lineHeight: 1.7,
+        }}
+      >
+        L'extension <strong>Jean find my Job</strong> vous permet d'ajouter une offre d'emploi à votre tableau de bord en un clic, directement depuis votre navigateur.
+      </p>
+
+      <p
+        style={{
+          margin: '0 0 12px',
+          fontSize: 13,
+          color: '#555',
+          fontFamily: FONT,
+          lineHeight: 1.7,
+        }}
+      >
+        👉{' '}
+        <a
+          href="https://chromewebstore.google.com/detail/jean-find-my-job/oaifejkeldlnjkebhhdgledmepnihndi"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: '#111',
+            fontWeight: 700,
+            textDecoration: 'underline',
+          }}
+        >
+          Accéder à l'extension Jean find my Job sur le Chrome Web Store
+        </a>
+      </p>
+
+      <ol
+        style={{
+          margin: '0 0 12px 18px',
+          padding: 0,
+          fontSize: 13,
+          color: '#555',
+          fontFamily: FONT,
+          lineHeight: 1.8,
+        }}
+      >
+        <li>Installez l'extension en cliquant sur <strong>Ajouter à Chrome</strong>.</li>
+
+        <li>Épinglez l'extension dans la barre d'outils de Chrome pour y accéder facilement.</li>
+
+        <li>Ouvrez une offre d'emploi sur un site compatible.</li>
+
+        <li>
+          Cliquez sur l'icône{' '}
+          <img
+            src="/extension%20chrome%20JFMJ.png"
+            alt="Extension Jean find my Job"
+            style={{
+              width: 16,
+              height: 16,
+              verticalAlign: 'text-bottom',
+              margin: '0 4px',
+            }}
+          />{' '}
+          puis sur <strong>Capturer cette offre</strong>.
+        </li>
+
+        <li>
+          Jean find my Job analyse automatiquement l'annonce et enregistre le poste,
+          l'entreprise, la description, les compétences et les autres informations
+          utiles dans votre tableau de bord.
+        </li>
+      </ol>
+
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12,
+          color: '#777',
+          fontFamily: FONT,
+          lineHeight: 1.6,
+        }}
+      >
+        Si une offre ne peut pas être capturée automatiquement, vous pouvez toujours
+        l'ajouter en important son PDF ou en la saisissant manuellement.
+      </p>
+    </div>
+  ),
+},
+{
     icon: '🗂️',
     title: 'Tableau de bord Kanban',
     content: (
