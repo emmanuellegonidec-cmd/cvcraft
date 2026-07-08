@@ -17,7 +17,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment installer et utiliser l'extension Chrome Jean find my Job ?",
-    a: "Téléchargez l'extension depuis le Chrome Web Store, puis cliquez sur « Ajouter à Chrome ». Une fois installée, épinglez-la dans la barre d'outils de votre navigateur pour y accéder facilement. Lorsque vous consultez une offre d'emploi sur un site compatible, cliquez sur l'icône de l'extension puis sur « Enregistrer l'offre ». Jean Find My Job importe automatiquement les informations essentielles (poste, entreprise, description, compétences, localisation...) dans votre tableau de bord."
+    a: "Téléchargez l'extension depuis le Chrome Web Store, puis cliquez sur « Ajouter à Chrome ». Une fois installée, épinglez-la dans la barre d'outils de votre navigateur pour y accéder facilement. Lorsque vous consultez une offre d'emploi sur un site compatible, cliquez sur l'icône de l'extension puis sur « Capturer cette offre ». Jean Find My Job importe automatiquement les informations essentielles (poste, entreprise, description, compétences, localisation...) dans votre tableau de bord."
   },
   {
     q: "Puis-je lier des contacts à mes candidatures ?",
