@@ -83,7 +83,7 @@ export default function UpdatePasswordPage() {
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <img src="/logojeanfindmyjob.webp" alt="Jean find my Job" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
           <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '1rem', fontWeight: 900, color: '#111' }}>
-            Jean <span style={{ color: '#E8151B' }}>Find My Job</span>
+            Jean <span style={{ color: '#E8151B' }}>find my Job</span>
           </span>
         </Link>
       </nav>
