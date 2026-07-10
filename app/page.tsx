@@ -91,6 +91,9 @@ export default async function LandingPage() {
         .fade3{animation:fadeUp 0.6s ease 0.3s both}
         .fade4{animation:fadeUp 0.6s ease 0.4s both}
 
+        /* CTA mobile : masqué par défaut (desktop), affiché uniquement sous 768px */
+        .feat-cta-mobile { display:none; }
+
         .steps-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;align-items:stretch; }
         .step-card-normal {
           background:rgba(255,255,255,0.06);
@@ -143,6 +146,13 @@ export default async function LandingPage() {
           .hero-grid{padding:2rem 1.25rem!important;gap:1.5rem!important;}
           .hero-logo-wrap{order:-1;}
           .steps-grid{grid-template-columns:1fr 1fr!important;}
+
+          /* Ordre mobile des blocs 01/02/03/04 : texte, puis image, puis CTA */
+          .feat-grid{gap:2rem!important;padding:3rem 1.25rem!important;}
+          .feat-text{order:1!important;}
+          .feat-media{order:2!important;}
+          .feat-cta-mobile{display:block!important;order:3!important;}
+          .feat-cta-desktop{display:none!important;}
         }
         @media(max-width:480px){
           .nav-btns{display:none!important}
@@ -233,11 +243,11 @@ export default async function LandingPage() {
       {/* FEATURE 1 — Extension Chrome */}
       <div style={{ height:'2.5px',background:'#111' }} />
       <section className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
-        <div>
+        <div className="feat-text">
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>01</div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>🔌 Extension Chrome</div>
           <h2 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Capturez une offre<br />en un clic,<br />sans copier-coller</h2>
-          <p style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Installez l&apos;extension Chrome et enregistrez n&apos;importe quelle offre directement depuis les plateformes d'emploi. Fini le copier-coller : l&apos;offre arrive dans votre tableau de bord, prête à suivre.</p>
+          <p style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:15,color:'#555',lineHeight:1.75,marginBottom:'1.5rem',fontWeight:500 }}>Installez l&apos;extension Chrome et enregistrez n&apos;importe quelle offre directement depuis les plateformes d&apos;emploi. Fini le copier-coller : l&apos;offre arrive dans votre tableau de bord, prête à suivre.</p>
           <ul style={{ listStyle:'none',display:'flex',flexDirection:'column',gap:10 }}>
             {[
               'Capturez vos offres directement depuis les sites d\'emploi',
@@ -250,9 +260,11 @@ export default async function LandingPage() {
               </li>
             ))}
           </ul>
-          <CTAButton href="/auth/signup" label="Commencer gratuitement →" eventName="cta_extension" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }} />
+          <div className="feat-cta-desktop" style={{ marginTop:'1.5rem' }}>
+            <CTAButton href="/auth/signup" label="Commencer gratuitement →" eventName="cta_extension" className="btn-black" style={{ display:'inline-flex' }} />
+          </div>
         </div>
-        <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
+        <div className="feat-media" style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>🔌 Extension Chrome — Capture d&apos;offre</div>
           <Image 
   src="/capture LinkedIn_JFMJ.png" 
@@ -264,13 +276,16 @@ export default async function LandingPage() {
   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
 />
         </div>
+        <div className="feat-cta-mobile">
+          <CTAButton href="/auth/signup" label="Commencer gratuitement →" eventName="cta_extension" className="btn-black" style={{ display:'inline-flex' }} />
+        </div>
       </section>
 
       <div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
 
       {/* FEATURE 2 — Tableau de bord */}
       <section className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
-        <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
+        <div className="feat-media" style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>📋 Tableau de bord — Vue Kanban</div>
         <Image 
   src="/kanban-dashboard.png" 
@@ -282,7 +297,7 @@ export default async function LandingPage() {
   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
 />
         </div>
-        <div>
+        <div className="feat-text">
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>02</div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>📋 Tableau de bord</div>
           <h2 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Votre recherche,<br />enfin organisée</h2>
@@ -300,7 +315,12 @@ export default async function LandingPage() {
               </li>
             ))}
           </ul>
-        <CTAButton href="/auth/signup" label="Organiser ma recherche →" eventName="cta_section" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }} />
+          <div className="feat-cta-desktop" style={{ marginTop:'1.5rem' }}>
+            <CTAButton href="/auth/signup" label="Organiser ma recherche →" eventName="cta_section" className="btn-black" style={{ display:'inline-flex' }} />
+          </div>
+        </div>
+        <div className="feat-cta-mobile">
+          <CTAButton href="/auth/signup" label="Organiser ma recherche →" eventName="cta_section" className="btn-black" style={{ display:'inline-flex' }} />
         </div>
       </section>
 
@@ -308,7 +328,7 @@ export default async function LandingPage() {
 
       {/* FEATURE 3 — Parcours par offre */}
       <section id="cv" className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
-        <div>
+        <div className="feat-text">
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>03</div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",display:'inline-block',background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>🗂️ Parcours par offre</div>
           <h2 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Chaque candidature<br />a son propre<br />parcours</h2>
@@ -325,9 +345,11 @@ export default async function LandingPage() {
               </li>
             ))}
           </ul>
-          <CTAButton href="/auth/signup" label="Suivre mes candidatures →" eventName="cta_suivre" className="btn-black" style={{ marginTop:'1.5rem',display:'inline-flex' }} />
+          <div className="feat-cta-desktop" style={{ marginTop:'1.5rem' }}>
+            <CTAButton href="/auth/signup" label="Suivre mes candidatures →" eventName="cta_suivre" className="btn-black" style={{ display:'inline-flex' }} />
+          </div>
         </div>
-        <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
+        <div className="feat-media" style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#F5C400',fontSize:12,fontWeight:800,color:'#111',textTransform:'uppercase',letterSpacing:'0.04em' }}>🗂️ Parcours de candidature — Vue détaillée</div>
         <Image 
   src="/parcours-candidature.png" 
@@ -339,13 +361,16 @@ export default async function LandingPage() {
   loading="lazy"
 />
         </div>
+        <div className="feat-cta-mobile">
+          <CTAButton href="/auth/signup" label="Suivre mes candidatures →" eventName="cta_suivre" className="btn-black" style={{ display:'inline-flex' }} />
+        </div>
       </section>
 
       <div style={{ height:'2.5px',background:'#111',maxWidth:1400,margin:'0 auto' }} />
 
       {/* FEATURE 4 — Score ATS */}
       <section id="score-ats" className="feat-grid" style={{ maxWidth:1400,margin:'0 auto',padding:'5rem 2rem',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5rem',alignItems:'center' }}>
-        <div style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
+        <div className="feat-media" style={{ background:'#fff',borderRadius:12,border:'2.5px solid #111',boxShadow:'6px 6px 0 #111',overflow:'hidden' }}>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",padding:'10px 14px',borderBottom:'2px solid #111',background:'#111',fontSize:12,fontWeight:800,color:'#F5C400',textTransform:'uppercase',letterSpacing:'0.04em' }}>🎯 Score ATS — Résultat en direct</div>
           <Image 
   src="/score-ats.png" 
@@ -357,7 +382,7 @@ export default async function LandingPage() {
   loading="lazy"
 />
         </div>
-        <div>
+        <div className="feat-text">
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'5rem',fontWeight:900,color:'#F5C400',lineHeight:1,marginBottom:'-1rem',WebkitTextStroke:'2px #111' }}>04</div>
           <div style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",display:'inline-block',background:'#FDEAEA',border:'2px solid #111',borderRadius:20,padding:'4px 14px',fontSize:12,fontWeight:800,color:'#111',margin:'0 0 1rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em' }}>🎯 Score ATS</div>
           <h2 style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.9rem',lineHeight:1.2,marginBottom:'1rem',fontWeight:900,letterSpacing:'-0.02em' }}>Votre CV passe-t-il<br />les filtres<br />automatiques ?</h2>
@@ -374,7 +399,15 @@ export default async function LandingPage() {
               </li>
             ))}
           </ul>
-         <div style={{ marginTop:'1.5rem', display:'flex', gap:16, alignItems:'center', flexWrap:'wrap' }}>
+          <div className="feat-cta-desktop" style={{ marginTop:'1.5rem', display:'flex', gap:16, alignItems:'center', flexWrap:'wrap' }}>
+            <CTAButton href="/auth/signup" label="Tester mon CV →" eventName="cta_tester_cv" className="btn-black" style={{ display:'inline-flex' }} />
+            <Link href="/score-ats" style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif", fontSize:13, fontWeight:700, color:'#111', textDecoration:'none', borderBottom:'2px solid #E8151B', paddingBottom:2 }}>
+              En savoir plus sur le Score ATS →
+            </Link>
+          </div>
+        </div>
+        <div className="feat-cta-mobile">
+          <div style={{ display:'flex', gap:16, alignItems:'center', flexWrap:'wrap' }}>
             <CTAButton href="/auth/signup" label="Tester mon CV →" eventName="cta_tester_cv" className="btn-black" style={{ display:'inline-flex' }} />
             <Link href="/score-ats" style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif", fontSize:13, fontWeight:700, color:'#111', textDecoration:'none', borderBottom:'2px solid #E8151B', paddingBottom:2 }}>
               En savoir plus sur le Score ATS →
