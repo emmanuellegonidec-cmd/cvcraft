@@ -154,6 +154,10 @@ export default async function LandingPage() {
           .feat-cta-mobile{display:block!important;order:3!important;}
           .feat-cta-desktop{display:none!important;}
         }
+        @media(max-width:600px){
+          /* Grille des 9 fonctionnalités : 1 colonne pleine largeur sur téléphone */
+          .feats-grid{grid-template-columns:1fr!important;gap:1rem!important;}
+        }
         @media(max-width:480px){
           .nav-btns{display:none!important}
           .hero-title{font-size:1.9rem!important;}
@@ -455,15 +459,15 @@ export default async function LandingPage() {
           </div>
           <div className="feats-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1.5rem' }}>
            {[
-              { icon:'🔌',title:'Extension Google Chrome',desc:'Installez l\'extension et capturez automatiquement les offres depuis les jobboards.' },
-              { icon:'📊',title:'Tableau de bord kanban',desc:'5 colonnes pour visualiser toutes vos candidatures d\'un coup d\'œil — de l\'envie de postuler à l\'offre reçue.' },
-              { icon:'🗂️',title:'Parcours par candidature',desc:'Étapes, dates, notes, contacts et documents : tout est centralisé par offre en un seul endroit.' },
-              { icon:'🎯',title:'Score ATS',desc:'Analysez votre CV face à la description du poste et maximisez vos chances de passer les filtres automatiques.' },
-              { icon:'👥',title:'Contacts',desc:'Liez recruteurs, RH, managers et référents à chaque candidature. Historique de vos échanges et relances, rangés par offre.' },
-              { icon:'📋',title:'Synthèse & export PDF',desc:'Générez un bilan complet de votre recherche d\'emploi, exportable en PDF — idéal pour votre conseiller emploi.' },
-              { icon:'📅',title:'Calendrier intégré',desc:'Visualisez vos entretiens et relances à venir en vue semaine ou mois.' },
-              { icon:'⚡',title:'Événements',desc:'Ateliers, formations, coaching, RDV conseil — suivez tout ce qui gravite autour de votre recherche.' },
-              { icon:'📈',title:'Statistiques',desc:'Taux de réponse, entretiens, propositions : pilotez votre recherche avec les données.' },
+              { icon:'🔌',title:'Extension Google Chrome',desc:"Capturez n'importe quelle offre en un clic depuis les sites d'emploi, sans copier-coller ni changement d'onglet." },
+              { icon:'📊',title:'Tableau de bord kanban',desc:"Cinq colonnes pour voir toutes vos candidatures d'un coup d'œil, de l'envie de postuler à l'offre reçue." },
+              { icon:'🗂️',title:'Parcours par candidature',desc:"Étapes, dates, notes, contacts et documents : chaque offre a son dossier complet, rangé au même endroit." },
+              { icon:'🎯',title:'Score ATS',desc:"Analysez votre CV face à la description du poste et voyez précisément comment passer les filtres automatiques." },
+              { icon:'👥',title:'Contacts',desc:"Recruteurs, RH, managers : reliez chaque personne à une offre et retrouvez l'historique complet de vos échanges." },
+              { icon:'📋',title:'Synthèse & export PDF',desc:"Générez un bilan complet de votre recherche d'emploi, exportable en PDF, prêt à transmettre à votre conseiller." },
+              { icon:'📅',title:'Calendrier intégré',desc:"Entretiens, relances, rendez-vous : visualisez tout ce qui vous attend, en vue semaine ou en vue mois." },
+              { icon:'⚡',title:'Événements',desc:"Ateliers, formations, coaching, rendez-vous conseil : gardez la trace de tout ce qui gravite autour de votre recherche." },
+              { icon:'📈',title:'Statistiques',desc:"Taux de réponse, entretiens obtenus, propositions reçues : pilotez votre recherche avec des chiffres, pas des impressions." },
             ].map(f => (
               
               <div key={f.title} className="feat-card">
