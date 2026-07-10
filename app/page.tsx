@@ -190,14 +190,37 @@ export default async function LandingPage() {
             <div className="fade1" style={{ display:'inline-flex',alignItems:'center',gap:6,background:'#FEF9E0',border:'2px solid #111',borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:800,color:'#111',marginBottom:'1.5rem',boxShadow:'2px 2px 0 #111',textTransform:'uppercase',letterSpacing:'0.05em',fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif" }}>
               ⚡ Propulsé par Claude AI
             </div>
-            <h1 className="fade2 hero-title" style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'3rem',lineHeight:1.05,marginBottom:'1.25rem',fontWeight:900,letterSpacing:'-0.03em' }}>
-              <span style={{ display:'block',whiteSpace:'nowrap' }}>Trouvez votre job,</span>
-              <span style={{ display:'block',whiteSpace:'nowrap',color:'#E8151B',fontStyle:'italic' }}>sans vous perdre</span>
-              <span style={{ display:'block',whiteSpace:'nowrap' }}>dans le chaos</span>
-            </h1>
-            <p className="fade3" style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.05rem',color:'#555',marginBottom:'2rem',lineHeight:1.75,maxWidth:460,fontWeight:500 }}>
-              Jean find my Job organise votre recherche d&apos;emploi. Enregistrez vos offres, suivez vos candidatures et gardez tout au même endroit, enfin.
-            </p>
+           <h1
+  className="fade2 hero-title"
+  style={{
+    fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
+    fontSize: "3rem",
+    lineHeight: 1.05,
+    marginBottom: "1.25rem",
+    fontWeight: 900,
+    letterSpacing: "-0.03em",
+  }}
+>
+  <span style={{ display: "block", whiteSpace: "nowrap" }}>
+    Organisez votre
+  </span>
+  <span
+    style={{
+      display: "block",
+      whiteSpace: "nowrap",
+      color: "#E8151B",
+      fontStyle: "italic",
+    }}
+  >
+    recherche d'emploi.
+  </span>
+  <span style={{ display: "block", whiteSpace: "nowrap" }}>
+    Multipliez vos chances.
+  </span>
+</h1> 
+<p className="fade3" style={{ fontFamily:"var(--font-montserrat), 'Montserrat', sans-serif",fontSize:'1.05rem',color:'#555',marginBottom:'2rem',lineHeight:1.75,maxWidth:460,fontWeight:500 }}>
+              Analysez chaque offre avec votre CV, obtenez votre score ATS, optimisez vos candidatures et suivez toute votre recherche d&apos;emploi au même endroit.
+            </p>            
             <div className="fade4" style={{ display:'flex',gap:12,flexWrap:'wrap',alignItems:'center' }}>
               <CTAButton href="/auth/signup" label="Commencer gratuitement →" eventName="cta_hero" className="btn-black" style={{ fontSize:15,padding:'14px 32px' }} />
             </div>
