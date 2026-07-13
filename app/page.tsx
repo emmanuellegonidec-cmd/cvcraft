@@ -511,7 +511,7 @@ export default async function LandingPage() {
           </div>
           <div className="testi-grid" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1.5rem' }}>
             {[
-              { initials:'SL',name:'Sophie L.',role:'Comm → Offre reçue chez LVMH',text:"Le tableau de bord a changé ma façon de chercher. Tout est au même endroit. J'ai eu 3 entretiens en 2 semaines.",color:'#FDEAEA',textColor:'#E8151B' },
+              { initials:'SL',name:'Sophie L.',role:'Comm → Offre reçue dans une grande entreprise de luxe',text:"Le tableau de bord a changé ma façon de chercher. Tout est au même endroit. J'ai eu 3 entretiens en 2 semaines.",color:'#FDEAEA',textColor:'#E8151B' },
               { initials:'MK',name:'Marc K.',role:'Dev backend → Startup Series B',text:"L'IA qui génère le CV est bluffante. En 30 secondes j'avais un CV bien mieux rédigé que ce que j'aurais fait moi-même.",color:'#FEF9E0',textColor:'#B8900A' },
               { initials:'AC',name:'Amandine C.',role:'Reconversion → Talent Acquisition',text:"Jean find my Job m'a aidée à valoriser mes compétences transférables. Résultat : CDI en 6 semaines.",color:'#EBF2FD',textColor:'#1A6FDB' },
             ].map(t => (
