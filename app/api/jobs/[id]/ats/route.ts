@@ -297,7 +297,8 @@ Rappel :
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-5',
-      max_tokens: 4000,
+      max_tokens: 8000,
+      thinking: { type: 'disabled' },
       system: ATS_SYSTEM_PROMPT,
       messages: [
         {
@@ -318,7 +319,7 @@ Rappel :
           ],
         },
       ],
-    })
+    } as any)
 
     const rawText = response.content
       .filter((b) => b.type === 'text')
