@@ -14,11 +14,12 @@ export async function POST(req: NextRequest) {
 
     // ⚠️ Claude Vision : on envoie le PDF directement, Claude le lit visuellement.
     // Bien supérieur à pdfjs pour les PDF complexes (multi-colonnes Canva, éléments graphiques).
-    // Le `as any` sur content contourne une limitation des types TypeScript du SDK Anthropic
-    // qui ne connaissent pas encore le type 'document' (l'API, elle, le supporte parfaitement).
+    // Le `as any` sur l'objet params contourne une limitation des types TypeScript du SDK Anthropic
+    // qui ne connaissent pas encore les champs 'document' et 'thinking' (l'API, elle, les supporte).
     const message = await client.messages.create({
       model: 'claude-sonnet-5',
       max_tokens: 4000,
+      thinking: { type: 'disabled' },
       messages: [{
         role: 'user',
         content: [
@@ -34,11 +35,14 @@ export async function POST(req: NextRequest) {
             type: 'text',
             text: buildExtractPrompt(),
           },
-        ] as any,
+        ],
       }],
-    });
+    } as any);
 
-    const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
+    // Lecture robuste : on cherche le bloc de type 'text' au lieu de lire content[0].
+    // Ainsi, même si un bloc de réflexion passe devant, on récupère bien le texte.
+    const textBlock = message.content.find((b) => b.type === 'text');
+    const raw = textBlock?.type === 'text' ? textBlock.text : '{}';
 
     // Nettoyage robuste du JSON retourné par Claude
     const cleaned = raw
