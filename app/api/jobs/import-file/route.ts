@@ -122,11 +122,14 @@ export async function POST(req: NextRequest) {
       ];
     }
 
+    // Le `as any` sur l'objet params contourne une limitation des types TypeScript
+    // du SDK Anthropic qui ne connaissent pas encore le champ 'thinking'.
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-5',
-      max_tokens: 2000,
+      max_tokens: 4000,
+      thinking: { type: 'disabled' },
       messages: [{ role: 'user', content: messageContent }],
-    });
+    } as any);
 
     const rawText = response.content
       .filter((b: any) => b.type === 'text')
