@@ -65,13 +65,19 @@ export async function POST(req: NextRequest) {
 
     const prompt = buildGeneratePrompt(safeData);
 
+    // Le `as any` contourne une limitation des types TypeScript du SDK Anthropic
+    // qui ne connaissent pas encore le champ 'thinking' (l'API, elle, le supporte).
     const message = await client.messages.create({
       model: 'claude-sonnet-5',
       max_tokens: 4000,
+      thinking: { type: 'disabled' },
       messages: [{ role: 'user', content: prompt }],
-    });
+    } as any);
 
-    const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
+    // Lecture robuste : on cherche le bloc de type 'text' au lieu de lire content[0].
+    // Ainsi, même si un bloc de réflexion passe devant, on récupère bien le texte.
+    const textBlock = message.content.find((b) => b.type === 'text');
+    const raw = textBlock?.type === 'text' ? textBlock.text : '{}';
 
     // Nettoyage robuste du JSON retourné par Claude
     const cleaned = raw
