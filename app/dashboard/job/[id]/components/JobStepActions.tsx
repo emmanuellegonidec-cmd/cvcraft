@@ -326,6 +326,16 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
   // Suppression
   const [actionToDelete, setActionToDelete] = useState<{ id: string; title: string } | null>(null)
 
+  // Affichage mobile : cartes en pleine largeur
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
   const stepData = STEP_ACTIONS[currentStepId] || STEP_ACTIONS['hr_interview']
 
   const sortedStepActions = [...stepActions]
@@ -526,9 +536,9 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
             onDragEnd={handleActionDragEnd}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'stretch' }}>
               {sortedStepActions.map((action) => (
-                <div key={action.id} style={{ display: 'flex', alignItems: 'stretch' }}>
+                <div key={action.id} style={{ display: 'flex', alignItems: 'stretch', width: isMobile ? '100%' : 'auto' }}>
                   <ActionDropZone id={`action-before-${action.id}`} isOver={overActionZone === `action-before-${action.id}`} />
-                  <div style={{ width: 170, display: 'flex' }}>
+                  <div style={{ ...(isMobile ? { flex: 1 } : { width: 170 }), display: 'flex' }}>
                     <DraggableActionCard
                       action={action}
                       dragId={action.id}
