@@ -72,6 +72,16 @@ export default function DashboardPage() {
   const [personalActionsVisible, setPersonalActionsVisible] = useState(false);
   const [personalActionsCount, setPersonalActionsCount] = useState(0);
 
+  // Détection de l'affichage mobile (largeur <= 768px)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
   const [deleteJobTarget, setDeleteJobTarget] = useState<Job | null>(null);
   const [deleteJobLoading, setDeleteJobLoading] = useState(false);
 
@@ -564,7 +574,9 @@ export default function DashboardPage() {
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', flexShrink: 0 }}>
+        <div style={isMobile
+          ? { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12, padding: '60px 1rem 12px', background: '#fff', flexShrink: 0 }
+          : { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 2rem', background: '#fff', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'capitalize' }}>{today}</div>
             {isCalendarView ? (
@@ -577,7 +589,9 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div style={isMobile
+            ? { display: 'flex', gap: 8, width: '100%', flexWrap: 'wrap' }
+            : { display: 'flex', gap: 10 }}>
             {view === 'kanban' && (
               <>
                 <button
@@ -617,7 +631,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '1rem' : '1.5rem 2rem' }}>
 
           {['kanban', 'list', 'stats'].includes(view) && (
             <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
