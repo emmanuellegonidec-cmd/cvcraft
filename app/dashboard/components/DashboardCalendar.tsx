@@ -329,7 +329,7 @@ export default function DashboardCalendar({
   // dédiée accessible depuis la sidebar.
   alwaysVisible?: boolean;
 }) {
-  const [calView, setCalView]   = useState<'week' | 'month'>('week');
+  const [calView, setCalView]   = useState<'week' | 'month' | 'day'>('week');
   const [offset, setOffset]     = useState(0);
   const [visibleState, setVisibleState] = useState(false);
   const visible = alwaysVisible ? true : visibleState;
@@ -337,6 +337,21 @@ export default function DashboardCalendar({
   const [deadlineEvents, setDeadlineEvents] = useState<CalEvent[]>([]);
   const [actionEvents, setActionEvents]     = useState<CalEvent[]>([]);
   const dragEvRef = useRef<CalEvent | null>(null);
+
+  // Affichage mobile : détection + bascule automatique en vue Jour
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
+      setCalView('day');
+    }
+  }, []);
 
   const today = new Date();
   const jobEvents = jobsToEvents(jobs, stagesLabelMap);
@@ -530,6 +545,36 @@ export default function DashboardCalendar({
   }
 
   function NavBar({ periodLabel }: { periodLabel: string }) {
+    // Onglets de vue : Jour/Mois sur mobile, Semaine/Mois sur ordinateur
+    const viewOptions = (isMobile ? ['day', 'month'] : ['week', 'month']) as ('week' | 'month' | 'day')[];
+    const viewLabel: Record<'week' | 'month' | 'day', string> = { week: 'Semaine', month: 'Mois', day: 'Jour' };
+
+    if (isMobile) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button onClick={() => setOffset(o => o - 1)} style={navBtnStyle}>‹</button>
+              <button onClick={() => setOffset(o => o + 1)} style={navBtnStyle}>›</button>
+              <button onClick={() => setOffset(0)} style={{ ...navBtnStyle, fontSize: 11, padding: '3px 8px', width: 'auto' }}>Auj.</button>
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {viewOptions.map(v => (
+                <button key={v} onClick={() => { setCalView(v); setOffset(0); }} style={{
+                  padding: '4px 12px', fontSize: 12, fontWeight: 700,
+                  fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
+                  border: '2px solid #111', borderRadius: 6, cursor: 'pointer',
+                  background: calView === v ? '#111' : '#fff',
+                  color: calView === v ? '#F5C400' : '#111',
+                }}>{viewLabel[v]}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#111', textAlign: 'center', textTransform: 'capitalize' }}>{periodLabel}</div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -546,18 +591,189 @@ export default function DashboardCalendar({
           <button onClick={() => setOffset(o => o + 1)} style={navBtnStyle}>›</button>
           <button onClick={() => setOffset(0)} style={{ ...navBtnStyle, fontSize: 11, padding: '3px 8px', width: 'auto' }}>Auj.</button>
           <div style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
-            {(['week', 'month'] as const).map(v => (
+            {viewOptions.map(v => (
               <button key={v} onClick={() => { setCalView(v); setOffset(0); }} style={{
                 padding: '4px 12px', fontSize: 12, fontWeight: 700,
                 fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
                 border: '2px solid #111', borderRadius: 6, cursor: 'pointer',
                 background: calView === v ? '#111' : '#fff',
                 color: calView === v ? '#F5C400' : '#111',
-              }}>{v === 'week' ? 'Semaine' : 'Mois'}</button>
+              }}>{viewLabel[v]}</button>
             ))}
           </div>
         </div>
       </div>
+    );
+  }
+
+  function DayView() {
+    const HOUR_H = 60;
+    const START_H = 8;
+    const totalH = HOURS.length * HOUR_H;
+
+    const dayDate = new Date(today);
+    dayDate.setDate(today.getDate() + offset);
+    dayDate.setHours(0, 0, 0, 0);
+    const isTod = sameDay(dayDate, today);
+    const periodLabel = `${CAL_DAYS[(dayDate.getDay() + 6) % 7]} ${dayDate.getDate()} ${CAL_MONTHS[dayDate.getMonth()]} ${dayDate.getFullYear()}`;
+
+    function evTop(ev: CalEvent): number {
+      const h = ev.hour ?? START_H;
+      const m = ev.minutes ?? 0;
+      return (h - START_H) * HOUR_H + (m / 60) * HOUR_H;
+    }
+    function evHeight(ev: CalEvent): number {
+      if (ev.endHour !== undefined) {
+        const startMin = (ev.hour ?? START_H) * 60 + (ev.minutes ?? 0);
+        const endMin = ev.endHour * 60 + (ev.endMinutes ?? 0);
+        const dur = Math.max(endMin - startMin, 30);
+        return (dur / 60) * HOUR_H - 2;
+      }
+      return 44;
+    }
+
+    const dayEvs = allEvents.filter(e => sameDay(e.date, dayDate));
+    const key = cellKey(dayDate);
+
+    function handleDaySlotClick(e: React.MouseEvent) {
+      if (!onEmptySlotClick) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const hour = Math.floor(y / HOUR_H) + START_H;
+      if (hour < 0 || hour >= 24) return;
+      const clickedDate = new Date(dayDate);
+      clickedDate.setHours(hour, 0, 0, 0);
+      onEmptySlotClick(clickedDate, true);
+    }
+
+    return (
+      <>
+        <NavBar periodLabel={periodLabel} />
+        {onEmptySlotClick && (
+          <div style={{ fontSize: 11, color: '#888', fontWeight: 600, marginBottom: 8, fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif" }}>
+            💡 Astuce : appuyez sur un créneau libre pour créer un événement ou une action
+          </div>
+        )}
+        <div style={{ border: '2px solid #111', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{
+            padding: '8px 12px', borderBottom: '2px solid #111',
+            background: isTod ? '#111' : '#FAFAFA',
+            color: isTod ? '#F5C400' : '#111',
+            fontSize: 13, fontWeight: 900, textTransform: 'capitalize',
+            fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
+          }}>
+            {isTod ? "Aujourd'hui — " : ''}{periodLabel}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr)' }}>
+            <div style={{ background: '#FAFAFA', borderRight: '1px solid #E5E5E5', position: 'relative', height: totalH }}>
+              {HOURS.map(h => (
+                <div key={h} style={{
+                  position: 'absolute', top: (h - START_H) * HOUR_H,
+                  right: 6, fontSize: 10, color: '#AAA', fontWeight: 600, lineHeight: 1,
+                }}>{h}h</div>
+              ))}
+            </div>
+
+            <div
+              onClick={handleDaySlotClick}
+              style={{
+                position: 'relative',
+                height: totalH,
+                background: isTod ? 'rgba(245,196,0,0.04)' : 'transparent',
+                cursor: onEmptySlotClick ? 'copy' : 'default',
+              }}
+            >
+              {HOURS.map(h => (
+                <div key={h} style={{
+                  position: 'absolute', top: (h - START_H) * HOUR_H,
+                  left: 0, right: 0, borderTop: '1px solid #F0F0F0',
+                  pointerEvents: 'none',
+                }} />
+              ))}
+
+              {dayEvs.map((ev, ei) => {
+                const top = evTop(ev);
+                const height = evHeight(ev);
+                const isArchived = ev.type === 'archive';
+                const isAction = ev.type === 'action';
+                const isDeadline = ev.type === 'deadline';
+                const timeLabel = ev.hour !== undefined ? formatTime(ev.hour, ev.minutes || 0) : undefined;
+                const endLabel = ev.endHour !== undefined ? formatTime(ev.endHour, ev.endMinutes || 0) : undefined;
+                const statusStyle = getStatusStyleOverride(ev);
+
+                function handleEvClick(e: React.MouseEvent) {
+                  e.stopPropagation();
+                  if (isAction) {
+                    if (onActionClick && ev.actionKind && ev.rawData) {
+                      onActionClick(ev.actionKind, ev.rawData);
+                    }
+                  } else if (!isDeadline) {
+                    onJobClick(ev.jobId);
+                  }
+                }
+
+                return (
+                  <div
+                    key={ei}
+                    onClick={handleEvClick}
+                    style={{
+                      position: 'absolute',
+                      top: top + 1,
+                      left: 4,
+                      right: 4,
+                      height: height,
+                      ...EV_STYLE[ev.type],
+                      ...statusStyle,
+                      borderRadius: 5,
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      fontFamily: "var(--font-montserrat), 'Montserrat', sans-serif",
+                      overflow: 'hidden',
+                      userSelect: 'none',
+                      opacity: statusStyle.opacity ?? (isArchived ? 0.65 : 1),
+                      border: statusStyle.border || (isDeadline ? '1.5px dashed rgba(255,255,255,0.5)' : isAction ? '1.5px solid rgba(0,0,0,0.3)' : 'none'),
+                      zIndex: 1,
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    {timeLabel && (
+                      <div style={{ fontSize: 10, opacity: .9, fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+                        {timeLabel}{endLabel ? ` → ${endLabel}` : ''}
+                      </div>
+                    )}
+                    {isDeadline && (
+                      <div style={{ fontSize: 10, opacity: .85, fontWeight: 800, lineHeight: 1.3 }}>⏰ {ev.deadlineLabel}</div>
+                    )}
+                    {isAction && ev.actionStatus === 'en_retard' && (
+                      <div style={{ fontSize: 9, fontWeight: 900, lineHeight: 1.3, color: '#E8151B', textTransform: 'uppercase' }}>
+                        🔴 Retard
+                      </div>
+                    )}
+                    {isAction && ev.actionStatus === 'fait' && (
+                      <div style={{ fontSize: 9, fontWeight: 900, lineHeight: 1.3, color: '#1A7A4A', textTransform: 'uppercase' }}>
+                        ✓ Fait
+                      </div>
+                    )}
+                    <div style={{
+                      fontSize: 12, fontWeight: 800, lineHeight: 1.3,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      textDecoration: isArchived ? 'line-through' : 'none',
+                    }}>{ev.title}</div>
+                    {ev.company && height > 40 && (
+                      <div style={{
+                        fontSize: 10, opacity: .85, lineHeight: 1.3,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        textDecoration: isArchived ? 'line-through' : 'none',
+                      }}>{isAction ? '⚡ ' : ''}{ev.company}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </>
     );
   }
 
@@ -826,7 +1042,7 @@ export default function DashboardCalendar({
     return (
       <div style={{ marginBottom: '1.25rem', background: '#fff', border: '2px solid #111', borderRadius: 12, overflow: 'hidden', boxShadow: '3px 3px 0 #111' }}>
         <div style={{ padding: '14px 16px' }}>
-          {calView === 'week' ? <WeekView /> : <MonthView />}
+          {calView === 'day' ? <DayView /> : calView === 'week' ? <WeekView /> : <MonthView />}
         </div>
       </div>
     );
@@ -853,7 +1069,7 @@ export default function DashboardCalendar({
 
       {visible && (
         <div style={{ padding: '14px 16px' }}>
-          {calView === 'week' ? <WeekView /> : <MonthView />}
+          {calView === 'day' ? <DayView /> : calView === 'week' ? <WeekView /> : <MonthView />}
         </div>
       )}
     </div>
