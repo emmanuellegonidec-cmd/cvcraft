@@ -167,7 +167,7 @@ export default function JobDetailPanel({ job, stages, userId, accessToken, onClo
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,12,0.5)', zIndex: 200 }} onClick={onClose}>
       <div
-        style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 480, background: '#fff', borderLeft: '2px solid #111', padding: '1.5rem', overflowY: 'auto', boxShadow: '-4px 0 0 #111' }}
+        style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 'min(480px, 100%)', background: '#fff', borderLeft: '2px solid #111', padding: '1.5rem', overflowY: 'auto', boxShadow: '-4px 0 0 #111', boxSizing: 'border-box' }}
         onClick={e => e.stopPropagation()}
       >
 
