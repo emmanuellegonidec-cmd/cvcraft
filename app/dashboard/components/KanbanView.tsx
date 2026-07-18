@@ -204,10 +204,11 @@ function DraggableCard({ job, colId, stages, stagesLabelMap, onClick }: {
 }
 
 // ─── Colonne droppable ────────────────────────────────────────────────────────
-function DroppableColumn({ col, jobs, stages, stagesLabelMap, onCardClick, onAddJob, isDragOver }: {
+function DroppableColumn({ col, jobs, stages, stagesLabelMap, onCardClick, onAddJob, isDragOver, hideHeader = false }: {
   col: Stage; jobs: Job[]; stages: Stage[];
   stagesLabelMap: Record<string, string>;
   onCardClick: (job: Job) => void; onAddJob: (stageId: string) => void; isDragOver: boolean;
+  hideHeader?: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id: col.id });
   const isToProcess = col.id === 'to_process'
@@ -218,14 +219,16 @@ function DroppableColumn({ col, jobs, stages, stagesLabelMap, onCardClick, onAdd
       borderRadius: 10, padding: 10, flex: '1 1 0', minWidth: 0,
       transition: 'background .15s, border .15s',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.3 }}>
-          {col.label}
+      {!hideHeader && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.3 }}>
+            {col.label}
+          </div>
+          <div style={{ width: 20, height: 20, borderRadius: '50%', background: col.color + '22', color: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+            {jobs.length}
+          </div>
         </div>
-        <div style={{ width: 20, height: 20, borderRadius: '50%', background: col.color + '22', color: col.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
-          {jobs.length}
-        </div>
-      </div>
+      )}
       {jobs.map(job => (
         <DraggableCard
           key={job.id} job={job} colId={col.id} stages={stages}
@@ -332,6 +335,17 @@ export default function KanbanView({ jobs, stages, stagesLabelMap, contactJobIds
 
   const [pendingMove, setPendingMove] = useState<{ job: Job; fromCol: string; toCol: string } | null>(null)
 
+  // Affichage mobile : onglets + une seule colonne visible à la fois
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(stages[0]?.id || 'to_apply');
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
   useEffect(() => {
     const handleVisibility = () => { if (document.visibilityState === 'visible') onRefresh(); };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -392,16 +406,60 @@ export default function KanbanView({ jobs, stages, stagesLabelMap, contactJobIds
   return (
     <>
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'start', width: '100%', height: '100%' }}>
-          {stages.map(col => (
-            <DroppableColumn
-              key={col.id} col={col} jobs={jobsByStatus(col.id)} stages={stages}
-              stagesLabelMap={stagesLabelMap}
-              onCardClick={job => router.push(`/dashboard/job/${job.id}`)}
-              onAddJob={onAddJob} isDragOver={overColId === col.id}
-            />
-          ))}
-        </div>
+        {isMobile ? (
+          <div style={{ padding: 4 }}>
+            {/* Onglets : un par colonne, défilables horizontalement */}
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 10, WebkitOverflowScrolling: 'touch' }}>
+              {stages.map(col => {
+                const count = jobsByStatus(col.id).length;
+                const active = activeTab === col.id;
+                return (
+                  <button
+                    key={col.id}
+                    onClick={() => setActiveTab(col.id)}
+                    style={{
+                      flex: '0 0 auto', fontFamily: FONT, cursor: 'pointer',
+                      fontSize: 12, fontWeight: 800, padding: '7px 12px', borderRadius: 6,
+                      whiteSpace: 'nowrap',
+                      background: active ? '#111' : '#fff',
+                      color: active ? '#fff' : '#111',
+                      border: '2px solid #111',
+                      boxShadow: active ? `2px 2px 0 ${col.color}` : 'none',
+                    }}
+                  >
+                    {col.label} <span style={{ opacity: 0.65 }}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Colonne active en pleine largeur */}
+            {(() => {
+              const col = stages.find(s => s.id === activeTab) || stages[0];
+              if (!col) return null;
+              return (
+                <DroppableColumn
+                  col={col} jobs={jobsByStatus(col.id)} stages={stages}
+                  stagesLabelMap={stagesLabelMap}
+                  onCardClick={job => router.push(`/dashboard/job/${job.id}`)}
+                  onAddJob={onAddJob} isDragOver={overColId === col.id}
+                  hideHeader
+                />
+              );
+            })()}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'start', width: '100%', height: '100%' }}>
+            {stages.map(col => (
+              <DroppableColumn
+                key={col.id} col={col} jobs={jobsByStatus(col.id)} stages={stages}
+                stagesLabelMap={stagesLabelMap}
+                onCardClick={job => router.push(`/dashboard/job/${job.id}`)}
+                onAddJob={onAddJob} isDragOver={overColId === col.id}
+              />
+            ))}
+          </div>
+        )}
         <DragOverlay>{activeJob ? <GhostCard job={activeJob} /> : null}</DragOverlay>
       </DndContext>
 
