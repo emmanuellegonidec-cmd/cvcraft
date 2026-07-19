@@ -98,6 +98,16 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
   const [stagesReady, setStagesReady] = useState(false);
   const [exchangesReady, setExchangesReady] = useState(false);
 
+  // Affichage mobile : titre en pleine largeur
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
   // Fetch contacts
   useEffect(() => {
     fetch('/api/contacts', { headers: getAuthHeaders() })
@@ -354,10 +364,10 @@ export function AgendaView({ jobs, stages, onJobClick, onBackToKanban }: AgendaP
         )}
 
         {/* TITRE · Entreprise · Contact */}
-        <div style={{ flex: '1 1 140px', minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, fontWeight: 800, whiteSpace: 'nowrap', fontFamily: FONT }}>{job.title}</span>
+        <div style={{ flex: isMobile ? '1 1 100%' : '1 1 140px', minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 800, whiteSpace: isMobile ? 'normal' : 'nowrap', fontFamily: FONT }}>{job.title}</span>
           {job.company && (
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#888', whiteSpace: 'nowrap', fontFamily: FONT }}>· {job.company}</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#888', whiteSpace: isMobile ? 'normal' : 'nowrap', fontFamily: FONT }}>· {job.company}</span>
           )}
           {contactLabel && (
             <span style={{
