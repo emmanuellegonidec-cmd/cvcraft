@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
@@ -293,17 +293,63 @@ export default function HelpPage() {
   const router = useRouter();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
+  // Affichage mobile : menu repliable
+  const [isMobile, setIsMobile] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
   return (
     <>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap');`}</style>
       <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#FAFAFA', fontFamily: FONT }}>
 
-        {/* Sidebar */}
-        <aside style={{ width: 200, minWidth: 200, background: '#0f0f0f', display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0, borderRight: '1px solid #1e1e1e', overflow: 'hidden' }}>
+        {/* Bouton burger (mobile, menu fermé) */}
+        {isMobile && !menuOpen && (
+          <button
+            onClick={() => setMenuOpen(true)}
+            aria-label="Ouvrir le menu"
+            style={{
+              position: 'fixed', top: 12, left: 12, zIndex: 50,
+              width: 44, height: 44,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+              background: '#111', border: '2px solid #F5C400', borderRadius: 8, boxShadow: '3px 3px 0 #F5C400', cursor: 'pointer',
+            }}
+          >
+            <span style={{ width: 20, height: 2.5, background: '#fff', borderRadius: 2 }} />
+            <span style={{ width: 20, height: 2.5, background: '#fff', borderRadius: 2 }} />
+            <span style={{ width: 20, height: 2.5, background: '#fff', borderRadius: 2 }} />
+          </button>
+        )}
 
-          <div onClick={() => router.push('/')} style={{ padding: '18px 16px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer', flexShrink: 0 }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#F5C400' }}>find my Job</span>
+        {/* Fond sombre (mobile, menu ouvert) */}
+        {isMobile && menuOpen && (
+          <div onClick={() => setMenuOpen(false)}
+            style={{ position: 'fixed', inset: 0, zIndex: 54, background: 'rgba(0,0,0,0.5)' }} />
+        )}
+
+        {/* Sidebar */}
+        <aside style={isMobile ? {
+          width: 240, minWidth: 240, background: '#0f0f0f', display: 'flex', flexDirection: 'column',
+          height: '100dvh', position: 'fixed', top: 0, left: 0, zIndex: 55,
+          transform: menuOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.22s ease',
+          borderRight: '1px solid #1e1e1e', overflow: 'hidden',
+        } : { width: 200, minWidth: 200, background: '#0f0f0f', display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0, borderRight: '1px solid #1e1e1e', overflow: 'hidden' }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1e1e1e', flexShrink: 0 }}>
+            <div onClick={() => router.push('/')} style={{ padding: '18px 16px 16px', cursor: 'pointer' }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
+              <span style={{ fontWeight: 700, fontSize: 14, color: '#F5C400' }}>find my Job</span>
+            </div>
+            {isMobile && (
+              <button onClick={() => setMenuOpen(false)} aria-label="Fermer le menu"
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 22, lineHeight: 1, padding: '0 16px' }}>×</button>
+            )}
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -347,14 +393,14 @@ export default function HelpPage() {
         </aside>
 
         {/* Contenu principal */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: '2.5rem 2rem' }}>
+        <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '64px 1rem 2rem' : '2.5rem 2rem' }}>
           <div style={{ maxWidth: 700, margin: '0 auto' }}>
 
             <div style={{ marginBottom: '2.5rem' }}>
               <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', padding: '4px 14px', borderRadius: 6, fontSize: 11, fontWeight: 800, fontFamily: FONT, letterSpacing: 1, marginBottom: 14, boxShadow: '2px 2px 0 #111' }}>
                 CENTRE D&apos;AIDE
               </div>
-              <div style={{ fontSize: 32, fontWeight: 900, color: '#111', fontFamily: FONT, lineHeight: 1.15, marginBottom: 10 }}>
+              <div style={{ fontSize: isMobile ? 24 : 32, fontWeight: 900, color: '#111', fontFamily: FONT, lineHeight: 1.15, marginBottom: 10 }}>
                 Won&apos;t you please,<br />please, help me?
               </div>
               <div style={{ fontSize: 13, color: '#aaa', fontFamily: FONT }}>
