@@ -640,19 +640,31 @@ export default function DashboardPage() {
                   📊 Statistiques
                 </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(5,1fr)' }}>
                 {[
                   { l: "Nombre d'offres",          v: stats.total,      c: '#111'    },
                   { l: 'Offres envie de postuler', v: stats.toApply,    c: '#B8900A' },
                   { l: 'Offres postulées',         v: stats.applied,    c: '#1B4F72' },
                   { l: 'Offres en cours',          v: stats.interviews, c: '#1A7A4A' },
                   { l: 'Offres archivées',         v: stats.archived,   c: '#888'    },
-                ].map((s, i, arr) => (
-                  <div key={s.l} style={{ padding: '14px 16px', borderRight: i < arr.length - 1 ? '1px solid #E0E0E0' : 'none' }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: s.c }}>{s.v}</div>
-                  </div>
-                ))}
+                ].map((s, i, arr) => {
+                  const cols = isMobile ? 2 : 5;
+                  const isLoneLast = i === arr.length - 1 && arr.length % cols === 1 && cols > 1;
+                  const isLastCol = (i % cols) === (cols - 1) || isLoneLast;
+                  const lastRowStart = arr.length - (arr.length % cols === 0 ? cols : arr.length % cols);
+                  const isLastRow = i >= lastRowStart;
+                  return (
+                    <div key={s.l} style={{
+                      padding: '14px 16px',
+                      gridColumn: isLoneLast ? '1 / -1' : undefined,
+                      borderRight: !isLastCol ? '1px solid #E0E0E0' : 'none',
+                      borderBottom: !isLastRow ? '1px solid #E0E0E0' : 'none',
+                    }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{s.l}</div>
+                      <div style={{ fontSize: '1.75rem', fontWeight: 900, color: s.c }}>{s.v}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
