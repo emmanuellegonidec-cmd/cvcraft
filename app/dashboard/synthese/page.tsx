@@ -92,6 +92,17 @@ export default function SynthesePage() {
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Affichage mobile : menu repliable
+  const [isMobile, setIsMobile] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
   useEffect(() => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -252,14 +263,54 @@ export default function SynthesePage() {
           .print-title { display: block !important; margin-bottom: 20px; }
           .screen-title { display: none !important; }
         }
+        @media (max-width: 768px) {
+          .synthese-content { padding: 64px 16px 40px !important; max-width: 100% !important; }
+          .synthese-stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+          .synthese-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .synthese-table-scroll table { min-width: 680px; }
+        }
       `}</style>
 
       <div className="synthese-page">
 
-        <aside className="synthese-sidebar no-print">
-          <div onClick={() => router.push('/')} style={{ padding: '18px 16px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer' }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#F5C400' }}>find my Job</span>
+        {/* Bouton burger (mobile, menu fermé) */}
+        {isMobile && !menuOpen && (
+          <button
+            onClick={() => setMenuOpen(true)}
+            aria-label="Ouvrir le menu"
+            className="no-print"
+            style={{
+              position: 'fixed', top: 12, left: 12, zIndex: 50,
+              width: 44, height: 44,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+              background: '#111', border: '2px solid #F5C400', borderRadius: 8, boxShadow: '3px 3px 0 #F5C400', cursor: 'pointer',
+            }}
+          >
+            <span style={{ width: 20, height: 2.5, background: '#fff', borderRadius: 2 }} />
+            <span style={{ width: 20, height: 2.5, background: '#fff', borderRadius: 2 }} />
+            <span style={{ width: 20, height: 2.5, background: '#fff', borderRadius: 2 }} />
+          </button>
+        )}
+
+        {/* Fond sombre (mobile, menu ouvert) */}
+        {isMobile && menuOpen && (
+          <div className="no-print" onClick={() => setMenuOpen(false)}
+            style={{ position: 'fixed', inset: 0, zIndex: 54, background: 'rgba(0,0,0,0.5)' }} />
+        )}
+
+        <aside className="synthese-sidebar no-print" style={isMobile ? {
+          position: 'fixed', top: 0, left: 0, height: '100dvh', width: 240, minWidth: 240, zIndex: 55,
+          transform: menuOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.22s ease',
+        } : undefined}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1e1e1e' }}>
+            <div onClick={() => router.push('/')} style={{ padding: '18px 16px 16px', cursor: 'pointer' }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Jean </span>
+              <span style={{ fontWeight: 700, fontSize: 14, color: '#F5C400' }}>find my Job</span>
+            </div>
+            {isMobile && (
+              <button onClick={() => setMenuOpen(false)} aria-label="Fermer le menu"
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 22, lineHeight: 1, padding: '0 16px' }}>×</button>
+            )}
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#444', letterSpacing: 1.2, textTransform: 'uppercase', padding: '0 8px 8px' }}>Recherche</div>
@@ -332,7 +383,7 @@ export default function SynthesePage() {
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginBottom: 24 }}>
+          <div className="synthese-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginBottom: 24 }}>
             {[
               { label: 'Candidatures', value: stats.total },
               { label: 'En cours / entretiens', value: stats.interviews },
@@ -349,7 +400,7 @@ export default function SynthesePage() {
           {/* Tableau candidatures */}
           <div style={{ marginBottom: 36 }}>
             <div className="section-label">Détail des candidatures {loading && '— chargement...'}</div>
-            <div style={{ overflowX: 'auto' }}>
+            <div className="synthese-table-scroll" style={{ overflowX: 'auto' }}>
               <table>
                 <colgroup>
                   <col style={{ width: '9%' }} />
@@ -420,6 +471,7 @@ export default function SynthesePage() {
           {exchanges.length > 0 && (
             <div style={{ marginBottom: 36 }}>
               <div className="section-label">Échanges & entretiens</div>
+              <div className="synthese-table-scroll" style={{ overflowX: 'auto' }}>
               <table>
                 <colgroup>
                   <col style={{ width: '10%' }} />
@@ -443,6 +495,7 @@ export default function SynthesePage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 
@@ -450,6 +503,7 @@ export default function SynthesePage() {
           {actions.length > 0 && (
             <div style={{ marginBottom: 36 }}>
               <div className="section-label">Événements & formations</div>
+              <div className="synthese-table-scroll" style={{ overflowX: 'auto' }}>
               <table>
                 <colgroup>
                   <col style={{ width: '10%' }} />
@@ -484,6 +538,7 @@ export default function SynthesePage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 
