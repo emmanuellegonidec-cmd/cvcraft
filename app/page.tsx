@@ -136,7 +136,7 @@ export default async function LandingPage() {
         }
         @media(max-width:768px){
           .nav-desktop{display:none!important}
-          .nav-btns{display:none!important}
+          .nav-btns{display:flex!important;gap:6px!important}
           .hero-grid,.feat-grid,.testi-grid,.blog-grid{grid-template-columns:1fr!important}
           .feats-grid{grid-template-columns:1fr 1fr!important}
           .footer-grid{grid-template-columns:1fr!important}
@@ -159,7 +159,7 @@ export default async function LandingPage() {
           .feats-grid{grid-template-columns:1fr!important;gap:1rem!important;}
         }
         @media(max-width:480px){
-          .nav-btns{display:none!important}
+          .nav-btns{display:flex!important;gap:6px!important}
           .hero-title{font-size:1.9rem!important;}
           .steps-grid{grid-template-columns:1fr!important;}
         }
