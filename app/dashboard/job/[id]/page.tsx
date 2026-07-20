@@ -65,6 +65,7 @@ const SUB_STATUS_LABELS: Record<string, string> = {
 interface Job {
   id: string; title: string; company: string; location: string; job_type: string
   status: string; sub_status: string; description: string; notes: string; source_url: string
+  requirements: string | null
   salary_text: string | null; salary_min: number | null; salary_max: number | null; currency: string | null
   cv_sent: boolean; cover_letter_sent: boolean; cv_url: string | null; cover_letter_url: string | null
   ats_score: number | null; ats_keywords: { present: string[]; missing: string[] } | null
@@ -256,6 +257,8 @@ export default function JobDetailPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [descExpanded, setDescExpanded] = useState(false)
+  // Session 14 : état d'expansion pour la section "Profil recherché"
+  const [profileExpanded, setProfileExpanded] = useState(false)
   const [recruitmentExpanded, setRecruitmentExpanded] = useState(false)
   const [companyExpanded, setCompanyExpanded] = useState(true)
   // Session 10 Bloc 1 : état d'expansion pour la nouvelle section
@@ -902,6 +905,32 @@ export default function JobDetailPage() {
             {descExpanded ? 'Réduire ↑' : 'Lire la suite →'}
           </span>
         </div>
+
+        {/* ═══ SESSION 14 : Profil recherché ═══════════════════════════════════
+            Affiche le champ `requirements` (bloc "Profil recherché" scrapé par
+            l'extension, ex. APEC : formation, expérience, compétences).
+            Sur certains sites (France Travail, WTJ, LinkedIn), tout est dans la
+            description et ce champ est vide : la section ne s'affiche alors pas.
+            Même modèle repliable que "Description du poste". */}
+        {(job.requirements) && (
+          <div style={card}>
+            <span style={sectionLabel}>Profil recherché</span>
+            <div style={{ position: 'relative', maxHeight: profileExpanded ? 'none' : 200, overflow: 'hidden' }}>
+              {looksLikeHtml(job.requirements) ? (
+                <div dangerouslySetInnerHTML={{ __html: job.requirements }}
+                  style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500 }} />
+              ) : (
+                <div style={{ fontSize: 14, color: '#444', lineHeight: 1.8, fontFamily: FONT, fontWeight: 500, whiteSpace: 'pre-wrap' }}>
+                  {job.requirements}
+                </div>
+              )}
+              {!profileExpanded && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: 'linear-gradient(transparent, #fff)' }} />}
+            </div>
+            <span onClick={() => setProfileExpanded(v => !v)} style={{ fontSize: 13, fontWeight: 700, color: '#111', textDecoration: 'underline', cursor: 'pointer', marginTop: 12, display: 'inline-block', fontFamily: FONT }}>
+              {profileExpanded ? 'Réduire ↑' : 'Lire la suite →'}
+            </span>
+          </div>
+        )}
 
         {(job.recruitment_process) && (
           <div style={card}>
