@@ -61,6 +61,38 @@ const EMPTY_SALARY: ExtractedSalary = {
   salaryPeriod: null,
 };
 
+// Session 11 : conversion robuste vers un nombre.
+// L'IA peut renvoyer le montant comme un nombre (80000) ou comme du texte
+// ("80000", "80 000", "80 000 €", "80k", "80K€"). On accepte tous ces cas.
+function toNumber(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return isFinite(value) ? value : null;
+  }
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  let s = value.trim().toLowerCase();
+  if (!s) return null;
+
+  // Gestion du suffixe "k" (milliers) : "80k" -> 80000
+  const hasK = /\d\s*k/.test(s);
+
+  // On ne garde que les chiffres, la virgule et le point (on retire €, espaces, "k"...).
+  s = s.replace(/[^0-9.,]/g, '');
+  if (!s) return null;
+
+  // Virgule décimale française -> point.
+  s = s.replace(',', '.');
+
+  let n = parseFloat(s);
+  if (!isFinite(n)) return null;
+
+  if (hasK) n = n * 1000;
+
+  return Math.round(n);
+}
+
 async function extractSalaryFromDescription(
   description: string | null | undefined
 ): Promise<ExtractedSalary> {
@@ -129,15 +161,10 @@ async function extractSalaryFromDescription(
 
     const parsed = JSON.parse(cleaned);
 
-    // Normalisation défensive : on ne garde que des nombres valides.
-    const min =
-      typeof parsed.salaryMin === 'number' && isFinite(parsed.salaryMin)
-        ? parsed.salaryMin
-        : null;
-    const max =
-      typeof parsed.salaryMax === 'number' && isFinite(parsed.salaryMax)
-        ? parsed.salaryMax
-        : null;
+    // Normalisation défensive : l'IA peut renvoyer le montant comme un nombre
+    // (80000) OU comme du texte ("80000", "80 000", "80k"). On accepte les deux.
+    const min = toNumber(parsed.salaryMin);
+    const max = toNumber(parsed.salaryMax);
 
     // Aucun montant exploitable -> salaire vide (currency/period seuls n'ont pas de sens).
     if (min === null && max === null) {
