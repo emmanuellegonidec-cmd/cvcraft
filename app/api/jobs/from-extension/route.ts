@@ -329,11 +329,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5 bis. Extraction par l'IA depuis la description (salaire + entreprise).
+    // 5 bis. Extraction par l'IA depuis la description (salaire + entreprise + contrat).
     // Le salaire REMPLACE celui de l'extension (souvent une estimation fausse).
     // Le passage entreprise est recopié verbatim par l'IA (jamais réécrit) et
     // placé dans son champ dédié. La description du poste reste inchangée.
-    const ai = await extractFromDescription(description);
+    //
+    // Session 14 : on donne à l'IA la description ET le profil recherché
+    // (requirements) réunis. Sur certains sites (APEC notamment), le contrat et
+    // le salaire ne sont PAS dans la description mais dans le bloc profil
+    // ("Contrat à durée indéterminée (CDI)", "55 000 € à 70 000 € brut/an").
+    // Sans ça, l'IA ne les voyait pas. Le texte stocké en base n'est pas modifié :
+    // on ne fait que fournir plus de contexte à l'analyse.
+    const analysisText = [description, requirements]
+      .filter((t) => t && String(t).trim())
+      .join('\n\n');
+    const ai = await extractFromDescription(analysisText);
 
     const finalSalaryMin = ai.salaryMin;
     const finalSalaryMax = ai.salaryMax;
