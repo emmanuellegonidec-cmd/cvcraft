@@ -47,18 +47,23 @@ function createAuthedClient(token: string) {
 // pour l'ensemble des jobboards, sans mise à jour de l'extension.
 // ============================================================
 
-type ExtractedSalary = {
+type ExtractedFromDescription = {
   salaryMin: number | null;
   salaryMax: number | null;
   salaryCurrency: string | null;
   salaryPeriod: string | null;
+  // Session 12 : la présentation de l'entreprise est souvent noyée dans la
+  // description du poste. L'IA la recopie VERBATIM (sans jamais la réécrire).
+  // C'est ensuite le code (stripCompanyPassage) qui la retire de la description.
+  companyPassage: string | null; // texte entreprise recopié tel quel, ou null si rien
 };
 
-const EMPTY_SALARY: ExtractedSalary = {
+const EMPTY_EXTRACTION: ExtractedFromDescription = {
   salaryMin: null,
   salaryMax: null,
   salaryCurrency: null,
   salaryPeriod: null,
+  companyPassage: null,
 };
 
 // Session 11 : conversion robuste vers un nombre.
@@ -93,18 +98,62 @@ function toNumber(value: unknown): number | null {
   return Math.round(n);
 }
 
-async function extractSalaryFromDescription(
+// Session 12 : retire de la description un passage recopié verbatim par l'IA.
+// Le texte n'est JAMAIS réécrit : on retire uniquement le morceau exact.
+// - Correspondance exacte trouvée     -> passage retiré, description nettoyée.
+// - Tolérance aux espaces/retours ligne (l'IA peut normaliser les blancs).
+// - Rien ne correspond                -> description inchangée (sécurité).
+function stripCompanyPassage(
+  description: string | null,
+  passage: string | null
+): string | null {
+  if (!description) return description ?? null;
+  if (!passage || passage.trim().length < 20) return description;
+
+  const p = passage.trim();
+
+  // 1) Tentative de retrait direct (correspondance exacte).
+  let out: string | null = null;
+  const idx = description.indexOf(p);
+  if (idx !== -1) {
+    out = description.slice(0, idx) + description.slice(idx + p.length);
+  } else {
+    // 2) Tentative tolérante aux espaces : on transforme le passage en motif
+    //    où chaque suite d'espaces/retours ligne peut varier.
+    const escaped = p
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // échappe les caractères spéciaux regex
+      .replace(/\s+/g, '\\s+');                // rend les espaces flexibles
+    try {
+      const re = new RegExp(escaped);
+      if (re.test(description)) {
+        out = description.replace(re, '');
+      }
+    } catch {
+      out = null;
+    }
+  }
+
+  if (out === null) {
+    // Aucune correspondance : on ne touche pas à la description.
+    return description;
+  }
+
+  // Nettoyage léger : on réduit les lignes vides multiples créées par le retrait.
+  return out.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+async function extractFromDescription(
   description: string | null | undefined
-): Promise<ExtractedSalary> {
+): Promise<ExtractedFromDescription> {
   // Pas de description exploitable -> rien à analyser.
   if (!description || description.trim().length < 20) {
-    return EMPTY_SALARY;
+    return EMPTY_EXTRACTION;
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    // Pas de clé configurée : on n'invente rien, salaire vide.
-    return EMPTY_SALARY;
+    // Pas de clé configurée : on n'invente rien.
+    return EMPTY_EXTRACTION;
   }
 
   const prompt =
@@ -113,22 +162,25 @@ async function extractSalaryFromDescription(
     + '"""\n'
     + description + '\n'
     + '"""\n\n'
-    + 'Ta seule tâche : trouver le salaire RÉELLEMENT ÉCRIT par le recruteur dans ce texte.\n\n'
-    + 'Règles strictes :\n'
-    + '- N\'extrais un salaire QUE s\'il est explicitement écrit dans le texte ci-dessus.\n'
-    + '- Si aucun salaire n\'est écrit, réponds avec des valeurs null. N\'invente jamais de fourchette.\n'
-    + '- "80k€", "80 k€", "80K" signifient 80000. Convertis toujours en nombre entier (ex: 80000).\n'
-    + '- Si une fourchette est donnée (ex: "45 à 55 k€"), remplis min et max avec ces deux montants.\n'
+    + 'Tu dois EXTRAIRE deux choses depuis ce texte, sans JAMAIS le réécrire.\n\n'
+    + '1) LE SALAIRE réellement écrit par le recruteur :\n'
+    + '- N\'extrais un salaire QUE s\'il est explicitement écrit dans le texte. Sinon, valeurs null. N\'invente jamais.\n'
+    + '- "80k€", "80 k€", "80K" signifient 80000. Convertis en nombre entier (ex: 80000).\n'
+    + '- Si une fourchette est donnée (ex: "45 à 55 k€"), remplis min et max.\n'
     + '- Si un montant fixe est donné SANS variable (ex: "Budget: 80k€ fixe"), mets-le dans min et laisse max à null.\n'
-    + '- Si un fixe ET un variable/bonus sont donnés (ex: "80k€ fixe (+8k€ de variable)"), mets le FIXE dans min et le TOTAL fixe+variable dans max. Exemple : "80k€ fixe (+8k€ variable)" -> min 80000, max 88000.\n'
+    + '- Si un fixe ET un variable/bonus sont donnés (ex: "80k€ fixe (+8k€ de variable)"), mets le FIXE dans min et le TOTAL fixe+variable dans max. Exemple -> min 80000, max 88000.\n'
     + '- currency : "EUR", "USD" ou "GBP" selon le symbole (€, $, £). Par défaut "EUR" si un montant est trouvé sans symbole.\n'
-    + '- period : "YEAR" (par an), "MONTH" (par mois), "DAY" (par jour) ou "HOUR" (par heure). Par défaut "YEAR" pour un salaire annuel.\n\n'
+    + '- period : "YEAR" (par an), "MONTH" (par mois), "DAY" (par jour) ou "HOUR" (par heure). Par défaut "YEAR".\n\n'
+    + '2) LA PRÉSENTATION DE L\'ENTREPRISE si elle est présente dans le texte (qui est l\'entreprise, son activité, son secteur, sa taille, ses valeurs, ses chiffres clés).\n'
+    + 'RÈGLE ABSOLUE : recopie ce passage MOT POUR MOT, exactement comme dans le texte ci-dessus, caractère pour caractère. Ne le reformule pas, ne le résume pas, ne corrige aucune faute, ne change aucun espace ni ponctuation. Si tu n\'es pas sûr, renvoie null.\n'
+    + 'Ne recopie QUE la partie qui parle de l\'entreprise, PAS les missions du poste ni le profil recherché. Si aucune présentation d\'entreprise n\'est présente, renvoie null.\n\n'
     + 'Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après :\n'
     + '{\n'
     + '  "salaryMin": nombre ou null,\n'
     + '  "salaryMax": nombre ou null,\n'
     + '  "salaryCurrency": "EUR" ou "USD" ou "GBP" ou null,\n'
-    + '  "salaryPeriod": "YEAR" ou "MONTH" ou "DAY" ou "HOUR" ou null\n'
+    + '  "salaryPeriod": "YEAR" ou "MONTH" ou "DAY" ou "HOUR" ou null,\n'
+    + '  "companyPassage": "le passage entreprise recopié mot pour mot" ou null\n'
     + '}';
 
   try {
@@ -141,13 +193,13 @@ async function extractSalaryFromDescription(
       },
       body: JSON.stringify({
         model: 'claude-sonnet-5',
-        max_tokens: 300,
+        max_tokens: 2000,
         thinking: { type: 'disabled' },
         messages: [{ role: 'user', content: prompt }],
       }),
     });
 
-    if (!response.ok) return EMPTY_SALARY;
+    if (!response.ok) return EMPTY_EXTRACTION;
 
     const data = await response.json();
 
@@ -157,44 +209,55 @@ async function extractSalaryFromDescription(
         ?.at(-1)?.text ?? '';
 
     const cleaned = textBlock.replace(/```json|```/g, '').trim();
-    if (!cleaned) return EMPTY_SALARY;
+    if (!cleaned) return EMPTY_EXTRACTION;
 
     const parsed = JSON.parse(cleaned);
 
-    // Normalisation défensive : l'IA peut renvoyer le montant comme un nombre
-    // (80000) OU comme du texte ("80000", "80 000", "80k"). On accepte les deux.
+    // --- Salaire ---
+    // L'IA peut renvoyer le montant comme nombre (80000) ou texte ("80 000", "80k").
     const min = toNumber(parsed.salaryMin);
     const max = toNumber(parsed.salaryMax);
 
-    // Aucun montant exploitable -> salaire vide (currency/period seuls n'ont pas de sens).
-    if (min === null && max === null) {
-      return EMPTY_SALARY;
+    let salaryMin: number | null = null;
+    let salaryMax: number | null = null;
+    let salaryCurrency: string | null = null;
+    let salaryPeriod: string | null = null;
+
+    if (min !== null || max !== null) {
+      salaryMin = min;
+      salaryMax = max;
+      salaryCurrency =
+        parsed.salaryCurrency === 'EUR' ||
+        parsed.salaryCurrency === 'USD' ||
+        parsed.salaryCurrency === 'GBP'
+          ? parsed.salaryCurrency
+          : 'EUR';
+      salaryPeriod =
+        parsed.salaryPeriod === 'YEAR' ||
+        parsed.salaryPeriod === 'MONTH' ||
+        parsed.salaryPeriod === 'DAY' ||
+        parsed.salaryPeriod === 'HOUR'
+          ? parsed.salaryPeriod
+          : 'YEAR';
     }
 
-    const currency =
-      parsed.salaryCurrency === 'EUR' ||
-      parsed.salaryCurrency === 'USD' ||
-      parsed.salaryCurrency === 'GBP'
-        ? parsed.salaryCurrency
-        : 'EUR';
-
-    const period =
-      parsed.salaryPeriod === 'YEAR' ||
-      parsed.salaryPeriod === 'MONTH' ||
-      parsed.salaryPeriod === 'DAY' ||
-      parsed.salaryPeriod === 'HOUR'
-        ? parsed.salaryPeriod
-        : 'YEAR';
+    // --- Passage entreprise (verbatim) ---
+    const companyPassage =
+      typeof parsed.companyPassage === 'string' &&
+      parsed.companyPassage.trim().length >= 20
+        ? parsed.companyPassage.trim()
+        : null;
 
     return {
-      salaryMin: min,
-      salaryMax: max,
-      salaryCurrency: currency,
-      salaryPeriod: period,
+      salaryMin,
+      salaryMax,
+      salaryCurrency,
+      salaryPeriod,
+      companyPassage,
     };
   } catch {
-    // Toute erreur (réseau, JSON invalide...) -> salaire vide, l'import continue.
-    return EMPTY_SALARY;
+    // Toute erreur (réseau, JSON invalide...) -> rien, l'import continue.
+    return EMPTY_EXTRACTION;
   }
 }
 
@@ -289,14 +352,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5 bis. Session 11 : extraction du salaire par l'IA depuis la description.
-    // Le résultat REMPLACE le salaire envoyé par l'extension (souvent une
-    // estimation fausse de la plateforme). Rien trouvé -> salaire vide.
-    const aiSalary = await extractSalaryFromDescription(description);
-    const finalSalaryMin = aiSalary.salaryMin;
-    const finalSalaryMax = aiSalary.salaryMax;
-    const finalSalaryCurrency = aiSalary.salaryCurrency;
-    const finalSalaryPeriod = aiSalary.salaryPeriod;
+    // 5 bis. Extraction par l'IA depuis la description (salaire + entreprise).
+    // Le salaire REMPLACE celui de l'extension (souvent une estimation fausse).
+    // Le passage entreprise est recopié verbatim par l'IA (jamais réécrit) puis
+    // retiré de la description par le code (stripCompanyPassage).
+    const ai = await extractFromDescription(description);
+
+    const finalSalaryMin = ai.salaryMin;
+    const finalSalaryMax = ai.salaryMax;
+    const finalSalaryCurrency = ai.salaryCurrency;
+    const finalSalaryPeriod = ai.salaryPeriod;
+
+    // Description entreprise :
+    // - on garde en priorité celle envoyée par l'extension (bloc dédié fiable),
+    // - sinon on prend le passage entreprise repéré dans la description.
+    const extensionCompanyDesc =
+      companyDescription && String(companyDescription).trim()
+        ? companyDescription
+        : null;
+    const finalCompanyDescription = extensionCompanyDesc ?? ai.companyPassage;
+
+    // Description du poste : si l'IA a repéré un passage entreprise, on le retire
+    // de la description (correspondance exacte). Sinon, description inchangée.
+    const finalDescription = ai.companyPassage
+      ? stripCompanyPassage(description || null, ai.companyPassage)
+      : (description || null);
 
     // 6. Calcul de la confiance d'extraction (ratio de champs importants remplis)
     const importantFields = [
@@ -305,7 +385,7 @@ export async function POST(request: NextRequest) {
       location,
       contractType,
       finalSalaryMin,
-      description,
+      finalDescription,
       postedAt,
     ];
     const filledFields = importantFields.filter(
@@ -332,9 +412,10 @@ export async function POST(request: NextRequest) {
         salary_max: finalSalaryMax ?? null,
         currency: finalSalaryCurrency || 'EUR',
         salary_period: finalSalaryPeriod || null,
-        description: description || null,
+        // Session 12 : description nettoyée du passage entreprise + entreprise déplacée.
+        description: finalDescription || null,
         requirements: requirements || null,
-        company_description: companyDescription || null,
+        company_description: finalCompanyDescription || null,
         posted_at: postedAt || null,
         education_level: educationLevel || null,
         qualification: qualification || null,
