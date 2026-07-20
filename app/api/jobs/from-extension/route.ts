@@ -56,6 +56,10 @@ type ExtractedFromDescription = {
   // description du poste. L'IA la recopie VERBATIM (sans jamais la réécrire)
   // pour la placer dans le champ entreprise. La description reste inchangée.
   companyPassage: string | null; // texte entreprise recopié tel quel, ou null si rien
+  // Session 13 : type de contrat déduit de la description UNIQUEMENT s'il y est
+  // écrit clairement. Corrige le cas APEC où l'extension attrapait un mauvais
+  // contrat (ex: "Alternance" pioché ailleurs sur la page pour une offre CDI).
+  contractType: string | null;
 };
 
 const EMPTY_EXTRACTION: ExtractedFromDescription = {
@@ -64,6 +68,7 @@ const EMPTY_EXTRACTION: ExtractedFromDescription = {
   salaryCurrency: null,
   salaryPeriod: null,
   companyPassage: null,
+  contractType: null,
 };
 
 // Session 11 : conversion robuste vers un nombre.
@@ -118,7 +123,7 @@ async function extractFromDescription(
     + '"""\n'
     + description + '\n'
     + '"""\n\n'
-    + 'Tu dois EXTRAIRE deux choses depuis ce texte, sans JAMAIS le réécrire.\n\n'
+    + 'Tu dois EXTRAIRE trois choses depuis ce texte, sans JAMAIS le réécrire.\n\n'
     + '1) LE SALAIRE réellement écrit par le recruteur :\n'
     + '- N\'extrais un salaire QUE s\'il est explicitement écrit dans le texte. Sinon, valeurs null. N\'invente jamais.\n'
     + '- "80k€", "80 k€", "80K" signifient 80000. Convertis en nombre entier (ex: 80000).\n'
@@ -130,13 +135,18 @@ async function extractFromDescription(
     + '2) LA PRÉSENTATION DE L\'ENTREPRISE si elle est présente dans le texte (qui est l\'entreprise, son activité, son secteur, sa taille, ses valeurs, ses chiffres clés).\n'
     + 'RÈGLE ABSOLUE : recopie ce passage MOT POUR MOT, exactement comme dans le texte ci-dessus, caractère pour caractère. Ne le reformule pas, ne le résume pas, ne corrige aucune faute, ne change aucun espace ni ponctuation. Si tu n\'es pas sûr, renvoie null.\n'
     + 'Ne recopie QUE la partie qui parle de l\'entreprise, PAS les missions du poste ni le profil recherché. Si aucune présentation d\'entreprise n\'est présente, renvoie null.\n\n'
+    + '3) LE TYPE DE CONTRAT du poste, UNIQUEMENT s\'il est clairement écrit dans le texte :\n'
+    + '- Valeurs possibles : "CDI", "CDD", "Stage", "Alternance", "Freelance", "Intérim", "Temporaire".\n'
+    + '- Ne le déduis QUE du contrat proposé pour CE poste. Ignore les mentions d\'autres contrats qui ne concernent pas le poste (ex: "vous encadrerez des alternants" ne veut PAS dire que le poste est en alternance).\n'
+    + '- Si le type de contrat n\'est pas clairement écrit, renvoie null (surtout ne devine pas).\n\n'
     + 'Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après :\n'
     + '{\n'
     + '  "salaryMin": nombre ou null,\n'
     + '  "salaryMax": nombre ou null,\n'
     + '  "salaryCurrency": "EUR" ou "USD" ou "GBP" ou null,\n'
     + '  "salaryPeriod": "YEAR" ou "MONTH" ou "DAY" ou "HOUR" ou null,\n'
-    + '  "companyPassage": "le passage entreprise recopié mot pour mot" ou null\n'
+    + '  "companyPassage": "le passage entreprise recopié mot pour mot" ou null,\n'
+    + '  "contractType": "CDI" ou "CDD" ou "Stage" ou "Alternance" ou "Freelance" ou "Intérim" ou "Temporaire" ou null\n'
     + '}';
 
   try {
@@ -204,12 +214,23 @@ async function extractFromDescription(
         ? parsed.companyPassage.trim()
         : null;
 
+    // --- Type de contrat (validé contre la liste autorisée) ---
+    const allowedContracts = [
+      'CDI', 'CDD', 'Stage', 'Alternance', 'Freelance', 'Intérim', 'Temporaire',
+    ];
+    const contractType =
+      typeof parsed.contractType === 'string' &&
+      allowedContracts.includes(parsed.contractType)
+        ? parsed.contractType
+        : null;
+
     return {
       salaryMin,
       salaryMax,
       salaryCurrency,
       salaryPeriod,
       companyPassage,
+      contractType,
     };
   } catch {
     // Toute erreur (réseau, JSON invalide...) -> rien, l'import continue.
@@ -333,12 +354,18 @@ export async function POST(request: NextRequest) {
     // il reste aussi dans la description, telle que le recruteur l'a écrite.
     const finalDescription = description || null;
 
+    // Session 13 : type de contrat.
+    // - Si l'IA a trouvé un contrat clairement écrit dans la description -> il PRIME
+    //   (corrige le cas APEC où l'extension attrape un mauvais contrat sur la page).
+    // - Sinon on garde le contrat scrapé par l'extension (fiable sur les autres sites).
+    const finalContractType = ai.contractType ?? contractType ?? null;
+
     // 6. Calcul de la confiance d'extraction (ratio de champs importants remplis)
     const importantFields = [
       title,
       company,
       location,
-      contractType,
+      finalContractType,
       finalSalaryMin,
       finalDescription,
       postedAt,
@@ -359,7 +386,7 @@ export async function POST(request: NextRequest) {
         title,
         company: company || null,
         location: location || null,
-        job_type: contractType || null,
+        job_type: finalContractType || null,
         employment_type: workSchedule || null,
         working_hours: workingHours || null,
         // Session 11 : salaire issu de l'analyse IA de la description.
