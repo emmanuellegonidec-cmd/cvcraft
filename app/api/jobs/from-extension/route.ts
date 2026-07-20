@@ -53,8 +53,8 @@ type ExtractedFromDescription = {
   salaryCurrency: string | null;
   salaryPeriod: string | null;
   // Session 12 : la présentation de l'entreprise est souvent noyée dans la
-  // description du poste. L'IA la recopie VERBATIM (sans jamais la réécrire).
-  // C'est ensuite le code (stripCompanyPassage) qui la retire de la description.
+  // description du poste. L'IA la recopie VERBATIM (sans jamais la réécrire)
+  // pour la placer dans le champ entreprise. La description reste inchangée.
   companyPassage: string | null; // texte entreprise recopié tel quel, ou null si rien
 };
 
@@ -96,50 +96,6 @@ function toNumber(value: unknown): number | null {
   if (hasK) n = n * 1000;
 
   return Math.round(n);
-}
-
-// Session 12 : retire de la description un passage recopié verbatim par l'IA.
-// Le texte n'est JAMAIS réécrit : on retire uniquement le morceau exact.
-// - Correspondance exacte trouvée     -> passage retiré, description nettoyée.
-// - Tolérance aux espaces/retours ligne (l'IA peut normaliser les blancs).
-// - Rien ne correspond                -> description inchangée (sécurité).
-function stripCompanyPassage(
-  description: string | null,
-  passage: string | null
-): string | null {
-  if (!description) return description ?? null;
-  if (!passage || passage.trim().length < 20) return description;
-
-  const p = passage.trim();
-
-  // 1) Tentative de retrait direct (correspondance exacte).
-  let out: string | null = null;
-  const idx = description.indexOf(p);
-  if (idx !== -1) {
-    out = description.slice(0, idx) + description.slice(idx + p.length);
-  } else {
-    // 2) Tentative tolérante aux espaces : on transforme le passage en motif
-    //    où chaque suite d'espaces/retours ligne peut varier.
-    const escaped = p
-      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // échappe les caractères spéciaux regex
-      .replace(/\s+/g, '\\s+');                // rend les espaces flexibles
-    try {
-      const re = new RegExp(escaped);
-      if (re.test(description)) {
-        out = description.replace(re, '');
-      }
-    } catch {
-      out = null;
-    }
-  }
-
-  if (out === null) {
-    // Aucune correspondance : on ne touche pas à la description.
-    return description;
-  }
-
-  // Nettoyage léger : on réduit les lignes vides multiples créées par le retrait.
-  return out.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 async function extractFromDescription(
@@ -354,8 +310,8 @@ export async function POST(request: NextRequest) {
 
     // 5 bis. Extraction par l'IA depuis la description (salaire + entreprise).
     // Le salaire REMPLACE celui de l'extension (souvent une estimation fausse).
-    // Le passage entreprise est recopié verbatim par l'IA (jamais réécrit) puis
-    // retiré de la description par le code (stripCompanyPassage).
+    // Le passage entreprise est recopié verbatim par l'IA (jamais réécrit) et
+    // placé dans son champ dédié. La description du poste reste inchangée.
     const ai = await extractFromDescription(description);
 
     const finalSalaryMin = ai.salaryMin;
@@ -372,11 +328,10 @@ export async function POST(request: NextRequest) {
         : null;
     const finalCompanyDescription = extensionCompanyDesc ?? ai.companyPassage;
 
-    // Description du poste : si l'IA a repéré un passage entreprise, on le retire
-    // de la description (correspondance exacte). Sinon, description inchangée.
-    const finalDescription = ai.companyPassage
-      ? stripCompanyPassage(description || null, ai.companyPassage)
-      : (description || null);
+    // Session 12 (mode "Copier") : la description du poste n'est JAMAIS modifiée.
+    // Le passage entreprise est seulement RECOPIÉ dans son champ dédié ci-dessus ;
+    // il reste aussi dans la description, telle que le recruteur l'a écrite.
+    const finalDescription = description || null;
 
     // 6. Calcul de la confiance d'extraction (ratio de champs importants remplis)
     const importantFields = [
