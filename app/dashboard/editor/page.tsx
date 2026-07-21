@@ -55,7 +55,9 @@ function EditorContent() {
   const cvId = searchParams.get('id');
   // Session 14 : arrivée depuis "Optimiser ce CV pour cette offre".
   // job_id = l'offre visée (pour le poste + les recommandations ATS).
+  // cv_ref = le CV source à pré-remplir automatiquement (format "upload:user_id/.../fichier.pdf").
   const jobId = searchParams.get('job_id');
+  const cvRef = searchParams.get('cv_ref');
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<CVFormData>(defaultFormData);
@@ -70,6 +72,13 @@ function EditorContent() {
 
   // Session 14 : contexte "offre" (poste + recommandations ATS) affiché en bandeau.
   const [jobContext, setJobContext] = useState<{ title: string; ats: AtsResult | null } | null>(null);
+
+  // Session 14 : pré-remplissage automatique depuis le CV source (cv_ref).
+  // prefillStatus : null | 'loading' | 'done' | 'error' — pilote l'affichage du statut.
+  const [prefillStatus, setPrefillStatus] = useState<null | 'loading' | 'done' | 'error'>(null);
+  const [prefillError, setPrefillError] = useState('');
+  // Évite de relancer l'extraction plusieurs fois (une seule tentative par session).
+  const [prefillDone, setPrefillDone] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -157,6 +166,75 @@ function EditorContent() {
     }
     loadJobContext();
   }, [jobId]);
+
+  // ─── Session 14 : pré-remplissage automatique du formulaire depuis le CV source ───
+  // Déclenché au passage de l'étape 1 → 2 quand on est arrivé avec ?cv_ref=...
+  // Étapes : (1) télécharger le PDF depuis le storage (bucket job-documents),
+  // (2) le convertir en base64, (3) l'envoyer à /api/extract-pdf (Claude Vision),
+  // (4) pré-remplir le formulaire (même mapping que Step2Import), (5) aller à l'étape 3.
+  // Ne bloque JAMAIS l'éditeur : en cas d'échec, on laisse la personne continuer à la main.
+  async function runPrefillFromCvRef() {
+    if (!cvRef || prefillDone) return;
+    setPrefillDone(true);
+    setPrefillStatus('loading');
+    setPrefillError('');
+    try {
+      // Le cv_ref a la forme "upload:user_id/job_id/fichier.pdf".
+      // Seuls les CV uploadés (PDF) sont lisibles ici ; un CV Creator (creator:) n'a pas de PDF.
+      if (!cvRef.startsWith('upload:')) {
+        throw new Error('Ce CV n\'est pas un PDF importé, pré-remplissage impossible.');
+      }
+      const filePath = cvRef.slice('upload:'.length);
+
+      const supabase = createClient();
+      const { data: fileData, error: dlError } = await supabase
+        .storage
+        .from('job-documents')
+        .download(filePath);
+      if (dlError || !fileData) {
+        throw new Error('Impossible de récupérer le CV depuis le stockage.');
+      }
+
+      // Conversion Blob -> base64 (sans le préfixe "data:...;base64,").
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(fileData);
+      });
+
+      const res = await fetch('/api/extract-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfBase64: base64 }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Extraction impossible.');
+
+      const d = json.data || {};
+      const uid = () => Math.random().toString(36).slice(2, 9);
+      // Même mapping que Step2Import : on régénère des id pour les listes.
+      setForm(prev => ({
+        ...prev,
+        ...d,
+        // On conserve le poste visé déjà pré-rempli depuis l'offre s'il existe.
+        targetJob: prev.targetJob || d.targetJob || '',
+        experiences: (d.experiences || []).map((e: any) => ({ ...e, id: uid() })),
+        education: (d.education || []).map((e: any) => ({ ...e, id: uid() })),
+      }));
+
+      setPrefillStatus('done');
+      setStep(3); // on saute l'écran d'import et on va directement vérifier les infos
+    } catch (e: any) {
+      setPrefillStatus('error');
+      setPrefillError(e?.message || 'Pré-remplissage impossible.');
+      // On amène quand même à l'étape 2 pour que la personne puisse importer/saisir à la main.
+      setStep(2);
+    }
+  }
 
   async function downloadPdf() {
     const blob = await pdf(
@@ -410,9 +488,20 @@ function EditorContent() {
                         ))}
                       </select>
                     </div>
-                    <button onClick={next}
-                      style={{ width: '100%', padding: '12px', background: '#111', color: '#fff', border: '2px solid #111', borderRadius: 8, fontSize: 13, fontWeight: 800, fontFamily: FONT, cursor: 'pointer', boxShadow: `3px 3px 0 ${accentColor}` }}>
-                      Continuer →
+                    {/* Session 14 : statut du pré-remplissage automatique (si arrivée avec cv_ref) */}
+                    {prefillStatus === 'loading' && (
+                      <div style={{ background: '#FFF3CD', border: '2px solid #111', borderRadius: 8, padding: '10px 14px', marginBottom: 12, boxShadow: '2px 2px 0 #111', fontSize: 13, color: '#111', fontFamily: FONT, fontWeight: 700 }}>
+                        ⏳ L&apos;IA lit votre CV et pré-remplit vos informations…
+                      </div>
+                    )}
+                    {prefillStatus === 'error' && (
+                      <div style={{ background: '#F8D7DA', border: '2px solid #E8151B', borderRadius: 8, padding: '10px 14px', marginBottom: 12, boxShadow: '2px 2px 0 #E8151B', fontSize: 13, color: '#111', fontFamily: FONT, fontWeight: 600, lineHeight: 1.5 }}>
+                        ⚠️ {prefillError} Vous pouvez importer ou saisir vos informations manuellement.
+                      </div>
+                    )}
+                    <button onClick={cvRef ? runPrefillFromCvRef : next} disabled={prefillStatus === 'loading'}
+                      style={{ width: '100%', padding: '12px', background: prefillStatus === 'loading' ? '#888' : '#111', color: '#fff', border: '2px solid #111', borderRadius: 8, fontSize: 13, fontWeight: 800, fontFamily: FONT, cursor: prefillStatus === 'loading' ? 'wait' : 'pointer', boxShadow: `3px 3px 0 ${accentColor}` }}>
+                      {prefillStatus === 'loading' ? 'Pré-remplissage en cours…' : (cvRef ? 'Continuer et pré-remplir mon CV →' : 'Continuer →')}
                     </button>
                   </div>
                   <div style={{ padding: '1.5rem', overflowY: 'auto', background: '#F7F6F3' }}>
