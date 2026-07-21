@@ -27,6 +27,23 @@ export async function GET(req: NextRequest) {
   const { userId, supabase } = await getAuth(req);
   if (!userId) return NextResponse.json({ error: 'Non connecté' }, { status: 401 });
 
+  // Session 14 : lecture d'UNE offre par id (?id=...).
+  // Utilisé par le CV Creator (parcours "Optimiser ce CV pour cette offre") pour
+  // charger le poste visé + les recommandations ATS (ats_result) d'une offre précise.
+  // Si aucun id n'est fourni, on garde le comportement d'origine (liste complète).
+  const id = req.nextUrl.searchParams.get('id');
+  if (id) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 404 });
+    return NextResponse.json({ job: data });
+  }
+
   const { data, error } = await supabase
     .from('jobs')
     .select('*')
