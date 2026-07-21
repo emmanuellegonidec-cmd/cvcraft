@@ -550,7 +550,7 @@ export default function CVsSection({ token }: { token: string }) {
                 color: '#fff',
               }}
             >
-              in Importer mon CV LinkedIn
+              Importer mon CV LinkedIn
             </button>
             <button
               onClick={openUploadModal}
