@@ -34,7 +34,8 @@
     "https://www.welcometothejungle.com/*",
     "https://www.linkedin.com/*",
     "https://www.apec.fr/*",
-    "https://www.hellowork.com/*"
+    "https://www.hellowork.com/*",
+    "https://fr.indeed.com/*"
   ],
   "content_scripts": [
     {
@@ -77,6 +78,15 @@
       "matches": ["https://www.hellowork.com/*"],
       "js": [
         "content/scrapers/hellowork.js",
+        "content/content.js"
+      ],
+      "css": ["content/content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://fr.indeed.com/*"],
+      "js": [
+        "content/scrapers/indeed.js",
         "content/content.js"
       ],
       "css": ["content/content.css"],
