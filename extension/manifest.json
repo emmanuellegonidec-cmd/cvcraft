@@ -33,7 +33,8 @@
     "https://candidat.francetravail.fr/*",
     "https://www.welcometothejungle.com/*",
     "https://www.linkedin.com/*",
-    "https://www.apec.fr/*"
+    "https://www.apec.fr/*",
+    "https://www.hellowork.com/*"
   ],
   "content_scripts": [
     {
@@ -67,6 +68,15 @@
       "matches": ["https://www.apec.fr/*"],
       "js": [
         "content/scrapers/apec.js",
+        "content/content.js"
+      ],
+      "css": ["content/content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.hellowork.com/*"],
+      "js": [
+        "content/scrapers/hellowork.js",
         "content/content.js"
       ],
       "css": ["content/content.css"],
