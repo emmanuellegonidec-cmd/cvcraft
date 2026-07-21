@@ -350,6 +350,17 @@ function EditorContent() {
     );
   }
 
+  // Session 14 : bouton "Continuer et pré-remplir" — réutilisé en haut (sous le
+  // bandeau recommandations) ET en bas de l'étape 1, pour qu'il soit toujours visible.
+  function PrefillButton() {
+    return (
+      <button onClick={cvRef ? runPrefillFromCvRef : next} disabled={prefillStatus === 'loading'}
+        style={{ width: '100%', padding: '12px', background: prefillStatus === 'loading' ? '#888' : '#111', color: '#fff', border: '2px solid #111', borderRadius: 8, fontSize: 13, fontWeight: 800, fontFamily: FONT, cursor: prefillStatus === 'loading' ? 'wait' : 'pointer', boxShadow: `3px 3px 0 ${accentColor}` }}>
+        {prefillStatus === 'loading' ? 'Pré-remplissage en cours…' : (cvRef ? 'Continuer et pré-remplir mon CV →' : 'Continuer →')}
+      </button>
+    );
+  }
+
   return (
     <>
       <style>{`
@@ -444,6 +455,13 @@ function EditorContent() {
                   <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto', background: '#fff' }}>
                     {/* Session 14 : bandeau recommandations si on vient d'une offre */}
                     <JobRecoBanner />
+                    {/* Session 14 : bouton d'action visible en HAUT quand on vient d'une offre
+                        (évite de scroller jusqu'en bas pour lancer le pré-remplissage). */}
+                    {cvRef && (
+                      <div style={{ marginBottom: 16 }}>
+                        <PrefillButton />
+                      </div>
+                    )}
                     <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
                       Choisis ton modèle
                     </div>
@@ -499,10 +517,7 @@ function EditorContent() {
                         ⚠️ {prefillError} Vous pouvez importer ou saisir vos informations manuellement.
                       </div>
                     )}
-                    <button onClick={cvRef ? runPrefillFromCvRef : next} disabled={prefillStatus === 'loading'}
-                      style={{ width: '100%', padding: '12px', background: prefillStatus === 'loading' ? '#888' : '#111', color: '#fff', border: '2px solid #111', borderRadius: 8, fontSize: 13, fontWeight: 800, fontFamily: FONT, cursor: prefillStatus === 'loading' ? 'wait' : 'pointer', boxShadow: `3px 3px 0 ${accentColor}` }}>
-                      {prefillStatus === 'loading' ? 'Pré-remplissage en cours…' : (cvRef ? 'Continuer et pré-remplir mon CV →' : 'Continuer →')}
-                    </button>
+                    <PrefillButton />
                   </div>
                   <div style={{ padding: '1.5rem', overflowY: 'auto', background: '#F7F6F3' }}>
                     <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
