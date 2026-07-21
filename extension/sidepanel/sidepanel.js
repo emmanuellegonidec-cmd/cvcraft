@@ -904,13 +904,25 @@ $('btn-download-cv')?.addEventListener('click', async () => {
 
 // ============================================================
 // SESSION 6 v0.6.1 — Bouton "Optimiser mon CV"
+// Parcours "Optimiser ce CV" — redirection vers le CV Creator
+//   Avant : /dashboard?ats=open&jobId=...
+//   Maintenant : /dashboard/editor?job_id=...&cv_ref=...
+//   On transmet l'offre (job_id) + le CV qui a servi à l'analyse ATS
+//   (cv_ref = selectedCvRef) pour arriver dans le CV Creator pré-rempli.
 // ============================================================
 $('btn-optimize-cv')?.addEventListener('click', () => {
   if (!currentJobId) {
     alert("Pas de jobId courant");
     return;
   }
-  const url = `${JEAN_API_BASE}/dashboard?ats=open&jobId=${encodeURIComponent(currentJobId)}`;
+
+  const params = new URLSearchParams();
+  params.set('job_id', currentJobId);
+  if (selectedCvRef) {
+    params.set('cv_ref', selectedCvRef);
+  }
+
+  const url = `${JEAN_API_BASE}/dashboard/editor?${params.toString()}`;
   window.open(url, '_blank');
 });
 
