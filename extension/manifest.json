@@ -35,7 +35,8 @@
     "https://www.linkedin.com/*",
     "https://www.apec.fr/*",
     "https://www.hellowork.com/*",
-    "https://fr.indeed.com/*"
+    "https://fr.indeed.com/*",
+    "https://www.cadremploi.fr/*"
   ],
   "content_scripts": [
     {
@@ -87,6 +88,15 @@
       "matches": ["https://fr.indeed.com/*"],
       "js": [
         "content/scrapers/indeed.js",
+        "content/content.js"
+      ],
+      "css": ["content/content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.cadremploi.fr/*"],
+      "js": [
+        "content/scrapers/cadremploi.js",
         "content/content.js"
       ],
       "css": ["content/content.css"],
