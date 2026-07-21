@@ -7,7 +7,6 @@ import { CVFormData, defaultFormData } from '@/lib/types';
 import { TemplateId, FontId, DEFAULT_CV_CONFIG, CV_TEMPLATES, CV_PALETTES, CV_FONTS } from '@/lib/cv-config';
 import { pdf } from '@react-pdf/renderer';
 import { CVPdf } from '@/lib/pdf-generator';
-
 import { StepperNav } from './components/StepperNav';
 import { Step2Import } from './components/Step2Import';
 import { Step3Form } from './components/Step3Form';
@@ -41,10 +40,22 @@ const DEMO_FORM: Partial<CVFormData> = {
   tone: 'professionnel',
 };
 
+// Session 14 : structure minimale des recommandations ATS lues depuis l'offre
+// (colonne `ats_result` de la table jobs, écrite par la route ats-from-extension).
+interface AtsRecommendation { priorite?: number; impact?: string; action?: string; }
+interface AtsResult {
+  score_global?: number;
+  recommandations?: AtsRecommendation[];
+  erreurs?: { critiques?: string[]; majeures?: string[]; mineures?: string[] };
+}
+
 function EditorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const cvId = searchParams.get('id');
+  // Session 14 : arrivée depuis "Optimiser ce CV pour cette offre".
+  // job_id = l'offre visée (pour le poste + les recommandations ATS).
+  const jobId = searchParams.get('job_id');
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<CVFormData>(defaultFormData);
@@ -57,6 +68,9 @@ function EditorContent() {
   const [saveMsg, setSaveMsg] = useState('');
   const [loadError, setLoadError] = useState('');
 
+  // Session 14 : contexte "offre" (poste + recommandations ATS) affiché en bandeau.
+  const [jobContext, setJobContext] = useState<{ title: string; ats: AtsResult | null } | null>(null);
+
   useEffect(() => {
     async function load() {
       const supabase = createClient();
@@ -65,26 +79,22 @@ function EditorContent() {
       if (session?.access_token) (window as any).__jfmj_token = session.access_token;
       if (!user) { router.push('/auth/login'); return; }
       if (!cvId) return;
-
       try {
         // Appel direct au mode "single CV" de l'API : /api/cvs?id=xxx
         // renvoie { cv: { id, title, template, content, form_data, ... } }
         const res = await fetch(`/api/cvs?id=${encodeURIComponent(cvId)}`, {
           headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
         });
-
         // Parsing JSON défensif
         const rawText = await res.text();
         let json: any = null;
         if (rawText) {
           try { json = JSON.parse(rawText); } catch { json = null; }
         }
-
         if (!res.ok || !json?.cv) {
           setLoadError(json?.error || `Impossible de charger le CV (${res.status})`);
           return;
         }
-
         const cv = json.cv;
         setCvTitle(cv.title || '');
         setGeneratedCV(cv.content || '');
@@ -106,6 +116,47 @@ function EditorContent() {
     }
     load();
   }, [cvId, router]);
+
+  // ─── Session 14 : chargement du contexte offre (parcours "Optimiser ce CV") ───
+  // Quand l'éditeur est ouvert avec ?job_id=..., on charge l'offre correspondante
+  // pour : (1) pré-remplir le poste visé (targetJob = titre de l'offre),
+  // (2) afficher les recommandations ATS déjà enregistrées sur l'offre (ats_result).
+  // On ne relit PAS le PDF ici (ce sera l'étape "pré-remplissage auto" ultérieure).
+  useEffect(() => {
+    async function loadJobContext() {
+      if (!jobId) return;
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || (window as any).__jfmj_token || '';
+        const res = await fetch(`/api/jobs?id=${encodeURIComponent(jobId)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const rawText = await res.text();
+        let json: any = null;
+        if (rawText) { try { json = JSON.parse(rawText); } catch { json = null; } }
+        if (!res.ok || !json?.job) return; // silencieux : le CV Creator reste utilisable même si l'offre n'est pas trouvée
+
+        const job = json.job;
+        const ats: AtsResult | null = job.ats_result || null;
+
+        setJobContext({ title: job.title || '', ats });
+
+        // Pré-remplissage du poste visé (sans écraser une saisie éventuelle déjà présente)
+        if (job.title) {
+          setForm(prev => ({ ...prev, targetJob: prev.targetJob || job.title }));
+        }
+        // Pré-remplissage du titre du CV au nom du poste s'il est encore vide
+        if (job.title) {
+          setCvTitle(prev => prev || `CV — ${job.title}`);
+        }
+      } catch (e) {
+        // silencieux : ne jamais bloquer l'éditeur à cause du contexte offre
+        console.warn('Contexte offre non chargé:', e);
+      }
+    }
+    loadJobContext();
+  }, [jobId]);
 
   async function downloadPdf() {
     const blob = await pdf(
@@ -129,6 +180,98 @@ function EditorContent() {
     fontWeight: 500, fontSize: 14, cursor: 'pointer', textAlign: 'left', width: '100%',
   };
 
+  // ─── Session 14 : bandeau "Recommandations pour cette offre" ───
+  // Affiché en haut du panneau droit dès qu'on arrive via ?job_id=...
+  // Reprend les recommandations priorisées + les erreurs critiques/majeures/mineures
+  // déjà calculées et stockées sur l'offre (ats_result).
+  function JobRecoBanner() {
+    if (!jobContext) return null;
+    const ats = jobContext.ats;
+    const recos = ats?.recommandations || [];
+    const critiques = ats?.erreurs?.critiques || [];
+    const majeures = ats?.erreurs?.majeures || [];
+    const mineures = ats?.erreurs?.mineures || [];
+
+    const hasContent = recos.length > 0 || critiques.length > 0 || majeures.length > 0 || mineures.length > 0;
+
+    const impactColor = (impact?: string) => {
+      if (impact === 'critique') return { bg: '#FFEBEE', color: '#C62828' };
+      if (impact === 'majeur') return { bg: '#FFF3CD', color: '#B8900A' };
+      return { bg: '#E8F5E9', color: '#2E7D32' };
+    };
+
+    return (
+      <div style={{
+        background: '#fff', border: '2px solid #111', borderRadius: 10,
+        padding: '16px 20px', marginBottom: 20, boxShadow: '3px 3px 0 #F5C400',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#111', fontFamily: FONT }}>
+            🎯 Recommandations pour cette offre
+          </div>
+          {jobContext.title && (
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#555', fontFamily: FONT }}>
+              {jobContext.title}
+              {typeof ats?.score_global === 'number' && (
+                <span style={{ marginLeft: 10, background: '#111', color: '#F5C400', padding: '2px 8px', borderRadius: 6, fontWeight: 900 }}>
+                  Score {ats.score_global}/100
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {!hasContent && (
+          <div style={{ fontSize: 13, color: '#888', fontFamily: FONT, fontWeight: 500 }}>
+            Aucune recommandation enregistrée pour cette offre. Lance d&apos;abord une analyse ATS depuis l&apos;extension.
+          </div>
+        )}
+
+        {recos.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: (critiques.length || majeures.length || mineures.length) ? 14 : 0 }}>
+            {recos
+              .slice()
+              .sort((a, b) => (a.priorite || 99) - (b.priorite || 99))
+              .map((r, i) => {
+                const c = impactColor(r.impact);
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <span style={{ fontSize: 10, fontWeight: 900, padding: '3px 8px', borderRadius: 5, background: c.bg, color: c.color, textTransform: 'uppercase', whiteSpace: 'nowrap', fontFamily: FONT, flexShrink: 0, marginTop: 1 }}>
+                      {r.impact || 'à faire'}
+                    </span>
+                    <span style={{ fontSize: 13, color: '#333', lineHeight: 1.5, fontFamily: FONT, fontWeight: 500 }}>
+                      {r.action}
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+
+        {(critiques.length > 0 || majeures.length > 0 || mineures.length > 0) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[
+              { label: 'Critiques', items: critiques, color: '#C62828' },
+              { label: 'Majeures', items: majeures, color: '#B8900A' },
+              { label: 'Mineures', items: mineures, color: '#2E7D32' },
+            ].filter(g => g.items.length > 0).map((g, gi) => (
+              <div key={gi}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: g.color, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: FONT, marginBottom: 3 }}>
+                  {g.label}
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {g.items.map((it, ii) => (
+                    <li key={ii} style={{ fontSize: 12.5, color: '#444', lineHeight: 1.5, fontFamily: FONT, fontWeight: 500, marginBottom: 2 }}>{it}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
       <style>{`
@@ -138,9 +281,7 @@ function EditorContent() {
         .editor-sidebar { width: 200px; min-width: 200px; background: #0f0f0f; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; border-right: 1px solid #1e1e1e; flex-shrink: 0; }
         .editor-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #F7F6F3; }
       `}</style>
-
       <div className="editor-page">
-
         {/* ── SIDEBAR ── */}
         <aside className="editor-sidebar">
           <div onClick={() => router.push('/')} style={{ padding: '18px 16px 16px', borderBottom: '1px solid #1e1e1e', cursor: 'pointer' }}>
@@ -197,7 +338,6 @@ function EditorContent() {
 
         {/* ── MAIN ── */}
         <div className="editor-main">
-
           {/* Header */}
           <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem', height: 54, flexShrink: 0, background: '#fff', borderBottom: '2px solid #111' }}>
             <input
@@ -214,19 +354,18 @@ function EditorContent() {
 
           {/* Corps */}
           <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '300px 1fr', overflow: 'hidden' }}>
-
             {/* Stepper */}
             <div style={{ borderRight: '2px solid #111', overflowY: 'auto', background: '#fff' }}>
               <StepperNav currentStep={step} onStepClick={goTo} />
             </div>
-
             {/* Panneau droit */}
             <div style={{ overflowY: 'auto', background: '#F7F6F3' }}>
-
               {/* ÉTAPE 1 */}
               {step === 1 && (
                 <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', height: '100%' }}>
                   <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto', background: '#fff' }}>
+                    {/* Session 14 : bandeau recommandations si on vient d'une offre */}
+                    <JobRecoBanner />
                     <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
                       Choisis ton modèle
                     </div>
@@ -352,7 +491,6 @@ function EditorContent() {
                   />
                 </div>
               )}
-
             </div>
           </div>
         </div>
