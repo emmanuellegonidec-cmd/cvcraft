@@ -419,6 +419,11 @@ function EditorContent() {
                     <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
                       Aperçu du template
                     </div>
+                    {/* Session 14 : avertissement — l'aperçu utilise un contenu de démonstration,
+                        pas les vraies informations de l'utilisateur (celles-ci arrivent à l'étape suivante). */}
+                    <div style={{ background: '#FFF3CD', border: '2px solid #111', borderRadius: 8, padding: '10px 14px', marginBottom: 14, boxShadow: '2px 2px 0 #111', fontSize: 12.5, color: '#111', fontFamily: FONT, fontWeight: 600, lineHeight: 1.5 }}>
+                      ⚠️ <strong style={{ fontWeight: 800 }}>Contenu de démonstration</strong> — cet aperçu montre uniquement le style du modèle. Vos vraies informations seront ajoutées à l&apos;étape suivante.
+                    </div>
                     <CVPreviewWrapper form={{ ...defaultFormData, ...DEMO_FORM }} photo="" template={template} accentColor={accentColor} font={font} />
                   </div>
                 </div>
