@@ -82,6 +82,9 @@ export default function CVsSection({ token }: { token: string }) {
   const [uploadName, setUploadName] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  // Session 14 : indique si la modale d'upload est ouverte en mode "export LinkedIn"
+  // (affiche une consigne d'export dédiée + nom pré-rempli). Sinon, upload de CV classique.
+  const [linkedinMode, setLinkedinMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadCvs = useCallback(async () => {
@@ -286,6 +289,18 @@ export default function CVsSection({ token }: { token: string }) {
     setUploadName('');
     setUploadFile(null);
     setError('');
+    setLinkedinMode(false);
+    setShowUploadModal(true);
+  }
+
+  // Session 14 : ouvre la même modale d'upload, pré-réglée pour un export LinkedIn.
+  // Le PDF LinkedIn est stocké tel quel (comme un CV référent) et devient donc
+  // disponible dans la liste "Choisis un CV" de l'extension pour l'analyse.
+  function openLinkedInUpload() {
+    setUploadFile(null);
+    setUploadName('CV LinkedIn');
+    setError('');
+    setLinkedinMode(true);
     setShowUploadModal(true);
   }
 
@@ -294,6 +309,7 @@ export default function CVsSection({ token }: { token: string }) {
     setShowUploadModal(false);
     setUploadName('');
     setUploadFile(null);
+    setLinkedinMode(false);
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -517,23 +533,43 @@ export default function CVsSection({ token }: { token: string }) {
       }}>
         <div style={sectionTitleStyle}>
           <span>📌 CV référents</span>
-          <button
-            onClick={openUploadModal}
-            style={{
-              background: '#F5C400',
-              border: '2px solid #111',
-              borderRadius: 8,
-              padding: '8px 14px',
-              fontSize: 12,
-              fontWeight: 900,
-              cursor: 'pointer',
-              boxShadow: '2px 2px 0 #111',
-              fontFamily: FONT,
-              color: '#111',
-            }}
-          >
-            + Ajouter un CV référent
-          </button>
+          {/* Session 14 : deux boutons — upload classique + import export LinkedIn */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              onClick={openLinkedInUpload}
+              style={{
+                background: '#1B4F72',
+                border: '2px solid #111',
+                borderRadius: 8,
+                padding: '8px 14px',
+                fontSize: 12,
+                fontWeight: 900,
+                cursor: 'pointer',
+                boxShadow: '2px 2px 0 #111',
+                fontFamily: FONT,
+                color: '#fff',
+              }}
+            >
+              in Importer mon CV LinkedIn
+            </button>
+            <button
+              onClick={openUploadModal}
+              style={{
+                background: '#F5C400',
+                border: '2px solid #111',
+                borderRadius: 8,
+                padding: '8px 14px',
+                fontSize: 12,
+                fontWeight: 900,
+                cursor: 'pointer',
+                boxShadow: '2px 2px 0 #111',
+                fontFamily: FONT,
+                color: '#111',
+              }}
+            >
+              + Ajouter un CV référent
+            </button>
+          </div>
         </div>
 
         <div style={{
@@ -551,7 +587,7 @@ export default function CVsSection({ token }: { token: string }) {
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
             <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>💡</span>
             <div>
-              Les CV référents sont tes CV de base, indépendants d'une candidature. Tu peux en avoir plusieurs (par ex. CV Marketing, CV Management) et marquer tes préférés ⭐ pour qu'ils remontent en haut dans l'extension Chrome.
+              Les CV référents sont tes CV de base, indépendants d'une candidature. Tu peux en avoir plusieurs (par ex. CV Marketing, CV Management) et marquer tes préférés ⭐ pour qu'ils remontent en haut dans l'extension Chrome. Tu peux aussi importer ton profil LinkedIn en PDF pour l'utiliser comme CV de référence.
             </div>
           </div>
         </div>
@@ -693,11 +729,34 @@ export default function CVsSection({ token }: { token: string }) {
             }}
           >
             <h3 style={{ fontSize: 16, fontWeight: 900, color: '#111', margin: '0 0 8px' }}>
-              📌 Ajouter un CV référent
+              {linkedinMode ? 'in Importer mon CV LinkedIn' : '📌 Ajouter un CV référent'}
             </h3>
             <p style={{ fontSize: 12, color: '#888', margin: '0 0 20px', lineHeight: 1.55 }}>
-              Upload ton CV de base — il pourra être réutilisé pour analyser n'importe quelle offre depuis l'extension Chrome.
+              {linkedinMode
+                ? 'Importe ton profil LinkedIn au format PDF — il sera utilisable comme CV de référence pour analyser n\'importe quelle offre depuis l\'extension Chrome.'
+                : 'Upload ton CV de base — il pourra être réutilisé pour analyser n\'importe quelle offre depuis l\'extension Chrome.'}
             </p>
+
+            {/* Session 14 : consigne d'export LinkedIn (mode LinkedIn uniquement) */}
+            {linkedinMode && (
+              <div style={{
+                background: '#FFFBE6',
+                border: '1.5px solid #F5C400',
+                borderRadius: 8,
+                padding: '10px 14px',
+                marginBottom: 18,
+                fontSize: 12,
+                color: '#444',
+                lineHeight: 1.55,
+                fontFamily: FONT,
+                fontWeight: 500,
+              }}>
+                <strong style={{ color: '#111', fontWeight: 800 }}>Comment exporter depuis LinkedIn :</strong>
+                <div style={{ marginTop: 4 }}>
+                  Sur ton profil LinkedIn → bouton <strong>Plus</strong> → <strong>Enregistrer au format PDF</strong>. Puis dépose ce PDF ci-dessous.
+                </div>
+              </div>
+            )}
 
             {/* Champ nom */}
             <label style={{
