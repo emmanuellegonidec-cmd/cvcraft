@@ -238,6 +238,70 @@ function EditorContent() {
     }
   }
 
+  // ── Écran 2 : "Repartir d'un de mes CV" ──
+  // Sélection d'un CV déjà en base. On garde le modèle/couleur/police choisis
+  // à l'écran 1 (on ne charge QUE le contenu).
+  // - CV créé  : on recharge son form_data directement.
+  // - CV importé (PDF) : l'IA le relit (extraction), même mécanisme que l'import.
+  // En cas d'échec : on relance l'exception pour que l'écran 2 affiche le message.
+  async function handlePickSavedCv(item: { ref: string; source: 'creator' | 'upload'; metadata?: { cv_id?: string } }) {
+    const genId = () => Math.random().toString(36).slice(2, 9);
+
+    if (item.source === 'creator' && item.metadata?.cv_id) {
+      const token = (window as any).__jfmj_token || '';
+      const res = await fetch(`/api/cvs?id=${encodeURIComponent(item.metadata.cv_id)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const rawText = await res.text();
+      let json: any = null;
+      if (rawText) { try { json = JSON.parse(rawText); } catch { json = null; } }
+      if (!res.ok || !json?.cv) throw new Error(json?.error || 'Impossible de charger ce CV.');
+      const fd = json.cv.form_data || {};
+      setForm(prev => ({
+        ...prev, ...fd,
+        targetJob: prev.targetJob || fd.targetJob || '',
+        experiences: (fd.experiences || []).map((e: any) => ({ ...e, id: genId() })),
+        education: (fd.education || []).map((e: any) => ({ ...e, id: genId() })),
+      }));
+      if (fd.photo) setPhoto(fd.photo);
+      setStep(3);
+      return;
+    }
+
+    if (item.source === 'upload') {
+      if (!item.ref.startsWith('upload:')) throw new Error('Ce CV ne peut pas être relu.');
+      const filePath = item.ref.slice('upload:'.length);
+      const supabase = createClient();
+      const { data: fileData, error: dlError } = await supabase
+        .storage.from('job-documents').download(filePath);
+      if (dlError || !fileData) throw new Error('Impossible de récupérer ce CV depuis le stockage.');
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(fileData);
+      });
+      const res = await fetch('/api/extract-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfBase64: base64 }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Extraction impossible.');
+      const d = json.data || {};
+      setForm(prev => ({
+        ...prev, ...d,
+        targetJob: prev.targetJob || d.targetJob || '',
+        experiences: (d.experiences || []).map((e: any) => ({ ...e, id: genId() })),
+        education: (d.education || []).map((e: any) => ({ ...e, id: genId() })),
+      }));
+      setStep(3);
+      return;
+    }
+
+    throw new Error('Ce CV ne peut pas être réutilisé.');
+  }
+
   async function downloadPdf() {
     // On n'ajoute la photo au PDF que si le modèle choisi l'affiche.
     const usePhoto = templateSupportsPhoto(template) ? (photo || undefined) : undefined;
@@ -583,6 +647,7 @@ function EditorContent() {
                     form={form}
                     onFormChange={setForm}
                     onImportSuccess={data => setForm(prev => ({ ...prev, ...data }))}
+                    onPickSavedCv={handlePickSavedCv}
                     onNext={next}
                     onSkip={next}
                   />
