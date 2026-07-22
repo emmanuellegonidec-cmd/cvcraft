@@ -48,6 +48,57 @@ interface AtsResult {
   erreurs?: { critiques?: string[]; majeures?: string[]; mineures?: string[] };
 }
 
+// ── Diff mot à mot : surligne ce qui a changé entre le CV brut et la version actuelle ──
+function tokenizeDiff(s: string): string[] {
+  return (s || '').split(/(\s+)/).filter(t => t.length > 0);
+}
+function diffTokens(oldStr: string, newStr: string): { text: string; changed: boolean }[] {
+  const A = tokenizeDiff(oldStr);
+  const B = tokenizeDiff(newStr);
+  const n = A.length, m = B.length;
+  const norm = (t: string) => t.toLowerCase();
+  const isWord = (t: string) => !/^\s+$/.test(t);
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = norm(A[i]) === norm(B[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  const out: { text: string; changed: boolean }[] = [];
+  let i = 0, j = 0;
+  while (j < m) {
+    if (i >= n) { out.push({ text: B[j], changed: isWord(B[j]) }); j++; continue; }
+    if (norm(A[i]) === norm(B[j]) && dp[i][j] === dp[i + 1][j + 1] + 1) {
+      out.push({ text: B[j], changed: false }); i++; j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      i++;
+    } else {
+      out.push({ text: B[j], changed: isWord(B[j]) }); j++;
+    }
+  }
+  // Surligne aussi les espaces entre deux mots modifiés (pour un surlignage continu).
+  for (let k = 1; k < out.length - 1; k++) {
+    if (/^\s+$/.test(out[k].text) && out[k - 1].changed && out[k + 1].changed) out[k].changed = true;
+  }
+  return out;
+}
+function DiffText({ oldText, newText }: { oldText: string; newText: string }) {
+  const segs = diffTokens(oldText || '', newText || '');
+  const groups: { text: string; changed: boolean }[] = [];
+  for (const s of segs) {
+    const last = groups[groups.length - 1];
+    if (last && last.changed === s.changed) last.text += s.text;
+    else groups.push({ ...s });
+  }
+  return (
+    <span style={{ whiteSpace: 'pre-wrap' }}>
+      {groups.map((g, idx) => g.changed
+        ? <mark key={idx} style={{ background: '#FFF3B0', color: '#111', borderRadius: 2, padding: '0 1px' }}>{g.text}</mark>
+        : <span key={idx}>{g.text}</span>)}
+    </span>
+  );
+}
+
 function EditorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -77,6 +128,10 @@ function EditorContent() {
   const [scoredSig, setScoredSig] = useState('');
   const [rescoreError, setRescoreError] = useState('');
   const autoRescoreDone = useRef(false);
+  // Copie du CV brut (avant la 1ère optimisation IA) pour surligner ce qui a changé.
+  const [rawForm, setRawForm] = useState<CVFormData | null>(null);
+  const [recoOpen, setRecoOpen] = useState(false);          // bandeau recos replié par défaut
+  const [aiChangesOpen, setAiChangesOpen] = useState(true); // panneau modifications ouvert par défaut
   const [saveMsg, setSaveMsg] = useState('');
   const [loadError, setLoadError] = useState('');
 
@@ -413,6 +468,7 @@ function EditorContent() {
   // Reprend les recommandations priorisées + les erreurs critiques/majeures/mineures
   // déjà calculées et stockées sur l'offre (ats_result).
   function JobRecoBanner() {
+    const open = recoOpen, setOpen = setRecoOpen;
     if (!jobContext) return null;
     const ats = jobContext.ats;
     const recos = ats?.recommandations || [];
@@ -433,22 +489,27 @@ function EditorContent() {
         background: '#fff', border: '2px solid #111', borderRadius: 10,
         padding: '16px 20px', marginBottom: 20, boxShadow: '3px 3px 0 #F5C400',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        <div onClick={() => setOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: open ? 12 : 0, cursor: 'pointer' }}>
           <div style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#111', fontFamily: FONT }}>
             🎯 Recommandations pour cette offre
           </div>
-          {jobContext.title && (
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#555', fontFamily: FONT }}>
-              {jobContext.title}
-              {typeof ats?.score_global === 'number' && (
-                <span style={{ marginLeft: 10, background: '#111', color: '#F5C400', padding: '2px 8px', borderRadius: 6, fontWeight: 900 }}>
-                  Score {ats.score_global}/100
-                </span>
-              )}
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {jobContext.title && (
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#555', fontFamily: FONT }}>
+                {jobContext.title}
+                {typeof ats?.score_global === 'number' && (
+                  <span style={{ marginLeft: 10, background: '#111', color: '#F5C400', padding: '2px 8px', borderRadius: 6, fontWeight: 900 }}>
+                    Score {ats.score_global}/100
+                  </span>
+                )}
+              </div>
+            )}
+            <span style={{ fontSize: 12, fontWeight: 900, color: '#111' }}>{open ? '▲' : '▼'}</span>
+          </div>
         </div>
 
+        {open && (
+          <>
         {!hasContent && (
           <div style={{ fontSize: 13, color: '#888', fontFamily: FONT, fontWeight: 500 }}>
             Aucune recommandation enregistrée pour cette offre. Lance d&apos;abord une analyse ATS depuis l&apos;extension.
@@ -494,6 +555,62 @@ function EditorContent() {
                 </ul>
               </div>
             ))}
+          </div>
+        )}
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Écran 5 : panneau "Ce que l'IA a modifié" — surlignage mot à mot vs CV brut.
+  function AiChangesPanel() {
+    const open = aiChangesOpen, setOpen = setAiChangesOpen;
+    if (!rawForm) return null;
+    const summaryChanged = (rawForm.summary || '') !== (form.summary || '');
+    const skillsChanged = (rawForm.skills || '') !== (form.skills || '');
+    const rawExpDesc: Record<string, string> = {};
+    (rawForm.experiences || []).forEach(e => { rawExpDesc[e.id] = e.description || ''; });
+    const changedExps = (form.experiences || []).filter(
+      e => rawExpDesc[e.id] !== undefined && rawExpDesc[e.id] !== (e.description || '')
+    );
+    const hasChange = summaryChanged || skillsChanged || changedExps.length > 0;
+    if (!hasChange) return null;
+    const labelStyle: React.CSSProperties = { fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#888', fontFamily: FONT, marginBottom: 4 };
+    const textStyle: React.CSSProperties = { fontSize: 13, lineHeight: 1.6, color: '#333', fontFamily: FONT };
+    return (
+      <div style={{ border: '2px solid #111', borderRadius: 10, background: '#fff', boxShadow: '3px 3px 0 #F5C400', marginBottom: 18, overflow: 'hidden' }}>
+        <div onClick={() => setOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', cursor: 'pointer', background: '#F7F6F3', borderBottom: open ? '2px solid #111' : 'none' }}>
+          <div style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#111', fontFamily: FONT }}>
+            🔍 Ce que l&apos;IA a modifié
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#666', fontFamily: FONT }}>
+              <span style={{ background: '#FFF3B0', padding: '1px 5px', borderRadius: 2 }}>surligné</span> = modifié
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 900, color: '#111' }}>{open ? '▲' : '▼'}</span>
+          </div>
+        </div>
+        {open && (
+          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {summaryChanged && (
+              <div>
+                <div style={labelStyle}>Résumé</div>
+                <div style={textStyle}><DiffText oldText={rawForm.summary || ''} newText={form.summary || ''} /></div>
+              </div>
+            )}
+            {changedExps.map(e => (
+              <div key={e.id}>
+                <div style={labelStyle}>{[e.role, e.company].filter(Boolean).join(' · ') || 'Expérience'}</div>
+                <div style={textStyle}><DiffText oldText={rawExpDesc[e.id]} newText={e.description || ''} /></div>
+              </div>
+            ))}
+            {skillsChanged && (
+              <div>
+                <div style={labelStyle}>Compétences</div>
+                <div style={textStyle}><DiffText oldText={rawForm.skills || ''} newText={form.skills || ''} /></div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -761,7 +878,10 @@ function EditorContent() {
                   <Step4Generate
                     form={form}
                     onGenerated={setGeneratedCV}
-                    onFormUpdate={enriched => setForm(prev => ({ ...prev, ...enriched }))}
+                    onFormUpdate={enriched => {
+                      setRawForm(r => r ?? form); // capture le CV brut une seule fois
+                      setForm(prev => ({ ...prev, ...enriched }));
+                    }}
                     onNext={next}
                   />
                 </div>
@@ -829,6 +949,9 @@ function EditorContent() {
 
                     {/* Les retours de l'IA (recommandations + erreurs de l'offre) */}
                     <JobRecoBanner />
+
+                    {/* Ce que l'IA a modifié (surlignage vs CV brut) */}
+                    <AiChangesPanel />
 
                     {/* Régénérer — bien à part (remplace le contenu, avec confirmation) */}
                     <div style={{
