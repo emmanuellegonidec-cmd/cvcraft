@@ -51,7 +51,9 @@ function renderMarkdown(cv: any): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const data = await req.json();
+    const body = await req.json();
+    // On isole l'arbitrage des recos (écran 4) pour ne pas le mêler aux données du CV.
+    const { recoArbitrage, ...data } = body;
 
     // Garantit des valeurs par défaut pour lang et tone si le formulaire
     // ne les envoie pas, pour éviter que le prompt contienne "undefined".
@@ -63,7 +65,7 @@ export async function POST(req: NextRequest) {
       education: data.education || [],
     };
 
-    const prompt = buildGeneratePrompt(safeData);
+    const prompt = buildGeneratePrompt(safeData, recoArbitrage);
 
     // Le `as any` contourne une limitation des types TypeScript du SDK Anthropic
     // qui ne connaissent pas encore le champ 'thinking' (l'API, elle, le supporte).

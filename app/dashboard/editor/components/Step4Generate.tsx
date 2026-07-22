@@ -51,12 +51,20 @@ export function Step4Generate({
     setIsGenerating(true);
     setError('');
     try {
-      // ⚠️ Étape UX uniquement : les choix d'arbitrage ne sont pas encore envoyés à l'IA.
-      // Le branchement au prompt se fera dans une étape ultérieure.
+      // Arbitrage des recos → listes "à appliquer" (accepté / reformulé) et "à ignorer" (refusé).
+      const recoArbitrage = {
+        appliquer: recos.map((r, i) => {
+          const c = choices[i];
+          if (c?.mode === 'accept') return r.action || '';
+          if (c?.mode === 'reformulate') return (c.text || '').trim() || r.action || '';
+          return '';
+        }).filter(Boolean),
+        ignorer: recos.map((r, i) => (choices[i]?.mode === 'refuse' ? (r.action || '') : '')).filter(Boolean),
+      };
       const res = await fetch('/api/generate-cv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, recoArbitrage }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
