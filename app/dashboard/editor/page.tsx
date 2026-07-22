@@ -11,7 +11,6 @@ import { StepperNav } from './components/StepperNav';
 import { Step2Import } from './components/Step2Import';
 import { Step3Form } from './components/Step3Form';
 import { Step4Generate } from './components/Step4Generate';
-import { Step5Preview } from './components/Step5Preview';
 import { Step6Save } from './components/Step6Save';
 
 const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
@@ -69,6 +68,9 @@ function EditorContent() {
   const [photo, setPhoto] = useState('');
   const [cvTitle, setCvTitle] = useState('');
   const [generatedCV, setGeneratedCV] = useState('');
+  // Écran 5 : régénération sur place ("Régénérer avec l'IA")
+  const [regenStatus, setRegenStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [regenError, setRegenError] = useState('');
   const [saveMsg, setSaveMsg] = useState('');
   const [loadError, setLoadError] = useState('');
 
@@ -318,6 +320,32 @@ function EditorContent() {
 
   function goTo(n: number) { setStep(n); }
   function next() { setStep(s => Math.min(s + 1, 6)); }
+
+  // Écran 5 : relance la génération IA sur le contenu actuel.
+  // Confirmation obligatoire car ça remplace le contenu (y compris les corrections manuelles).
+  async function regenerateCV() {
+    if (typeof window !== 'undefined' &&
+        !window.confirm('Régénérer avec l\'IA va remplacer le contenu actuel, y compris tes corrections manuelles. Continuer ?')) {
+      return;
+    }
+    setRegenStatus('loading');
+    setRegenError('');
+    try {
+      const res = await fetch('/api/generate-cv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Régénération impossible.');
+      if (json.data) setForm(prev => ({ ...prev, ...json.data }));
+      if (json.cv) setGeneratedCV(json.cv);
+      setRegenStatus('idle');
+    } catch (e: any) {
+      setRegenStatus('error');
+      setRegenError(e?.message || 'Régénération impossible.');
+    }
+  }
 
   const sideNavBtn: React.CSSProperties = {
     display: 'flex', alignItems: 'center', padding: '9px 12px',
@@ -687,14 +715,78 @@ function EditorContent() {
                 </div>
               )}
 
-              {/* ÉTAPE 5 */}
+              {/* ÉTAPE 5 — Finaliser (poste de pilotage) */}
               {step === 5 && (
-                <div style={{ padding: '1.5rem' }}>
-                  <Step5Preview
-                    form={form} photo={shownPhoto} template={template}
-                    accentColor={accentColor} font={font}
-                    cvTitle={cvTitle} onDownloadPdf={downloadPdf} onNext={next}
-                  />
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+
+                  {/* Barre haute : titre + score de départ + Continuer (reste visible) */}
+                  <div style={{
+                    position: 'sticky', top: 0, zIndex: 5, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    flexWrap: 'wrap', gap: 10,
+                    padding: '12px 1.5rem', background: '#fff', borderBottom: '2px solid #111',
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT }}>
+                      Finalise ton CV
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      {typeof jobContext?.ats?.score_global === 'number' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111', borderRadius: 8, padding: '6px 12px', boxShadow: '2px 2px 0 #F5C400' }}>
+                          <span style={{ fontSize: 9, color: '#bbb', fontWeight: 700, fontFamily: FONT, letterSpacing: '0.04em' }}>SCORE DE DÉPART</span>
+                          <span style={{ fontSize: 14, fontWeight: 900, color: '#F5C400', fontFamily: FONT }}>{jobContext.ats.score_global}/100</span>
+                        </div>
+                      )}
+                      <button onClick={next}
+                        style={{ background: '#111', color: '#fff', fontSize: 13, fontWeight: 800, padding: '9px 18px', border: '2px solid #111', borderRadius: 8, cursor: 'pointer', fontFamily: FONT, boxShadow: `2px 2px 0 ${accentColor}` }}>
+                        Continuer →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Zone scrollable : retours IA + régénérer + édition/aperçu */}
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+
+                    {/* Les retours de l'IA (recommandations + erreurs de l'offre) */}
+                    <JobRecoBanner />
+
+                    {/* Régénérer — bien à part (remplace le contenu, avec confirmation) */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+                      background: '#FFF8E5', border: '2px solid #111', borderRadius: 8,
+                      padding: '10px 14px', boxShadow: '2px 2px 0 #111', marginBottom: 18,
+                    }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#555', fontFamily: FONT }}>
+                        Pas convaincu par le résultat de l&apos;IA ?
+                      </span>
+                      <button onClick={regenerateCV} disabled={regenStatus === 'loading'}
+                        style={{ background: '#fff', border: '2px solid #E8151B', color: '#E8151B', borderRadius: 7, padding: '8px 14px', fontSize: 12, fontWeight: 800, fontFamily: FONT, cursor: regenStatus === 'loading' ? 'not-allowed' : 'pointer', boxShadow: '2px 2px 0 #E8151B', opacity: regenStatus === 'loading' ? 0.6 : 1 }}>
+                        {regenStatus === 'loading' ? '⏳ L\'IA régénère...' : '⟳ Régénérer avec l\'IA'}
+                      </button>
+                    </div>
+                    {regenStatus === 'error' && (
+                      <div style={{ background: '#F8D7DA', border: '2px solid #111', borderRadius: 8, padding: '10px 14px', marginBottom: 18, fontSize: 13, fontWeight: 700, color: '#111', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>
+                        ❌ {regenError}
+                      </div>
+                    )}
+
+                    {/* 2 colonnes : édition à gauche + aperçu A4 à droite */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+                      <div>
+                        <Step3Form
+                          form={form} photo={photo} template={template}
+                          accentColor={accentColor} font={font}
+                          onFormChange={setForm} onPhotoChange={setPhoto} onNext={next}
+                          title="Corrige ce que l'IA a écrit" hideNext
+                        />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 12 }}>
+                          Aperçu — mise à jour en direct
+                        </div>
+                        <CVPreviewWrapper form={form} photo={shownPhoto} template={template} accentColor={accentColor} font={font} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

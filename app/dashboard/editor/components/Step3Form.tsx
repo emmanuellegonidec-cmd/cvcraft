@@ -46,11 +46,14 @@ interface Props {
   onFormChange: (form: CVFormData) => void;
   onPhotoChange: (photo: string) => void;
   onNext: () => void;
+  title?: string;
+  hideNext?: boolean;
 }
 
 export function Step3Form({
   form, photo, template, accentColor, font,
   onFormChange, onPhotoChange, onNext,
+  title = 'Vérifie tes informations', hideNext = false,
 }: Props) {
   const photoRef = useRef<HTMLInputElement>(null);
 
@@ -131,7 +134,7 @@ export function Step3Form({
   return (
     <div style={{ fontFamily: FONT }}>
       <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 16 }}>
-        Vérifie tes informations
+        {title}
       </div>
 
       {/* ── INFORMATIONS PERSONNELLES ── */}
@@ -353,18 +356,20 @@ export function Step3Form({
       </div>
 
       {/* ── BOUTON CONTINUER ── */}
-      <button
-        onClick={onNext}
-        style={{
-          width: '100%', marginTop: 8, padding: '12px',
-          background: '#111', color: '#fff',
-          border: '2px solid #111', borderRadius: 8,
-          fontSize: 13, fontWeight: 800, fontFamily: FONT,
-          cursor: 'pointer', boxShadow: `3px 3px 0 ${accentColor}`,
-        }}
-      >
-        Continuer →
-      </button>
+      {!hideNext && (
+        <button
+          onClick={onNext}
+          style={{
+            width: '100%', marginTop: 8, padding: '12px',
+            background: '#111', color: '#fff',
+            border: '2px solid #111', borderRadius: 8,
+            fontSize: 13, fontWeight: 800, fontFamily: FONT,
+            cursor: 'pointer', boxShadow: `3px 3px 0 ${accentColor}`,
+          }}
+        >
+          Continuer →
+        </button>
+      )}
     </div>
   );
 }
