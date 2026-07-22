@@ -312,7 +312,9 @@ function EditorContent() {
     const genId = () => Math.random().toString(36).slice(2, 9);
 
     if (item.source === 'creator' && item.metadata?.cv_id) {
-      const token = (window as any).__jfmj_token || '';
+      const supabaseP = createClient();
+      const { data: { session: sessP } } = await supabaseP.auth.getSession();
+      const token = sessP?.access_token || (window as any).__jfmj_token || '';
       const res = await fetch(`/api/cvs?id=${encodeURIComponent(item.metadata.cv_id)}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -431,7 +433,9 @@ function EditorContent() {
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
-      const token = (window as any).__jfmj_token || '';
+      const supabaseR = createClient();
+      const { data: { session: sessR } } = await supabaseR.auth.getSession();
+      const token = sessR?.access_token || (window as any).__jfmj_token || '';
       const res = await fetch(`/api/jobs/${jobId}/ats-rescore`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },

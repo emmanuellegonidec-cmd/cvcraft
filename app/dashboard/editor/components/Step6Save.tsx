@@ -48,7 +48,9 @@ export function Step6Save({
 
   // Enregistrement du CV éditable dans "Mes CV" (table cvs). Peut lever une exception.
   async function postToMesCv() {
-    const token = (window as any).__jfmj_token || '';
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || (window as any).__jfmj_token || '';
     const res = await fetch('/api/cvs', {
       method: 'POST',
       headers: {
