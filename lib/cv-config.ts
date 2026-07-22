@@ -14,6 +14,7 @@ export interface CVTemplate {
   defaultColor: string;
   atsLevel: AtsLevel;
   atsTip: string;
+  supportsPhoto: boolean;
 }
 
 export interface CVFont {
@@ -50,6 +51,10 @@ export interface CVConfig {
 //    indépendamment de la couleur de fond
 
 // ─── TEMPLATES ────────────────────────────────────────────────────────
+// supportsPhoto : indique si le modèle affiche une photo. Les modèles à
+// en-tête ou barre latérale (Classique, Moderne, Créatif) accueillent une
+// photo ; les modèles sobres / "texte pur" (Minimaliste, Élégant, Executive)
+// n'en affichent pas. Utilisé pour masquer le bloc "Photo" dans l'éditeur.
 export const CV_TEMPLATES: CVTemplate[] = [
   {
     id: 'classic',
@@ -61,6 +66,7 @@ export const CV_TEMPLATES: CVTemplate[] = [
     defaultColor: '#E8151B',
     atsLevel: 'excellent',
     atsTip: 'Structure linéaire — lecture ATS optimale',
+    supportsPhoto: true,
   },
   {
     id: 'modern',
@@ -72,6 +78,7 @@ export const CV_TEMPLATES: CVTemplate[] = [
     defaultColor: '#1B4F72',
     atsLevel: 'bon',
     atsTip: 'Colonne principale lue en premier dans le PDF — compétences en texte réel',
+    supportsPhoto: true,
   },
   {
     id: 'minimal',
@@ -83,6 +90,7 @@ export const CV_TEMPLATES: CVTemplate[] = [
     defaultColor: '#E8151B',
     atsLevel: 'excellent',
     atsTip: 'Structure simple — excellent passage ATS',
+    supportsPhoto: false,
   },
   {
     id: 'elegant',
@@ -94,6 +102,7 @@ export const CV_TEMPLATES: CVTemplate[] = [
     defaultColor: '#111111',
     atsLevel: 'excellent',
     atsTip: 'Mise en page sobre — très bien reconnu par les ATS',
+    supportsPhoto: false,
   },
   {
     id: 'creative',
@@ -105,6 +114,7 @@ export const CV_TEMPLATES: CVTemplate[] = [
     defaultColor: '#E8151B',
     atsLevel: 'bon',
     atsTip: 'Barre décorative ignorée par les ATS — texte toujours lisible',
+    supportsPhoto: true,
   },
   {
     id: 'executive',
@@ -116,6 +126,7 @@ export const CV_TEMPLATES: CVTemplate[] = [
     defaultColor: '#111111',
     atsLevel: 'excellent',
     atsTip: 'Texte pur linéaire — meilleur score ATS possible',
+    supportsPhoto: false,
   },
 ];
 
@@ -219,6 +230,12 @@ export function getAtsLabel(level: AtsLevel): string {
     case 'bon':       return '✔ Bon ATS';
     case 'moyen':     return '⚠ ATS moyen';
   }
+}
+
+// Indique si le modèle choisi affiche une photo (pour masquer le bloc "Photo"
+// dans l'éditeur et éviter d'ajouter une photo sur un modèle qui n'en veut pas).
+export function templateSupportsPhoto(id: TemplateId): boolean {
+  return getTemplate(id).supportsPhoto;
 }
 
 // ─── RÈGLE DE RENDU DES COMPÉTENCES ──────────────────────────────────

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { CVFormData, defaultFormData } from '@/lib/types';
-import { TemplateId, FontId, DEFAULT_CV_CONFIG, CV_TEMPLATES, CV_PALETTES, CV_FONTS } from '@/lib/cv-config';
+import { TemplateId, FontId, DEFAULT_CV_CONFIG, CV_TEMPLATES, CV_PALETTES, CV_FONTS, templateSupportsPhoto } from '@/lib/cv-config';
 import { pdf } from '@react-pdf/renderer';
 import { CVPdf } from '@/lib/pdf-generator';
 import { StepperNav } from './components/StepperNav';
@@ -60,6 +60,8 @@ function EditorContent() {
   const cvRef = searchParams.get('cv_ref');
 
   const [step, setStep] = useState(1);
+  // Réf de l'input fichier caché pour ajouter une photo dès l'écran 1.
+  const photoRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<CVFormData>(defaultFormData);
   const [template, setTemplate] = useState<TemplateId>(DEFAULT_CV_CONFIG.template);
   const [accentColor, setAccentColor] = useState(DEFAULT_CV_CONFIG.accentColor);
@@ -79,14 +81,6 @@ function EditorContent() {
   const [prefillError, setPrefillError] = useState('');
   // Évite de relancer l'extraction plusieurs fois (une seule tentative par session).
   const [prefillDone, setPrefillDone] = useState(false);
-
-  // Re-score : mesure de progression du CV optimise (parcours "Optimiser ce CV").
-  // rescoreStatus : null | 'loading' | 'done' | 'error'
-  const [rescoreStatus, setRescoreStatus] = useState<null | 'loading' | 'done' | 'error'>(null);
-  const [newScore, setNewScore] = useState<number | null>(null);
-  const [rescoreError, setRescoreError] = useState('');
-  // Ancien score de l'offre (base de comparaison du re-score) : number | undefined.
-  const oldScore = jobContext?.ats?.score_global;
 
   useEffect(() => {
     async function load() {
@@ -245,8 +239,10 @@ function EditorContent() {
   }
 
   async function downloadPdf() {
+    // On n'ajoute la photo au PDF que si le modèle choisi l'affiche.
+    const usePhoto = templateSupportsPhoto(template) ? (photo || undefined) : undefined;
     const blob = await pdf(
-      <CVPdf formData={form} template={template} accentColor={accentColor} font={font} photo={photo || undefined} />
+      <CVPdf formData={form} template={template} accentColor={accentColor} font={font} photo={usePhoto} />
     ).toBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -254,56 +250,6 @@ function EditorContent() {
     a.download = `${(cvTitle || 'Mon_CV').replace(/\s+/g, '_')}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
-  }
-
-  // Convertit un Blob PDF en base64 (sans le prefixe data:) pour l'envoi a l'API.
-  function blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        resolve((result.split(',')[1]) || '');
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  // Re-score : genere le PDF du CV optimise, l'envoie a l'analyse dediee
-  // (/api/jobs/[id]/ats-rescore) et affiche le nouveau score. N'ecrase rien,
-  // ne consomme pas de credit d'analyse.
-  async function runRescore() {
-    if (!jobId) return;
-    setRescoreStatus('loading');
-    setRescoreError('');
-    try {
-      const blob = await pdf(
-        <CVPdf formData={form} template={template} accentColor={accentColor} font={font} photo={photo || undefined} />
-      ).toBlob();
-      const base64 = await blobToBase64(blob);
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || (window as any).__jfmj_token || '';
-      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/ats-rescore`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ pdfBase64: base64 }),
-      });
-      const rawText = await res.text();
-      let json: any = null;
-      if (rawText) { try { json = JSON.parse(rawText); } catch { json = null; } }
-      if (!res.ok || !json?.success || typeof json.score_global !== 'number') {
-        throw new Error(json?.error || 'Analyse impossible pour le moment.');
-      }
-      setNewScore(json.score_global);
-      setRescoreStatus('done');
-    } catch (e: any) {
-      setRescoreStatus('error');
-      setRescoreError(e?.message || 'Analyse impossible pour le moment.');
-    }
   }
 
   function goTo(n: number) { setStep(n); }
@@ -418,6 +364,10 @@ function EditorContent() {
       </button>
     );
   }
+
+  // Photo réellement affichée dans les aperçus : masquée si le modèle ne
+  // supporte pas la photo (le réglage photo est conservé, juste non affiché).
+  const shownPhoto = templateSupportsPhoto(template) ? photo : '';
 
   return (
     <>
@@ -543,6 +493,39 @@ function EditorContent() {
                         );
                       })}
                     </div>
+                    {/* Photo — visible uniquement pour les modèles qui l'affichent
+                        (câblée sur le même réglage photo que l'étape 3). */}
+                    {templateSupportsPhoto(template) && (
+                      <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111', marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT, color: '#111' }}>Photo <span style={{ color: '#888', fontWeight: 700 }}>(facultative)</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          {photo
+                            ? <img src={photo} style={{ width: 44, height: 44, borderRadius: '50%', border: '2px solid #111', objectFit: 'cover' }} />
+                            : <div style={{ width: 44, height: 44, borderRadius: '50%', border: '2px solid #111', background: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 14, color: '#fff', flexShrink: 0, fontFamily: FONT }}>
+                                {(form.firstName?.[0] || '') + (form.lastName?.[0] || '') || '?'}
+                              </div>
+                          }
+                          <button onClick={() => photoRef.current?.click()}
+                            style={{ fontSize: 11, fontWeight: 700, fontFamily: FONT, padding: '5px 10px', border: '2px solid #111', borderRadius: 6, background: '#F7F6F3', cursor: 'pointer', boxShadow: '2px 2px 0 #111' }}>
+                            {photo ? 'Changer' : 'Ajouter une photo'}
+                          </button>
+                          {photo && (
+                            <button onClick={() => setPhoto('')}
+                              style={{ fontSize: 11, fontWeight: 700, color: '#E8151B', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>
+                              ✕
+                            </button>
+                          )}
+                          <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }}
+                            onChange={e => {
+                              const f = e.target.files?.[0];
+                              if (!f) return;
+                              const reader = new FileReader();
+                              reader.onload = ev => setPhoto(ev.target?.result as string);
+                              reader.readAsDataURL(f);
+                            }} />
+                        </div>
+                      </div>
+                    )}
                     <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111', marginBottom: 10 }}>
                       <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT, color: '#111' }}>Couleur d'accent</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -586,7 +569,7 @@ function EditorContent() {
                     <div style={{ background: '#FFF3CD', border: '2px solid #111', borderRadius: 8, padding: '10px 14px', marginBottom: 14, boxShadow: '2px 2px 0 #111', fontSize: 12.5, color: '#111', fontFamily: FONT, fontWeight: 600, lineHeight: 1.5 }}>
                       ⚠️ <strong style={{ fontWeight: 800 }}>Contenu de démonstration</strong> — cet aperçu montre uniquement le style du modèle. Vos vraies informations seront ajoutées à l&apos;étape suivante.
                     </div>
-                    <CVPreviewWrapper form={{ ...defaultFormData, ...DEMO_FORM }} photo="" template={template} accentColor={accentColor} font={font} />
+                    <CVPreviewWrapper form={{ ...defaultFormData, ...DEMO_FORM }} photo={shownPhoto} template={template} accentColor={accentColor} font={font} />
                   </div>
                 </div>
               )}
@@ -619,7 +602,7 @@ function EditorContent() {
                       <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 12 }}>
                         Aperçu live
                       </div>
-                      <CVPreviewWrapper form={form} photo={photo} template={template} accentColor={accentColor} font={font} />
+                      <CVPreviewWrapper form={form} photo={shownPhoto} template={template} accentColor={accentColor} font={font} />
                     </div>
                   </div>
                 </div>
@@ -641,7 +624,7 @@ function EditorContent() {
               {step === 5 && (
                 <div style={{ padding: '1.5rem' }}>
                   <Step5Preview
-                    form={form} photo={photo} template={template}
+                    form={form} photo={shownPhoto} template={template}
                     accentColor={accentColor} font={font}
                     cvTitle={cvTitle} onDownloadPdf={downloadPdf} onNext={next}
                   />
@@ -656,78 +639,6 @@ function EditorContent() {
                     font={font} generatedCV={generatedCV} cvTitle={cvTitle}
                     cvId={cvId || undefined} onDownloadPdf={downloadPdf} onTitleChange={setCvTitle}
                   />
-
-                  {/* Re-score : progression du CV optimise (visible seulement si on vient d'une offre analysee) */}
-                  {jobId && typeof oldScore === 'number' && (
-                    <div style={{
-                      marginTop: 20, padding: '18px 20px',
-                      border: '2px solid #111', borderRadius: 10,
-                      boxShadow: '3px 3px 0 #111', background: '#fff',
-                    }}>
-                      <div style={{
-                        fontFamily: FONT, fontWeight: 900, fontSize: 12,
-                        letterSpacing: 1, textTransform: 'uppercase', color: '#111', marginBottom: 10,
-                      }}>
-                        Mesure ta progression
-                      </div>
-
-                      {rescoreStatus !== 'done' && (
-                        <>
-                          <p style={{ fontFamily: FONT, fontSize: 13, color: '#444', margin: '0 0 12px' }}>
-                            Tu as optimise ton CV pour cette offre. Verifie combien de points tu as gagnes.
-                          </p>
-                          <button
-                            onClick={runRescore}
-                            disabled={rescoreStatus === 'loading'}
-                            style={{
-                              fontFamily: FONT, fontWeight: 700, fontSize: 14,
-                              padding: '10px 18px', border: '2px solid #111', borderRadius: 8,
-                              boxShadow: '3px 3px 0 #111',
-                              background: rescoreStatus === 'loading' ? '#eee' : '#F5C400',
-                              color: '#111', cursor: rescoreStatus === 'loading' ? 'default' : 'pointer',
-                            }}
-                          >
-                            {rescoreStatus === 'loading' ? 'Analyse en cours…' : 'Voir mon nouveau score'}
-                          </button>
-                          {rescoreStatus === 'error' && (
-                            <p style={{ fontFamily: FONT, fontSize: 13, color: '#E8151B', margin: '10px 0 0' }}>
-                              {rescoreError}
-                            </p>
-                          )}
-                        </>
-                      )}
-
-                      {rescoreStatus === 'done' && newScore !== null && (
-                        <div>
-                          <div style={{ fontFamily: FONT, fontSize: 13, color: '#444', marginBottom: 6 }}>
-                            Ton score ATS pour cette offre
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                            <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 22, color: '#888' }}>
-                              {oldScore}
-                            </span>
-                            <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 20, color: '#111' }}>→</span>
-                            <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 30, color: '#1A7A4A' }}>
-                              {newScore}
-                            </span>
-                            {newScore > oldScore && (
-                              <span style={{
-                                fontFamily: FONT, fontWeight: 700, fontSize: 14, color: '#1A7A4A',
-                                border: '2px solid #1A7A4A', borderRadius: 20, padding: '2px 10px',
-                              }}>
-                                +{newScore - oldScore} points 🎉
-                              </span>
-                            )}
-                          </div>
-                          {newScore <= oldScore && (
-                            <p style={{ fontFamily: FONT, fontSize: 12, color: '#888', margin: '8px 0 0' }}>
-                              Score stable — pense a integrer les recommandations restantes pour gagner des points.
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
             </div>

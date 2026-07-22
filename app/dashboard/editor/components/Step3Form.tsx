@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { CVFormData, Experience, Education } from '@/lib/types';
-import { TemplateId, FontId } from '@/lib/cv-config';
+import { TemplateId, FontId, templateSupportsPhoto } from '@/lib/cv-config';
 
 const FONT = "var(--font-montserrat), 'Montserrat', sans-serif";
 function uid() { return Math.random().toString(36).slice(2, 9); }
@@ -152,7 +152,8 @@ export function Step3Form({
           </div>
         </div>
 
-        {/* Photo */}
+        {/* Photo — masquée pour les modèles sans photo (cohérent avec l'écran 1) */}
+        {templateSupportsPhoto(template) && (
         <div>
           <label style={fieldLabelStyle}>Photo (optionnel)</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -193,6 +194,7 @@ export function Step3Form({
             />
           </div>
         </div>
+        )}
       </div>
 
       {/* ── RÉSUMÉ ── */}
