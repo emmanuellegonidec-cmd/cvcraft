@@ -366,12 +366,16 @@ function EditorContent() {
     throw new Error('Ce CV ne peut pas être réutilisé.');
   }
 
-  async function downloadPdf() {
-    // On n'ajoute la photo au PDF que si le modèle choisi l'affiche.
+  // Génère le PDF du CV courant (réutilisé pour le téléchargement ET l'enregistrement sur l'offre).
+  async function makePdfBlob(): Promise<Blob> {
     const usePhoto = templateSupportsPhoto(template) ? (photo || undefined) : undefined;
-    const blob = await pdf(
+    return await pdf(
       <CVPdf formData={form} template={template} accentColor={accentColor} font={font} photo={usePhoto} />
     ).toBlob();
+  }
+
+  async function downloadPdf() {
+    const blob = await makePdfBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1016,7 +1020,13 @@ function EditorContent() {
                   <Step6Save
                     form={form} template={template} accentColor={accentColor}
                     font={font} generatedCV={generatedCV} cvTitle={cvTitle}
-                    cvId={cvId || undefined} onDownloadPdf={downloadPdf} onTitleChange={setCvTitle}
+                    cvId={cvId || undefined}
+                    jobId={jobId || undefined}
+                    originalScore={jobContext?.ats?.score_global}
+                    newScore={newScore}
+                    jobTitle={jobContext?.title}
+                    onGetPdfBlob={makePdfBlob}
+                    onDownloadPdf={downloadPdf} onTitleChange={setCvTitle}
                   />
                 </div>
               )}
