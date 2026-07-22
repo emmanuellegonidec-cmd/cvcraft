@@ -71,6 +71,12 @@ function EditorContent() {
   // Écran 5 : régénération sur place ("Régénérer avec l'IA")
   const [regenStatus, setRegenStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [regenError, setRegenError] = useState('');
+  // Écran 5 : re-score ATS (nouveau score du CV optimisé)
+  const [rescoreStatus, setRescoreStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [newScore, setNewScore] = useState<number | null>(null);
+  const [scoredSig, setScoredSig] = useState('');
+  const [rescoreError, setRescoreError] = useState('');
+  const autoRescoreDone = useRef(false);
   const [saveMsg, setSaveMsg] = useState('');
   const [loadError, setLoadError] = useState('');
 
@@ -346,6 +352,54 @@ function EditorContent() {
       setRegenError(e?.message || 'Régénération impossible.');
     }
   }
+
+  // ── Écran 5 : re-score ATS ──
+  // Fabrique le PDF du CV courant → l'envoie à /api/jobs/[id]/ats-rescore → récupère le nouveau score.
+  async function runRescore() {
+    if (!jobId) return;
+    const sigAtStart = JSON.stringify({ form, photoLen: photo ? photo.length : 0, template, accentColor, font });
+    setRescoreStatus('loading');
+    setRescoreError('');
+    try {
+      const usePhotoPdf = templateSupportsPhoto(template) ? (photo || undefined) : undefined;
+      const blob = await pdf(
+        <CVPdf formData={form} template={template} accentColor={accentColor} font={font} photo={usePhotoPdf} />
+      ).toBlob();
+      const pdfBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      const token = (window as any).__jfmj_token || '';
+      const res = await fetch(`/api/jobs/${jobId}/ats-rescore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ pdfBase64 }),
+      });
+      const json = await res.json();
+      if (!res.ok || typeof json.score_global !== 'number') throw new Error(json.error || 'Recalcul impossible.');
+      setNewScore(json.score_global);
+      setScoredSig(sigAtStart);
+      setRescoreStatus('done');
+    } catch (e: any) {
+      setRescoreStatus('error');
+      setRescoreError(e?.message || 'Recalcul impossible.');
+    }
+  }
+
+  // Calcul automatique une seule fois, en arrivant à l'écran 5 depuis une offre.
+  useEffect(() => {
+    if (step === 5 && jobId && typeof jobContext?.ats?.score_global === 'number' && !autoRescoreDone.current) {
+      autoRescoreDone.current = true;
+      runRescore();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, jobId, jobContext]);
+
+  // Le score est "périmé" si le CV a changé depuis le dernier calcul.
+  const currentScoreSig = JSON.stringify({ form, photoLen: photo ? photo.length : 0, template, accentColor, font });
+  const scoreIsStale = rescoreStatus === 'done' && scoredSig !== currentScoreSig;
 
   const sideNavBtn: React.CSSProperties = {
     display: 'flex', alignItems: 'center', padding: '9px 12px',
@@ -730,10 +784,25 @@ function EditorContent() {
                       Finalise ton CV
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      {typeof jobContext?.ats?.score_global === 'number' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111', borderRadius: 8, padding: '6px 12px', boxShadow: '2px 2px 0 #F5C400' }}>
-                          <span style={{ fontSize: 9, color: '#bbb', fontWeight: 700, fontFamily: FONT, letterSpacing: '0.04em' }}>SCORE DE DÉPART</span>
-                          <span style={{ fontSize: 14, fontWeight: 900, color: '#F5C400', fontFamily: FONT }}>{jobContext.ats.score_global}/100</span>
+                      {jobId && typeof jobContext?.ats?.score_global === 'number' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111', borderRadius: 8, padding: '6px 12px', boxShadow: `2px 2px 0 ${scoreIsStale ? '#888' : '#1A7A4A'}` }}>
+                            <span style={{ fontSize: 9, color: '#bbb', fontWeight: 700, fontFamily: FONT, letterSpacing: '0.04em' }}>SCORE ATS</span>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: '#bbb', fontFamily: FONT }}>{jobContext.ats.score_global}</span>
+                            <span style={{ color: '#F5C400' }}>→</span>
+                            {rescoreStatus === 'loading' && <span style={{ fontSize: 12, fontWeight: 800, color: '#F5C400', fontFamily: FONT }}>⏳ calcul…</span>}
+                            {rescoreStatus === 'error' && <span style={{ fontSize: 13, fontWeight: 800, color: '#E8151B', fontFamily: FONT }}>⚠️</span>}
+                            {rescoreStatus === 'done' && (
+                              <span style={{ fontSize: 16, fontWeight: 900, color: scoreIsStale ? '#888' : '#5DE29A', textDecoration: scoreIsStale ? 'line-through' : 'none', fontFamily: FONT }}>{newScore}</span>
+                            )}
+                            {rescoreStatus === 'idle' && <span style={{ fontSize: 12, fontWeight: 800, color: '#bbb', fontFamily: FONT }}>—</span>}
+                          </div>
+                          {(scoreIsStale || rescoreStatus === 'error') && (
+                            <button onClick={runRescore}
+                              style={{ background: '#F5C400', border: '2px solid #111', borderRadius: 8, padding: '7px 12px', fontSize: 11, fontWeight: 800, fontFamily: FONT, cursor: 'pointer', boxShadow: '2px 2px 0 #111' }}>
+                              ↻ Recalculer mon score
+                            </button>
+                          )}
                         </div>
                       )}
                       <button onClick={next}
@@ -745,6 +814,20 @@ function EditorContent() {
 
                   {/* Zone scrollable : retours IA + régénérer + édition/aperçu */}
                   <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+
+                    {/* Message si le score est périmé (CV modifié depuis le dernier calcul) */}
+                    {scoreIsStale && (
+                      <div style={{ fontSize: 12, color: '#B8900A', fontWeight: 700, fontFamily: FONT, marginBottom: 12 }}>
+                        ✏️ Tu as modifié ton CV — recalcule ton score quand tu as fini.
+                      </div>
+                    )}
+
+                    {/* Erreur éventuelle du recalcul du score */}
+                    {rescoreStatus === 'error' && (
+                      <div style={{ background: '#F8D7DA', border: '2px solid #111', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 13, fontWeight: 700, color: '#111', fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}>
+                        ❌ {rescoreError || 'Le recalcul du score a échoué.'}
+                      </div>
+                    )}
 
                     {/* Les retours de l'IA (recommandations + erreurs de l'offre) */}
                     <JobRecoBanner />
