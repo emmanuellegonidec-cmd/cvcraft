@@ -151,28 +151,33 @@ export function Step2Import({ form, onFormChange, onImportSuccess, onNext, onSki
         Importe ton CV
       </div>
 
-      {/* ── CONSEIL ATS ── */}
-      <div style={{ background: '#F0FFF4', border: '1.5px solid #2D6A4F', borderRadius: 8, padding: '12px 16px', marginBottom: 22, fontSize: 13, color: '#2D6A4F', lineHeight: 1.6, fontFamily: FONT, fontWeight: 600 }}>
-        ✅ <strong style={{ fontWeight: 800 }}>Conseil ATS :</strong> L'IA nettoie automatiquement les données importées pour qu'elles soient lisibles par les logiciels de recrutement.
-      </div>
-
-      {/* ── 3 BLOCS EN COLONNES ── */}
+      {/* ── 3 BLOCS EN COLONNES — ordre : LinkedIn (recommandé) → Import PDF → Manuel ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16, marginBottom: 16 }}>
 
-        {/* BLOC 1 — Remplir manuellement */}
-        <div style={blocStyle}>
+        {/* BLOC 1 — Profil LinkedIn (recommandé) */}
+        <div style={{ ...blocStyle, border: '2px solid #1B4F72', boxShadow: '3px 3px 0 #1B4F72', position: 'relative' }}>
+          <div style={{ position: 'absolute', top: 8, right: 8, background: '#F5C400', border: '2px solid #111', borderRadius: 14, fontSize: 9, fontWeight: 900, padding: '2px 9px', boxShadow: '1px 1px 0 #111', fontFamily: FONT, letterSpacing: '0.03em' }}>★ Recommandé</div>
           <div style={blocHeadStyle}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', border: '2px solid #111', background: '#F5C400', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, flexShrink: 0 }}>✏</div>
-            <div style={{ fontSize: 14, fontWeight: 900, color: '#111', fontFamily: FONT }}>Remplir manuellement</div>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', border: '2px solid #111', background: '#0A66C2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 900, color: '#fff', fontFamily: 'serif', flexShrink: 0 }}>in</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#111', fontFamily: FONT }}>Profil LinkedIn</div>
           </div>
           <div style={blocBodyStyle}>
-            <div>Tu saisis tes informations directement dans le formulaire à l'étape suivante.</div>
-            <button
-              onClick={onSkip}
-              style={{ display: 'block', padding: '10px 14px', border: '2px solid #111', borderRadius: 7, fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '2px 2px 0 #111', background: '#fff', color: '#111', textAlign: 'center', fontFamily: FONT, width: '100%' }}
+            <div style={{ background: '#FFF3CD', border: '2px solid #111', borderRadius: 7, padding: '10px 12px', fontSize: 12, color: '#111', lineHeight: 1.6, boxShadow: '2px 2px 0 #111' }}>
+              <strong style={{ color: '#E8151B', fontWeight: 800 }}>Exporter depuis LinkedIn :</strong><br />
+              Profil → <strong style={{ fontWeight: 800 }}>Plus</strong> → <strong style={{ fontWeight: 800 }}>Enregistrer au format PDF</strong>
+            </div>
+            <div
+              onClick={() => linkedinRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setIsDragOverLi(true); }}
+              onDragLeave={() => setIsDragOverLi(false)}
+              onDrop={e => { e.preventDefault(); setIsDragOverLi(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+              style={{ ...dropBase, background: isDragOverLi ? '#FFF3CD' : '#FAFAFA', boxShadow: isDragOverLi ? '2px 2px 0 #111' : 'none' }}
             >
-              Continuer sans importer →
-            </button>
+              <div style={{ fontSize: 26, color: '#0A66C2', fontFamily: 'serif', fontWeight: 900, lineHeight: 1 }}>in</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#111', fontFamily: FONT }}>Glisse ton export LinkedIn</div>
+              <div style={{ fontSize: 12, color: '#888', fontFamily: FONT, fontWeight: 600 }}>ou clique pour sélectionner</div>
+            </div>
+            <input ref={linkedinRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
           </div>
         </div>
 
@@ -199,29 +204,20 @@ export function Step2Import({ form, onFormChange, onImportSuccess, onNext, onSki
           </div>
         </div>
 
-        {/* BLOC 3 — LinkedIn */}
+        {/* BLOC 3 — Remplir manuellement */}
         <div style={blocStyle}>
           <div style={blocHeadStyle}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', border: '2px solid #111', background: '#0A66C2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 900, color: '#fff', fontFamily: 'serif', flexShrink: 0 }}>in</div>
-            <div style={{ fontSize: 14, fontWeight: 900, color: '#111', fontFamily: FONT }}>Profil LinkedIn</div>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', border: '2px solid #111', background: '#F5C400', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, flexShrink: 0 }}>✏</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#111', fontFamily: FONT }}>Remplir manuellement</div>
           </div>
           <div style={blocBodyStyle}>
-            <div style={{ background: '#FFF3CD', border: '2px solid #111', borderRadius: 7, padding: '10px 12px', fontSize: 12, color: '#111', lineHeight: 1.6, boxShadow: '2px 2px 0 #111' }}>
-              <strong style={{ color: '#E8151B', fontWeight: 800 }}>Exporter depuis LinkedIn :</strong><br />
-              Profil → <strong style={{ fontWeight: 800 }}>Plus</strong> → <strong style={{ fontWeight: 800 }}>Enregistrer au format PDF</strong>
-            </div>
-            <div
-              onClick={() => linkedinRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); setIsDragOverLi(true); }}
-              onDragLeave={() => setIsDragOverLi(false)}
-              onDrop={e => { e.preventDefault(); setIsDragOverLi(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-              style={{ ...dropBase, background: isDragOverLi ? '#FFF3CD' : '#FAFAFA', boxShadow: isDragOverLi ? '2px 2px 0 #111' : 'none' }}
+            <div>Tu saisis tes informations directement dans le formulaire à l'étape suivante.</div>
+            <button
+              onClick={onSkip}
+              style={{ display: 'block', padding: '10px 14px', border: '2px solid #111', borderRadius: 7, fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '2px 2px 0 #111', background: '#fff', color: '#111', textAlign: 'center', fontFamily: FONT, width: '100%' }}
             >
-              <div style={{ fontSize: 26, color: '#0A66C2', fontFamily: 'serif', fontWeight: 900, lineHeight: 1 }}>in</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#111', fontFamily: FONT }}>Glisse ton export LinkedIn</div>
-              <div style={{ fontSize: 12, color: '#888', fontFamily: FONT, fontWeight: 600 }}>ou clique pour sélectionner</div>
-            </div>
-            <input ref={linkedinRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+              Continuer sans importer →
+            </button>
           </div>
         </div>
 
