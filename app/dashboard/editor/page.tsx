@@ -459,7 +459,7 @@ function EditorContent() {
             <div style={{ overflowY: 'auto', background: '#F7F6F3' }}>
               {/* ÉTAPE 1 */}
               {step === 1 && (
-                <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', height: '100%' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '500px 1fr', height: '100%' }}>
                   <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto', background: '#fff' }}>
                     {/* Session 14 : bandeau recommandations si on vient d'une offre */}
                     <JobRecoBanner />
@@ -473,7 +473,7 @@ function EditorContent() {
                     <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
                       Choisis ton modèle
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
                       {CV_TEMPLATES.map(t => {
                         const isSelected = template === t.id;
                         return (
@@ -487,55 +487,55 @@ function EditorContent() {
                                 </div>
                               </div>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#333', fontFamily: FONT }}>{t.description}</div>
-                              <div style={{ fontSize: 10, color: '#666', fontFamily: FONT, marginTop: 2 }}>{t.target}</div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                    {/* Photo — visible uniquement pour les modèles qui l'affichent
-                        (câblée sur le même réglage photo que l'étape 3). */}
-                    {templateSupportsPhoto(template) && (
-                      <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111', marginBottom: 10 }}>
-                        <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT, color: '#111' }}>Photo <span style={{ color: '#888', fontWeight: 700 }}>(facultative)</span></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          {photo
-                            ? <img src={photo} style={{ width: 44, height: 44, borderRadius: '50%', border: '2px solid #111', objectFit: 'cover' }} />
-                            : <div style={{ width: 44, height: 44, borderRadius: '50%', border: '2px solid #111', background: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 14, color: '#fff', flexShrink: 0, fontFamily: FONT }}>
-                                {(form.firstName?.[0] || '') + (form.lastName?.[0] || '') || '?'}
-                              </div>
-                          }
-                          <button onClick={() => photoRef.current?.click()}
-                            style={{ fontSize: 11, fontWeight: 700, fontFamily: FONT, padding: '5px 10px', border: '2px solid #111', borderRadius: 6, background: '#F7F6F3', cursor: 'pointer', boxShadow: '2px 2px 0 #111' }}>
-                            {photo ? 'Changer' : 'Ajouter une photo'}
-                          </button>
-                          {photo && (
-                            <button onClick={() => setPhoto('')}
-                              style={{ fontSize: 11, fontWeight: 700, color: '#E8151B', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>
-                              ✕
+                    {/* Photo + Couleur côte à côte pour compacter l'écran 1. */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10, alignItems: 'start' }}>
+                      {templateSupportsPhoto(template) && (
+                        <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111' }}>
+                          <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT, color: '#111' }}>Photo <span style={{ color: '#888', fontWeight: 700 }}>(facultative)</span></div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            {photo
+                              ? <img src={photo} style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid #111', objectFit: 'cover' }} />
+                              : <div style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid #111', background: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: '#fff', flexShrink: 0, fontFamily: FONT }}>
+                                  {(form.firstName?.[0] || '') + (form.lastName?.[0] || '') || '?'}
+                                </div>
+                            }
+                            <button onClick={() => photoRef.current?.click()}
+                              style={{ fontSize: 11, fontWeight: 700, fontFamily: FONT, padding: '5px 10px', border: '2px solid #111', borderRadius: 6, background: '#F7F6F3', cursor: 'pointer', boxShadow: '2px 2px 0 #111' }}>
+                              {photo ? 'Changer' : 'Ajouter'}
                             </button>
-                          )}
-                          <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }}
-                            onChange={e => {
-                              const f = e.target.files?.[0];
-                              if (!f) return;
-                              const reader = new FileReader();
-                              reader.onload = ev => setPhoto(ev.target?.result as string);
-                              reader.readAsDataURL(f);
-                            }} />
+                            {photo && (
+                              <button onClick={() => setPhoto('')}
+                                style={{ fontSize: 11, fontWeight: 700, color: '#E8151B', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>
+                                ✕
+                              </button>
+                            )}
+                            <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }}
+                              onChange={e => {
+                                const f = e.target.files?.[0];
+                                if (!f) return;
+                                const reader = new FileReader();
+                                reader.onload = ev => setPhoto(ev.target?.result as string);
+                                reader.readAsDataURL(f);
+                              }} />
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111', marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT, color: '#111' }}>Couleur d'accent</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {CV_PALETTES.map(p => (
-                          <div key={p.id} onClick={() => setAccentColor(p.accent)} title={p.name}
-                            style={{ width: 26, height: 26, borderRadius: '50%', background: p.accent, cursor: 'pointer', border: accentColor === p.accent ? '3px solid #111' : '2px solid transparent', boxShadow: accentColor === p.accent ? '0 0 0 2px #fff inset' : 'none', transition: 'all .15s' }} />
-                        ))}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#555', fontFamily: FONT, marginTop: 6, fontWeight: 600 }}>
-                        {CV_PALETTES.find(p => p.accent === accentColor)?.name} — la couleur n'affecte pas les ATS
+                      )}
+                      <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111' }}>
+                        <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: FONT, color: '#111' }}>Couleur d'accent</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                          {CV_PALETTES.map(p => (
+                            <div key={p.id} onClick={() => setAccentColor(p.accent)} title={p.name}
+                              style={{ width: 24, height: 24, borderRadius: '50%', background: p.accent, cursor: 'pointer', border: accentColor === p.accent ? '3px solid #111' : '2px solid transparent', boxShadow: accentColor === p.accent ? '0 0 0 2px #fff inset' : 'none', transition: 'all .15s' }} />
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 10, color: '#555', fontFamily: FONT, marginTop: 6, fontWeight: 600 }}>
+                          {CV_PALETTES.find(p => p.accent === accentColor)?.name} — n'affecte pas les ATS
+                        </div>
                       </div>
                     </div>
                     <div style={{ background: '#FAFAFA', border: '2px solid #111', borderRadius: 8, padding: '12px', boxShadow: '2px 2px 0 #111', marginBottom: 16 }}>
@@ -563,13 +563,12 @@ function EditorContent() {
                   <div style={{ padding: '1.5rem', overflowY: 'auto', background: '#F7F6F3' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
                       <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT }}>
-                        Aperçu du template
+                        Aperçu du modèle
                       </div>
-                      {/* Session 14 : étiquette compacte "démo" (remplace l'ancienne grande bannière
-                          pour laisser voir la feuille A4 en entier). Détail complet au survol. */}
-                      <div title="Cet aperçu montre uniquement le style du modèle. Vos vraies informations seront ajoutées à l'étape suivante."
-                        style={{ background: '#FFF3CD', border: '2px solid #111', borderRadius: 6, padding: '3px 9px', boxShadow: '2px 2px 0 #111', fontSize: 10, fontWeight: 800, color: '#111', fontFamily: FONT, whiteSpace: 'nowrap' }}>
-                        ⚠️ Contenu de démonstration
+                      {/* Étiquette "démo" au ton plus léger (voix Jean). Détail complet au survol. */}
+                      <div title="Cet aperçu montre uniquement le style du modèle. Tes vraies informations seront ajoutées à l'étape suivante."
+                        style={{ background: '#F5C400', border: '2px solid #111', borderRadius: 20, padding: '3px 12px', boxShadow: '2px 2px 0 #111', fontSize: 10, fontWeight: 800, color: '#111', fontFamily: FONT, whiteSpace: 'nowrap' }}>
+                        🪄 Aperçu de démo — le style, pas le contenu
                       </div>
                     </div>
                     <CVPreviewWrapper form={{ ...defaultFormData, ...DEMO_FORM }} photo={shownPhoto} template={template} accentColor={accentColor} font={font} />
