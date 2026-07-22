@@ -51,10 +51,10 @@ export interface CVConfig {
 //    indépendamment de la couleur de fond
 
 // ─── TEMPLATES ────────────────────────────────────────────────────────
-// supportsPhoto : indique si le modèle affiche une photo. Les modèles à
-// en-tête ou barre latérale (Classique, Moderne, Créatif) accueillent une
-// photo ; les modèles sobres / "texte pur" (Minimaliste, Élégant, Executive)
-// n'en affichent pas. Utilisé pour masquer le bloc "Photo" dans l'éditeur.
+// supportsPhoto : indique si le modèle affiche une photo. Les 6 modèles
+// disposent d'un emplacement photo, donc tous sont à true. Le champ reste
+// présent pour pouvoir, si besoin un jour, masquer le bloc "Photo" sur un
+// modèle donné dans l'éditeur.
 export const CV_TEMPLATES: CVTemplate[] = [
   {
     id: 'classic',
@@ -90,7 +90,7 @@ export const CV_TEMPLATES: CVTemplate[] = [
     defaultColor: '#E8151B',
     atsLevel: 'excellent',
     atsTip: 'Structure simple — excellent passage ATS',
-    supportsPhoto: false,
+    supportsPhoto: true,
   },
   {
     id: 'elegant',
@@ -102,7 +102,7 @@ export const CV_TEMPLATES: CVTemplate[] = [
     defaultColor: '#111111',
     atsLevel: 'excellent',
     atsTip: 'Mise en page sobre — très bien reconnu par les ATS',
-    supportsPhoto: false,
+    supportsPhoto: true,
   },
   {
     id: 'creative',
@@ -126,7 +126,7 @@ export const CV_TEMPLATES: CVTemplate[] = [
     defaultColor: '#111111',
     atsLevel: 'excellent',
     atsTip: 'Texte pur linéaire — meilleur score ATS possible',
-    supportsPhoto: false,
+    supportsPhoto: true,
   },
 ];
 
