@@ -80,6 +80,14 @@ function EditorContent() {
   // Évite de relancer l'extraction plusieurs fois (une seule tentative par session).
   const [prefillDone, setPrefillDone] = useState(false);
 
+  // Re-score : mesure de progression du CV optimise (parcours "Optimiser ce CV").
+  // rescoreStatus : null | 'loading' | 'done' | 'error'
+  const [rescoreStatus, setRescoreStatus] = useState<null | 'loading' | 'done' | 'error'>(null);
+  const [newScore, setNewScore] = useState<number | null>(null);
+  const [rescoreError, setRescoreError] = useState('');
+  // Ancien score de l'offre (base de comparaison du re-score) : number | undefined.
+  const oldScore = jobContext?.ats?.score_global;
+
   useEffect(() => {
     async function load() {
       const supabase = createClient();
@@ -246,6 +254,56 @@ function EditorContent() {
     a.download = `${(cvTitle || 'Mon_CV').replace(/\s+/g, '_')}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // Convertit un Blob PDF en base64 (sans le prefixe data:) pour l'envoi a l'API.
+  function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        resolve((result.split(',')[1]) || '');
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // Re-score : genere le PDF du CV optimise, l'envoie a l'analyse dediee
+  // (/api/jobs/[id]/ats-rescore) et affiche le nouveau score. N'ecrase rien,
+  // ne consomme pas de credit d'analyse.
+  async function runRescore() {
+    if (!jobId) return;
+    setRescoreStatus('loading');
+    setRescoreError('');
+    try {
+      const blob = await pdf(
+        <CVPdf formData={form} template={template} accentColor={accentColor} font={font} photo={photo || undefined} />
+      ).toBlob();
+      const base64 = await blobToBase64(blob);
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || (window as any).__jfmj_token || '';
+      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/ats-rescore`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ pdfBase64: base64 }),
+      });
+      const rawText = await res.text();
+      let json: any = null;
+      if (rawText) { try { json = JSON.parse(rawText); } catch { json = null; } }
+      if (!res.ok || !json?.success || typeof json.score_global !== 'number') {
+        throw new Error(json?.error || 'Analyse impossible pour le moment.');
+      }
+      setNewScore(json.score_global);
+      setRescoreStatus('done');
+    } catch (e: any) {
+      setRescoreStatus('error');
+      setRescoreError(e?.message || 'Analyse impossible pour le moment.');
+    }
   }
 
   function goTo(n: number) { setStep(n); }
@@ -598,6 +656,78 @@ function EditorContent() {
                     font={font} generatedCV={generatedCV} cvTitle={cvTitle}
                     cvId={cvId || undefined} onDownloadPdf={downloadPdf} onTitleChange={setCvTitle}
                   />
+
+                  {/* Re-score : progression du CV optimise (visible seulement si on vient d'une offre analysee) */}
+                  {jobId && typeof oldScore === 'number' && (
+                    <div style={{
+                      marginTop: 20, padding: '18px 20px',
+                      border: '2px solid #111', borderRadius: 10,
+                      boxShadow: '3px 3px 0 #111', background: '#fff',
+                    }}>
+                      <div style={{
+                        fontFamily: FONT, fontWeight: 900, fontSize: 12,
+                        letterSpacing: 1, textTransform: 'uppercase', color: '#111', marginBottom: 10,
+                      }}>
+                        Mesure ta progression
+                      </div>
+
+                      {rescoreStatus !== 'done' && (
+                        <>
+                          <p style={{ fontFamily: FONT, fontSize: 13, color: '#444', margin: '0 0 12px' }}>
+                            Tu as optimise ton CV pour cette offre. Verifie combien de points tu as gagnes.
+                          </p>
+                          <button
+                            onClick={runRescore}
+                            disabled={rescoreStatus === 'loading'}
+                            style={{
+                              fontFamily: FONT, fontWeight: 700, fontSize: 14,
+                              padding: '10px 18px', border: '2px solid #111', borderRadius: 8,
+                              boxShadow: '3px 3px 0 #111',
+                              background: rescoreStatus === 'loading' ? '#eee' : '#F5C400',
+                              color: '#111', cursor: rescoreStatus === 'loading' ? 'default' : 'pointer',
+                            }}
+                          >
+                            {rescoreStatus === 'loading' ? 'Analyse en cours…' : 'Voir mon nouveau score'}
+                          </button>
+                          {rescoreStatus === 'error' && (
+                            <p style={{ fontFamily: FONT, fontSize: 13, color: '#E8151B', margin: '10px 0 0' }}>
+                              {rescoreError}
+                            </p>
+                          )}
+                        </>
+                      )}
+
+                      {rescoreStatus === 'done' && newScore !== null && (
+                        <div>
+                          <div style={{ fontFamily: FONT, fontSize: 13, color: '#444', marginBottom: 6 }}>
+                            Ton score ATS pour cette offre
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                            <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 22, color: '#888' }}>
+                              {oldScore}
+                            </span>
+                            <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 20, color: '#111' }}>→</span>
+                            <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 30, color: '#1A7A4A' }}>
+                              {newScore}
+                            </span>
+                            {newScore > oldScore && (
+                              <span style={{
+                                fontFamily: FONT, fontWeight: 700, fontSize: 14, color: '#1A7A4A',
+                                border: '2px solid #1A7A4A', borderRadius: 20, padding: '2px 10px',
+                              }}>
+                                +{newScore - oldScore} points 🎉
+                              </span>
+                            )}
+                          </div>
+                          {newScore <= oldScore && (
+                            <p style={{ fontFamily: FONT, fontSize: 12, color: '#888', margin: '8px 0 0' }}>
+                              Score stable — pense a integrer les recommandations restantes pour gagner des points.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
