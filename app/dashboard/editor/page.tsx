@@ -607,8 +607,6 @@ function EditorContent() {
               {step === 1 && (
                 <div style={{ display: 'grid', gridTemplateColumns: '500px 1fr', height: '100%' }}>
                   <div style={{ padding: '1.5rem', borderRight: '2px solid #111', overflowY: 'auto', background: '#fff' }}>
-                    {/* Session 14 : bandeau recommandations si on vient d'une offre */}
-                    <JobRecoBanner />
                     {/* Session 14 : bouton d'action visible en HAUT quand on vient d'une offre
                         (évite de scroller jusqu'en bas pour lancer le pré-remplissage). */}
                     {cvRef && (
