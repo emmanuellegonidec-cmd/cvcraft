@@ -132,6 +132,7 @@ function EditorContent() {
   const [rawForm, setRawForm] = useState<CVFormData | null>(null);
   const [recoOpen, setRecoOpen] = useState(false);          // bandeau recos replié par défaut
   const [aiChangesOpen, setAiChangesOpen] = useState(true); // panneau modifications ouvert par défaut
+  const [extHintDismissed, setExtHintDismissed] = useState(false); // bandeau "ferme le panneau de l'extension"
   const [saveMsg, setSaveMsg] = useState('');
   const [loadError, setLoadError] = useState('');
 
@@ -711,6 +712,20 @@ function EditorContent() {
               {saveMsg && <span style={{ fontSize: 12, fontWeight: 700, color: saveMsg.startsWith('✅') ? '#1A7A4A' : '#E8151B', fontFamily: FONT }}>{saveMsg}</span>}
             </div>
           </header>
+
+          {/* Astuce : le panneau de l'extension chevauche l'éditeur → on invite à le fermer.
+              Affiché uniquement quand on arrive depuis l'extension (cv_ref présent). */}
+          {cvRef && !extHintDismissed && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 1.5rem', background: '#FFF3CD', borderBottom: '2px solid #111', flexShrink: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#111', fontFamily: FONT }}>
+                💡 Astuce : ferme le panneau de l&apos;extension (à droite) pour voir ton CV en entier.
+              </div>
+              <button onClick={() => setExtHintDismissed(true)}
+                style={{ background: '#fff', border: '2px solid #111', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 800, fontFamily: FONT, cursor: 'pointer', boxShadow: '2px 2px 0 #111', flexShrink: 0 }}>
+                ✕ Compris
+              </button>
+            </div>
+          )}
 
           {/* Corps */}
           <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '300px 1fr', overflow: 'hidden' }}>
