@@ -185,10 +185,12 @@ function ElegantPreview({ form, photo, accentColor, fontFamily }: { form: CVForm
   return (
     <div style={{ fontFamily, fontSize: 13 }}>
       <div style={{ textAlign: 'center', marginBottom: 14 }}>
-        {photo
-          ? <img src={photo} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${accentColor}`, marginBottom: 8 }} />
-          : <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><Initials firstName={form.firstName} lastName={form.lastName} bg="#f0f0f0" size={56} /></div>
-        }
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          {photo
+            ? <img src={photo} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${accentColor}` }} />
+            : <Initials firstName={form.firstName} lastName={form.lastName} bg="#f0f0f0" size={56} />
+          }
+        </div>
         <div style={{ fontSize: 18, fontWeight: 900, color: '#111', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>{form.firstName} {form.lastName}</div>
         <div style={{ fontSize: 11, color: '#555', marginBottom: 6, letterSpacing: 0.5 }}>{form.title}</div>
         <div style={{ height: 1, width: 80, background: accentColor, margin: '0 auto 6px' }} />
@@ -296,10 +298,12 @@ function ExecutivePreview({ form, photo, accentColor, fontFamily }: { form: CVFo
     <div style={{ fontFamily, fontSize: 13 }}>
       <div style={{ height: 2, background: '#111', marginBottom: 14 }} />
       <div style={{ textAlign: 'center', marginBottom: 10 }}>
-        {photo
-          ? <img src={photo} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ccc', marginBottom: 8 }} />
-          : <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><Initials firstName={form.firstName} lastName={form.lastName} bg="#f5f5f5" size={48} /></div>
-        }
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          {photo
+            ? <img src={photo} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '1px solid #ccc' }} />
+            : <Initials firstName={form.firstName} lastName={form.lastName} bg="#f5f5f5" size={48} />
+          }
+        </div>
         <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: 2, textTransform: 'uppercase', color: '#111', marginBottom: 3 }}>{form.firstName} {form.lastName}</div>
         <div style={{ fontSize: 10, color: '#555', letterSpacing: 0.8, marginBottom: 5 }}>{form.title}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 5 }}>
