@@ -73,7 +73,7 @@ function ClassicPreview({ form, photo, accentColor, fontFamily }: { form: CVForm
           </div>
         </div>
       </div>
-      {form.summary && <><SectionTitle color={accentColor}>Profil professionnel</SectionTitle><p style={{ fontSize: 11, lineHeight: 1.7, margin: '0 0 8px', color: '#333' }}>{form.summary}</p></>}
+      {form.summary && <><SectionTitle color={accentColor}>Profil professionnel</SectionTitle><p style={{ fontSize: 11, lineHeight: 1.7, margin: '0 0 8px', color: '#333' , whiteSpace: 'pre-wrap' }}>{form.summary}</p></>}
       {form.experiences?.length > 0 && <><SectionTitle color={accentColor}>Expériences</SectionTitle>{form.experiences.map((exp, i) => <ExpBlock key={i} exp={exp} accentColor={accentColor} />)}</>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 8 }}>
         {form.education?.length > 0 && (
@@ -128,7 +128,7 @@ function ModernPreview({ form, photo, accentColor, fontFamily }: { form: CVFormD
         )}
       </div>
       <div style={{ padding: '20px 18px' }}>
-        {form.summary && <><SectionTitle color={accentColor}>Profil professionnel</SectionTitle><p style={{ fontSize: 11, lineHeight: 1.7, margin: '0 0 8px', color: '#333' }}>{form.summary}</p></>}
+        {form.summary && <><SectionTitle color={accentColor}>Profil professionnel</SectionTitle><p style={{ fontSize: 11, lineHeight: 1.7, margin: '0 0 8px', color: '#333' , whiteSpace: 'pre-wrap' }}>{form.summary}</p></>}
         {form.experiences?.length > 0 && <><SectionTitle color={accentColor}>Expériences</SectionTitle>{form.experiences.map((exp, i) => <ExpBlock key={i} exp={exp} accentColor={accentColor} showBar />)}</>}
       </div>
     </div>
@@ -149,7 +149,7 @@ function MinimalPreview({ form, photo, accentColor, fontFamily }: { form: CVForm
         </div>
       </div>
       <div style={{ height: 0.5, background: '#ddd', margin: '10px 0' }} />
-      {form.summary && <p style={{ fontSize: 11, lineHeight: 1.7, color: '#333', margin: '0 0 8px' }}>{form.summary}</p>}
+      {form.summary && <p style={{ fontSize: 11, lineHeight: 1.7, color: '#333', margin: '0 0 8px' , whiteSpace: 'pre-wrap' }}>{form.summary}</p>}
       {form.experiences?.length > 0 && (
         <>
           <div style={{ fontSize: 10, fontWeight: 900, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7, marginTop: 12 }}>— Expériences</div>
@@ -197,7 +197,7 @@ function ElegantPreview({ form, photo, accentColor, fontFamily }: { form: CVForm
         <div style={{ fontSize: 10, color: '#888' }}>{contact}</div>
       </div>
       <div style={{ height: 0.5, background: '#ddd', margin: '10px 0' }} />
-      {form.summary && <><SectionTitle color={accentColor}>Profil</SectionTitle><p style={{ fontSize: 11, lineHeight: 1.7, color: '#333', textAlign: 'center', margin: '0 0 8px' }}>{form.summary}</p></>}
+      {form.summary && <><SectionTitle color={accentColor}>Profil</SectionTitle><p style={{ fontSize: 11, lineHeight: 1.7, color: '#333', textAlign: 'center', margin: '0 0 8px' , whiteSpace: 'pre-wrap' }}>{form.summary}</p></>}
       {form.experiences?.length > 0 && <><SectionTitle color={accentColor}>Expériences professionnelles</SectionTitle>{form.experiences.map((exp, i) => <ExpBlock key={i} exp={exp} accentColor={accentColor} />)}</>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 8 }}>
         {form.education?.length > 0 && (
@@ -246,7 +246,7 @@ function CreativePreview({ form, photo, accentColor, fontFamily }: { form: CVFor
               <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Profil professionnel</div>
               <div style={{ flex: 1, height: 0.5, background: '#eee' }} />
             </div>
-            <p style={{ fontSize: 11, lineHeight: 1.7, color: '#333', margin: '0 0 8px' }}>{form.summary}</p>
+            <p style={{ fontSize: 11, lineHeight: 1.7, color: '#333', margin: '0 0 8px' , whiteSpace: 'pre-wrap' }}>{form.summary}</p>
           </>
         )}
         {form.experiences?.length > 0 && (
@@ -314,7 +314,7 @@ function ExecutivePreview({ form, photo, accentColor, fontFamily }: { form: CVFo
         <div style={{ fontSize: 10, color: '#888' }}>{contact}</div>
       </div>
       <div style={{ height: 0.5, background: '#ddd', margin: '8px 0' }} />
-      {form.summary && <><SectionTitle color={accentColor}>Profil professionnel</SectionTitle><p style={{ fontSize: 11, lineHeight: 1.7, color: '#333', margin: '0 0 8px' }}>{form.summary}</p></>}
+      {form.summary && <><SectionTitle color={accentColor}>Profil professionnel</SectionTitle><p style={{ fontSize: 11, lineHeight: 1.7, color: '#333', margin: '0 0 8px' , whiteSpace: 'pre-wrap' }}>{form.summary}</p></>}
       {form.experiences?.length > 0 && <><SectionTitle color={accentColor}>Expériences professionnelles</SectionTitle>{form.experiences.map((exp, i) => <ExpBlock key={i} exp={exp} accentColor={accentColor} />)}</>}
       {form.education?.length > 0 && (
         <>
