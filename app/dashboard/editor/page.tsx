@@ -877,6 +877,7 @@ function EditorContent() {
                 <div style={{ padding: '1.5rem' }}>
                   <Step4Generate
                     form={form}
+                    recommandations={jobContext?.ats?.recommandations || []}
                     onGenerated={setGeneratedCV}
                     onFormUpdate={enriched => {
                       setRawForm(r => r ?? form); // capture le CV brut une seule fois
