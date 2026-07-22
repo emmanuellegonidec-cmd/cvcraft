@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { CVFormData, Experience, Education } from '@/lib/types';
 import { TemplateId, FontId, templateSupportsPhoto } from '@/lib/cv-config';
 
@@ -54,17 +54,36 @@ export function Step3Form({
 }: Props) {
   const photoRef = useRef<HTMLInputElement>(null);
 
+  // ── Accordéon des expériences ──
+  // Plusieurs expériences peuvent être ouvertes en même temps.
+  const [openExps, setOpenExps] = useState<Record<string, boolean>>({});
+  const didInitOpen = useRef(false);
+  useEffect(() => {
+    const exps = form.experiences || [];
+    if (!didInitOpen.current && exps.length > 0) {
+      didInitOpen.current = true;
+      setOpenExps({ [exps[0].id]: true }); // 1ʳᵉ expérience ouverte par défaut
+    }
+  }, [form.experiences]);
+  function toggleExp(id: string) {
+    setOpenExps(prev => ({ ...prev, [id]: !prev[id] }));
+  }
+
   function setField(field: keyof CVFormData, value: string) {
     onFormChange({ ...form, [field]: value });
   }
 
   function addExp() {
+    const id = uid();
     onFormChange({
       ...form,
       experiences: [...(form.experiences || []), {
-        id: uid(), role: '', company: '', start: '', end: '', description: '',
+        id, role: '', company: '', start: '', end: '', description: '',
       }],
     });
+    // Nouvelle expérience ouverte automatiquement pour la remplir tout de suite.
+    setOpenExps(prev => ({ ...prev, [id]: true }));
+    didInitOpen.current = true;
   }
 
   function updateExp(id: string, field: keyof Experience, val: string) {
@@ -81,6 +100,7 @@ export function Step3Form({
       ...form,
       experiences: (form.experiences || []).filter(e => e.id !== id),
     });
+    setOpenExps(prev => { const n = { ...prev }; delete n[id]; return n; });
   }
 
   function addEdu() {
@@ -212,46 +232,69 @@ export function Step3Form({
       {/* ── EXPÉRIENCES ── */}
       <div style={sectionStyle}>
         <div style={sectionLabelStyle}>Expériences</div>
-        {(form.experiences || []).map(exp => (
-          <div key={exp.id} style={{ borderTop: '2px solid #eee', paddingTop: 10, marginTop: 10 }}>
-            <button
-              onClick={() => removeExp(exp.id)}
-              style={{ float: 'right', fontSize: 10, fontWeight: 800, color: '#E8151B', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}
-            >
-              ✕ Supprimer
-            </button>
-            <div style={row2Style}>
-              <div>
-                <label style={fieldLabelStyle}>Poste</label>
-                <input style={inputStyle} value={exp.role} onChange={e => updateExp(exp.id, 'role', e.target.value)} placeholder="Directrice Marketing" />
+        {(form.experiences || []).map(exp => {
+          const isOpen = !!openExps[exp.id];
+          const titre = [exp.role, exp.company].filter(Boolean).join(' · ') || 'Nouvelle expérience';
+          const dates = [exp.start, exp.end].filter(Boolean).join(' – ');
+          return (
+            <div key={exp.id} style={{ border: '2px solid #111', borderRadius: 7, marginBottom: 8, overflow: 'hidden' }}>
+              {/* En-tête cliquable : replie / déplie */}
+              <div
+                onClick={() => toggleExp(exp.id)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '8px 10px', cursor: 'pointer', background: isOpen ? '#FFFBF0' : '#fff', borderBottom: isOpen ? '2px solid #111' : 'none' }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#111', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {titre}{dates && <span style={{ color: '#888', fontWeight: 600 }}> · {dates}</span>}
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 900, color: isOpen ? '#111' : '#888', flexShrink: 0 }}>{isOpen ? '▲' : '▼'}</span>
               </div>
-              <div>
-                <label style={fieldLabelStyle}>Entreprise</label>
-                <input style={inputStyle} value={exp.company} onChange={e => updateExp(exp.id, 'company', e.target.value)} placeholder="Acme" />
-              </div>
+
+              {/* Corps : visible seulement si ouvert */}
+              {isOpen && (
+                <div style={{ padding: '10px' }}>
+                  <div style={row2Style}>
+                    <div>
+                      <label style={fieldLabelStyle}>Poste</label>
+                      <input style={inputStyle} value={exp.role} onChange={e => updateExp(exp.id, 'role', e.target.value)} placeholder="Directrice Marketing" />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>Entreprise</label>
+                      <input style={inputStyle} value={exp.company} onChange={e => updateExp(exp.id, 'company', e.target.value)} placeholder="Acme" />
+                    </div>
+                  </div>
+                  <div style={row2Style}>
+                    <div>
+                      <label style={fieldLabelStyle}>Début</label>
+                      <input style={inputStyle} value={exp.start} onChange={e => updateExp(exp.id, 'start', e.target.value)} placeholder="Jan 2022" />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>Fin</label>
+                      <input style={inputStyle} value={exp.end} onChange={e => updateExp(exp.id, 'end', e.target.value)} placeholder="Présent" />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={fieldLabelStyle}>Description</label>
+                    <textarea
+                      style={{ ...inputStyle, resize: 'vertical', minHeight: 46 }}
+                      value={exp.description}
+                      onChange={e => updateExp(exp.id, 'description', e.target.value)}
+                      rows={2}
+                      placeholder="Missions et réalisations..."
+                    />
+                  </div>
+                  <div style={{ textAlign: 'right', marginTop: 6 }}>
+                    <button
+                      onClick={() => removeExp(exp.id)}
+                      style={{ fontSize: 10, fontWeight: 800, color: '#E8151B', background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}
+                    >
+                      ✕ Supprimer
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-            <div style={row2Style}>
-              <div>
-                <label style={fieldLabelStyle}>Début</label>
-                <input style={inputStyle} value={exp.start} onChange={e => updateExp(exp.id, 'start', e.target.value)} placeholder="Jan 2022" />
-              </div>
-              <div>
-                <label style={fieldLabelStyle}>Fin</label>
-                <input style={inputStyle} value={exp.end} onChange={e => updateExp(exp.id, 'end', e.target.value)} placeholder="Présent" />
-              </div>
-            </div>
-            <div>
-              <label style={fieldLabelStyle}>Description</label>
-              <textarea
-                style={{ ...inputStyle, resize: 'vertical' }}
-                value={exp.description}
-                onChange={e => updateExp(exp.id, 'description', e.target.value)}
-                rows={2}
-                placeholder="Missions et réalisations..."
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
         <button
           onClick={addExp}
           style={{ fontSize: 12, fontWeight: 800, color: '#111', background: '#F5C400', border: '2px solid #111', borderRadius: 6, cursor: 'pointer', padding: '5px 10px', marginTop: 8, fontFamily: FONT, boxShadow: '2px 2px 0 #111' }}
