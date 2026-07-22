@@ -561,13 +561,16 @@ function EditorContent() {
                     <PrefillButton />
                   </div>
                   <div style={{ padding: '1.5rem', overflowY: 'auto', background: '#F7F6F3' }}>
-                    <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT, marginBottom: 14 }}>
-                      Aperçu du template
-                    </div>
-                    {/* Session 14 : avertissement — l'aperçu utilise un contenu de démonstration,
-                        pas les vraies informations de l'utilisateur (celles-ci arrivent à l'étape suivante). */}
-                    <div style={{ background: '#FFF3CD', border: '2px solid #111', borderRadius: 8, padding: '10px 14px', marginBottom: 14, boxShadow: '2px 2px 0 #111', fontSize: 12.5, color: '#111', fontFamily: FONT, fontWeight: 600, lineHeight: 1.5 }}>
-                      ⚠️ <strong style={{ fontWeight: 800 }}>Contenu de démonstration</strong> — cet aperçu montre uniquement le style du modèle. Vos vraies informations seront ajoutées à l&apos;étape suivante.
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 11, fontWeight: 900, color: '#111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: FONT }}>
+                        Aperçu du template
+                      </div>
+                      {/* Session 14 : étiquette compacte "démo" (remplace l'ancienne grande bannière
+                          pour laisser voir la feuille A4 en entier). Détail complet au survol. */}
+                      <div title="Cet aperçu montre uniquement le style du modèle. Vos vraies informations seront ajoutées à l'étape suivante."
+                        style={{ background: '#FFF3CD', border: '2px solid #111', borderRadius: 6, padding: '3px 9px', boxShadow: '2px 2px 0 #111', fontSize: 10, fontWeight: 800, color: '#111', fontFamily: FONT, whiteSpace: 'nowrap' }}>
+                        ⚠️ Contenu de démonstration
+                      </div>
                     </div>
                     <CVPreviewWrapper form={{ ...defaultFormData, ...DEMO_FORM }} photo={shownPhoto} template={template} accentColor={accentColor} font={font} />
                   </div>
