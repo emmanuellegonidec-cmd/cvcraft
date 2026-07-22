@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useState, useEffect } from 'react';
 import { CVFormData } from '@/lib/types';
 import { TemplateId, splitSkills } from '@/lib/cv-config';
 
@@ -336,16 +337,82 @@ function ExecutivePreview({ form, photo, accentColor, fontFamily }: { form: CVFo
   );
 }
 
+// ─── APERÇU MULTI-PAGES A4 ────────────────────────────────────────────
+// L'aperçu est découpé en feuilles au format A4 (ratio 210 × 297). Chaque
+// feuille est une "fenêtre" sur le même contenu, décalée d'une hauteur de
+// page : on obtient 1, 2 pages ou plus selon la longueur du CV, sans avoir
+// à couper le contenu en morceaux. La coupure est visuelle et approchée
+// (le PDF final peut couper à quelques lignes près).
+const A4_RATIO = 297 / 210;   // hauteur / largeur d'une page A4
+const PAGE_PAD_TOP = 24;      // marge haute (px)
+const PAGE_PAD_SIDE = 24;     // marges gauche/droite (px)
+const SHEET_MAX_WIDTH = 560;  // largeur max d'une feuille (px)
+
 export function CVPreview({ form, photo, template, accentColor, fontFamily }: Props) {
   const props = { form, photo, accentColor, fontFamily };
+  const content =
+    template === 'modern'    ? <ModernPreview    {...props} /> :
+    template === 'minimal'   ? <MinimalPreview   {...props} /> :
+    template === 'elegant'   ? <ElegantPreview   {...props} /> :
+    template === 'creative'  ? <CreativePreview  {...props} /> :
+    template === 'executive' ? <ExecutivePreview {...props} /> :
+                               <ClassicPreview   {...props} />;
+
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [sheetW, setSheetW] = useState(0);
+  const [pages, setPages] = useState(1);
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const measure = () => {
+      const w = wrap.clientWidth;
+      if (!w) return;
+      const sheetH = w * A4_RATIO;
+      const fullH = contentRef.current?.scrollHeight || 0;
+      setSheetW(w);
+      setPages(Math.max(1, Math.ceil(fullH / Math.max(1, sheetH))));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, [form, photo, template, accentColor, fontFamily]);
+
+  const sheetH = sheetW * A4_RATIO;
+
   return (
-    <div style={{ background: '#fff', border: '2px solid #111', borderRadius: 10, padding: '1.5rem', boxShadow: '4px 4px 0 #111', overflowY: 'auto', maxHeight: 'calc(100vh - 200px)', fontFamily }}>
-      {template === 'modern'    && <ModernPreview    {...props} />}
-      {template === 'minimal'   && <MinimalPreview   {...props} />}
-      {template === 'elegant'   && <ElegantPreview   {...props} />}
-      {template === 'creative'  && <CreativePreview  {...props} />}
-      {template === 'executive' && <ExecutivePreview {...props} />}
-      {(template === 'classic' || !template) && <ClassicPreview {...props} />}
+    <div ref={wrapRef} style={{ width: '100%', maxWidth: SHEET_MAX_WIDTH, margin: '0 auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 22 }}>
+        {Array.from({ length: pages }).map((_, i) => (
+          <div key={i} aria-hidden={i > 0}
+            style={{
+              width: '100%',
+              height: sheetW ? sheetH : undefined,
+              aspectRatio: sheetW ? undefined : '210 / 297',
+              background: '#fff',
+              border: '2px solid #111',
+              borderRadius: 10,
+              boxShadow: '4px 4px 0 #111',
+              overflow: 'hidden',
+              position: 'relative',
+              fontFamily,
+            }}>
+            <div
+              ref={i === 0 ? contentRef : undefined}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: -(i * sheetH),
+                padding: `${PAGE_PAD_TOP}px ${PAGE_PAD_SIDE}px 0`,
+              }}>
+              {content}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
