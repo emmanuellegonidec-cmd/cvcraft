@@ -47,7 +47,7 @@ export function Step6Save({
   }
 
   // Enregistrement du CV éditable dans "Mes CV" (table cvs). Peut lever une exception.
-  async function postToMesCv() {
+  async function postToMesCv(skipReplace = false) {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token || (window as any).__jfmj_token || '';
@@ -80,8 +80,10 @@ export function Step6Save({
     }
     if (!savedId && json?.cv?.id) {
       setSavedId(json.cv.id);
-      const q = jobId ? `?id=${json.cv.id}&job_id=${jobId}` : `?id=${json.cv.id}`;
-      router.replace(`/dashboard/editor${q}`);
+      if (!skipReplace) {
+        const q = jobId ? `?id=${json.cv.id}&job_id=${jobId}` : `?id=${json.cv.id}`;
+        router.replace(`/dashboard/editor${q}`);
+      }
     }
   }
 
@@ -107,8 +109,8 @@ export function Step6Save({
     setIsSaving(true);
     setSaveMsg('');
     try {
-      // 1. On garde une copie éditable dans Mes CV.
-      await postToMesCv();
+      // 1. On garde une copie éditable dans Mes CV (sans changer l'URL, on va rediriger).
+      await postToMesCv(true);
 
       // 2. On dépose le PDF dans le dossier de l'offre (job-documents/{userId}/{jobId}/CV-....pdf).
       const supabase = createClient();
@@ -127,8 +129,8 @@ export function Step6Save({
         throw new Error('CV enregistré dans Mes CV, mais l\'attachement à l\'offre a échoué : ' + upErr.message);
       }
 
-      setSaveMsg('✅ Enregistré sur l\'offre !');
-      setTimeout(() => setSaveMsg(''), 3000);
+      setSaveMsg('✅ Enregistré sur l\'offre ! Redirection...');
+      setTimeout(() => router.push(`/dashboard/job/${jobId}`), 1200);
     } catch (e: any) {
       setSaveMsg('❌ ' + (e?.message || 'Erreur inconnue'));
     } finally {
