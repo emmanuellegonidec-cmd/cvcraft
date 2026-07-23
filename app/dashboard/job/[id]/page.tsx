@@ -70,6 +70,7 @@ interface Job {
   cv_sent: boolean; cover_letter_sent: boolean; cv_url: string | null; cover_letter_url: string | null
   ats_score: number | null; ats_keywords: { present: string[]; missing: string[] } | null
   ats_score_optimized: number | null; ats_score_optimized_at: string | null
+  ats_result: { score_global?: number } | null
   created_at: string; applied_at: string | null
   interview_at: string | null; interview_time: string | null; interview_time_end: string | null
   interview_type: string | null; interview_contact_id: string | null
@@ -641,7 +642,8 @@ export default function JobDetailPage() {
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#999', fontWeight: 700, fontSize: 15 }}>Chargement…</p></div>
   if (!job) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#E8151B', fontWeight: 700, fontSize: 15 }}>Offre introuvable.</p></div>
 
-  const atsScore = job.ats_score ?? null
+  // Le score de départ est stocké dans ats_result.score_global (ats_score n'est pas renseigné par l'analyse).
+  const atsScore = job.ats_score ?? (typeof job.ats_result?.score_global === 'number' ? job.ats_result.score_global : null)
   // Score obtenu après optimisation du CV via le CV Creator (le score de départ reste inchangé).
   const atsScoreOpt = job.ats_score_optimized ?? null
   const atsKw = job.ats_keywords ?? { present: [], missing: [] }
@@ -724,7 +726,7 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {(atsScore !== null || atsKw.present.length > 0 || atsKw.missing.length > 0) && (
+        {(atsScore !== null || atsScoreOpt !== null || atsKw.present.length > 0 || atsKw.missing.length > 0) && (
           <div style={{ ...card, border: '1.5px solid #F5C400', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
             {atsScore !== null && (
               <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
