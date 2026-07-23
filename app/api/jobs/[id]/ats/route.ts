@@ -4,6 +4,13 @@ import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 
 // ============================================================================
+// QUOTA COMPTE GRATUIT
+// Nombre maximum d'offres différentes analysables par un compte gratuit.
+// Les 3 analyses par offre restent inchangées.
+// ============================================================================
+const FREE_JOBS_LIMIT = 3
+
+// ============================================================================
 // SYSTEM PROMPT — Grille ATS cachée côté serveur (non exposée au user/concurrent)
 // ============================================================================
 const ATS_SYSTEM_PROMPT = `Tu es un système ATS (Applicant Tracking System) professionnel.
@@ -187,6 +194,26 @@ async function getAuth(request: NextRequest) {
 }
 
 // ============================================================================
+// ADMIN — Détection du compte administrateur (aucune limite)
+// S'appuie sur la table existante public.admin_users.
+// La règle RLS "auth.email() = email" garantit qu'un utilisateur ne peut
+// lire que sa propre ligne : un non-admin ne recevra jamais de résultat.
+// ============================================================================
+async function isAdminUser(supabase: any, email?: string | null): Promise<boolean> {
+  if (!email) return false
+  const { data, error } = await supabase
+    .from('admin_users')
+    .select('email')
+    .eq('email', email)
+    .maybeSingle()
+  if (error) {
+    console.error('Erreur vérification admin:', error)
+    return false
+  }
+  return !!data
+}
+
+// ============================================================================
 // HELPERS — Analyse fichier côté serveur
 // ============================================================================
 function formatPoids(bytes: number): string {
@@ -238,6 +265,9 @@ export async function POST(
 
     const jobId = params.id
 
+    // Le compte administrateur n'est soumis à aucune limite
+    const isAdmin = await isAdminUser(supabase, user.email)
+
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .select('id, title, company, description, user_id, cv_url, ats_analysis_count')
@@ -257,11 +287,38 @@ export async function POST(
     }
 
     const currentCount = job.ats_analysis_count || 0
-    if (currentCount >= 3) {
+    if (!isAdmin && currentCount >= 3) {
       return NextResponse.json(
         { error: 'Limite de 3 analyses ATS atteinte pour cette offre.' },
         { status: 429 }
       )
+    }
+
+    // ------------------------------------------------------------------------
+    // QUOTA COMPTE GRATUIT — nombre d'offres différentes analysées
+    // Vérifié uniquement s'il s'agit de la 1re analyse de cette offre.
+    // Les 2e et 3e analyses d'une offre déjà comptée passent toujours.
+    // ------------------------------------------------------------------------
+    if (!isAdmin && currentCount === 0) {
+      const { count: analyzedJobs, error: countError } = await supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gt('ats_analysis_count', 0)
+
+      if (countError) {
+        console.error('Erreur comptage quota offres:', countError)
+      } else if ((analyzedJobs || 0) >= FREE_JOBS_LIMIT) {
+        return NextResponse.json(
+          {
+            error: `Tu as atteint la limite de ${FREE_JOBS_LIMIT} offres analysées de ton compte gratuit. Tu peux toujours relancer une analyse sur une offre déjà analysée (3 maximum par offre).`,
+            code: 'FREE_QUOTA_REACHED',
+            offres_analysees: analyzedJobs || 0,
+            limite: FREE_JOBS_LIMIT,
+          },
+          { status: 429 }
+        )
+      }
     }
 
     const cvResponse = await fetch(job.cv_url)
@@ -299,9 +356,7 @@ Rappel :
       model: 'claude-sonnet-5',
       max_tokens: 8000,
       thinking: { type: 'disabled' },
-      system: [
-        { type: 'text', text: ATS_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-      ],
+      system: ATS_SYSTEM_PROMPT,
       messages: [
         {
           role: 'user',
@@ -378,7 +433,8 @@ Rappel :
     return NextResponse.json({
       success: true,
       result: atsResult,
-      analyses_restantes: 3 - (currentCount + 1),
+      analyses_restantes: isAdmin ? 999 : 3 - (currentCount + 1),
+      is_admin: isAdmin,
     })
   } catch (err: any) {
     console.error('Erreur API ATS:', err)

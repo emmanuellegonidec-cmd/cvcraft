@@ -4,6 +4,13 @@ import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 
 // ============================================================================
+// QUOTA COMPTE GRATUIT
+// Nombre maximum d'offres différentes analysables par un compte gratuit.
+// Doit rester identique à app/api/jobs/[id]/ats/route.ts
+// ============================================================================
+const FREE_JOBS_LIMIT = 3
+
+// ============================================================================
 // CORS — autorise les appels depuis l'extension Chrome (chrome-extension://*)
 // ============================================================================
 const corsHeaders = {
@@ -202,6 +209,26 @@ async function getAuth(request: NextRequest) {
 }
 
 // ============================================================================
+// ADMIN — Détection du compte administrateur (aucune limite)
+// S'appuie sur la table existante public.admin_users.
+// La règle RLS "auth.email() = email" garantit qu'un utilisateur ne peut
+// lire que sa propre ligne : un non-admin ne recevra jamais de résultat.
+// ============================================================================
+async function isAdminUser(supabase: any, email?: string | null): Promise<boolean> {
+  if (!email) return false
+  const { data, error } = await supabase
+    .from('admin_users')
+    .select('email')
+    .eq('email', email)
+    .maybeSingle()
+  if (error) {
+    console.error('Erreur vérification admin:', error)
+    return false
+  }
+  return !!data
+}
+
+// ============================================================================
 // HELPERS — Analyse fichier côté serveur (identique à la route ATS originale)
 // ============================================================================
 function formatPoids(bytes: number): string {
@@ -251,6 +278,9 @@ export async function POST(
     }
 
     const jobId = params.id
+
+    // Le compte administrateur n'est soumis à aucune limite
+    const isAdmin = await isAdminUser(supabase, user.email)
 
     // Body
     const body = await request.json()
@@ -308,7 +338,7 @@ export async function POST(
 
     // Limite 3 analyses par offre (héritée de la route ATS originale)
     const currentCount = job.ats_analysis_count || 0
-    if (currentCount >= 3) {
+    if (!isAdmin && currentCount >= 3) {
       return NextResponse.json(
         {
           error: 'Limite de 3 analyses ATS atteinte pour cette offre.',
@@ -316,6 +346,33 @@ export async function POST(
         },
         { status: 429, headers: corsHeaders }
       )
+    }
+
+    // ------------------------------------------------------------------------
+    // QUOTA COMPTE GRATUIT — nombre d'offres différentes analysées
+    // Vérifié uniquement s'il s'agit de la 1re analyse de cette offre.
+    // Les 2e et 3e analyses d'une offre déjà comptée passent toujours.
+    // ------------------------------------------------------------------------
+    if (!isAdmin && currentCount === 0) {
+      const { count: analyzedJobs, error: countError } = await supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gt('ats_analysis_count', 0)
+
+      if (countError) {
+        console.error('Erreur comptage quota offres:', countError)
+      } else if ((analyzedJobs || 0) >= FREE_JOBS_LIMIT) {
+        return NextResponse.json(
+          {
+            error: `Tu as atteint la limite de ${FREE_JOBS_LIMIT} offres analysées de ton compte gratuit. Tu peux toujours relancer une analyse sur une offre déjà analysée (3 maximum par offre).`,
+            code: 'FREE_QUOTA_REACHED',
+            offres_analysees: analyzedJobs || 0,
+            limite: FREE_JOBS_LIMIT,
+          },
+          { status: 429, headers: corsHeaders }
+        )
+      }
     }
 
     // Télécharger le PDF depuis le bucket Supabase Storage
@@ -445,7 +502,8 @@ Rappel :
       {
         success: true,
         result: atsResult,
-        analyses_restantes: 3 - (currentCount + 1),
+        analyses_restantes: isAdmin ? 999 : 3 - (currentCount + 1),
+        is_admin: isAdmin,
       },
       { headers: corsHeaders }
     )
