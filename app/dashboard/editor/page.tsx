@@ -253,6 +253,37 @@ function EditorContent() {
       const filePath = cvRef.slice('upload:'.length);
 
       const supabase = createClient();
+      const { data: { session: sessX } } = await supabase.auth.getSession();
+      const tokenX = sessX?.access_token || (window as any).__jfmj_token || '';
+
+      // Applique le contenu au formulaire (mémorisé ou fraîchement extrait).
+      const uid0 = () => Math.random().toString(36).slice(2, 9);
+      const applyPrefill = (dd: any) => {
+        setForm(prev => ({
+          ...prev,
+          ...dd,
+          targetJob: prev.targetJob || dd.targetJob || '',
+          experiences: (dd.experiences || []).map((e: any) => ({ ...e, id: uid0() })),
+          education: (dd.education || []).map((e: any) => ({ ...e, id: uid0() })),
+        }));
+        setPrefillStatus('done');
+        setStep(3);
+      };
+
+      // Ce CV a-t-il déjà été lu ? Si oui : instantané, sans appel à l'IA.
+      try {
+        const cachedRes = await fetch(`/api/cvs?extracted=${encodeURIComponent(cvRef)}`, {
+          headers: tokenX ? { Authorization: `Bearer ${tokenX}` } : {},
+        });
+        if (cachedRes.ok) {
+          const cj = await cachedRes.json();
+          if (cj?.extracted && Object.keys(cj.extracted).length > 0) {
+            applyPrefill(cj.extracted);
+            return;
+          }
+        }
+      } catch { /* pas de contenu mémorisé : on lit le PDF ci-dessous */ }
+
       const { data: fileData, error: dlError } = await supabase
         .storage
         .from('job-documents')
@@ -281,19 +312,21 @@ function EditorContent() {
       if (!res.ok) throw new Error(json.error || 'Extraction impossible.');
 
       const d = json.data || {};
-      const uid = () => Math.random().toString(36).slice(2, 9);
-      // Même mapping que Step2Import : on régénère des id pour les listes.
-      setForm(prev => ({
-        ...prev,
-        ...d,
-        // On conserve le poste visé déjà pré-rempli depuis l'offre s'il existe.
-        targetJob: prev.targetJob || d.targetJob || '',
-        experiences: (d.experiences || []).map((e: any) => ({ ...e, id: uid() })),
-        education: (d.education || []).map((e: any) => ({ ...e, id: uid() })),
-      }));
 
-      setPrefillStatus('done');
-      setStep(3); // on saute l'écran d'import et on va directement vérifier les infos
+      // On mémorise le résultat : les prochaines fois seront gratuites et instantanées.
+      try {
+        await fetch('/api/cvs', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(tokenX ? { Authorization: `Bearer ${tokenX}` } : {}),
+          },
+          body: JSON.stringify({ ref: cvRef, extracted: d }),
+        });
+      } catch { /* échec de mémorisation : sans conséquence */ }
+
+      // Même mapping que Step2Import : on régénère des id pour les listes.
+      applyPrefill(d); // renseigne le formulaire et passe à l'étape 3
     } catch (e: any) {
       setPrefillStatus('error');
       setPrefillError(e?.message || 'Pré-remplissage impossible.');
