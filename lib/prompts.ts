@@ -4,39 +4,9 @@ import { CVFormData } from './types';
 // Structure : pipeline forcé en 3 étapes + 6 règles explicites + 1 exemple concret bon/mauvais.
 // Objectifs : préserver les chiffres source, injecter les keywords de façon éthique,
 // forme verbale à l'infinitif, narrative bridge dans le summary.
-export function buildGeneratePrompt(
-  data: CVFormData,
-  arbitrage?: { appliquer?: string[]; ignorer?: string[] },
-): string {
-  let p = `Tu es un expert en rédaction de CV ATS-friendly. Tu optimises ce CV en ${data.lang}, ton ${data.tone}.\n`;
+// Partie FIXE du prompt de génération (identique à chaque appel) → mise en cache Anthropic.
+export const GENERATE_SYSTEM_PROMPT = `Tu es un expert en rédaction de CV ATS-friendly.
 
-  if (data.targetJob) {
-    p += `\nPOSTE VISÉ : "${data.targetJob}"
-Adapte le vocabulaire et le cadrage du contenu pour ce type de poste. Mets en avant en priorité les expériences et compétences les plus pertinentes pour ce poste (sans jamais en inventer).\n`;
-  } else {
-    p += `\nAucun poste visé n'est renseigné — optimise le CV de manière générique, professionnelle et ATS-friendly, en restant fidèle aux données fournies.\n`;
-  }
-
-  // Améliorations arbitrées par l'utilisateur (écran 4).
-  // Section injectée uniquement si l'utilisateur a fait des choix.
-  const arbAppliquer = (arbitrage?.appliquer || []).filter(Boolean);
-  const arbIgnorer = (arbitrage?.ignorer || []).filter(Boolean);
-  if (arbAppliquer.length > 0 || arbIgnorer.length > 0) {
-    p += `\n=== AMÉLIORATIONS ARBITRÉES PAR L'UTILISATEUR ===\n`;
-    p += `L'utilisateur a examiné les recommandations issues de l'analyse ATS et a fait des choix explicites que tu DOIS respecter.\n`;
-    if (arbAppliquer.length > 0) {
-      p += `\nAMÉLIORATIONS À APPLIQUER (validées ou reformulées par l'utilisateur) :\n`;
-      p += arbAppliquer.map((a) => `- ${a}`).join('\n') + `\n`;
-      p += `Applique ces améliorations en priorité, dans le strict respect des règles ci-dessous — notamment la préservation des chiffres (Règle #1) et l'interdiction absolue d'inventer quoi que ce soit d'absent du profil (Règle #5).\n`;
-    }
-    if (arbIgnorer.length > 0) {
-      p += `\nAMÉLIORATIONS REFUSÉES PAR L'UTILISATEUR (à NE PAS appliquer) :\n`;
-      p += arbIgnorer.map((a) => `- ${a}`).join('\n') + `\n`;
-      p += `Ne mets PAS en œuvre ces changements : respecte le choix de l'utilisateur.\n`;
-    }
-  }
-
-  p += `
 === FORMAT DE SORTIE ===
 Tu retournes UNIQUEMENT un objet JSON valide, sans markdown, sans backticks, sans texte avant ou après.
 
@@ -142,8 +112,41 @@ Gérer un budget annuel de 1,4 M€ en optimisant le ROI par canal"
 ❌ MAUVAISE RÉÉCRITURE (chiffres perdus, vocabulaire flou, forme verbale conjuguée) :
 "Pilote la stratégie de campagnes marketing digital à forte valeur ajoutée sur le segment premium
 Optimise significativement les performances CRM via un programme personnalisé
-Gère un budget conséquent en assurant un ROI optimal"
+Gère un budget conséquent en assurant un ROI optimal"`;
 
+export function buildGeneratePrompt(
+  data: CVFormData,
+  arbitrage?: { appliquer?: string[]; ignorer?: string[] },
+): string {
+  let p = `Optimise ce CV en ${data.lang}, ton ${data.tone}.\n`;
+
+  if (data.targetJob) {
+    p += `\nPOSTE VISÉ : "${data.targetJob}"
+Adapte le vocabulaire et le cadrage du contenu pour ce type de poste. Mets en avant en priorité les expériences et compétences les plus pertinentes pour ce poste (sans jamais en inventer).\n`;
+  } else {
+    p += `\nAucun poste visé n'est renseigné — optimise le CV de manière générique, professionnelle et ATS-friendly, en restant fidèle aux données fournies.\n`;
+  }
+
+  // Améliorations arbitrées par l'utilisateur (écran 4).
+  // Section injectée uniquement si l'utilisateur a fait des choix.
+  const arbAppliquer = (arbitrage?.appliquer || []).filter(Boolean);
+  const arbIgnorer = (arbitrage?.ignorer || []).filter(Boolean);
+  if (arbAppliquer.length > 0 || arbIgnorer.length > 0) {
+    p += `\n=== AMÉLIORATIONS ARBITRÉES PAR L'UTILISATEUR ===\n`;
+    p += `L'utilisateur a examiné les recommandations issues de l'analyse ATS et a fait des choix explicites que tu DOIS respecter.\n`;
+    if (arbAppliquer.length > 0) {
+      p += `\nAMÉLIORATIONS À APPLIQUER (validées ou reformulées par l'utilisateur) :\n`;
+      p += arbAppliquer.map((a) => `- ${a}`).join('\n') + `\n`;
+      p += `Applique ces améliorations en priorité, dans le strict respect des règles ci-dessous — notamment la préservation des chiffres (Règle #1) et l'interdiction absolue d'inventer quoi que ce soit d'absent du profil (Règle #5).\n`;
+    }
+    if (arbIgnorer.length > 0) {
+      p += `\nAMÉLIORATIONS REFUSÉES PAR L'UTILISATEUR (à NE PAS appliquer) :\n`;
+      p += arbIgnorer.map((a) => `- ${a}`).join('\n') + `\n`;
+      p += `Ne mets PAS en œuvre ces changements : respecte le choix de l'utilisateur.\n`;
+    }
+  }
+
+  p += `
 --- DONNÉES DU CV EN ENTRÉE ---
 
 {

@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
-import { buildGeneratePrompt } from '@/lib/prompts';
+import { buildGeneratePrompt, GENERATE_SYSTEM_PROMPT } from '@/lib/prompts';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
       model: 'claude-sonnet-5',
       max_tokens: 4000,
       thinking: { type: 'disabled' },
+      system: [{ type: 'text', text: GENERATE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: prompt }],
     } as any);
 
