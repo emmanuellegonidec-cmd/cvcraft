@@ -356,7 +356,9 @@ Rappel :
       model: 'claude-sonnet-5',
       max_tokens: 8000,
       thinking: { type: 'disabled' },
-      system: ATS_SYSTEM_PROMPT,
+      system: [
+        { type: 'text', text: ATS_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+      ],
       messages: [
         {
           role: 'user',
