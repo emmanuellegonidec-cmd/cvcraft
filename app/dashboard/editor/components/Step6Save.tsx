@@ -112,14 +112,14 @@ export function Step6Save({
       // 1. On garde une copie éditable dans Mes CV (sans changer l'URL, on va rediriger).
       await postToMesCv(true);
 
-      // 2. On dépose le PDF dans le dossier de l'offre (job-documents/{userId}/{jobId}/CV-....pdf).
+      // 2. On dépose le PDF dans le dossier de l'offre.
+      //    Même convention que la page de l'offre : {userId}/{jobId}/cv.pdf (remplace le précédent).
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Session expirée, reconnecte-toi.');
 
       const blob = await onGetPdfBlob();
-      const safeName = (cvTitle || 'CV').replace(/[^a-zA-Z0-9-_]+/g, '_').slice(0, 60);
-      const path = `${user.id}/${jobId}/CV-${safeName || 'optimise'}-${Date.now()}.pdf`;
+      const path = `${user.id}/${jobId}/cv.pdf`;
 
       const { error: upErr } = await supabase.storage
         .from('job-documents')
@@ -127,6 +127,33 @@ export function Step6Save({
 
       if (upErr) {
         throw new Error('CV enregistré dans Mes CV, mais l\'attachement à l\'offre a échoué : ' + upErr.message);
+      }
+
+      // 3. On met à jour la fiche de l'offre : lien du CV + score après optimisation.
+      //    Sans le lien, la page de l'offre affiche "Aucun fichier" même si le PDF est déposé.
+      //    Le score de départ (ats_score) n'est pas touché : on garde les deux.
+      const { data: signedData } = await supabase.storage
+        .from('job-documents')
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+
+      const jobUpdates: any = {};
+      if (signedData?.signedUrl) jobUpdates.cv_url = signedData.signedUrl;
+      if (typeof newScore === 'number') {
+        jobUpdates.ats_score_optimized = newScore;
+        jobUpdates.ats_score_optimized_at = new Date().toISOString();
+      }
+
+      if (Object.keys(jobUpdates).length > 0) {
+        const { data: { session: sessJ } } = await supabase.auth.getSession();
+        const tokenJ = sessJ?.access_token || (window as any).__jfmj_token || '';
+        await fetch(`/api/jobs?id=${jobId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(tokenJ ? { Authorization: `Bearer ${tokenJ}` } : {}),
+          },
+          body: JSON.stringify(jobUpdates),
+        });
       }
 
       setSaveMsg('✅ Enregistré sur l\'offre ! Redirection...');
