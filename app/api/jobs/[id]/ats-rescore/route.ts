@@ -246,10 +246,25 @@ export async function POST(
 ${job.description || 'Description non disponible — signale-le dans erreurs.majeures et fixe matching à 0.'}
 
 Le CV au format PDF est joint. Applique rigoureusement la grille de notation /100.
-Rappel :
-- Compte bien la couverture keywords (étape 2) avant de scorer la dimension matching
-- Produis minimum 5 points forts, 5 points faibles et 4 recommandations priorisées
-- Chaque point doit être SPÉCIFIQUE au CV analysé (pas de généralités)`
+
+IMPORTANT — RÉPONSE ALLÉGÉE :
+Il s'agit d'un simple RE-CALCUL de score après optimisation du CV. Seuls les scores sont utilisés.
+Tu retournes UNIQUEMENT ce JSON, sans aucun autre champ :
+{
+  "scores": {
+    "format": <0-15>,
+    "lisibilite_ats": <0-15>,
+    "infos_obligatoires": <0-10>,
+    "structure": <0-10>,
+    "experiences": <0-25>,
+    "competences": <0-15>,
+    "matching": <0-10>
+  },
+  "score_global": <somme des 7 sous-scores>
+}
+
+N'inclus NI points_forts, NI points_faibles, NI recommandations, NI erreurs, NI aucun texte d'analyse.
+Rappel : compte bien la couverture keywords (étape 2) avant de scorer la dimension matching.`
 
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -257,7 +272,7 @@ Rappel :
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-5',
-      max_tokens: 8000,
+      max_tokens: 800,
       thinking: { type: 'disabled' },
       system: [
         { type: 'text', text: ATS_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
