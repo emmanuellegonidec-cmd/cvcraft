@@ -306,7 +306,8 @@ function EditorContent() {
   // Sélection d'un CV déjà en base. On garde le modèle/couleur/police choisis
   // à l'écran 1 (on ne charge QUE le contenu).
   // - CV créé  : on recharge son form_data directement.
-  // - CV importé (PDF) : l'IA le relit (extraction), même mécanisme que l'import.
+  // - CV importé (PDF) : on réutilise le contenu déjà mémorisé (gratuit, instantané) ;
+  //   sinon l'IA le lit une fois, puis on mémorise le résultat pour les fois suivantes.
   // En cas d'échec : on relance l'exception pour que l'écran 2 affiche le message.
   async function handlePickSavedCv(item: { ref: string; source: 'creator' | 'upload'; metadata?: { cv_id?: string } }) {
     const genId = () => Math.random().toString(36).slice(2, 9);
@@ -338,6 +339,35 @@ function EditorContent() {
       if (!item.ref.startsWith('upload:')) throw new Error('Ce CV ne peut pas être relu.');
       const filePath = item.ref.slice('upload:'.length);
       const supabase = createClient();
+      const { data: { session: sessU } } = await supabase.auth.getSession();
+      const tokenU = sessU?.access_token || (window as any).__jfmj_token || '';
+
+      // Applique le contenu du CV au formulaire (mémorisé ou fraîchement extrait).
+      const applyData = (d: any) => {
+        setForm(prev => ({
+          ...prev, ...d,
+          targetJob: prev.targetJob || d.targetJob || '',
+          experiences: (d.experiences || []).map((e: any) => ({ ...e, id: genId() })),
+          education: (d.education || []).map((e: any) => ({ ...e, id: genId() })),
+        }));
+        setStep(3);
+      };
+
+      // 1. Ce CV a-t-il déjà été lu ? Si oui : instantané et sans appel à l'IA.
+      try {
+        const cached = await fetch(`/api/cvs?extracted=${encodeURIComponent(item.ref)}`, {
+          headers: tokenU ? { Authorization: `Bearer ${tokenU}` } : {},
+        });
+        if (cached.ok) {
+          const cj = await cached.json();
+          if (cj?.extracted && Object.keys(cj.extracted).length > 0) {
+            applyData(cj.extracted);
+            return;
+          }
+        }
+      } catch { /* pas de contenu mémorisé : on lit le PDF ci-dessous */ }
+
+      // 2. Première lecture : on extrait le PDF via l'IA.
       const { data: fileData, error: dlError } = await supabase
         .storage.from('job-documents').download(filePath);
       if (dlError || !fileData) throw new Error('Impossible de récupérer ce CV depuis le stockage.');
@@ -355,13 +385,20 @@ function EditorContent() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Extraction impossible.');
       const d = json.data || {};
-      setForm(prev => ({
-        ...prev, ...d,
-        targetJob: prev.targetJob || d.targetJob || '',
-        experiences: (d.experiences || []).map((e: any) => ({ ...e, id: genId() })),
-        education: (d.education || []).map((e: any) => ({ ...e, id: genId() })),
-      }));
-      setStep(3);
+
+      // 3. On mémorise le résultat : les prochaines fois seront gratuites.
+      try {
+        await fetch('/api/cvs', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(tokenU ? { Authorization: `Bearer ${tokenU}` } : {}),
+          },
+          body: JSON.stringify({ ref: item.ref, extracted: d }),
+        });
+      } catch { /* échec de mémorisation : sans conséquence, on relira la prochaine fois */ }
+
+      applyData(d);
       return;
     }
 

@@ -40,6 +40,8 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const singleId = searchParams.get('id');
+  // Contenu déjà extrait d'un CV importé (évite de relire le PDF via l'IA).
+  const extractedRef = searchParams.get('extracted');
 
   // ─────────────────────────────────────────────────────────────
   // MODE "SINGLE CV" — si ?id=xxx est fourni, renvoie la ligne
@@ -71,13 +73,32 @@ export async function GET(req: NextRequest) {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // MODE "CONTENU EXTRAIT" — ?extracted=upload:{path}
+  // Renvoie le contenu déjà lu pour ce CV importé, s'il existe.
+  // ─────────────────────────────────────────────────────────────
+  if (extractedRef) {
+    try {
+      const { data: prof } = await supabase
+        .from('user_profiles')
+        .select('cv_extracted')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const map: Record<string, any> = prof?.cv_extracted || {};
+      return NextResponse.json({ extracted: map[extractedRef] || null });
+    } catch (err: any) {
+      console.error('GET /api/cvs?extracted=... exception:', err);
+      return NextResponse.json({ extracted: null });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // MODE "LISTE AGRÉGÉE" — comportement historique enrichi avec
   // is_reference et is_favorite (session 9bis-bis).
   // ─────────────────────────────────────────────────────────────
   try {
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('default_cv_ref, cv_display_names, cv_references, cv_favorites')
+      .select('default_cv_ref, cv_display_names, cv_references, cv_favorites, cv_extracted')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -85,6 +106,8 @@ export async function GET(req: NextRequest) {
     const displayNames: Record<string, string> = profile?.cv_display_names || {};
     const referenceRefs: string[] = Array.isArray(profile?.cv_references) ? profile.cv_references : [];
     const favoriteRefs: string[] = Array.isArray(profile?.cv_favorites) ? profile.cv_favorites : [];
+    // Indique si le contenu du CV a déjà été lu (réutilisation gratuite et instantanée).
+    const extractedMap: Record<string, any> = profile?.cv_extracted || {};
 
     // CV Creator
     const { data: creatorCvs } = await supabase
@@ -164,6 +187,7 @@ export async function GET(req: NextRequest) {
               file_name: (file as any).name,
               file_size: (file as any).metadata?.size || 0,
               is_reference_folder: true,
+              has_extracted: !!extractedMap[ref],
             };
           } else {
             const job = jobsMap[folderName];
@@ -175,6 +199,7 @@ export async function GET(req: NextRequest) {
               file_path: filePath,
               file_name: (file as any).name,
               file_size: (file as any).metadata?.size || 0,
+              has_extracted: !!extractedMap[ref],
             };
           }
 
@@ -282,7 +307,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { ref, display_name, is_default, is_reference, is_favorite } = body;
+    const { ref, display_name, is_default, is_reference, is_favorite, extracted } = body;
 
     if (!ref || typeof ref !== 'string') {
       return NextResponse.json({ error: 'ref requis' }, { status: 400 });
@@ -300,7 +325,7 @@ export async function PATCH(req: NextRequest) {
 
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('default_cv_ref, cv_display_names, cv_references, cv_favorites')
+      .select('default_cv_ref, cv_display_names, cv_references, cv_favorites, cv_extracted')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -347,6 +372,17 @@ export async function PATCH(req: NextRequest) {
         if (idx >= 0) currentFavs.splice(idx, 1);
       }
       updates.cv_favorites = currentFavs;
+    }
+
+    // ─── extracted (contenu lu du PDF, mémorisé pour éviter de relire) ───
+    if (extracted !== undefined) {
+      const currentExtracted: Record<string, any> = { ...(profile?.cv_extracted || {}) };
+      if (extracted === null) {
+        delete currentExtracted[ref];
+      } else {
+        currentExtracted[ref] = extracted;
+      }
+      updates.cv_extracted = currentExtracted;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -403,7 +439,7 @@ export async function DELETE(req: NextRequest) {
 
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('default_cv_ref, cv_display_names, cv_references, cv_favorites')
+      .select('default_cv_ref, cv_display_names, cv_references, cv_favorites, cv_extracted')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -423,6 +459,14 @@ export async function DELETE(req: NextRequest) {
     const refs: string[] = Array.isArray(profile?.cv_references) ? profile.cv_references : [];
     if (refs.includes(ref)) {
       cleanupUpdates.cv_references = refs.filter((r: string) => r !== ref);
+    }
+
+    // Nettoyage du contenu extrait mémorisé pour ce CV.
+    const extractedAll: Record<string, any> = profile?.cv_extracted || {};
+    if (extractedAll[ref]) {
+      const newExtracted = { ...extractedAll };
+      delete newExtracted[ref];
+      cleanupUpdates.cv_extracted = newExtracted;
     }
 
     const favs: string[] = Array.isArray(profile?.cv_favorites) ? profile.cv_favorites : [];
