@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import { validateSignupEmail } from '@/lib/emailValidation';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -21,6 +22,14 @@ export default function SignupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+
+    // Vérification de l'adresse email (format + emails jetables)
+    const emailCheck = validateSignupEmail(email);
+    if (!emailCheck.valid) {
+      setError(emailCheck.error || "Adresse email invalide.");
+      return;
+    }
+
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas.'); return; }
     if (password.length < 8) { setError('Le mot de passe doit faire au moins 8 caractères.'); return; }
     setLoading(true);
