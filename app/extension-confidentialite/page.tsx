@@ -28,7 +28,7 @@ export default function ExtensionConfidentialitePage() {
         <div style={{ marginBottom: '2.5rem' }}>
           <div style={{ display: 'inline-block', background: '#F5C400', border: '2px solid #111', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 800, color: '#111', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Légal — Extension Chrome</div>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Politique de confidentialité de l&apos;extension Chrome</h1>
-          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 23 mai 2026</p>
+          <p style={{ color: '#888', fontSize: 14, fontWeight: 500 }}>Dernière mise à jour : 23 juillet 2026</p>
         </div>
 
         {/* Encart de contexte */}
@@ -61,7 +61,7 @@ Toutes les fonctionnalités (capture, analyse, marquage de candidature) servent 
 Un jeton de session vous permet de rester connecté à votre compte Jean find my Job. Ce jeton n'est partagé avec aucun tiers.
 
 📌 Données d'offres d'emploi — envoyées à votre tableau de bord Jean :
-Lors d'un clic volontaire sur « Capturer cette offre », l'extension lit les données publiques affichées dans l'annonce (intitulé, employeur, localisation, contrat, conditions, description et autres informations visibles). Ces données sont transmises à votre espace personnel.
+Lors d'un clic volontaire sur le bouton de capture, l'extension lit les données publiques affichées dans l'annonce (intitulé, employeur, localisation, contrat, conditions, description et autres informations visibles). Ces données sont transmises à votre espace personnel.
 
 📌 Données d'analyse de CV — uniquement si vous lancez l'analyse :
 L'extension transmet une référence vers le CV que vous avez sélectionné dans votre compte (le CV n'est jamais ré-uploadé depuis l'extension). L'analyse est réalisée par un service tiers d'intelligence artificielle.
@@ -84,19 +84,25 @@ Le clic sur « J'ai postulé » met à jour le statut de la candidature dans vot
 
 🔑 sidePanel : affichage du panneau latéral Jean dans votre navigateur.
 
-🔑 host_permissions :
+🔑 host_permissions — domaines techniques du service :
 - https://kjsqfgpewjzierlxzdyj.supabase.co/* — URL technique de notre fournisseur d'authentification et de base de données.
 - https://jeanfindmyjob.fr/* — URL de notre service.
-- https://www.linkedin.com/* — activation de la capture uniquement sur les pages d'offres de ce domaine.
-- https://candidat.francetravail.fr/* — activation de la capture uniquement sur les pages d'offres de ce domaine.
-- https://www.welcometothejungle.com/* — activation de la capture uniquement sur les pages d'offres de ce domaine.
-- https://www.apec.fr/* — activation de la capture uniquement sur les pages d'offres de ce domaine.
+
+🔑 host_permissions — plateformes de recrutement compatibles.
+Sur chacun des domaines ci-dessous, l'extension active uniquement la capture des pages d'offres d'emploi :
+- https://candidat.francetravail.fr/*
+- https://www.welcometothejungle.com/*
+- https://www.linkedin.com/*
+- https://www.apec.fr/*
+- https://www.hellowork.com/*
+- https://fr.indeed.com/*
+- https://www.cadremploi.fr/*
 
 L'extension ne demande pas la permission « <all_urls> » et ne s'exécute que sur les domaines explicitement listés ci-dessus.`
           },
           {
             title: '5. Comportement sur les sites compatibles',
-            content: `Sur les plateformes de recrutement compatibles listées en section 4, l'extension reste passive jusqu'à un clic explicite de votre part sur le bouton « Capturer cette offre ».
+            content: `Sur les plateformes de recrutement compatibles listées en section 4, l'extension reste passive jusqu'à un clic explicite de votre part sur le bouton de capture.
 
 Sur tout autre site, l'extension est totalement inactive : aucune lecture, aucun bouton affiché, aucune requête envoyée.`
           },
@@ -112,8 +118,9 @@ Vous êtes invité(e) à respecter les conditions générales de chaque platefor
             title: '7. Sous-traitants et transferts',
             content: `Vos données sont traitées par des sous-traitants techniques sélectionnés pour leur conformité au RGPD :
 
-- Un fournisseur d'hébergement web et de base de données situé dans l'Union Européenne.
-- Un fournisseur de services d'intelligence artificielle situé aux États-Unis, sollicité uniquement au moment où vous lancez une analyse de CV.
+- Supabase (authentification, base de données, stockage) — hébergement en Union Européenne (Irlande, région eu-west-1), chiffrement AES-256. Société établie aux États-Unis.
+- Vercel (hébergement et exécution de notre service) — hébergement en Union Européenne (Paris, région cdg1). Société établie aux États-Unis.
+- Anthropic Claude (analyse de compatibilité entre votre CV et l'offre) — société américaine, traitement aux États-Unis, sollicité uniquement au moment où vous lancez une analyse. Ces données ne sont pas utilisées pour entraîner les modèles et font l'objet d'une conservation temporaire limitée, de 30 jours maximum, à des fins de sécurité, avant suppression.
 
 Aucun de ces sous-traitants n'est autorisé à utiliser vos données à ses propres fins commerciales.
 
