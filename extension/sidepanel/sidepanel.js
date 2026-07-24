@@ -360,15 +360,43 @@ chrome.runtime.onMessage.addListener((message) => {
 // ============================================================
 // Populate recap
 // ============================================================
+// Lieu / Contrat / Salaire restent TOUJOURS affichés : une donnée absente est
+// une information en soi (ex. salaire non communiqué par l'entreprise).
+// On l'indique explicitement, en discret.
+function setFieldOrUnknown(id, value) {
+  const el = $(id);
+  if (!el) return;
+  const has = !!(value && String(value).trim() && String(value).trim() !== '—');
+  el.textContent = has ? value : 'Non communiqué';
+  el.style.color = has ? '' : '#999';
+  el.style.fontStyle = has ? '' : 'italic';
+}
+
+// Masque la carte entière quand elle n'a rien à montrer.
+function toggleCard(id, hasContent) {
+  const el = $(id);
+  if (!el) return;
+  const card = el.closest('.jfmj-card');
+  if (card) card.style.display = hasContent ? '' : 'none';
+}
+
+// Ajuste la hauteur d'une zone de texte à son contenu (plus de scroll interne).
+function autosizeTextarea(el) {
+  if (!el) return;
+  el.style.overflowY = 'hidden';
+  el.style.height = 'auto';
+  el.style.height = Math.min(Math.max(el.scrollHeight, 48), 520) + 'px';
+}
+
 function populateRecap(d) {
   $('field-title').value = d.title || '';
   $('field-company').value = d.company || '';
-  setText('field-location', d.location);
+  setFieldOrUnknown('field-location', d.location);
 
   const contractParts = [d.contractType, d.workSchedule].filter(Boolean);
-  setText('field-contract', contractParts.join(' · '));
+  setFieldOrUnknown('field-contract', contractParts.join(' · '));
 
-  let salary = '—';
+  let salary = '';
   if (d.salaryMin || d.salaryMax) {
     const period = d.salaryPeriod === 'YEAR' ? '/an' : d.salaryPeriod === 'MONTH' ? '/mois' : d.salaryPeriod === 'HOUR' ? '/h' : '';
     if (d.salaryMin && d.salaryMax && d.salaryMin !== d.salaryMax) {
@@ -377,7 +405,7 @@ function populateRecap(d) {
       salary = `${d.salaryMin || d.salaryMax} ${d.salaryCurrency || '€'}${period}`;
     }
   }
-  setText('field-salary', salary);
+  setFieldOrUnknown('field-salary', salary);
 
   $('field-description').value = d.description || '';
 
@@ -387,6 +415,7 @@ function populateRecap(d) {
   if (infoField) {
     infoField.value = d.informationsComplementaires || '';
   }
+  toggleCard('field-informations-complementaires', !!(d.informationsComplementaires || '').trim());
 
   const chipsContainer = $('field-skills-chips');
   chipsContainer.innerHTML = '';
@@ -406,7 +435,25 @@ function populateRecap(d) {
       }
     });
   });
+
+  // Aucune compétence détectée : la carte n'a rien à montrer.
+  toggleCard('field-skills-chips', skills.length > 0);
+
+  // Les zones de texte s'ajustent à leur contenu. Le panneau est encore masqué
+  // au moment du remplissage : on attend l'affichage pour mesurer la hauteur.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      autosizeTextarea($('field-description'));
+      autosizeTextarea($('field-informations-complementaires'));
+    });
+  });
 }
+
+// Une zone de texte modifiee par l'utilisateur suit sa nouvelle hauteur.
+['field-description', 'field-informations-complementaires'].forEach((id) => {
+  const el = $(id);
+  if (el) el.addEventListener('input', () => autosizeTextarea(el));
+});
 
 // ============================================================
 // Boutons fermeture
