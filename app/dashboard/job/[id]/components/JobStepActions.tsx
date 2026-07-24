@@ -211,7 +211,10 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
         <span style={{ fontSize: 7, color: '#111', fontWeight: 700 }}>/100</span>
       </div>
     </div>
-    <span style={{ fontSize: 9, color: '#888', fontFamily: FONT }}>{atsScoreOpt != null ? 'après optimisation' : 'Voir le détail →'}</span>
+    {atsScoreOpt != null && (
+      <span style={{ fontSize: 9, color: '#1A7A4A', fontWeight: 800, fontFamily: FONT }}>après optimisation</span>
+    )}
+    <span style={{ fontSize: 9, color: '#888', fontFamily: FONT }}>Voir le détail →</span>
   </div>
 )}
 

@@ -58,7 +58,7 @@
     return m[1]; // ex: "ff450c67eae7568f"
   }
 
-  async function extract(externalId) {
+  function extract(externalId) {
     const data = {
       source: 'indeed',
       externalId: externalId,
@@ -93,13 +93,15 @@
       Object.assign(data, ldData);
       data._extractionMethod = 'json-ld';
     } else {
-      // 1b. Page de resultats (jobs?...&vjk=) : l'offre est affichee dans le volet de
-      //     droite, sans JSON-LD. On va lire la fiche de la page plein ecran en
-      //     arriere-plan (meme domaine, session de l'utilisateur).
-      const remote = await extractFromViewjobPage(externalId);
-      if (remote) {
-        Object.assign(data, remote);
-        data._extractionMethod = 'json-ld-viewjob';
+      // 1b. Page de resultats (jobs?...&vjk=) : pas de JSON-LD, l'offre est rendue
+      //     cote navigateur dans le volet de droite. On lit donc l'affichage.
+      //     Note : aller chercher /viewjob en arriere-plan ne sert a rien (la page
+      //     renvoyee n'embarque pas le JSON-LD) et casserait l'ouverture du panneau
+      //     lateral, que Chrome n'autorise qu'immediatement apres le clic.
+      const dom = extractFromResultsPane();
+      if (dom) {
+        Object.assign(data, dom);
+        data._extractionMethod = 'dom-pane';
       }
     }
 
@@ -124,21 +126,99 @@
   }
 
   // ============================================================
-  // Lecture de la fiche depuis la page plein ecran /viewjob
+  // Lecture directe du volet de droite (page de resultats)
+  // Indeed n'expose pas de JSON-LD sur /jobs?...&vjk= : le contenu est
+  // rendu cote navigateur. On lit donc les elements affiches.
   // ============================================================
-  async function extractFromViewjobPage(jobKey) {
-    if (!jobKey) return null;
-    try {
-      const url = window.location.origin + '/viewjob?jk=' + encodeURIComponent(jobKey);
-      const res = await fetch(url, { credentials: 'include' });
-      if (!res.ok) return null;
-      const html = await res.text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      return extractFromJsonLd(doc);
-    } catch (e) {
-      console.warn('[Jean] Indeed : lecture de la page plein ecran impossible', e);
-      return null;
+  function extractFromResultsPane() {
+    const txt = function (sel) {
+      const el = document.querySelector(sel);
+      if (!el) return null;
+      const t = (el.innerText || el.textContent || '').trim();
+      return t || null;
+    };
+
+    // Le titre contient parfois un suffixe sur une seconde ligne (ex: '- job post').
+    let title = txt('[data-testid="jobsearch-JobInfoHeader-title"]') || txt('.jobsearch-JobInfoHeader-title');
+    if (title) title = cleanInline(title.split('\n')[0]);
+    if (!title) return null;
+
+    const r = {
+      title: title,
+      company: cleanInline(txt('[data-testid="inlineHeader-companyName"]') || ''),
+      location: cleanInline(txt('[data-testid="inlineHeader-companyLocation"]') || ''),
+      description: null,
+      contractType: null,
+      workSchedule: null,
+      salaryMin: null,
+      salaryMax: null,
+      salaryCurrency: null,
+      salaryPeriod: null
+    };
+    if (!r.company) r.company = null;
+    if (!r.location) r.location = null;
+
+    const desc = txt('#jobDescriptionText');
+    if (desc) r.description = cleanMultiline(desc);
+
+    // Bandeau '#salaryInfoAndJobType' : ex. 'De 70 000 EUR a 80 000 EUR par an - CDI, Temps plein'
+    const infoLine = txt('#salaryInfoAndJobType') || '';
+    const chips = [];
+    document.querySelectorAll('[data-testid="attribute_snippet_testid"]').forEach(function (el) {
+      const t = (el.innerText || '').trim();
+      if (t) chips.push(t);
+    });
+    const haystack = infoLine + ' ' + chips.join(' ');
+
+    for (let i = 0; i < CONTRACT_PATTERNS.length; i++) {
+      if (CONTRACT_PATTERNS[i].regex.test(haystack)) { r.contractType = CONTRACT_PATTERNS[i].label; break; }
     }
+    if (/Temps plein/i.test(haystack)) r.workSchedule = 'Temps plein';
+    else if (/Temps partiel/i.test(haystack)) r.workSchedule = 'Temps partiel';
+
+    const sal = parseSalaryFromText(infoLine);
+    if (sal) {
+      r.salaryMin = sal.min;
+      r.salaryMax = sal.max;
+      r.salaryCurrency = sal.currency;
+      r.salaryPeriod = sal.period;
+    }
+
+    return r;
+  }
+
+  // Analyse d'un libelle de salaire affiche, ex. 'De 50 000 EUR a 60 000 EUR par an'
+  function parseSalaryFromText(text) {
+    if (!text) return null;
+    const t = String(text).replace(/\u00a0/g, ' ');
+    if (!/[€$£]|EUR|USD|GBP/i.test(t)) return null;
+
+    const nums = [];
+    const re = /(\d[\d ]*\d|\d)\s*(?=(?:€|EUR|\$|USD|£|GBP))/gi;
+    let m;
+    while ((m = re.exec(t)) !== null) {
+      const n = parseInt(m[1].replace(/ /g, ''), 10);
+      if (!isNaN(n)) nums.push(n);
+    }
+    if (nums.length === 0) return null;
+
+    let period = null;
+    if (/par an|\/ ?an|annuel/i.test(t)) period = 'YEAR';
+    else if (/par mois|mensuel/i.test(t)) period = 'MONTH';
+    else if (/par semaine/i.test(t)) period = 'WEEK';
+    else if (/par jour/i.test(t)) period = 'DAY';
+    else if (/de l'heure|par heure|horaire/i.test(t)) period = 'HOUR';
+
+    let currency = 'EUR';
+    if (/\$|USD/i.test(t)) currency = 'USD';
+    else if (/£|GBP/i.test(t)) currency = 'GBP';
+
+    return {
+      min: nums[0],
+      max: nums.length > 1 ? nums[nums.length - 1] : null,
+      currency: currency,
+      period: period
+    };
   }
 
   // ============================================================

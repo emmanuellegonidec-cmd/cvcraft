@@ -22,6 +22,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       tabId: sender.tab?.id,
     };
 
+    // Le panneau peut deja etre ouvert : on le previent pour qu'il affiche
+    // la nouvelle offre au lieu de garder l'ancienne.
+    chrome.runtime.sendMessage({ type: "JFMJ_NEW_CAPTURE" }, () => {
+      if (chrome.runtime.lastError) {
+        // Aucun panneau ouvert pour recevoir le signal : sans consequence.
+      }
+    });
+
     // Ouverture du side panel sur l'onglet actif
     if (sender.tab?.windowId) {
       chrome.sidePanel

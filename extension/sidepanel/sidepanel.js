@@ -340,6 +340,24 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 });
 
 // ============================================================
+// Nouvelle offre capturée alors que le panneau est déjà ouvert
+// Sans cela, le panneau garderait l'offre précédente à l'écran.
+// ============================================================
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type !== 'JFMJ_NEW_CAPTURE') return;
+  if (!currentSessionToken) return; // non connecté : rien à afficher
+
+  chrome.runtime.sendMessage({ type: 'JFMJ_GET_PENDING_CAPTURE' }, (response) => {
+    if (chrome.runtime.lastError) return;
+    if (!response || !response.ok || !response.payload || !response.payload.data) return;
+    console.log('[sidepanel] Nouvelle offre reçue → mise à jour du panneau');
+    currentCapturedData = response.payload.data;
+    populateRecap(currentCapturedData);
+    show('view-recap');
+  });
+});
+
+// ============================================================
 // Populate recap
 // ============================================================
 function populateRecap(d) {
