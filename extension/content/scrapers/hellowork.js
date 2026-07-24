@@ -89,6 +89,10 @@
       data._extractionMethod = 'json-ld';
     }
 
+    // 2bis. Experience affichee sur la page (prioritaire sur le minimum JSON-LD)
+    const domExp = extractExperienceFromDom();
+    if (domExp) data.experienceLabel = domExp;
+
     // 2. DOM fallback : contractType si non deductible du JSON-LD (ex: CDI/CDD)
     if (!data.contractType) {
       const domContract = extractContractTypeFromDom();
@@ -255,19 +259,47 @@
   // ============================================================
   // DOM fallback : contractType (CDI/CDD/Freelance/Stage/Alternance/Interim)
   // ============================================================
+  // Deux passes :
+  //  1. un element dont le texte est EXACTEMENT un type de contrat (le badge de
+  //     l'offre, en tete de page) ;
+  //  2. a defaut seulement, un texte qui en contient un.
+  // Sans cette priorite, un mot "Stage" croise dans un menu ou une phrase plus
+  // haut dans la page l'emportait sur le vrai contrat de l'offre.
   function extractContractTypeFromDom() {
+    const candidates = document.querySelectorAll('span, p, div, li');
+
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 0; i < candidates.length; i++) {
+        const el = candidates[i];
+        if (el.children.length > 2) continue;
+        const txt = cleanInline(el.textContent);
+        if (!txt || txt.length === 0 || txt.length > 30) continue;
+
+        for (let j = 0; j < CONTRACT_PATTERNS.length; j++) {
+          const p = CONTRACT_PATTERNS[j];
+          if (pass === 0) {
+            if (txt.toUpperCase() === p.label.toUpperCase()) return p.label;
+          } else if (p.regex.test(txt)) {
+            return p.label;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // L'experience affichee ("Exp. 1 a 7 ans") est plus riche que le minimum
+  // present dans la fiche technique (monthsOfExperience). On la prefere.
+  function extractExperienceFromDom() {
     const candidates = document.querySelectorAll('span, p, div, li');
     for (let i = 0; i < candidates.length; i++) {
       const el = candidates[i];
-      // Element feuille ou semi-feuille uniquement (pas de gros conteneur)
       if (el.children.length > 2) continue;
       const txt = cleanInline(el.textContent);
-      if (!txt || txt.length === 0 || txt.length > 30) continue;
-
-      for (let j = 0; j < CONTRACT_PATTERNS.length; j++) {
-        if (CONTRACT_PATTERNS[j].regex.test(txt)) {
-          return CONTRACT_PATTERNS[j].label;
-        }
+      if (!txt || txt.length > 40) continue;
+      const m = txt.match(/^Exp\.?\s*:?\s*(.+)$/i);
+      if (m && m[1] && /an|mois|d(é|e)butant|junior|senior/i.test(m[1])) {
+        return cleanInline(m[1]);
       }
     }
     return null;
