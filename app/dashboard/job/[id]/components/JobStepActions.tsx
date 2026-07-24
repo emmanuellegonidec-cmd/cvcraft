@@ -88,6 +88,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
 const DATE_ACTION_TITLES = ['Fixer une deadline', 'Ajouter un rappel', 'Programmer une relance', 'Date de prise de poste']
 const ATS_CARD_TITLE = 'Vérifier le score ATS'
 const LM_CARD_TITLE = 'Rédiger ma LM'
+const CV_CARD_TITLE = 'Préparer mon CV'
 
 interface StepActionRow {
   id: string; title: string; icon: string; sub: string; position: number
@@ -95,7 +96,7 @@ interface StepActionRow {
   deadline_date?: string | null
 }
 
-function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlineSave, onATSClick, atsScore, atsScoreOpt, onLMClick, lmGenerated }: {
+function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlineSave, onATSClick, atsScore, atsScoreOpt, onLMClick, lmGenerated, cvUrl, onCvOptimize }: {
   action: StepActionRow
   dragId: string
   onDelete: (id: string, title: string) => void
@@ -104,6 +105,8 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
   onATSClick?: () => void
   atsScore?: number | null
   atsScoreOpt?: number | null
+  cvUrl?: string | null
+  onCvOptimize?: () => void
   onLMClick?: () => void
   lmGenerated?: boolean
 }) {
@@ -112,6 +115,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
   const isDateCard = DATE_ACTION_TITLES.includes(action.title)
   const isATSCard = action.title === ATS_CARD_TITLE
   const isLMCard = action.title === LM_CARD_TITLE
+  const isCvCard = action.title === CV_CARD_TITLE
 
   const borderColor = action.is_done ? '#A5D6A7' : action.type === 'included' ? '#C8E6C9' : action.type === 'new' ? '#FFCDD2' : '#BBBBBB'
   const bgColor = action.is_done ? '#F1F8E9' : action.type === 'included' ? '#F1F8E9' : '#fff'
@@ -140,7 +144,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
   }
 
   const deadlineStatus = isDateCard ? getDeadlineStatus(localDate) : null
-  const isInteractiveCard = isATSCard || isLMCard
+  const isInteractiveCard = isATSCard || isLMCard || isCvCard
 
   return (
     <div ref={setNodeRef} style={{
@@ -181,6 +185,27 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
       </span>
 
       <span style={{ fontSize: 11, color: '#888', display: 'block', fontFamily: FONT, marginBottom: isDateCard ? 8 : 10, flex: isDateCard ? 'none' : 1 }}>{action.sub}</span>
+
+      {/* Carte CV : etat reel + actions (voir / refaire / optimiser) */}
+      {isCvCard && (
+        <div onPointerDown={e => e.stopPropagation()} style={{ marginBottom: 8 }}>
+          {cvUrl ? (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#1A7A4A', marginBottom: 6, fontFamily: FONT }}>✓ CV enregistré sur cette offre</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <a href={cvUrl} target="_blank" rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  style={{ ...({ border: '2px solid #111', borderRadius: 6, padding: '5px 10px', fontSize: 10, fontWeight: 800, fontFamily: FONT, cursor: 'pointer', boxShadow: '2px 2px 0 #111', textDecoration: 'none', display: 'inline-block' }), background: '#fff', color: '#111' }}>Voir</a>
+                <button onClick={e => { e.stopPropagation(); onCvOptimize?.() }}
+                  style={{ ...({ border: '2px solid #111', borderRadius: 6, padding: '5px 10px', fontSize: 10, fontWeight: 800, fontFamily: FONT, cursor: 'pointer', boxShadow: '2px 2px 0 #111', textDecoration: 'none', display: 'inline-block' }), background: '#F5C400', color: '#111' }}>Refaire</button>
+              </div>
+            </>
+          ) : (
+            <button onClick={e => { e.stopPropagation(); onCvOptimize?.() }}
+              style={{ ...({ border: '2px solid #111', borderRadius: 6, padding: '5px 10px', fontSize: 10, fontWeight: 800, fontFamily: FONT, cursor: 'pointer', boxShadow: '2px 2px 0 #111', textDecoration: 'none', display: 'inline-block' }), background: '#F5C400', color: '#111', width: '100%', textAlign: 'center' }}>Optimiser mon CV →</button>
+          )}
+        </div>
+      )}
 
       {/* Cercle score ATS — style jaune/noir, pas de fond */}
 {isATSCard && atsScore != null && (
@@ -316,6 +341,8 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
   const [stepActions, setStepActions] = useState<StepActionRow[]>([])
   const [loading, setLoading] = useState(false)
   const [cvSent, setCvSent] = useState<boolean>(false)
+  // Lien du CV rattache a l'offre (bouton "Voir" de la carte CV).
+  const [cvUrl, setCvUrl] = useState<string | null>(null)
   // Score obtenu après optimisation du CV (affiché sur la carte score ATS).
   const [atsScoreOpt, setAtsScoreOpt] = useState<number | null>(null)
   const [lmSent, setLmSent] = useState<boolean>(false)
@@ -387,6 +414,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
       .single()
     if (data) {
       setCvSent(!!(data.cv_sent || data.cv_url))
+      setCvUrl(data.cv_url || null)
       setLmSent(!!(data.cover_letter_sent || data.cover_letter_url))
       if (data.ats_result) setAtsResult(data.ats_result)
       if (data.ats_analysis_count) setAtsCount(data.ats_analysis_count)
@@ -573,6 +601,8 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
                       onATSClick={action.title === ATS_CARD_TITLE ? () => setAtsModalOpen(true) : undefined}
                       atsScore={action.title === ATS_CARD_TITLE && atsResult ? atsResult.score_global : null}
                       atsScoreOpt={action.title === ATS_CARD_TITLE ? atsScoreOpt : null}
+                      cvUrl={action.title === CV_CARD_TITLE ? cvUrl : null}
+                      onCvOptimize={action.title === CV_CARD_TITLE ? () => { window.location.href = `/dashboard/editor?job_id=${jobId}` } : undefined}
                       onLMClick={action.title === LM_CARD_TITLE ? () => setLmModalOpen(true) : undefined}
                       lmGenerated={action.title === LM_CARD_TITLE ? lmGenerated : undefined}
                     />
