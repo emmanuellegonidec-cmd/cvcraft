@@ -82,7 +82,7 @@
   }
 
   // 3. CLIC SUR "CAPTURER" -> envoi au service worker
-  function handleCaptureClick(scraper, offerId, btn, label) {
+  async function handleCaptureClick(scraper, offerId, btn, label) {
     // Garde-fou : si l'extension a ete rechargee, inutile d'aller plus loin.
     if (contextInvalidated || !isExtensionAlive()) {
       showReloadNeeded(btn, label);
@@ -94,7 +94,8 @@
     label.textContent = 'Capture…';
 
     try {
-      const data = scraper.extract(offerId);
+      // extract() peut etre asynchrone (Indeed va lire la fiche de la page plein ecran).
+      const data = await scraper.extract(offerId);
 
       console.group('%c[Jean find my Job] Offre capturee — ' + scraper.label, 'background:#F5C400;color:#111;font-weight:bold;padding:2px 6px;');
       console.log('Source :', data.source);

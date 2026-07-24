@@ -58,7 +58,7 @@
     return m[1]; // ex: "ff450c67eae7568f"
   }
 
-  function extract(externalId) {
+  async function extract(externalId) {
     const data = {
       source: 'indeed',
       externalId: externalId,
@@ -87,11 +87,20 @@
       _extractionMethod: null
     };
 
-    // 1. JSON-LD JobPosting : source primaire Indeed
-    const ldData = extractFromJsonLd();
+    // 1. JSON-LD JobPosting : source primaire Indeed (page plein ecran /viewjob)
+    let ldData = extractFromJsonLd(document);
     if (ldData) {
       Object.assign(data, ldData);
       data._extractionMethod = 'json-ld';
+    } else {
+      // 1b. Page de resultats (jobs?...&vjk=) : l'offre est affichee dans le volet de
+      //     droite, sans JSON-LD. On va lire la fiche de la page plein ecran en
+      //     arriere-plan (meme domaine, session de l'utilisateur).
+      const remote = await extractFromViewjobPage(externalId);
+      if (remote) {
+        Object.assign(data, remote);
+        data._extractionMethod = 'json-ld-viewjob';
+      }
     }
 
     // 2. DOM fallback : contractType si non deductible du JSON-LD (ex: CDI/CDD)
@@ -106,14 +115,38 @@
     // 3. Construction du texte "Informations complementaires"
     data.informationsComplementaires = buildInformationsComplementaires(data);
 
+    // Garde-fou : sans titre, la capture serait vide. Mieux vaut une erreur explicite.
+    if (!data.title) {
+      throw new Error("Indeed : impossible de lire cette offre (fiche JobPosting introuvable).");
+    }
+
     return data;
+  }
+
+  // ============================================================
+  // Lecture de la fiche depuis la page plein ecran /viewjob
+  // ============================================================
+  async function extractFromViewjobPage(jobKey) {
+    if (!jobKey) return null;
+    try {
+      const url = window.location.origin + '/viewjob?jk=' + encodeURIComponent(jobKey);
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) return null;
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      return extractFromJsonLd(doc);
+    } catch (e) {
+      console.warn('[Jean] Indeed : lecture de la page plein ecran impossible', e);
+      return null;
+    }
   }
 
   // ============================================================
   // JSON-LD : extraction principale
   // ============================================================
-  function extractFromJsonLd() {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+  function extractFromJsonLd(root) {
+    const doc = root || document;
+    const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
     for (let i = 0; i < scripts.length; i++) {
       try {
         const parsed = JSON.parse(scripts[i].textContent);
