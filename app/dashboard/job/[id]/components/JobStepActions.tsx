@@ -39,6 +39,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     actions: [
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
+      { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'included' },
       { icon: '🎯', title: 'Préparer mon pitch', sub: '2 min chrono', type: 'action' },
       { icon: '⏰', title: 'Mes questions', sub: 'À poser au recruteur', type: 'action' },
     ],
@@ -47,6 +48,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     desc: "L'entretien RH explore ta personnalité et tes motivations. Prépare des exemples avec la méthode STAR.",
     actions: [
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
+      { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'included' },
       { icon: '⭐', title: 'Méthode STAR', sub: 'Préparer mes exemples', type: 'action' },
       { icon: '🧠', title: 'Questions RH types', sub: 'Se présenter, motivations, enjeux du poste...', type: 'action' },
       { icon: '🏢', title: "Connaître l'entreprise et ses concurrents", sub: 'Valeurs, actualités, équipe', type: 'action' },
@@ -60,6 +62,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
     actions: [
       { icon: '📄', title: 'CV', sub: 'Inclus — étape Postulé', type: 'included' },
       { icon: '✉️', title: 'LM', sub: 'Incluse — étape Postulé', type: 'included' },
+      { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'included' },
       { icon: '🔧', title: 'Analyse du poste', sub: 'Enjeux, priorités, KPIs', type: 'action' },
       { icon: '📊', title: 'Portfolio / cas pratique', sub: 'Exemples chiffrés', type: 'action' },
       { icon: '⏰', title: 'Mes questions manager', sub: 'Équipe, objectifs, style', type: 'action' },
@@ -71,6 +74,7 @@ const STEP_ACTIONS: Record<string, { desc: string; actions: { icon: string; titl
   offer: {
     desc: "Félicitations ! Prends le temps d'analyser l'offre avant de répondre. Négocie si nécessaire.",
     actions: [
+      { icon: '🎯', title: 'Vérifier le score ATS', sub: 'Compatibilité CV / offre', type: 'included' },
       { icon: '📋', title: 'Analyser le contrat', sub: 'Salaire, avantages, conditions', type: 'action' },
       { icon: '⚖️', title: 'Comparer les offres', sub: 'Si vous avez plusieurs pistes', type: 'action' },
       { icon: '💬', title: 'Négocier le salaire', sub: 'Conseils & arguments', type: 'action' },
@@ -91,7 +95,7 @@ interface StepActionRow {
   deadline_date?: string | null
 }
 
-function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlineSave, onATSClick, atsScore, onLMClick, lmGenerated }: {
+function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlineSave, onATSClick, atsScore, atsScoreOpt, onLMClick, lmGenerated }: {
   action: StepActionRow
   dragId: string
   onDelete: (id: string, title: string) => void
@@ -99,6 +103,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
   onDeadlineSave: (id: string, date: string) => void
   onATSClick?: () => void
   atsScore?: number | null
+  atsScoreOpt?: number | null
   onLMClick?: () => void
   lmGenerated?: boolean
 }) {
@@ -154,6 +159,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
         <span style={{ fontSize: 18 }}>{action.icon}</span>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {!isInteractiveCard && <span style={{ fontSize: 11, color: '#bbb', cursor: 'grab', lineHeight: 1 }}>⠿</span>}
+          {!isATSCard && (
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onDelete(action.id, action.title) }}
@@ -161,6 +167,7 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
             onMouseOver={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#E8151B'; b.style.borderColor = '#E8151B'; b.style.color = '#fff' }}
             onMouseOut={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#f0f0f0'; b.style.borderColor = '#ddd'; b.style.color = '#999' }}
           >×</button>
+          )}
         </div>
       </div>
 
@@ -182,6 +189,12 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
     onClick={e => { e.stopPropagation(); onATSClick?.() }}
     style={{ cursor: 'pointer', marginBottom: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}
   >
+    {atsScoreOpt != null && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#888', fontFamily: FONT }}>{atsScore}</span>
+        <span style={{ fontSize: 10, color: '#1A7A4A', fontWeight: 900 }}>→</span>
+      </div>
+    )}
     <div style={{ position: 'relative', width: 64, height: 64 }}>
       <svg viewBox="0 0 64 64" style={{ width: 64, height: 64, transform: 'rotate(-90deg)' }}>
         <circle cx="32" cy="32" r="27" fill="#F5C400" stroke="#F5C400" strokeWidth="6" />
@@ -189,16 +202,16 @@ function DraggableActionCard({ action, dragId, onDelete, onToggleDone, onDeadlin
           stroke="#111"
           strokeWidth="6"
           strokeDasharray="169.6"
-          strokeDashoffset={169.6 - (atsScore / 100) * 169.6}
+          strokeDashoffset={169.6 - ((atsScoreOpt ?? atsScore) / 100) * 169.6}
           strokeLinecap="round"
         />
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 16, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
+        <span style={{ fontSize: 16, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScoreOpt ?? atsScore}</span>
         <span style={{ fontSize: 7, color: '#111', fontWeight: 700 }}>/100</span>
       </div>
     </div>
-    <span style={{ fontSize: 9, color: '#888', fontFamily: FONT }}>Voir le détail →</span>
+    <span style={{ fontSize: 9, color: '#888', fontFamily: FONT }}>{atsScoreOpt != null ? 'après optimisation' : 'Voir le détail →'}</span>
   </div>
 )}
 
@@ -300,6 +313,8 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
   const [stepActions, setStepActions] = useState<StepActionRow[]>([])
   const [loading, setLoading] = useState(false)
   const [cvSent, setCvSent] = useState<boolean>(false)
+  // Score obtenu après optimisation du CV (affiché sur la carte score ATS).
+  const [atsScoreOpt, setAtsScoreOpt] = useState<number | null>(null)
   const [lmSent, setLmSent] = useState<boolean>(false)
   const [activeActionId, setActiveActionId] = useState<string | null>(null)
   const [overActionZone, setOverActionZone] = useState<string | null>(null)
@@ -345,6 +360,12 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
       if ((a.title === 'LM' || a.title === 'Lettre de motivation') && a.type === 'included') return lmSent
       return true
     })
+    // Cases cochées automatiquement quand la réalité le dit (score calculé, CV enregistré).
+    .map(a => {
+      if (a.title === ATS_CARD_TITLE && atsResult) return { ...a, is_done: true }
+      if (a.title === 'Préparer mon CV' && cvSent) return { ...a, is_done: true }
+      return a
+    })
 
   useEffect(() => {
     if (!currentStepId || !userId) return
@@ -358,7 +379,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
     const supabase = createClient()
     const { data } = await supabase
       .from('jobs')
-      .select('cv_sent, cover_letter_sent, cv_url, cover_letter_url, ats_result, ats_analysis_count')
+      .select('cv_sent, cover_letter_sent, cv_url, cover_letter_url, ats_result, ats_analysis_count, ats_score_optimized')
       .eq('id', jobId)
       .single()
     if (data) {
@@ -366,6 +387,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
       setLmSent(!!(data.cover_letter_sent || data.cover_letter_url))
       if (data.ats_result) setAtsResult(data.ats_result)
       if (data.ats_analysis_count) setAtsCount(data.ats_analysis_count)
+      setAtsScoreOpt(typeof data.ats_score_optimized === 'number' ? data.ats_score_optimized : null)
     }
   }
 
@@ -547,6 +569,7 @@ export default function JobStepActions({ jobId, userId, currentStepId, currentSt
                       onDeadlineSave={handleDeadlineSave}
                       onATSClick={action.title === ATS_CARD_TITLE ? () => setAtsModalOpen(true) : undefined}
                       atsScore={action.title === ATS_CARD_TITLE && atsResult ? atsResult.score_global : null}
+                      atsScoreOpt={action.title === ATS_CARD_TITLE ? atsScoreOpt : null}
                       onLMClick={action.title === LM_CARD_TITLE ? () => setLmModalOpen(true) : undefined}
                       lmGenerated={action.title === LM_CARD_TITLE ? lmGenerated : undefined}
                     />

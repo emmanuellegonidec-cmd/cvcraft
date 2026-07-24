@@ -642,11 +642,7 @@ export default function JobDetailPage() {
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#999', fontWeight: 700, fontSize: 15 }}>Chargement…</p></div>
   if (!job) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F0', fontFamily: FONT }}><p style={{ color: '#E8151B', fontWeight: 700, fontSize: 15 }}>Offre introuvable.</p></div>
 
-  // Le score de départ est stocké dans ats_result.score_global (ats_score n'est pas renseigné par l'analyse).
-  const atsScore = job.ats_score ?? (typeof job.ats_result?.score_global === 'number' ? job.ats_result.score_global : null)
-  // Score obtenu après optimisation du CV via le CV Creator (le score de départ reste inchangé).
-  const atsScoreOpt = job.ats_score_optimized ?? null
-  const atsKw = job.ats_keywords ?? { present: [], missing: [] }
+  // Le score ATS est désormais affiché par la carte dédiée du parcours (JobStepActions).
   const card: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 14, border: '1.5px solid #EBEBEB' }
   const sectionLabel: React.CSSProperties = {
     fontSize: 11, fontWeight: 800, textTransform: 'uppercase',
@@ -723,37 +719,6 @@ export default function JobDetailPage() {
               style={{ background: '#7C3AED', color: '#fff', fontSize: 12, fontWeight: 800, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: FONT, whiteSpace: 'nowrap', boxShadow: '2px 2px 0 #111' }}>
               + Créer la fiche contact
             </button>
-          </div>
-        )}
-
-        {(atsScore !== null || atsScoreOpt !== null || atsKw.present.length > 0 || atsKw.missing.length > 0) && (
-          <div style={{ ...card, border: '1.5px solid #F5C400', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-            {atsScore !== null && (
-              <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
-                <svg width="72" height="72" viewBox="0 0 72 72" style={{ transform: 'rotate(-90deg)', display: 'block' }}>
-                  <circle cx="36" cy="36" r="28" fill="none" stroke="#F0F0F0" strokeWidth="6" />
-                  <circle cx="36" cy="36" r="28" fill="none" stroke="#F5C400" strokeWidth="6" strokeDasharray="176" strokeDashoffset={176 - (176 * atsScore / 100)} strokeLinecap="round" />
-                </svg>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 20, fontWeight: 900, color: '#111', lineHeight: 1, fontFamily: FONT }}>{atsScore}</span>
-                  <small style={{ fontSize: 10, color: '#999', fontWeight: 700, fontFamily: FONT }}>/100</small>
-                </div>
-              </div>
-            )}
-            <div style={{ flex: 1, minWidth: 180 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 800, color: '#111', marginBottom: 4, fontFamily: FONT }}>Score ATS — Compatibilité avec l&apos;offre</h3>
-              {atsScoreOpt !== null && (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#E8F5E9', border: '2px solid #1A7A4A', borderRadius: 8, padding: '4px 10px', marginBottom: 8, fontFamily: FONT }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#555' }}>{atsScore ?? '—'} au départ</span>
-                  <span style={{ fontSize: 12, fontWeight: 900, color: '#1A7A4A' }}>→ {atsScoreOpt} après optimisation</span>
-                </div>
-              )}
-              <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, marginBottom: 8, fontFamily: FONT }}>{atsScore !== null && atsScore >= 70 ? 'Bonne compatibilité. Quelques mots-clés à ajouter.' : 'Des mots-clés importants manquent dans votre CV.'}</p>
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                {atsKw.present.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: '#E8F5E9', color: '#2E7D32', fontFamily: FONT }}>{k} ✓</span>)}
-                {atsKw.missing.map(k => <span key={k} style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: '#FFEBEE', color: '#C62828', fontFamily: FONT }}>{k} ✗</span>)}
-              </div>
-            </div>
           </div>
         )}
 
