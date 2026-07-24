@@ -27,13 +27,16 @@
   };
 
   // Patterns pour detecter le contractType dans le DOM (bandeau meta APEC)
+  // Ordre important : du plus specifique au plus generique.
+  // Une offre libellee "CDD et Alternance - Contrat d'apprentissage" est une
+  // alternance : il faut donc tester Alternance AVANT CDD.
   const CONTRACT_PATTERNS = [
-    { regex: /\bCDI\b/i, label: 'CDI' },
-    { regex: /\bCDD\b/i, label: 'CDD' },
+    { regex: /Alternance|Apprentissage/i, label: 'Alternance' },
+    { regex: /\bStage\b/i, label: 'Stage' },
+    { regex: /Int(e|é)rim/i, label: 'Interim' },
     { regex: /Freelance/i, label: 'Freelance' },
-    { regex: /Alternance/i, label: 'Alternance' },
-    { regex: /Stage/i, label: 'Stage' },
-    { regex: /Interim/i, label: 'Interim' }
+    { regex: /\bCDI\b/i, label: 'CDI' },
+    { regex: /\bCDD\b/i, label: 'CDD' }
   ];
 
   function match(url) {
@@ -215,13 +218,27 @@
   // DOM fallback : contractType (CDI/CDD/Freelance/Stage/Alternance/Interim)
   // ============================================================
   function extractContractTypeFromDom() {
-    const candidates = document.querySelectorAll('span, p, div, li');
+    // On restreint la recherche au bloc de metadonnees de l'offre affichee.
+    // Sur une page de resultats, le menu lateral (lien "Alternance") et les
+    // autres offres de la liste apparaissent avant dans le DOM et faussaient
+    // le type de contrat.
+    const scopeEl =
+      document.querySelector('apec-offre-metadata') ||
+      document.querySelector('.card-offer__header');
+    const scope = scopeEl || document;
+
+    // Dans le bloc de l'offre, on accepte des libelles longs du type
+    // "1 CDD et Alternance - Contrat d'apprentissage de 12 mois".
+    // Sans perimetre, on reste prudent (30 caracteres) pour eviter les faux positifs.
+    const maxLen = scopeEl ? 120 : 30;
+
+    const candidates = scope.querySelectorAll('span, p, div, li');
     for (let i = 0; i < candidates.length; i++) {
       const el = candidates[i];
       // Element feuille ou semi-feuille uniquement (pas de gros conteneur)
       if (el.children.length > 2) continue;
       const txt = cleanInline(el.textContent);
-      if (!txt || txt.length === 0 || txt.length > 30) continue;
+      if (!txt || txt.length === 0 || txt.length > maxLen) continue;
 
       for (let j = 0; j < CONTRACT_PATTERNS.length; j++) {
         if (CONTRACT_PATTERNS[j].regex.test(txt)) {
@@ -238,9 +255,11 @@
 
   function htmlToReadableText(html) {
     if (!html) return '';
-    // Si c'est deja du texte plain (pas de balises HTML), on retourne tel quel nettoye
+    // APEC fournit la description en TEXTE BRUT (aucune balise) et sans aucun
+    // saut de ligne : les phrases se collent ("...communication.Vous contribuerez").
+    // On restaure des coupures lisibles avant le nettoyage.
     if (typeof html === 'string' && html.indexOf('<') === -1) {
-      return cleanMultiline(html);
+      return cleanMultiline(restoreLineBreaks(html));
     }
     let doc;
     try {
@@ -257,9 +276,34 @@
     return cleanMultiline(doc.body.innerText || doc.body.textContent || '');
   }
 
+  // Reintroduit des sauts de ligne dans un texte brut sans mise en forme :
+  //  - apres une fin de phrase suivie d'une majuscule
+  //  - devant chaque puce
+  // APEC encode les accents en notation HTML (&eacute;, &rsquo;, &agrave;...)
+  // meme quand le texte ne contient aucune balise. Sans decodage, l'utilisateur
+  // lit "d&eacute;ploiement" au lieu de "deploiement".
+  function decodeEntities(str) {
+    if (!str || String(str).indexOf('&') === -1) return str;
+    try {
+      const el = document.createElement('textarea');
+      el.innerHTML = String(str);
+      return el.value;
+    } catch (e) {
+      return str;
+    }
+  }
+
+  function restoreLineBreaks(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/([.!?])\s*([A-ZÀÂÄÇÉÈÊËÎÏÔÖÙÛÜŸ])/g, '$1\n$2')
+      .replace(/\s*([•·])\s*/g, '\n$1 ')
+      .replace(/\n{3,}/g, '\n\n');
+  }
+
   function cleanMultiline(s) {
     if (!s) return '';
-    const lines = String(s).replace(/\r\n/g, '\n').split('\n');
+    const lines = String(decodeEntities(s)).replace(/\r\n/g, '\n').split('\n');
     const out = [];
     let prevEmpty = false;
     for (let i = 0; i < lines.length; i++) {
@@ -322,7 +366,7 @@
   // les paragraphes pour les descriptions plain text).
   function cleanMultilineNoEmpty(s) {
     if (!s) return '';
-    const lines = String(s).split('\n').map(function (l) {
+    const lines = String(decodeEntities(s)).split('\n').map(function (l) {
       return l.replace(/[ \t]+/g, ' ').trim();
     }).filter(Boolean);
     return lines.join('\n');
@@ -349,7 +393,7 @@
 
   function cleanInline(s) {
     if (!s) return '';
-    return String(s).replace(/\s+/g, ' ').trim();
+    return String(decodeEntities(s)).replace(/\s+/g, ' ').trim();
   }
 
   // ============================================================
